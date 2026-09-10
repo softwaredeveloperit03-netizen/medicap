@@ -1,0 +1,1179 @@
+﻿<div class="card" *ngIf="!isView && !isViewMacro">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Received Factory Order</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/planning" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+    <div class="card-block">
+        <div class="card-text" style="overflow-x:auto;">
+  <clr-datagrid *ngIf="pendingpo?.length > 0">
+  <clr-dg-column>Sr. No.</clr-dg-column>
+  <clr-dg-column>Order No</clr-dg-column>
+  <clr-dg-column>Product Name</clr-dg-column>
+  <clr-dg-column>Order Qty</clr-dg-column>
+  <clr-dg-column>Pack Size</clr-dg-column>
+  <!-- <clr-dg-column>Medicap Lot No</clr-dg-column> -->
+  <clr-dg-column>Stock Qty</clr-dg-column>
+  <clr-dg-column>Remaining Qty</clr-dg-column>
+   <!-- <clr-dg-column>Actual Plan Date</clr-dg-column> -->
+  <clr-dg-column>No of Batches Planed</clr-dg-column>
+  <!-- <clr-dg-column>Actual Start Date</clr-dg-column> -->
+  <!-- <clr-dg-column>Po Date</clr-dg-column> -->
+   <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+  <clr-dg-row *ngFor="let pending of pendingpo; let i = index">
+    <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+    <clr-dg-cell>{{ pending.order_no }}</clr-dg-cell>
+    <clr-dg-cell>{{ pending.product_name }} ({{ pending.product_code }})</clr-dg-cell>
+    <clr-dg-cell>{{ pending.order_qty }} {{ pending.unit }}</clr-dg-cell>
+    <clr-dg-cell>{{ pending.pack_size?.pack_size }} {{ pending.pack_size?.unit }}</clr-dg-cell>
+    <!-- <clr-dg-cell><ul class="list-unstyled mb-0">  <li *ngFor="let data of pending['batch_nos']">{{ data.batch_number }}</li> </ul></clr-dg-cell> -->
+    <clr-dg-cell>{{ pending.stock_qty }}</clr-dg-cell>
+    <clr-dg-cell>{{ pending.order_qty - pending.stock_qty }}</clr-dg-cell>
+    <!-- <clr-dg-cell>--</clr-dg-cell> -->
+    <!-- <clr-dg-cell> <ul class="list-unstyled mb-0"> <li *ngFor="let data of pending['planDates']">{{ data.approve_date | date: 'dd-MM-yyyy' }}</li> </ul>    </clr-dg-cell> -->
+    <clr-dg-cell>
+  {{ getTotalBatches(pending['total_batches']) }}
+</clr-dg-cell>
+    <!-- <clr-dg-cell> <ul class="list-unstyled mb-0"> <li *ngFor="let data of pending['total_batches']">{{ data.total_batches }}</li> </ul> </clr-dg-cell> -->
+    <!-- <clr-dg-cell> <ul class="list-unstyled mb-0"> <li *ngFor="let data of pending['startsDates']">{{ data.approved_date | date: 'dd-MM-yyyy' }}</li>  </ul> </clr-dg-cell> -->
+    <!-- <clr-dg-cell>{{ pending.po_date | date: 'dd-MM-yyyy' }}</clr-dg-cell> -->
+    <!-- <clr-dg-cell>--</clr-dg-cell> Placeholder for Production End Date -->
+    <clr-dg-cell> <button class="btn btn-sm btn-info" (click)="view(i)">Start Planning</button>  
+         <!-- <button class="btn btn-sm btn-info" (click)="viewMicro(i)">View Micro</button> -->
+         </clr-dg-cell>
+  </clr-dg-row>
+
+  <clr-dg-footer>
+    {{ pendingpo?.length }} record(s)
+  </clr-dg-footer>
+</clr-datagrid>
+
+<!-- Empty state message -->
+<div *ngIf="pendingpo?.length == 0" class="p-3 text-danger">
+  No Records Found!
+</div>
+   </div>
+        <button class="btn btn-success mb-2" (click)="exportExcel()">Download Excel</button>
+
+    </div>
+
+</div>
+
+
+<div class="card" *ngIf="isView &&!isViewMacro">
+    <span class="loader" *ngIf="isLoader"></span>
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Total Order Qty
+          </div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+               <button class="btn btn-sm btn-danger" routerLink="/planning">{{'common.close' | translate}}</button>
+          </div>
+      </div>
+  </div>
+  <div class="clr-row">
+    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+              <div class="card-block">
+                      <div class="card-text">
+                          <div class="clr-row">
+                            <table class="table table-bordered table-striped">
+                              <thead>
+                                <tr>
+                                  <th colspan="3">Orders</th>
+                                </tr>
+                                <tr>
+                                 <th style="text-align: left;">&#10004;</th>
+                                  <th style="text-align: left;">{{'common.quantity' | translate}}</th>
+                                  <th style="text-align: left;">Planning Start Date</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr *ngFor="let item of splits; let i = index">
+                                    <td style="text-align: left;" >
+                                      <clr-checkbox-wrapper *ngIf="item.batch_plan_id == 0">
+                                        <input type="checkbox" clrCheckbox [(ngModel)]="item.selected" name="selected{{i}}" (ngModelChange)="updateSelection()"  />
+                                      </clr-checkbox-wrapper>
+                                    </td>
+                                  <td style="text-align: left;">{{ item.Qty }}</td>
+                                  <td style="text-align: left;">{{ item.month }}-{{ item.year }}</td>
+
+                                </tr>
+                                <tr *ngIf="tableData?.length === 0">
+                                  <td colspan="4" style="text-align: center;">No Records Found</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                      </div>
+              </div>
+</div>
+<div class="clr-col-lg-9 clr-col-md-9 clr-col-sm-9 clr-col-xs-9">
+  <div class="card-block">
+      <form #batchForm="ngForm">
+          <div class="card-text">
+            <div class="card-block">
+              <div class="clr-row">
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Select MFR No :</label>
+                      <select name="mfr_no" [(ngModel)]="mfr_no" (change)="getBfrList($event.target.selectedIndex)">
+                          <option></option>
+                          <option *ngFor="let batch of mfr_list" [value]="batch.mfr_no">{{ batch.mfr_no }}</option>
+                      </select>
+                  </div>
+
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Select BFR No.:</label>
+                      <select name="bfr_no" [(ngModel)]="bfr_no"
+                          (change)="getRawMaterialsByBfrNo($event.target.selectedIndex)">
+                       <option></option>
+                          <option *ngFor="let batch of bfr_list;let i = index;" [value]="batch.bfr_no">{{ batch.bfr_no }} ({{
+                              batch.batch_formula_weight }})</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Plan For Market:<span style="color: red">*</span></label>
+                      <select name="plan_for_market" [(ngModel)]="plan_for_market"
+                          (change)="getPackingMaterialsByBfrNo($event.target.selectedIndex)" required>
+                          <option>Export</option>
+                          <option>Domestic</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="plan_for_market=='Domestic'">
+                      <label>Multipacking:</label>
+                      <select name="multi_packing" [(ngModel)]="multi_packing" required  (change)="getPackList($event.target.selectedIndex)">
+                          <option> </option>
+                          <option>Yes </option>
+                          <option>No</option>
+                      </select>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="plan_for_market=='Export'" (change)="getPackList($event.target.selectedIndex)">
+                      <label>Country Specific Packing:</label>
+                      <select name="country_specific" [(ngModel)]="country_specific" required>
+                          <option> </option>
+                          <option>Yes </option>
+                          <option>No</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf=" plan_for_market=='Export' && country_specific=='Yes' ">
+                      <label>Pack For Multiple Countries:</label>
+                      <select name="pack_multiple_countries" [(ngModel)]="pack_multiple_countries"
+                      required>
+                          <option> </option>
+                          <option>Yes </option>
+                          <option>No</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf=" multi_packing=='No'">
+                      <label>Packsize:</label>
+                      <select name="pack_size1" [(ngModel)]="pack_size1" required
+                          (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                          <option></option>
+                          <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">P-{{ cnt.pack_size }}{{ cnt.unit }}, B-{{cnt.batch_size}}
+                          </option>
+                      </select>
+
+                  </div>
+
+
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="plan_for_market=='Domestic' && multi_packing=='Yes' ">
+
+                      <div class="card">
+                          <div class="card-header" style="text-align: center">
+                              <div class="clr-row" style="margin-bottom: -10px;">
+                                  <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                      Domestic Multi Packing
+                                  </div>
+
+                              </div>
+                          </div>
+                          <div class="card-block">
+                              <div class="clr-row">
+                                  <form #cntForm="ngForm">
+                                      <div class="clr-row">
+                                          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <label>Packsize:</label>
+                                              <select name="pack_size1" [(ngModel)]="pack_size1" required
+                                              (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                                              <option></option>
+                                              <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">P-{{ cnt.pack_size }}{{ cnt.unit }}, B-{{cnt.batch_size}}
+                                              </option>
+                                          </select>
+
+                                          </div>
+
+                                          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <label>Packing Type:</label>
+                                              <select name="packing_type" [(ngModel)]="packing_type"
+                                              (change)="setBatchQty($event.target.selectedIndex)"  required>
+                                                  <option> </option>
+                                                  <option>Sale </option>
+                                                  <option>Sample(PS)</option>
+                                                  <option>Both</option>
+                                              </select>
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                              *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                                              <label>Sale Qty:</label>
+                                              <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()"
+                                                  [(ngModel)]="sale_qty" [readonly]="packing_type == 'Sale'"
+                                                  [max]="bfr_batch_size"
+                                                  required>
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                              *ngIf="packing_type=='Sample(PS)' || packing_type=='Both'">
+                                              <label>PS Qty:</label>
+                                              <input type="text" name="ps_qty" [(ngModel)]="ps_qty"
+                                              [max]="bfr_batch_size"
+                                                  [readonly]="packing_type=='Both' || is_both_types == 'Sample(PS)'">
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <button class="btn btn-success btn-sm" style="margin-top:20px" (click)="addCountry(cntForm)">Add
+                                              </button>
+                                          </div>
+                                      </div>
+                                  </form>
+                                  <table class="table table-border">
+                                      <tr>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              SL No
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Pack
+                                              Size</th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Packing Type</th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Sale
+                                              Qty</th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              PS
+                                              Qty</th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Action</th>
+                                      </tr>
+                                      <tr *ngFor="let result of country_configuration; let i = index">
+                                          <td style="text-align: left;">{{ i+1 }}</td>
+
+                                          <td style="text-align: left;">{{ result.packs1234 }}</td>
+                                          <td style="text-align: left;">{{ result.packing_type }}</td>
+                                          <td style="text-align: left;">{{ result.sale_qty }}</td>
+                                          <td style="text-align: left;" *ngIf="result.ps_qty!=''">{{ result.ps_qty }}</td>
+                                          <td style="text-align: left;" *ngIf="result.ps_qty==''">NA</td>
+                                          <td style="text-align: center;">
+                                              <clr-icon shape="trash" class="is-error" (click)="deleteCountry(i)">
+                                              </clr-icon>
+                                          </td>
+                                      </tr>
+                                      <tr *ngIf="country_configuration?.length == 0">
+                                          <td colspan="7">No. Records Found</td>
+                                      </tr>
+                                  </table>
+
+
+                              </div>
+                          </div>
+                      </div>
+
+                  </div>
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="plan_for_market=='Export' && pack_multiple_countries=='Yes'">
+
+                      <div class="card">
+                          <div class="card-header" style="text-align: center">
+                              <div class="clr-row" style="margin-bottom: -10px;">
+                                  <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                      Country Wise Packing Material Planing
+                                  </div>
+
+                              </div>
+                          </div>
+                          <div class="card-block">
+                              <div class="clr-row">
+                                  <form #cntForm="ngForm">
+                                      <div class="clr-row">
+                                          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <label>Country Name:</label>
+
+                                              <select name="country_name" [(ngModel)]="country_name" required>
+                                                  <option value="Afganistan">Afghanistan</option>
+                                                  <option value="Albania">Albania</option>
+                                                  <option value="Algeria">Algeria</option>
+                                                  <option value="American Samoa">American Samoa</option>
+                                                  <option value="Andorra">Andorra</option>
+                                                  <option value="Angola">Angola</option>
+                                                  <option value="Anguilla">Anguilla</option>
+                                                  <option value="Antigua & Barbuda">Antigua & Barbuda</option>
+                                                  <option value="Argentina">Argentina</option>
+                                                  <option value="Armenia">Armenia</option>
+                                                  <option value="Aruba">Aruba</option>
+                                                  <option value="Australia">Australia</option>
+                                                  <option value="Austria">Austria</option>
+                                                  <option value="Azerbaijan">Azerbaijan</option>
+                                                  <option value="Bahamas">Bahamas</option>
+                                                  <option value="Bahrain">Bahrain</option>
+                                                  <option value="Bangladesh">Bangladesh</option>
+                                                  <option value="Barbados">Barbados</option>
+                                                  <option value="Belarus">Belarus</option>
+                                                  <option value="Belgium">Belgium</option>
+                                                  <option value="Belize">Belize</option>
+                                                  <option value="Benin">Benin</option>
+                                                  <option value="Bermuda">Bermuda</option>
+                                                  <option value="Bhutan">Bhutan</option>
+                                                  <option value="Bolivia">Bolivia</option>
+                                                  <option value="Bonaire">Bonaire</option>
+                                                  <option value="Bosnia & Herzegovina">Bosnia & Herzegovina</option>
+                                                  <option value="Botswana">Botswana</option>
+                                                  <option value="Brazil">Brazil</option>
+                                                  <option value="British Indian Ocean Ter">British Indian Ocean Ter</option>
+                                                  <option value="Brunei">Brunei</option>
+                                                  <option value="Bulgaria">Bulgaria</option>
+                                                  <option value="Burkina Faso">Burkina Faso</option>
+                                                  <option value="Burundi">Burundi</option>
+                                                  <option value="Cambodia">Cambodia</option>
+                                                  <option value="Cameroon">Cameroon</option>
+                                                  <option value="Canada">Canada</option>
+                                                  <option value="Canary Islands">Canary Islands</option>
+                                                  <option value="Cape Verde">Cape Verde</option>
+                                                  <option value="Cayman Islands">Cayman Islands</option>
+                                                  <option value="Central African Republic">Central African Republic</option>
+                                                  <option value="Chad">Chad</option>
+                                                  <option value="Channel Islands">Channel Islands</option>
+                                                  <option value="Chile">Chile</option>
+                                                  <option value="China">China</option>
+                                                  <option value="Christmas Island">Christmas Island</option>
+                                                  <option value="Cocos Island">Cocos Island</option>
+                                                  <option value="Colombia">Colombia</option>
+                                                  <option value="Comoros">Comoros</option>
+                                                  <option value="Congo">Congo</option>
+                                                  <option value="Cook Islands">Cook Islands</option>
+                                                  <option value="Costa Rica">Costa Rica</option>
+                                                  <option value="Cote DIvoire">Cote DIvoire</option>
+                                                  <option value="Croatia">Croatia</option>
+                                                  <option value="Cuba">Cuba</option>
+                                                  <option value="Curaco">Curacao</option>
+                                                  <option value="Cyprus">Cyprus</option>
+                                                  <option value="Czech Republic">Czech Republic</option>
+                                                  <option value="Denmark">Denmark</option>
+                                                  <option value="Djibouti">Djibouti</option>
+                                                  <option value="Dominica">Dominica</option>
+                                                  <option value="Dominican Republic">Dominican Republic</option>
+                                                  <option value="East Timor">East Timor</option>
+                                                  <option value="Ecuador">Ecuador</option>
+                                                  <option value="Egypt">Egypt</option>
+                                                  <option value="El Salvador">El Salvador</option>
+                                                  <option value="Equatorial Guinea">Equatorial Guinea</option>
+                                                  <option value="Eritrea">Eritrea</option>
+                                                  <option value="Estonia">Estonia</option>
+                                                  <option value="Ethiopia">Ethiopia</option>
+                                                  <option value="Falkland Islands">Falkland Islands</option>
+                                                  <option value="Faroe Islands">Faroe Islands</option>
+                                                  <option value="Fiji">Fiji</option>
+                                                  <option value="Finland">Finland</option>
+                                                  <option value="France">France</option>
+                                                  <option value="French Guiana">French Guiana</option>
+                                                  <option value="French Polynesia">French Polynesia</option>
+                                                  <option value="French Southern Ter">French Southern Ter</option>
+                                                  <option value="Gabon">Gabon</option>
+                                                  <option value="Gambia">Gambia</option>
+                                                  <option value="Georgia">Georgia</option>
+                                                  <option value="Germany">Germany</option>
+                                                  <option value="Ghana">Ghana</option>
+                                                  <option value="Gibraltar">Gibraltar</option>
+                                                  <option value="Great Britain">Great Britain</option>
+                                                  <option value="Greece">Greece</option>
+                                                  <option value="Greenland">Greenland</option>
+                                                  <option value="Grenada">Grenada</option>
+                                                  <option value="Guadeloupe">Guadeloupe</option>
+                                                  <option value="Guam">Guam</option>
+                                                  <option value="Guatemala">Guatemala</option>
+                                                  <option value="Guinea">Guinea</option>
+                                                  <option value="Guyana">Guyana</option>
+                                                  <option value="Haiti">Haiti</option>
+                                                  <option value="Hawaii">Hawaii</option>
+                                                  <option value="Honduras">Honduras</option>
+                                                  <option value="Hong Kong">Hong Kong</option>
+                                                  <option value="Hungary">Hungary</option>
+                                                  <option value="Iceland">Iceland</option>
+                                                  <option value="Indonesia">Indonesia</option>
+                                                  <option value="India">India</option>
+                                                  <option value="Iran">Iran</option>
+                                                  <option value="Iraq">Iraq</option>
+                                                  <option value="Ireland">Ireland</option>
+                                                  <option value="Isle of Man">Isle of Man</option>
+                                                  <option value="Israel">Israel</option>
+                                                  <option value="Italy">Italy</option>
+                                                  <option value="Jamaica">Jamaica</option>
+                                                  <option value="Japan">Japan</option>
+                                                  <option value="Jordan">Jordan</option>
+                                                  <option value="Kazakhstan">Kazakhstan</option>
+                                                  <option value="Kenya">Kenya</option>
+                                                  <option value="Kiribati">Kiribati</option>
+                                                  <option value="Korea North">Korea North</option>
+                                                  <option value="Korea Sout">Korea South</option>
+                                                  <option value="Kuwait">Kuwait</option>
+                                                  <option value="Kyrgyzstan">Kyrgyzstan</option>
+                                                  <option value="Laos">Laos</option>
+                                                  <option value="Latvia">Latvia</option>
+                                                  <option value="Lebanon">Lebanon</option>
+                                                  <option value="Lesotho">Lesotho</option>
+                                                  <option value="Liberia">Liberia</option>
+                                                  <option value="Libya">Libya</option>
+                                                  <option value="Liechtenstein">Liechtenstein</option>
+                                                  <option value="Lithuania">Lithuania</option>
+                                                  <option value="Luxembourg">Luxembourg</option>
+                                                  <option value="Macau">Macau</option>
+                                                  <option value="Macedonia">Macedonia</option>
+                                                  <option value="Madagascar">Madagascar</option>
+                                                  <option value="Malaysia">Malaysia</option>
+                                                  <option value="Malawi">Malawi</option>
+                                                  <option value="Maldives">Maldives</option>
+                                                  <option value="Mali">Mali</option>
+                                                  <option value="Malta">Malta</option>
+                                                  <option value="Marshall Islands">Marshall Islands</option>
+                                                  <option value="Martinique">Martinique</option>
+                                                  <option value="Mauritania">Mauritania</option>
+                                                  <option value="Mauritius">Mauritius</option>
+                                                  <option value="Mayotte">Mayotte</option>
+                                                  <option value="Mexico">Mexico</option>
+                                                  <option value="Midway Islands">Midway Islands</option>
+                                                  <option value="Moldova">Moldova</option>
+                                                  <option value="Monaco">Monaco</option>
+                                                  <option value="Mongolia">Mongolia</option>
+                                                  <option value="Montserrat">Montserrat</option>
+                                                  <option value="Morocco">Morocco</option>
+                                                  <option value="Mozambique">Mozambique</option>
+                                                  <option value="Myanmar">Myanmar</option>
+                                                  <option value="Nambia">Nambia</option>
+                                                  <option value="Nauru">Nauru</option>
+                                                  <option value="Nepal">Nepal</option>
+                                                  <option value="Netherland Antilles">Netherland Antilles</option>
+                                                  <option value="Netherlands">Netherlands (Holland, Europe)</option>
+                                                  <option value="Nevis">Nevis</option>
+                                                  <option value="New Caledonia">New Caledonia</option>
+                                                  <option value="New Zealand">New Zealand</option>
+                                                  <option value="Nicaragua">Nicaragua</option>
+                                                  <option value="Niger">Niger</option>
+                                                  <option value="Nigeria">Nigeria</option>
+                                                  <option value="Niue">Niue</option>
+                                                  <option value="Norfolk Island">Norfolk Island</option>
+                                                  <option value="Norway">Norway</option>
+                                                  <option value="Oman">Oman</option>
+                                                  <option value="Pakistan">Pakistan</option>
+                                                  <option value="Palau Island">Palau Island</option>
+                                                  <option value="Palestine">Palestine</option>
+                                                  <option value="Panama">Panama</option>
+                                                  <option value="Papua New Guinea">Papua New Guinea</option>
+                                                  <option value="Paraguay">Paraguay</option>
+                                                  <option value="Peru">Peru</option>
+                                                  <option value="Phillipines">Philippines</option>
+                                                  <option value="Pitcairn Island">Pitcairn Island</option>
+                                                  <option value="Poland">Poland</option>
+                                                  <option value="Portugal">Portugal</option>
+                                                  <option value="Puerto Rico">Puerto Rico</option>
+                                                  <option value="Qatar">Qatar</option>
+                                                  <option value="Republic of Montenegro">Republic of Montenegro</option>
+                                                  <option value="Republic of Serbia">Republic of Serbia</option>
+                                                  <option value="Reunion">Reunion</option>
+                                                  <option value="Romania">Romania</option>
+                                                  <option value="Russia">Russia</option>
+                                                  <option value="Rwanda">Rwanda</option>
+                                                  <option value="St Barthelemy">St Barthelemy</option>
+                                                  <option value="St Eustatius">St Eustatius</option>
+                                                  <option value="St Helena">St Helena</option>
+                                                  <option value="St Kitts-Nevis">St Kitts-Nevis</option>
+                                                  <option value="St Lucia">St Lucia</option>
+                                                  <option value="St Maarten">St Maarten</option>
+                                                  <option value="St Pierre & Miquelon">St Pierre & Miquelon</option>
+                                                  <option value="St Vincent & Grenadines">St Vincent & Grenadines</option>
+                                                  <option value="Saipan">Saipan</option>
+                                                  <option value="Samoa">Samoa</option>
+                                                  <option value="Samoa American">Samoa American</option>
+                                                  <option value="San Marino">San Marino</option>
+                                                  <option value="Sao Tome & Principe">Sao Tome & Principe</option>
+                                                  <option value="Saudi Arabia">Saudi Arabia</option>
+                                                  <option value="Senegal">Senegal</option>
+                                                  <option value="Seychelles">Seychelles</option>
+                                                  <option value="Sierra Leone">Sierra Leone</option>
+                                                  <option value="Singapore">Singapore</option>
+                                                  <option value="Slovakia">Slovakia</option>
+                                                  <option value="Slovenia">Slovenia</option>
+                                                  <option value="Solomon Islands">Solomon Islands</option>
+                                                  <option value="Somalia">Somalia</option>
+                                                  <option value="South Africa">South Africa</option>
+                                                  <option value="Spain">Spain</option>
+                                                  <option value="Sri Lanka">Sri Lanka</option>
+                                                  <option value="Sudan">Sudan</option>
+                                                  <option value="Suriname">Suriname</option>
+                                                  <option value="Swaziland">Swaziland</option>
+                                                  <option value="Sweden">Sweden</option>
+                                                  <option value="Switzerland">Switzerland</option>
+                                                  <option value="Syria">Syria</option>
+                                                  <option value="Tahiti">Tahiti</option>
+                                                  <option value="Taiwan">Taiwan</option>
+                                                  <option value="Tajikistan">Tajikistan</option>
+                                                  <option value="Tanzania">Tanzania</option>
+                                                  <option value="Thailand">Thailand</option>
+                                                  <option value="Togo">Togo</option>
+                                                  <option value="Tokelau">Tokelau</option>
+                                                  <option value="Tonga">Tonga</option>
+                                                  <option value="Trinidad & Tobago">Trinidad & Tobago</option>
+                                                  <option value="Tunisia">Tunisia</option>
+                                                  <option value="Turkey">Turkey</option>
+                                                  <option value="Turkmenistan">Turkmenistan</option>
+                                                  <option value="Turks & Caicos Is">Turks & Caicos Is</option>
+                                                  <option value="Tuvalu">Tuvalu</option>
+                                                  <option value="Uganda">Uganda</option>
+                                                  <option value="United Kingdom">United Kingdom</option>
+                                                  <option value="Ukraine">Ukraine</option>
+                                                  <option value="United Arab Erimates">United Arab Emirates</option>
+                                                  <option value="United States of America">United States of America</option>
+                                                  <option value="Uraguay">Uruguay</option>
+                                                  <option value="Uzbekistan">Uzbekistan</option>
+                                                  <option value="Vanuatu">Vanuatu</option>
+                                                  <option value="Vatican City State">Vatican City State</option>
+                                                  <option value="Venezuela">Venezuela</option>
+                                                  <option value="Vietnam">Vietnam</option>
+                                                  <option value="Virgin Islands (Brit)">Virgin Islands (Brit)</option>
+                                                  <option value="Virgin Islands (USA)">Virgin Islands (USA)</option>
+                                                  <option value="Wake Island">Wake Island</option>
+                                                  <option value="Wallis & Futana Is">Wallis & Futana Is</option>
+                                                  <option value="Yemen">Yemen</option>
+                                                  <option value="Zaire">Zaire</option>
+                                                  <option value="Zambia">Zambia</option>
+                                                  <option value="Zimbabwe">Zimbabwe</option>
+                                              </select>
+                                          </div>
+                                          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <label>Packsize:</label>
+                                              <select name="pack_size" ngModel required
+                                              (change)="get_pack_size_by_mfrno1($event.target.selectedIndex)">
+                                                  <option></option>
+                                                  <option *ngFor="let cnt of Pack_Sizess;let i = index;" [value]="cnt.pack_size">{{
+                                                      cnt.pack_size
+                                                      }}
+                                                  </option>
+                                              </select>
+                                          </div>
+
+                                          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <label>Packing Type:</label>
+                                              <select name="packing_type" [(ngModel)]="packing_type"
+                                              (change)="setBatchQty($event.target.selectedIndex)"  required>
+                                                  <option> </option>
+                                                  <option>Sale </option>
+                                                  <option>Sample(PS)</option>
+                                                  <option>Both</option>
+                                              </select>
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                              *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                                              <label>Sale Qty:</label>
+                                              <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()"
+                                                  [(ngModel)]="sale_qty" [readonly]="packing_type == 'Sale'"
+                                                  [max]="bfr_batch_size"
+                                                  required>
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                              *ngIf="packing_type=='Sample(PS)' || packing_type=='Both'">
+                                              <label>PS Qty:</label>
+                                              <input type="text" name="ps_qty" [(ngModel)]="ps_qty"
+                                              [max]="bfr_batch_size"
+                                                  [readonly]="packing_type=='Both' || is_both_types == 'Sample(PS)'">
+                                          </div>
+                                          <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                              <button class="btn btn-success btn-sm" style="margin-top:20px" (click)="addCountry(cntForm)">Add
+                                              </button>
+                                          </div>
+                                      </div>
+                                  </form>
+                                  <table class="table table-border">
+                                      <tr>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              SL No
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Country
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Pack Size
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Packing Type
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Sale Qty
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              PS Qty
+                                          </th>
+                                          <th
+                                              style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                              Action
+                                          </th>
+                                      </tr>
+                                      <tr *ngFor="let result of country_configuration; let i = index">
+                                          <td style="text-align: left;">{{ i+1 }}</td>
+                                          <td style="text-align: left;">{{ result.country_name }}</td>
+                                          <td style="text-align: left;">{{ result.pack_size }}</td>
+                                          <td style="text-align: left;">{{ result.packing_type }}</td>
+                                          <td style="text-align: left;">{{ result.sale_qty }}</td>
+                                          <td style="text-align: left;">{{ result.ps_qty }}</td>
+                                          <td style="text-align: center;">
+                                              <clr-icon
+                                                  shape="trash" class="is-error" (click)="deleteCountry(i)">
+                                              </clr-icon>
+                                          </td>
+                                      </tr>
+                                      <tr *ngIf="country_configuration?.length == 0">
+                                          <td colspan="7">No. Records Found</td>
+                                      </tr>
+                                  </table>
+
+
+                              </div>
+                          </div>
+                      </div>
+
+                  </div>
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf=" pack_multiple_countries=='No' && plan_for_market!='Domestic' && (country_specific==='No'|| country_specific==='Yes')">
+                      <label> Pack Size:</label>
+
+                      <select name="pack_size1" [(ngModel)]="pack_size1" required
+                          (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                          <option></option>
+                          <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">P-{{ cnt.pack_size }}{{ cnt.unit }}, B-{{cnt.batch_size}}
+                          </option>
+                      </select>
+
+
+
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="pack_multiple_countries=='No'">
+                      <label>Packing Type:</label>
+                      <select name="packing_type" [(ngModel)]="packing_type" required>
+                          <option> </option>
+                          <option>Sale </option>
+                          <option>Sample(PS)</option>
+                          <option>Both</option>
+                      </select>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                      <label>Sale Qty:</label>
+                      <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()" [(ngModel)]="sale_qty">
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="packing_type=='>Sample(PS)' || packing_type=='Both'">
+                      <label>PS Qty:</label>
+                      <input type="text" name="ps_qty" [(ngModel)]="ps_qty" [readonly]="packing_type=='Both'">
+                  </div>
+
+
+
+                  <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                      <label>No Of Batches (Proposed) (Nos):</label>
+                      <input type="text" name="number_of_batches" [(ngModel)]="number_of_batches"  oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                          style="background-color:#1e8cc5; color:white" (input)="calculateBatchQty()" required readonly
+                         >
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                      <label>Total Quantity to Plan (Kg): </label>
+                      <input type="text" name="planned_qty" style="background-color:#1e8cc5; color:white"  oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                          [(ngModel)]="planned_qty" (input)="setNoOfBatches()" [readonly]="plan_type=='Batch Wise'"
+                          required>
+                  </div>
+                  <!-- <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                      <label>No of Batches can be planned</label>
+                      <input style="background-color:green; color:white" type="text" name="lowest_batch"
+                          [(ngModel)]="lowest_batch" readonly>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12" readonly>
+                      <label> Quantity Can be planned :</label>
+                      <input style="background-color:green; color:white" type="text" name="can_plan_qty"
+                          [(ngModel)]="can_plan_qty" readonly>
+                  </div> -->
+
+
+              </div>
+              </div>
+              <h3 style="margin-top: 5px;">Raw Materials:</h3>
+              <table class="table">
+                  <tr>
+                      <th>Sr.</th>
+                      <th>Material type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Unit Qty</th>
+
+                      <th>Batch Qty(kg)</th>
+                      <th>Plan Qty</th>
+                      <th>Available Stock</th>
+                      <th>No Of Batches Can Be Planed</th>
+                      <th>Short Qty</th>
+
+                  </tr>
+                  <tr *ngFor="let comp of raw_materials; let i = index">
+                      <td>{{ i + 1 }}.</td>
+                      <td>{{ comp.material_type }}</td>
+                      <td>{{ comp.material_Code }} {{ comp.material_code }}</td>
+                      <td>{{ comp.material_name1 }} {{ comp.material_name }} </td>
+                      <td>{{ comp.qty | number : '1.2-2' ||'qs' }} </td>
+                      <td>{{ comp.batch_qty  | number : '1.2-2'||'qs' }}</td>
+                      <td>{{ comp.plan_qty | number : '1.2-2'||'qs' }}</td>
+                      <td>{{ comp.avbl_stock | number : '1.2-2' }}</td>
+                      <td>{{ comp.can_plan_batches | number : '1.2-2' ||'qs' }}</td>
+                      <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                          comp.shortage_qty | number : '1.2-2' ||'qs' }}</td>
+                      <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty| number : '1.2-2'
+                        ||'qs' }}</td>
+
+                  </tr>
+
+              </table>
+
+<h3>Consumeable Material</h3>
+              <div>
+                <table class="table" >
+
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Material type</th>
+                        <th>Material Code</th>
+                        <th>Material Name</th>
+                        <th>Unit Qty</th>
+                        <th>Overages (%)</th>
+                        <th>Total Qty</th>
+                        <th>Batch Qty(kg)</th>
+                        <th>Plan Qty</th>
+                        <th>Available Stock</th>
+                        <th>No Of Batches Can Be Planed...</th>
+                        <th>Short Qty</th>
+
+                    </tr>
+                    <tr *ngFor="let comp of ConsumeableMaterial; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comp.material_type }}</td>
+                        <td>{{ comp.material_code }}</td>
+                        <td>{{ comp.material_name }}</td>
+                        <td>{{ comp.qty | number : '1.2-2'}} {{ comp.unit_name }}</td>
+                        <td>{{ comp.overages | number : '1.2-2'}}</td>
+                        <td>{{ comp.total_qty | number: '1.4-6' }}                        </td>
+                        <td>{{ comp.batch_qtyqqqq | number: '1.4-6'}}</td>
+                        <td>{{ comp.plan   | number: '1.4-6'}}</td>
+                        <td>{{ comp.avbl_stock | number: '1.4-6' || '00.00'}}</td>
+                        <td>{{ comp.can_plan_batches | number: '1.4-6'}}</td>
+                        <!-- <td>{{ comp.can_plan_batches | number: '1.4-6'}}</td>                         -->
+                        <td *ngIf="comp.avbl_stock-comp.plan >=0" style="color:green">{{
+                            comp.short_qt | number : '1.2-2' ||'qs' }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan <0" style="color:red">{{ comp.short_qt| number : '1.2-2'
+                          ||'qs' }}</td>
+
+
+
+                    </tr>
+
+                </table>
+                </div>
+<h3>Primary Packing Materials</h3>
+              <div>
+                <table class="table" >
+
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Material type</th>
+                        <th>Material Code</th>
+                        <th>Material Name</th>
+                        <th>Unit Qty</th>
+                        <th>Overages (%)</th>
+                        <th>Total Qty</th>
+                        <th>Batch Qty(kg)</th>
+                        <th>Plan Qty</th>
+                        <th>Available Stock</th>
+                        <th>No Of Batches Can Be Planed...</th>
+                        <th>Short Qty</th>
+
+                    </tr>
+                    <tr *ngFor="let comp of primaryPacking_materials; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comp.material_type }}</td>
+                        <td>{{ comp.material_code }}</td>
+                        <td>{{ comp.material_name }}</td>
+                        <td>{{ comp.qty | number : '1.2-2'}} {{ comp.unit_name }}</td>
+                        <td>{{ comp.overages | number : '1.2-2'}}</td>
+                        <td>{{ comp.total_qty | number: '1.4-6' }}                        </td>
+                        <td>{{ comp.batch_qtyqqqq | number: '1.4-6'}}</td>
+                        <td>{{ comp.plan   | number: '1.4-6'}}</td>
+                        <td>{{ comp.avbl_stock | number: '1.4-6' || '00.00'}}</td>
+                        <td>{{ comp.can_plan_batches | number: '1.4-6'}}</td>
+                        <!-- <td>{{ comp.can_plan_batches | number: '1.4-6'}}</td>                         -->
+                        <td *ngIf="comp.avbl_stock-comp.plan >=0" style="color:green">{{
+                            comp.short_qt | number : '1.2-2' ||'qs' }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan <0" style="color:red">{{ comp.short_qt| number : '1.2-2'
+                          ||'qs' }}</td>
+
+
+                    </tr>
+
+                </table>
+            </div>
+
+
+
+
+
+              <h3 style="margin-top: 5px;">Secondary Packing Materials:</h3>
+              <div *ngFor="let cnt of final_packing_materials_list; let i = index">
+                  <table style="width: 100%;">
+                      <tr style="background-color: maroon; color: white;font-weight: bold;">
+                          <td style="text-align: left;">Country Name:</td>
+                          <td style="text-align: left;"> {{cnt.country_name}}</td>
+
+                          <td style="text-align: left;">Pack Size</td>
+                          <td style="text-align: left;">{{cnt.pack_size}}</td>
+
+
+                          <td style="text-align: left;">Sale Type Type</td>
+                          <td style="text-align: left;">{{cnt.pack_type}}</td>
+
+                          <td style="text-align: left;">Batch Size</td>
+                          <td style="text-align: left;">{{cnt.batch_size}}</td>
+                      </tr>
+
+                  </table>
+                  <table class="table">
+
+                      <tr>
+                          <th>Sr.</th>
+                          <th>Material type</th>
+                          <th>Material Code</th>
+                          <th>Material Name</th>
+                          <th>Unit Qty</th>
+                          <th>Overages (%)</th>
+                          <th>Total Qty</th>
+                          <th>Batch Qty(kg)</th>
+                          <th>Plan Qty</th>
+                          <th>Available Stock</th>
+                          <th>No Of Batches Can Be Planed.</th>
+                          <th>Short Qty</th>
+
+                      </tr>
+                      <tr *ngFor="let comp of countries1; let i = index">
+                          <td>{{ i + 1 }}.</td>
+                          <td>{{ comp.material_subtype }}</td>
+                          <td>{{ comp.material_code }}</td>
+                          <td>{{ comp.material_name }}</td>
+                          <td>{{ comp.qty }} {{ comp.unit_name }}</td>
+                          <td>{{ comp.overages }}</td>
+                          <td>{{ comp.total_qty }}</td>
+                          <td>{{ comp.batch_qty }}</td>
+                          <td>{{ comp.plan_qty }}</td>
+                          <td>{{ comp.avbl_stock || '00.00' }}</td>
+                          <!-- <td>{{ comp.avbl_stock / comp.batch_qty }}</td> -->
+                          <td>{{ comp.can_plan_batches.toFixed(2) }}</td>
+
+                          <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                              comp.shortage_qty }}</td>
+                          <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                              }}</td>
+
+                      </tr>
+
+                  </table>
+              </div>
+              <div *ngIf="multi_packing === 'Yes' || pack_multiple_countries === 'Yes'">
+              <table class="table" *ngFor="let comps of country_configuration; let i = index">
+
+                  <tr>
+                      <th>Sr.</th>
+                      <th>Material type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Unit Qty</th>
+                      <th>Overages (%)</th>
+                      <th>Total Qty</th>
+                      <th>Batch Qty(kg)</th>
+                      <th>Plan Qty</th>
+                      <th>Available Stock</th>
+                      <th>No Of Batches Can Be Planed..</th>
+                      <th>Short Qty</th>
+
+                  </tr>
+                  <tr *ngFor="let comp of comps.packs; let i = index">
+                      <td>{{ i + 1 }}.</td>
+                      <td>{{ comp.material_subtype }}</td>
+                      <td>{{ comp.material_code }}</td>
+                      <td>{{ comp.material_name }}</td>
+                      <td>{{ comp.qty | number : '1.2-2'}} {{ comp.unit_name }}</td>
+                      <td>{{ comp.pm_overages | number : '1.2-2'}}</td>
+                      <td>{{ comp.total_qty | number : '1.2-2' }}</td>
+                      <td>{{ comp.batch_qtyqqqq | number : '1.2-2'}}</td>
+                      <td>{{ comp.plan | number : '1.2-2'}}</td>
+                      <td>{{ comp.balance_qty  | number : '1.2-2' || '00.00'}}</td>
+                      <td>{{ comp.can_plan | number : '1.2-2'}}</td>
+                      <td>{{ comp.can_plan_batches?.toFixed(2) }}</td>
+                      <td *ngIf="comp.short_qt !== undefined && comp.short_qt >= 0" style="color: green">{{ comp.short_qt | number : '1.2-2'}}</td>
+                      <td *ngIf="comp.short_qt !== undefined && comp.short_qt < 0" style="color: red">{{ comp.short_qt | number : '1.2-2'}}</td>
+                  </tr>
+
+              </table>
+          </div>
+              <div *ngIf="pack_multiple_countries == 'No'">
+
+              <table class="table"   >
+
+                  <tr>
+                      <th>Sr.</th>
+                      <th>Material type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Unit Qty</th>
+                      <th>Overages (%)</th>
+                      <th>Total Qty</th>
+                      <th>Batch Qty(kg)</th>
+                      <th>Plan Qty</th>
+                      <th>Available Stock</th>
+                      <th>No Of Batches Can Be Planed..</th>
+                      <th>Short Qty</th>
+
+                  </tr>
+                  <tr *ngFor="let comp of  packs; let i = index">
+                      <td>{{ i + 1 }}.</td>
+                      <td>{{ comp.material_subtype }}</td>
+                      <td>{{ comp.material_code }}</td>
+                      <td>{{ comp.material_name }}</td>
+                      <td>{{ comp.qty  | number : '1.2-2'}} {{ comp.unit_name }}</td>
+                      <td>{{ comp.pm_overages  | number : '1.2-2'}}</td>
+                      <td>{{ comp.total_qty  | number : '1.2-2'}}</td>
+                      <td>{{ comp.batch_qtyqqqq  | number : '1.2-2'}}</td>
+                      <td>{{ comp.plan  | number : '1.2-2'}}</td>
+                      <td>{{ comp.balance_qty  | number : '1.2-2' || '00.00'}}</td>
+                      <td>{{ comp.can_plan  | number : '1.2-2'}}</td>
+                      <!-- <td>{{ comp.can_plan_batches?.toFixed(2) }}</td>                         -->
+                      <td *ngIf="comp.short_qt !== undefined && comp.short_qt >= 0" style="color: green">{{ comp.short_qt }}</td>
+                      <td *ngIf="comp.short_qt !== undefined && comp.short_qt < 0" style="color: red">{{ comp.short_qt }}</td>
+                  </tr>
+
+              </table>
+          </div>
+              <div *ngIf="plan_for_market=='Domestic'&& multi_packing=='No'">
+              <table class="table" >
+
+                  <tr>
+                      <th>Sr.</th>
+                      <th>Material type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Unit Qty</th>
+                      <th>Overages (%)</th>
+                      <th>Total Qty</th>
+                      <th>Batch Qty(kg)</th>
+                      <th>Plan Qty</th>
+                      <th>Available Stock</th>
+                      <th>No Of Batches Can Be Planed...</th>
+                      <th>Short Qty</th>
+
+                  </tr>
+                  <tr *ngFor="let comp of packs; let i = index">
+                      <td>{{ i + 1 }}.</td>
+                      <td>{{ comp.material_subtype }}</td>
+                      <td>{{ comp.material_code }}</td>
+                      <td>{{ comp.material_name }}</td>
+                      <td>{{ comp.qty | number : '1.2-2'}} {{ comp.unit_name }}</td>
+                      <td>{{ comp.pm_overages | number : '1.2-2'}}</td>
+                      <td>{{ comp.total_qty | number: '1.4-6' }}                        </td>
+                      <td>{{ comp.batch_qtyqqqq | number: '1.4-6'}}</td>
+                      <td>{{ comp.plan   | number: '1.4-6'}}</td>
+                      <td>{{ comp.balance_qty | number: '1.4-6' || '00.00'}}</td>
+                      <td>{{ comp.can_plan | number: '1.4-6'}}</td>
+                      <!-- <td>{{ comp.can_plan_batches | number: '1.4-6'}}</td>                         -->
+                      <td>{{comp.short_qt | number: '1.4-6'}}</td>
+
+
+                  </tr>
+
+              </table>
+          </div>
+
+
+          </div>
+      
+
+      </form>
+  </div>
+</div>
+  </div>
+  <div class="card-footer">
+      <button class="btn btn-primary" style="background-color:#1e8cc5; color:white"
+          (click)="saveBatchPlan(batchForm,'Proposed Qty')">Proceed For Planning</button>
+
+  </div>
+
+</div>
+<div class="card" *ngIf="isViewMacro && !isView">
+    <span class="loader" *ngIf="isLoader"></span>
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> 
+          </div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+               <button class="btn btn-sm btn-danger" routerLink="/mrp">{{'common.close' | translate}}</button>
+          </div>
+      </div>
+  </div>
+  <div class="clr-row">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <div class="card-block">
+                      <div class="card-text">
+                           <clr-datagrid >
+                            <clr-dg-column>Sr. No.</clr-dg-column>                             
+                            <clr-dg-column>Batch Number</clr-dg-column>
+                            <clr-dg-column>Planning Date</clr-dg-column>
+                            <clr-dg-column>Forecast WorkOrder Date.</clr-dg-column>
+                            <clr-dg-column>Actual WorkOrder Date.</clr-dg-column>
+                            <clr-dg-column>Forecast Batch Approval Date.</clr-dg-column>
+                            <clr-dg-column>Actual Batch Approval Date.</clr-dg-column>
+                            <clr-dg-column>Forecast LineClearance Date.</clr-dg-column>
+                            <clr-dg-column>Forecast LineClearance Date.</clr-dg-column>
+                            <clr-dg-column>Actual Dispensing Date.</clr-dg-column>
+                            <clr-dg-column>Actual Dispensing Date.</clr-dg-column>
+                            <clr-dg-column>Forecast Production Date.</clr-dg-column>
+                            <clr-dg-column>Actual Production Date.</clr-dg-column>
+                            <clr-dg-column>Forecast Packing Date.</clr-dg-column>
+                            <clr-dg-column>Actual Packing Date.</clr-dg-column>
+                            <clr-dg-column>Forecast FG Transfer Date.</clr-dg-column>
+                            <clr-dg-column>Actual FG Transfer Date.</clr-dg-column>
+                            <clr-dg-column>Forecast Dispatch Date.</clr-dg-column>
+                            <clr-dg-column>Actual Dispatch Date.</clr-dg-column>
+                                         
+                            
+
+                            <clr-dg-row *ngFor="let Data of selectresult['batch_details']; let i = index">
+                                <clr-dg-cell>{{ i + 1 }} <clr-icon shape="eye" (click)="openModal(i)"></clr-icon></clr-dg-cell>
+                                <clr-dg-cell>{{Data.batch_number  || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_planning_date |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_work_orderDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_work_orderDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_batchApprovalDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_batchApprovalDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_LineClearanceDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_LineClearanceDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_DispensingDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_DispensingDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Actual_DispensingDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_productionDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell> </clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_PackingDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell> </clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_FgTransferDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                                <clr-dg-cell> </clr-dg-cell>
+                                <clr-dg-cell>{{Data.Forecast_DispatchDate |  date:'dd-MM-yyyy' || 'NA'}}</clr-dg-cell>
+                            </clr-dg-row>
+                            <clr-dg-footer>
+                                {{ pendingpo?.length }} record(s)
+                            </clr-dg-footer>
+                            </clr-datagrid>   
+                        
+
+                         
+                      </div>
+              </div>
+</div>
+ 
+  </div>
+  <div class="card-footer">
+     
+
+  </div>
+
+</div>
+
+<clr-modal [(clrModalOpen)]="modalOpen" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Map Satges</h3>
+  <div class="modal-body">
+    <form #StagesForm="ngForm">
+    <table class="table">
+        <tr>
+            <th>Sr. No.</th>
+            <th>Stage</th>
+            <th>Equipment</th>
+            <th>Equipment Code</th>
+            <th>Performed By</th>
+            <th>Result</th>
+        </tr>
+        <tr *ngFor="let data of stages;let i = index">
+            <td>{{i+1}}</td>
+            <td>{{data.stage}}</td>
+            <td>{{data.Equipment}}</td>
+            <td>{{data.equipment_code}}</td>
+            <td>{{data.performed_by}}</td>
+            <td>{{data.result}}</td>
+        </tr>
+         <tr>
+            <td>#</td>
+            <td><select ngModel name="stages" >
+                <option ></option>
+                <option *ngFor="let data of selectresult['stages']">{{data.stages}}</option>
+            </select></td>
+            <td><select ngModel name="Equipment" (change)="get_equipment_code_by_equipment($event.target.selectedIndex)">
+                <option ></option>
+                <option *ngFor="let data of Equipments;let i = index">{{data.equipment_name}}</option>
+            </select></td>
+          
+            <td>
+                <input type="text" name="equipment_code" [(ngModel)]="selectedEquipments['equipment_code']" readonly> 
+            </td>
+            <td>
+                <input type="text" name="performed_by" [(ngModel)]="performed_by">
+            </td>
+            <td>
+                <select name="result" [(ngModel)]="result">
+                    <option ></option>
+                    <option>Pass</option>
+                    <option>Fail</option>
+                </select>
+            </td>
+         </tr>
+    </table>
+</form>
+
+
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" (click)="modalOpen = false">{{'common.cancel' | translate}}</button>
+    <button class="btn btn-primary" (click)="SubmitStages(StagesForm)">{{'common.submit' | translate}}</button>
+  </div>
+</clr-modal>

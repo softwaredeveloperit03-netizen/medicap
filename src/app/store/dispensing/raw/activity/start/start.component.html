@@ -1,0 +1,277 @@
+﻿<div class="card recv-page disp-start-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Line Clearance</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/dispensing/raw/activity">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+
+  <div class="card-block">
+    <div class="card-text">
+      <div class="disp-start__grid">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column class="disp-start__col-sr">Sr No.</clr-dg-column>
+          <clr-dg-column>Date</clr-dg-column>
+          <clr-dg-column clrDgField="plan_no">Plan No</clr-dg-column>
+          <clr-dg-column clrDgField="bfr_no">BFR For</clr-dg-column>
+          <clr-dg-column clrDgField="mfr_no">MFR No</clr-dg-column>
+          <clr-dg-column clrDgField="product_name">Product Name</clr-dg-column>
+          <clr-dg-column clrDgField="batch_number">Batch/Lot No.</clr-dg-column>
+          <clr-dg-column clrDgField="product_code">Product Code</clr-dg-column>
+          <clr-dg-column clrDgField="batch_size">Batch Size</clr-dg-column>
+          <clr-dg-column clrDgField="store_status_entry_by">Request By</clr-dg-column>
+          <clr-dg-column clrDgField="store_lc_status">Line Clearance</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result">
+            <clr-dg-cell class="disp-start__cell-center">{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.store_status_entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__mono">{{ result.plan_no }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__mono">{{ result.bfr_no }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__mono">{{ result.mfr_no }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__product" [title]="result.product_name">{{ result.product_name }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__mono">{{ result.batch_number }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="disp-start__mono">{{ result.product_code }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell class="disp-start__cell-center">{{ result.batch_size }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.store_status_entry_by }}</clr-dg-cell>
+            <clr-dg-cell class="disp-start__cell-center">
+              <span class="disp-start__badge" [ngClass]="lcStatusClass(result.store_lc_status)">
+                {{ result.store_lc_status || '—' }}
+              </span>
+            </clr-dg-cell>
+            <clr-dg-cell class="disp-start__cell-center">
+              <button
+                class="btn btn-sm disp-start__proceed-btn"
+                type="button"
+                (click)="view(result)"
+                title="Proceed with line clearance"
+              >
+                <clr-icon shape="play" class="is-solid"></clr-icon>
+                PROCEED
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>No line clearance requests found.</clr-dg-placeholder>
+
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Rows per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} results
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card recv-page disp-start-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Details</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+
+  <div class="card-block disp-start__detail-body">
+    <h3 class="disp-start__section-title">Product Details</h3>
+    <div class="disp-start__table-wrap">
+      <table class="table table-border disp-start__detail-table">
+        <tbody>
+          <tr>
+            <th>Product Name</th>
+            <td>{{ selectedResult['product_name'] }}</td>
+            <th>Batch/LOT No.</th>
+            <td>{{ selectedResult['batch_number'] }}</td>
+          </tr>
+          <tr>
+            <th>Grade</th>
+            <td>{{ selectedResult['grade'] }}</td>
+            <th>Batch Size/LOT Size</th>
+            <td>{{ selectedResult['batch_size'] }}</td>
+          </tr>
+          <tr>
+            <th>BFR No.</th>
+            <td>{{ selectedResult['bfr_no'] }}</td>
+            <th>MFR No.</th>
+            <td>{{ selectedResult['mfr_no'] }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="disp-start__section-title">Checklist</h3>
+    <form #checkList="ngForm">
+      <div class="disp-start__table-wrap">
+        <table class="table table-border disp-start__checklist-table">
+          <thead>
+            <tr>
+              <th class="disp-start__col-sr">{{ 'common.table.srNo' | translate }}</th>
+              <th class="disp-start__col-param">Parameters</th>
+              <th class="disp-start__col-remark">{{ 'common.remarks' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hr of checkPointData; let i = index">
+              <td class="disp-start__cell-center">{{ i + 1 }}.</td>
+              <td class="disp-start__param-cell">{{ hr.check_point }}</td>
+              <td *ngIf="po_status != 'Reject / Return' || po_status == 'Rejected'">
+                <input
+                  *ngIf="hr.evl_pr == '1'"
+                  type="text"
+                  min="0"
+                  name="check_{{ i }}"
+                  [(ngModel)]="hr.check"
+                  required
+                  class="disp-start__control"
+                  placeholder="Enter value"
+                />
+
+                <select
+                  *ngIf="hr.evl_pr != '1'"
+                  name="check_{{ i }}"
+                  [(ngModel)]="hr.check"
+                  required
+                  class="disp-start__control"
+                >
+                  <option value="">Select</option>
+                  <option *ngIf="hr.evl_pr == '2'">Yes</option>
+                  <option *ngIf="hr.evl_pr == '2'">No</option>
+                  <option *ngIf="hr.evl_pr == '3'">OK</option>
+                  <option *ngIf="hr.evl_pr == '3'">Not Ok</option>
+                  <option *ngIf="hr.evl_pr == '4'">Satisfactory</option>
+                  <option *ngIf="hr.evl_pr == '4'">Not Satisfactory</option>
+                  <option *ngIf="hr.evl_pr == '5'">Applicable</option>
+                  <option *ngIf="hr.evl_pr == '5'">Not Applicable</option>
+                  <option *ngIf="hr.evl_pr == '6'">Cleaned</option>
+                  <option *ngIf="hr.evl_pr == '6'">Not Cleaned</option>
+                  <option *ngIf="hr.evl_pr == '7'">Sealed</option>
+                  <option *ngIf="hr.evl_pr == '7'">Unsealed</option>
+                  <option *ngIf="hr.evl_pr == '8'">Verified</option>
+                  <option *ngIf="hr.evl_pr == '8'">Not Verfied</option>
+                  <option *ngIf="hr.evl_pr == '9'">Covered</option>
+                  <option *ngIf="hr.evl_pr == '9'">Uncovered</option>
+                  <option>NA</option>
+                </select>
+              </td>
+            </tr>
+            <tr *ngIf="!checkPointData?.length">
+              <td colspan="3" class="disp-start__empty-cell">No checklist parameters configured.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+    <form #dispensingData="ngForm">
+      <h3 class="disp-start__section-title">Line Clearance</h3>
+      <div class="clr-row disp-start__form-row">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+          <label>Balance</label>
+          <select name="balance_eqip_code" [(ngModel)]="balance_eqip_code" required class="disp-start__control">
+            <option value="">Select Balance</option>
+            <option *ngFor="let unit of equipments" [value]="unit.equipment_code">{{ unit.equipment_name }}</option>
+          </select>
+        </div>
+
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" *ngIf="plant_id != '67'">
+          <label>LAF ID</label>
+          <select name="laf_eqip_code" [(ngModel)]="laf_eqip_code" required class="disp-start__control">
+            <option value="">Select LAF</option>
+            <option *ngFor="let unit1 of laf_equipments" [value]="unit1.equipment_code">{{ unit1.equipment_name }}</option>
+          </select>
+        </div>
+
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" *ngIf="plant_id != '67'">
+          <label>Pressure Differential Reading</label>
+          <input
+            type="number"
+            name="pleasure_diff_reading"
+            [(ngModel)]="pleasure_diff_reading"
+            required
+            class="disp-start__control"
+          />
+        </div>
+
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+          <label>Line Clearance Type</label>
+          <select
+            name="line_clearance_type"
+            [(ngModel)]="line_clearance_type"
+            required
+            class="disp-start__control"
+            (change)="getChecklist($event.target.selectedIndex)"
+          >
+            <option value="">Select Type</option>
+            <option>Batch to Batch</option>
+            <option>Product To Product</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="disp-start__sub-card">
+        <div class="disp-start__sub-card-title">Previous Product Details</div>
+        <div class="clr-row disp-start__form-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+            <label>Product Name</label>
+            <input type="text" name="product_name" [(ngModel)]="prevdate.product_name" readonly class="disp-start__control" />
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+            <label>Batch Number</label>
+            <input type="text" name="batch_number" [(ngModel)]="prevdate.batch_number" readonly class="disp-start__control" />
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12" *ngIf="plant_id != '67'">
+            <label>Date Of Cleaning</label>
+            <input type="text" name="date_of_cleaning" [(ngModel)]="prevdate.date_of_cleaning" readonly class="disp-start__control" />
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12" *ngIf="plant_id != '67'">
+            <label>Cleaned By</label>
+            <input type="text" name="cleaned_by" [(ngModel)]="prevdate.cleaned_by" readonly class="disp-start__control" />
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12" *ngIf="plant_id != '67'">
+            <label>Checked By</label>
+            <input type="text" name="checked_by" [(ngModel)]="prevdate.checked_by" readonly class="disp-start__control" />
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-row disp-start__form-row">
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+          <label>Line Clearance Remarks</label>
+          <input
+            type="text"
+            name="line_clearance_remarks"
+            [(ngModel)]="line_clearance_remarks"
+            required
+            class="disp-start__control"
+            placeholder="Enter remarks"
+          />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card-footer store-page__footer disp-start__footer">
+    <button class="btn btn-primary disp-start__save-btn" type="button" (click)="startRLAF(dispensingData)">
+      <clr-icon shape="check" class="is-solid"></clr-icon>
+      Save
+    </button>
+    <button class="btn disp-start__close-btn" type="button" (click)="isView = false">
+      <clr-icon shape="window-close" class="is-solid"></clr-icon>
+      Close
+    </button>
+  </div>
+</div>

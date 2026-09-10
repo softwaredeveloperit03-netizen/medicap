@@ -1,0 +1,226 @@
+﻿<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Ne w Bulk Order</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/dispatch/sales/own">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+                <table class="table" style="border:solid rgb(14, 67, 112) 1px ;">
+                    <tr>
+                        <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill TO</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;color: rgb(14, 67, 112);">Legal Name</td>
+                        <td style="text-align: left;padding: 0%;" colspan="3">
+                            <select name="client_code" [(ngModel)]="client_code" (change)="getBranch($event.target.selectedIndex)"  required>
+                                <option></option>
+                                <option *ngFor="let res of clients" [value]="res.client_code">{{ res.LglNm }}</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;color: rgb(14, 67, 112);">Address1:</td>
+                        <td style="text-align: left;">{{ clientsData['c_address'] }}</td>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Address2:</td>
+                        <td style="text-align: left;">{{ clientsData['cr_address'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">GSTIN:</td>
+                        <td style="text-align: left;">{{ clientsData['gst_no'] }}</td>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Place:</td>
+                        <td style="text-align: left;">{{ clientsData['Loc'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+                        <td style="text-align: left;">{{ clientsData['c_permanent_state'] }}</td>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                        <td style="text-align: left;">{{ clientsData['c_pincode'] }}</td>
+                    </tr>
+                </table>
+                <div class="clr-row"style="margin-top:10px;">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label>Branch Name:</label>
+                        <select name="branch" [(ngModel)]="branch" required (change)="selectBranch($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let res of branches" [value]="res.branch_name">{{ res.branch_name }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div *ngIf="selectedBranch?.length !== 0">
+                    <table class="table">
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Type:</td>
+                            <td style="text-align: left;">{{ selectedBranch['client_type'] }}</td>
+                        </tr>
+                    </table>
+                    <br>
+                </div>
+                <form #mode="ngForm">
+                   <div class="clr-row">  
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Payment Mode:</label>
+                            <select name="pay_mode" ngModel required>
+                                <option>Cash</option>
+                                <option>Credit</option>
+                                <option>Cash / Credit</option>
+                                <option>As per PO Term</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label> PO NO:</label>
+                            <input type="text" name="po_no" ngModel required>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label> PO Date:</label>
+                            <input type="date" name="po_date"ngModel required >
+                        </div>
+                    </div>
+                </form>
+                <form #materialForm="ngForm">
+                    <div class="clr-col-lg-12" style="overflow-x: auto;overflow-y:auto;" *ngIf="clientsData['gst_type'] == 'GST'">
+                        <table class="table">
+                            <tr>
+                                <th>Sr.</th>
+                                <th style="text-align: left;">Product Name</th>
+                                <th>Product Code</th>
+                                <th>Medicap Lot No</th>
+                                <th>Qty</th>
+                                <th>Free Qty</th>
+                                <th>Disc%</th>
+                                <th>Rate</th>
+                                <th style="text-align: right;">GST%</th>
+                                <th style="text-align: right;">Gross</th>
+                                <th style="text-align: right;">Disc</th>
+                                <th style="text-align: right;">Taxable</th>
+                                <th>CGST</th>
+                                <th>SGST</th>
+                                <th>Other Charge</th>
+                                <th style="text-align: right;">Net</th>
+                            </tr>
+                            <tr *ngFor="let list of materials; let i = index">
+                                <td>
+                                    <input type="checkbox" name="check"  (change)="onChange($event.target.checked, i)">
+                                </td>
+                                <td style="text-align: left;">{{ list.product_name }}</td>
+                                <td>{{ list.product_code }}</td>
+                                <td style="margin: 0px; padding:0px; width: 80px;">
+                                        <select style="margin: 0px !important;"  (change)="getBatch($event.target.selectedIndex)"  required>
+                                            <option *ngFor="let batch of list.batches" >{{batch.batch_no}}              
+                                            </option>
+                                        </select> 
+                                </td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="purchase_qty{{i}}" [(ngModel)]="list.purchase_qty" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px; width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="f_qty{{i}}" [(ngModel)]="list.f_qty" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px; width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="disc{{i}}" [(ngModel)]="list.disc_per" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="rate{{i}}" [(ngModel)]="list.sale_rate" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td style="text-align: right;">{{ list.gst }}</td>
+                                <td style="text-align: right;">{{ list.gross_total }}</td>
+                                <td style="text-align: right;">{{ list.disc_total }}</td>
+                                <td style="text-align: right;">{{ list.taxable }}</td>
+                                <td style="text-align: right;">{{list.Cgst_amt }}</td>
+                                <td style="text-align: right;">{{list.Sgst_amt }}</td>
+                                <td *ngIf="list.selected == false"></td>
+                             <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="OthChrg{{i}}" [(ngModel)]="list.other_charge" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td style="text-align: right;">{{ list.net_total }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length !== 0">
+                                <td colspan="10" style="text-align: right;">Total:</td>
+                                <td style="text-align: right;">{{ gross_total }}</td>
+                                <td style="text-align: right;">{{ disc_total }}</td>
+                                <td style="text-align: right;">{{ igst_amt }}</td>  
+                                <td style="text-align: right;">{{ other_charge_amt }}</td>
+                                <td style="text-align: right;">{{ net_total }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length !== 0">
+                                <td colspan="10" style="text-align: right;">RndOffAmt:</td> 
+                                <td>{{ RndOffAmt }}</td>
+                                <td style="text-align: right;">Total:</td>
+                                <td colspan="3" style="text-align: right;font-weight: 600;">{{ TotInvVal }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length == 0">
+                                <td colspan="9">No Record Found!</td>
+                            </tr>  
+                        </table>
+                    </div>
+                    <div class="clr-col-lg-12" style="overflow-x: auto;overflow-y:auto;" *ngIf="clientsData['gst_type'] == 'IGST'">
+                        <table class="table">
+                            <tr>
+                                <th>Sr.</th>
+                                <th style="text-align: left;">Product Name</th>
+                                <th>Product Code</th>
+                                <th>Medicap Lot No</th>
+                                <th>Qty</th>
+                                <th>Free Qty</th>
+                                <th>Disc%</th>
+                                <th>Rate</th>
+                                <th style="text-align: right;">GST%</th>
+                                <th style="text-align: right;">Gross</th>
+                                <th style="text-align: right;">Disc</th>
+                                <th style="text-align: right;">Taxable</th>
+                                <th>IGST</th>
+                                <th>Other Charge</th>
+                                <th style="text-align: right;">Net</th>
+                            </tr>
+                            <tr *ngFor="let list of materials; let i = index">
+                                <td>
+                                    <input type="checkbox" name="check" (change)="onChange($event.target.checked, i)">
+                                </td>
+                                <td style="text-align: left;">{{list.product_name}}</td>
+                                <td>{{ list.product_code }}</td>
+                                <td style="margin: 0px; padding:0px; width: 80px;">
+                                    <select style="padding : 0px !important;"  (change)="getBatch($event.target.selectedIndex)"  required>
+                                        <option *ngFor="let batch of list['batches']" >{{batch.batch_no}}
+                                        </option>
+                                    </select>
+                                </td> 
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="purchase_qty{{i}}" [(ngModel)]="list.purchase_qty" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px; width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="f_qty{{i}}" [(ngModel)]="list.f_qty" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px; width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="disc{{i}}" [(ngModel)]="list.disc_per" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="rate{{i}}" [(ngModel)]="list.sale_rate" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td style="text-align: right;">{{ list.gst }}</td>
+                                <td style="text-align: right;">{{ list.gross_total }}</td>
+                                <td style="text-align: right;">{{ list.disc_total }}</td>
+                                <td style="text-align: right;">{{ list.taxable }}</td>
+                                <td style="text-align: right;">{{list.Igst_amt }}</td>
+                                <td *ngIf="list.selected == false"></td>
+                                <td *ngIf="list.selected == true" style="padding: 0px;"><input type="text" name="OthChrg{{i}}" [(ngModel)]="list.other_charge" (keyup)="calculation(i)" required (keypress)="keyPressNumbers($event)" style="margin: 5px;  width: 65px;"></td>
+                                <td style="text-align: right;">{{ list.net_total }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length !== 0">
+                                <td colspan="10" style="text-align: right;">Total:</td>
+                                <td style="text-align: right;">{{ gross_total }}</td>
+                                <td style="text-align: right;">{{ disc_total }}</td>
+                                <td style="text-align: right;">{{ igst_amt }}</td>
+                                <td style="text-align: right;">{{ other_charge_amt }}</td>
+                                <td style="text-align: right;">{{ net_total }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length !== 0">
+                                <td colspan="10" style="text-align: right;">RndOffAmt:</td>
+                                <td>{{ RndOffAmt }}</td>
+                                <td style="text-align: right;">Total:</td>
+                                <td colspan="3" style="text-align: right;font-weight: 600;">{{ TotInvVal }}</td>
+                            </tr>
+                            <tr *ngIf="materials?.length == 0">
+                                <td colspan="9">No Record Found!</td>
+                            </tr>  
+                        </table>
+                    </div>
+                </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="saveData(mode, materialForm)">{{'common.save' | translate}}</button>
+    </div>
+</div>

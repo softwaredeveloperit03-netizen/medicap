@@ -1,0 +1,778 @@
+﻿<div class="card" *ngIf="!isView && !isEdit">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Receiving of Material Log</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/qa/external-audit/select-audit/stores">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="clr-row">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3">
+          <label>Packaging Slip For</label>
+          <select name="challan_for" [(ngModel)]="challan_for">
+            <option ></option>
+            <option>PART-A</option>
+            <option>EOU</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Material Type:</label>
+          <select name="material_type" [(ngModel)]="material_type" required>
+            <option></option>
+            <option>Key Starting Material</option>
+            <option>Raw Material</option>
+            <option>Liquid</option>
+            <option>Solvents</option>
+            <option>Others</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>From Date</label>
+          <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>To Date</label>
+          <input type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+      </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <button class="btn btn-danger"  (click)="getReceivingLog()">{{'common.search' | translate}}</button>
+        </div>
+      </div>
+      <div class="card-text">
+        <table class="table">
+          <tr>
+            <th>Select</th>
+            <th style="text-align: left;">Receiving Date</th>
+            <th style="text-align: left;">Packaging Slip For</th>
+            <th style="text-align: left;">Inward No.</th>
+            <th style="text-align: left;">Packaging Slip</th>
+            <th style="text-align: left;">Material Type</th>
+            <th style="text-align: left;">Grade</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">No Of Containers</th>
+            <th style="text-align: left;">Qty Received</th>
+            <th style="text-align: left;">{{'common.table.action' | translate}}</th>
+          </tr>
+          <tr *ngFor="let user of results; let i = index">
+            <td style="text-align: left;"><input type="checkbox" name="raw_recieving"></td>
+            <td style="text-align: left;">{{ user.receiving_details.received_date | date: 'dd-MM-yyyy' }}</td>
+            <td style="text-align: left;">{{user.challan_for}}</td>
+            <td style="text-align: left;">{{user.inword_no}}</td>
+            <td style="text-align: left;">{{user.challan_no}}</td>
+            <td style="text-align: left;">{{user.material_subtype}}</td>
+            <td style="text-align: left;">{{user.grade}}</td>
+            <td style="text-align: left;">{{user.material_code}}</td>
+            <td style="text-align: left;">{{user.material_name}}</td>
+            <td style="text-align: left;">{{user.containers}}</td>
+            <td style="text-align: left;">{{ user.received_qty }} {{ user.unit }}</td>
+            <td>
+              <button class="btn btn-sm btn-info btn-icon" (click)="view(i)"><clr-icon shape="eye" class="is-info"></clr-icon></button>
+              <!-- <button class="btn btn-sm btn-danger-outline btn-icon" (click)="edit(i)"><clr-icon shape="pencil" class="is-warning"></clr-icon></button> -->
+            </td>
+          </tr>
+          <tr *ngIf="results?.length == 0">
+            <td colspan="10">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" >{{'common.submit' | translate}}</button>
+    </div>
+  </div>
+  
+  <div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Receiving of Raw Material Details: {{ selectedReport['inword_no'] }}</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text"> 
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;"><b>Material Name:</b></td>
+              <td colspan="3" style="text-align: left;">{{ selectedReport['material_name'] }} {{ selectedReport['grade'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Material Code:</b></td>
+              <td style="text-align: left;">{{ selectedReport['material_code'] }}</td>
+              <td style="text-align: left;"><b>Material Type:</b></td>
+              <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Vendor Name:</b></td>
+              <td style="text-align: left;">{{ selectedReport['vendor_name'] }}</td>
+              <td style="text-align: left;"><b>Manufacturer Name:</b></td>
+              <td style="text-align: left;">{{ selectedReport['manufacturer_name'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Inward No:</b></td>
+              <td style="text-align: left;">{{ selectedReport['inword_no'] }}</td>
+              <td style="text-align: left;"><b>Inward Date:</b></td>
+              <td style="text-align: left;">{{ selectedReport['inword_date'] | date:'dd-MM-yyyy' }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Packaging Slip:</b></td>
+              <td style="text-align: left;">{{ selectedReport['challan_no'] }}</td>
+              <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+              <td style="text-align: left;">{{ selectedReport['challan_date'] | date:'dd-MM-yyyy' }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>PO No.:</b></td>
+              <td style="text-align: left;">{{ selectedReport['po_no'] }}</td>
+              <td style="text-align: left;"><b>PO Date:</b></td>
+              <td style="text-align: left;">{{ selectedReport['po_date'] | date:'dd-MM-yyyy' }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>PO Qty:</b></td>
+              <td style="text-align: left;">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+              <td style="text-align: left;"><b>Challan Qty:</b></td>
+              <td style="text-align: left;">{{ selectedReport['challan_qty'] }} {{ selectedReport['unit'] }}</td>
+            </tr>
+          </table>
+          
+          <h3>Labeling Details:</h3>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Medicap Lot No</th>
+              <th>Pack Size</th>
+              <th>Qty</th>
+              <th>No Of Containers</th>
+              <th>Mfg Date</th>
+              <th>Exp Date</th>
+            </tr>
+            <tr *ngFor="let list of selectedReport['batches'];let i=index">
+              <td>{{i+1}}</td>
+              <td>{{list.batch_no}}</td>
+              <td>{{list.pack_size}}</td>
+              <td>{{list.qty_received}}</td>
+              <td>{{list.total_containers}}</td>
+              <td>{{list.mfg_date | date:'dd-MM-yyyy'}}</td>
+              <td>{{list.exp_date | date:'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr *ngIf="selectedReport['batches']?.length == 0">
+                <td colspan="5">No Record Found!</td>
+            </tr>
+          </table>
+  
+          <table class="table table-border">
+            <tr>
+              <th>Received Qty</th>
+              <th>No. of Containers</th>
+              <th>Damage Container Observed</th>
+              <th *ngIf="damage['isdamagecontainer'] =='Yes'">Inner Damage Containers</th>
+              <th *ngIf="damage['isdamagecontainer'] =='Yes'">Outer Damage Containers</th>
+            </tr>
+            <tr>
+              <td>{{ selectedReport['received_qty'] }} {{ selectedReport['unit'] }}</td>
+              <td>{{ selectedReport['containers'] }}</td>
+              <td>{{ damage['isdamagecontainer'] }}</td>
+              <td *ngIf="damage['isdamagecontainer'] =='Yes'">{{ damage['outer_damage'] }}</td>
+              <td *ngIf="damage['isdamagecontainer'] =='Yes'">{{ damage['inner_damage'] }}</td>
+            </tr>
+          </table>
+  
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;"><b>Condition / Cleanliness of Containers:</b></td>
+              <td style="text-align: left;">{{ selectedReport['container_condition'] }}</td>
+              <td style="text-align: left;"><b>Integrity of Containers Seal:</b></td>
+              <td style="text-align: left;">{{ selectedReport['container_condition'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Status of Document Received:</b></td>
+              <td style="text-align: left;">{{ selectedReport['document_status'] }}</td>
+              <td style="text-align: left;"><b>Specific storage condition:</b></td>
+              <td style="text-align: left;">{{ selectedReport['storage_condition'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Cleanliness of Vehicle:</b></td>
+              <td style="text-align: left;">{{ selectedReport['vehicle_cleanliness'] }}</td>
+              <td style="text-align: left;"><b>Vehicle Condition:</b></td>
+              <td style="text-align: left;">{{ selectedReport['receiving_details'].vehicle_condition }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Packing Intactness / Condition:</b></td>
+              <td style="text-align: left;">{{ selectedReport['receiving_details'].packing_condition }}</td>
+              <td style="text-align: left;"><b>Outer Packing:</b></td>
+              <td style="text-align: left;">{{ selectedReport['receiving_details'].outer_packing }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Container type:</b></td>
+              <td style="text-align: left;">{{ selectedReport['container_type'] }}</td>
+              <td style="text-align: left;" *ngIf="selectedReport['container_type'] !== 'Tanker'"><b>Container Subtype:</b></td>
+              <td style="text-align: left;" *ngIf="selectedReport['container_type'] !== 'Tanker'">{{ selectedReport['receiving_details'].container_subtype }}</td>
+              <td style="text-align: left;" *ngIf="selectedReport['container_type'] == 'Tanker'"><b>Tanker cleaning certificate:</b></td>
+              <td style="text-align: left;" *ngIf="selectedReport['container_type'] == 'Tanker'">{{ selectedReport['tanker_cleaning'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>COA Received:</b></td>
+              <td style="text-align: left;">{{ selectedReport['coa_received'] }}</td>
+              <td style="text-align: left;" *ngIf="selectedReport['coa_received'] == 'Yes'"><b>Certificate:</b></td>
+              <td style="text-align: left;" *ngIf="selectedReport['coa_received'] == 'Yes'"><button class="btn btn-info btn-sm" (click)="viewfile(selectedReport['receiving_details'].coa_file)">{{'common.view' | translate}}</button></td>
+              <td style="text-align: left;" *ngIf="selectedReport['coa_received'] == 'No'"><b>Remark:</b></td>
+              <td style="text-align: left;" *ngIf="selectedReport['coa_received'] == 'No'">{{ selectedReport['coa_remark'] }}</td>
+            </tr>
+          </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadPDF()">{{'common.download' | translate}}</button>
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+  
+  <div class="card" *ngIf="isEdit">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Update Receiving of Raw Material Details: {{ selectedReport['inword_no'] }}</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text"> 
+  
+        <table class="table" style="border: 1px solid black;">
+          <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Material Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['material_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Vendor Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['vendor_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Vendor Unit:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['vendor_unit'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_date'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_date'] | date:'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedReport['grade'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO Qty:</b></td>
+            <td style="text-align: left;" colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+          </tr>
+        </table>
+        <br>
+        <form #basicForm="ngForm">
+          <div class="clr-row">
+          
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12">
+              <label>Container type:</label>
+              <select name="container_type" [(ngModel)]="selectedReport.container_type" required>
+                <option>Drum</option>
+                <option>Bag</option>
+                <option>Boxes</option>
+                <option>Tanker</option>
+                <option>Cylinder</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="selectedReport.container_type == 'Drum'">
+              <label>Drum:</label>
+              <select name="container_subtype" [(ngModel)]="selectedReport.container_subtype" required>
+                <option>Plastic</option>
+                <option>HDPE Drum</option>
+                <option>Fiber Board Drum</option>
+                <option>Aluminium Container</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type == 'Bag'">
+              <label>Bag:</label>
+              <select name="container_subtype" [(ngModel)]="selectedReport.container_subtype" required>
+                <option>Polyethylene Bag</option>
+                <option>Pollinated Bag</option>
+                <option>Gunny Bag</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="selectedReport.container_type == 'Boxes'">
+              <label>Boxes:</label>
+              <select name="container_subtype" [(ngModel)]="selectedReport.container_subtype" required>
+                <option>Corrugated Boxes</option>
+                <option>Cartons</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="selectedReport.container_type == 'Other'">
+              <label>Other:</label>
+              <input type="text" name="container_subtype" [(ngModel)]="selectedReport.container_subtype" required>
+            </div>
+          </div>
+        </form>
+       
+        <form #labelform="ngForm">
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Medicap Lot No</th>
+              <th>Pack Size</th>
+              <th>Qty</th>
+              <th>{{'common.unit' | translate}}</th>
+              <th *ngIf="container_type !== 'Tanker'">No Of Containers</th>
+              <th>Mfg Date</th>
+              <th>Exp Date</th>
+              <th>{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+                <td>1.</td>
+                <td style="padding:0px;"> <input type="text" name="batch_no" ngModel required style="margin:0px;"></td>
+                <td style="padding:0px;" *ngIf="container_type !== 'Tanker'"> <input type="text" name="pack_size" ngModel required style="margin:0px;"></td>
+                <td style="padding:0px;" *ngIf="container_type == 'Tanker'"> <input type="text" name="pack_size" ngModel="Tanker" required readonly style="margin:0px;"></td>
+                <td style="padding:0px;"> <input type="number" (input)="checkValue($event)" name="qty_received" ngModel required style="margin:0px;"> </td>
+                <td style="padding:0px;width: 10%;">
+                  <select name="unit" ngModel required style="margin: 0px;">
+                    <option *ngFor="let unit of units">{{unit.unit}}</option>
+                  </select>
+                </td>
+                <td style="padding: 0px;"  *ngIf="container_type !== 'Tanker'"><input type="number" OnlyNumber="true" name="total_containers" [(ngModel)]="total_containers" required style="margin: 0px;"></td>
+                <td style="padding:0px;"><input type="date" name="mfg_date" ngModel [max]="maxDate" required style="margin:0px;"></td>
+                <td style="padding:0px;"> <input type="date" name="exp_date" ngModel [min]="minDate" required style="margin:0px;"></td>
+                <td> <button class="btn btn-sm btn-info" (click)="addlabel(labelform)"style="margin:0px;">{{'common.add' | translate}}</button></td>
+            </tr>
+            <tr *ngFor="let list of labelList;let i=index">
+              <td>{{i+1}}</td>
+              <td>{{list.batch_no}}</td>
+              <td>{{list.pack_size}}</td>
+              <td>{{list.qty_received}}</td>
+              <td>{{list.unit}}</td>
+              <td *ngIf="container_type !== 'Tanker'">{{list.total_containers}}</td>
+              <td>{{list.mfg_date | date:'dd-MM-yyyy'}}</td>
+              <td>{{list.exp_date | date:'dd-MM-yyyy'}}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="deleteLabel(i)">{{'common.delete' | translate}}</button>
+              </td>
+            </tr>
+            <tr *ngIf="labelList?.length == 0">
+                <td colspan="5">No Record Found!</td>
+            </tr>
+          </table>
+          <input *ngIf="container_type == 'Tanker'" type="hidden" name="total_containers" ngModel="1" tabindex="-1">
+        </form> -->
+        
+        
+        <form #receivingForm="ngForm" style="margin-top:20px;">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty. As per challan: {{ selectedReport['unit'] }}</label>
+              <input type="text" OnlyNumdigit="true" name="challan_qty" (keypress)="number($event.target.value)" [(ngModel)]="selectedReport.challan_qty" required>
+            </div> 
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Actual Received Qty: {{ selectedReport['unit'] }}</label>
+              <input type="text" OnlyNumdigit="true" name="received_qty" [(ngModel)]="selectedReport.received_qty" required readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Short / Extra Quantity</label>
+              <input type="text" OnlyNumdigit="true" name="qty_status" [(ngModel)]="result" required readonly tabindex="-1">
+            </div>
+            <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>PO Status</label>
+              <select name="po_status" [(ngModel)]="selectedReport.po_status" required>
+                <select></select>
+                 <option></option>
+                  <option>Ok</option>
+                  <option>Keep Open</option>
+                  <option>Accept</option>
+                  <option>Raise Additional</option>
+                  <option>Return Material</option>
+              </select>
+            </div> -->
+          </div>
+          <h3>Container Details:</h3>
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No.of Containers:</label>
+              <input type="text" name="containerTotal" [(ngModel)]="selectedReport.containers" required readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Condition / Cleanliness of Containers:</label>
+              <select name="container_condition" [(ngModel)]="selectedReport.container_condition" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+                <option>Fresh</option>
+                <option>Re-Used</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Integrity of Containers Seal:</label>
+              <select name="container_seal" [(ngModel)]="selectedReport.container_seal" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Status of Document Received:</label>
+              <select name="document_status" [(ngModel)]="selectedReport.document_status" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Specific storage condition:</label>
+              <select name="storage_condition" [(ngModel)]="selectedReport['receiving_details'].storage_condition" required>
+                <option>YES</option>
+                <option>NO</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12">
+              <label>Packing Intactness / Condition:</label>
+              <select name="packing_condition" [(ngModel)]="selectedReport['receiving_details'].packing_condition" required>
+                <option>OK</option>
+                <option>NOT OK</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12">
+              <label>Outer Packing:</label>
+              <select id="outer_packing" name="outer_packing" [(ngModel)]="selectedReport['receiving_details'].outer_packing" required>
+                <option>Sealed</option>
+                <option>Unsealed</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="selectedReport['receiving_details'].container_type == 'Tanker'">
+              <label>Tanker cleaning certificate:</label>
+              <select name="tanker_cleaning" [(ngModel)]="selectedReport['receiving_details'].tanker_cleaning" required>
+                <option>YES</option>
+                <option>NO</option>
+                <option>NA</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Damage Container Observed:</label>
+              <select name="isdamagecontainer" [(ngModel)]="selectedReport['receiving_details'].isdamagecontainer" (change)="checkdamage($event.target.value)">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedReport.isDamage">
+              <label>Outer Damage Containers:</label>
+              <input type="text" OnlyNumber="true" name="outer_damage" [(ngModel)]="selectedReport.outer_damage">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedReport.isDamage">
+              <label>Inner Damage Containers:</label>
+              <input type="text" OnlyNumber="true" name="inner_damage" [(ngModel)]="selectedReport.inner_damage">
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12" *ngIf="selectedReport.isDamage">
+              <label>Remark (if Any):</label>
+              <textarea rows="2" name="remark" [(ngModel)]="selectedReport['receiving_details'].damange_remark" required></textarea>
+            </div>
+          </div>
+          <h3>Transporter’s Details:</h3>
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Vehicle Condition:</label>
+              <select name="vehicle_condition" [(ngModel)]="selectedReport.vehicle_condition" required>
+                <option>OPEN</option>
+                <option>COVERED</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Cleanliness of Transport Vehicle::</label>
+              <select name="vehicle_cleanliness" [(ngModel)]="selectedReport.vehicle_cleanliness" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+         <!--    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>COA Received:</label>
+              <select name="coa_received" [(ngModel)]="selectedReport.coa_received" required>
+                <option>Yes</option>
+                <option>No</option>
+                <option>Hold</option>
+              </select>
+            </div> -->
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedReport.coa_received == 'No'">
+              <label>COA Status:</label>
+              <select name="coa_status" [(ngModel)]="selectedReport.coa_remark" required>
+                <option>Raise Deviation</option>
+                <option>Accept the material</option>
+              </select>
+            </div>
+          <!--   <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedReport.coa_received == 'Yes'">
+              <label>Upload COA:</label>
+              <input type="file" name="upload_coa" (change)="onFileChanged($event)" accept="application/pdf">
+            </div> -->
+          </div>
+          <div *ngIf="coa_received == 'No' && coa_status == 'Raise Deviation'">
+            <h3>Deviation Details:</h3>
+            <div class="clr-row" ngModelGroup="deviation">
+              <div class="clr-col-4">
+                <label>Deviation Related To:</label>
+                <input type="text" name="related_to" ngModel="Material" readonly tabindex="-1">
+              </div>
+              <div class="clr-col-4">
+                <label>Deviation Category:</label>
+                <input type="text" name="deviation_category" ngModel="Unplanned Deviation" readonly tabindex="-1">
+              </div>
+              <div class="clr-col-4">
+                <label>Type Of Deviation:</label>
+                <select name="type" ngModel required>
+                  <option value="Minor">Minor</option>
+                  <option value="Major">Major</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div class="clr-col-4">
+                <label>Justification for type:</label>
+                <textarea name="justification" ngModel required></textarea>
+              </div>
+              <div class="clr-col-4">
+                <label>Cause of Deviation:</label>
+                <textarea name="cause" ngModel required></textarea>
+              </div>
+              <div class="clr-col-4">
+                <label>Description of Deviation:</label>
+                <textarea name="description" ngModel required></textarea>
+              </div>
+              <div class="clr-col-12">
+                <fieldset style="border: solid 1px #a8a8a8;">
+                  <legend style="width:auto; margin-bottom: 0px; font-size: 12px; font-weight: bold; color: #1f497d;">Cross Functional Departments Remark</legend>
+                  <div class="clr-row" style="padding-left: 15px;">
+                    <div class="clr-control-container clr-control-inline">
+                      <div class="clr-checkbox-wrapper" *ngFor="let order of departments; let i = index">
+                        <input class="clr-checkbox" id="{{order.name}}" type="checkbox" name="{{order.name}}" [(ngModel)]="order.value">
+                        <label for="{{order.name}}" class="clr-control-label">{{order.name}}</label>
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+          <div class="clr-row">
+            <!-- <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Receiving For:</label>
+              <select name="receiving_for" ngModel required>
+                 <option>Part-A</option>
+                  <option>EOU</option>
+              </select>
+            </div> -->
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Dedusting Applicable:</label>
+                <select name="dedustingmaterial" ngModel="NO" required>
+                    <option>YES</option>
+                    <option>NO</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12" *ngIf="receivingForm.value.dedustingmaterial == 'YES'">
+              <label>Cleaning Type</label>
+              <select name="cleaning_type" ngModel (change)="getCleaner($event.target.value)">
+                <option value="Manual">Manual Cleaning</option>
+                <option value="Vaccume Cleaner">Vacuum Cleaner</option>
+              </select>
+            </div>
+          </div>
+          
+           <div ngModelGroup="dedusting">
+            <div *ngIf="ismanual && receivingForm.value.dedustingmaterial == 'YES'">
+              <h3>Dedusting Material </h3>
+              <table class="table" style="padding-top: 5px;">
+                <tr>
+                  <th>Operator Type</th>
+                  <th>Area and Consignment Cleaned By</th>
+                  <th>Start Time</th>
+                  <th>Stop Time</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px;">
+                    <select name="operator_type" [(ngModel)]="operator_type" required style="margin: 0px; height: 33px;">
+                      <option>Parmanent Operator</option>
+                      <option>Mannual Entry</option>
+                      <option>Employee</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Parmanent Operator'">
+                    <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Mannual Entry'">
+                    <input type="text" name="area_cleaned_by" ngModel required style="margin: 0px; height: 33px;">
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Employee'">
+                    <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of employees" [value]="operator.emp_id">{{ operator.firstname }} {{ operator.lastname }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'area_clean')">START</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_from" [(ngModel)]="area_cleaned_from">
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'area_clean')">STOP</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_to" [(ngModel)]="area_cleaned_to">
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div *ngIf="isvaccume">
+              <h3>Dedusting Details:</h3>
+              <table class="table" style="padding-top: 5px;">
+                <tr>
+                  <th>Vacuum Cleaner</th>
+                  <th>Operated By</th>
+                  <th>Operator Name</th>
+                  <th>Start Time</th>
+                  <th>Stop Time</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px;">
+                    <select name="equipment_code" ngModel style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let equipment of equipments" [value]="equipment.equipment_code">{{ equipment.equipment_code }} (capacity: {{ equipment.capacity }})</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;">
+                    <select name="operator_type" [(ngModel)]="operator_type" required style="margin: 0px; height: 33px;">
+                      <option>Parmanent Operator</option>
+                      <option>Mannual Entry</option>
+                      <option>Employee</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Parmanent Operator'">
+                    <select name="operator" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Mannual Entry'">
+                    <input type="text" name="operator" ngModel required style="margin: 0px; height: 33px;">
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Employee'">
+                    <select name="operator" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of employees" [value]="operator.emp_id">{{ operator.firstname }} {{ operator.lastname }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'usages')">START</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="from_time" [(ngModel)]="from_time">
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'usages')">STOP</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="to_time" [(ngModel)]="to_time">
+                  </td>
+                </tr>
+              </table>
+              <table class="table" style="padding-top: 5px;">
+                <tr>
+                  <th>Area Cleaned By</th>
+                  <th>Operator Name</th>
+                  <th>Start Time</th>
+                  <th>Stop Time</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px;">
+                    <select name="operator_type" [(ngModel)]="operator_type" required style="margin: 0px; height: 33px;">
+                      <option>Parmanent Operator</option>
+                      <option>Mannual Entry</option>
+                      <option>Employee</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Parmanent Operator'">
+                    <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Mannual Entry'">
+                    <input type="text" name="area_cleaned_by" ngModel required style="margin: 0px; height: 33px;">
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Employee'">
+                    <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of employees" [value]="operator.emp_id">{{ operator.firstname }} {{ operator.lastname }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'area_clean')">START</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_from" [(ngModel)]="area_cleaned_from">
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'area_clean')">STOP</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_to" [(ngModel)]="area_cleaned_to">
+                  </td>
+                </tr>
+              </table>
+  
+              <table class="table" style="padding-top: 5px;">
+                <tr>
+                  <th>Equipment Cleaned By</th>
+                  <th>Operator Name</th>
+                  <th>Start Time</th>
+                  <th>Stop Time</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px;">
+                    <select name="operator_type" [(ngModel)]="operator_type" required style="margin: 0px; height: 33px;">
+                      <option>Parmanent Operator</option>
+                      <option>Mannual Entry</option>
+                      <option>Employee</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Parmanent Operator'">
+                    <select name="equip_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Mannual Entry'">
+                    <input type="text" name="equip_cleaned_by" ngModel required style="margin: 0px; height: 33px;">
+                  </td>
+                  <td style="padding: 0px;" *ngIf="operator_type == 'Employee'">
+                    <select name="equip_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                      <option></option>
+                      <option *ngFor="let operator of employees" [value]="operator.emp_id">{{ operator.firstname }} {{ operator.lastname }}</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'equip_clean')">START</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="equip_cleaned_from" [(ngModel)]="equip_cleaned_from">
+                  </td>
+                  <td style="padding: 0px;">
+                      <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'equip_clean')">STOP</button>
+                      <input type="time" style="margin: 0px;height: 33px;width: auto;" name="equip_cleaned_to" [(ngModel)]="equip_cleaned_to">
+                  </td>
+                </tr>
+              </table>
+            </div>
+           </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="receiveMaterial(receivingForm,basicForm)">{{'common.update' | translate}}</button>
+      <button class="btn btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>

@@ -1,0 +1,565 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Resigned Employee List</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-success" (click)="isResignation = true">Employee EXIT</button>
+          <button class="btn btn-sm btn-danger" routerLink="/hr/employees" ><clr-icon shape="window-close" class="is-solid"></clr-icon> {{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-5">
+                <label>Search </label>
+                <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="emp_id">Emp. Id</clr-dg-column>
+                    <clr-dg-column clrDgField="firstname">Emp. Name</clr-dg-column>
+                    <clr-dg-column clrDgField="department">{{'common.department' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="designation">{{'common.designation' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="status">{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let emp of filteredMaterials;let i=index" [clrDgItem]="emp">
+                      <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                      <clr-dg-cell>{{emp.emp_id || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{emp.firstname || '-'}} {{emp.lastname || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{emp.department || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{emp.designation || '-'}}</clr-dg-cell>
+                      <clr-dg-cell><strong style="color: red'">{{emp.status | uppercase}}</strong></clr-dg-cell>
+                      <clr-dg-cell>{{emp.entry_date | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell >
+                          <button class="btn btn-sm btn-icon" (click)="view(emp)">
+                            <clr-icon shape="eye"></clr-icon>
+                          </button>
+                      </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="exportToExcel()">Export To EXCEL</button>
+      <button class="btn btn-danger" routerLink="/hr/employees">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Resigned Employee Details</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView = false">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+              <div class="card" style="margin-bottom: 30px;">
+                  <div class="card-header" style="text-align: center">
+                      <div class="clr-row" style="margin-bottom: -10px;">
+                          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                              Employee Registration Mandatory Fields
+                          </div>
+                      </div>
+                  </div>
+                  <div class="card-block">
+                      <div class="card-text">
+                          <div class="clr-row">
+
+                            <!-- Employee Code -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Code : </strong></label>
+                              <span> {{ selectedResult['emp_id'] || '-' }}</span>
+                            </div>
+
+                            <!-- Employee Type -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Type : </strong></label>
+                              <span> {{ selectedResult['employee_type'] || '-' }}</span>
+                            </div>
+
+                            <!-- First Name -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>First Name : </strong></label>
+                              <span> {{ selectedResult['firstname'] || '-' }}</span>
+                            </div>
+
+                            <!-- Middle Name -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Middle Name : </strong></label>
+                              <span> {{ selectedResult['middlename'] || '-' }}</span>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Last Name : </strong></label>
+                              <span> {{ selectedResult['lastname'] || '-' }}</span>
+                            </div>
+
+                            <!-- Contact No -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Contact No : </strong></label>
+                              <span> {{ (selectedResult['contact_no'] | canadianPhone) || '-' }}</span>
+                            </div>
+
+                            <!-- Email Id -->
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Email Id : </strong></label>
+                              <span> {{ selectedResult['emp_email'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Department : </strong></label>
+                              <span> {{ selectedResult['department'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Designation : </strong></label>
+                              <span> {{ selectedResult['designation'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Category : </strong></label>
+                              <span> {{ selectedResult['operator_category'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Joining Status : </strong></label>
+                              <span> {{ selectedResult['joining_status'] || '-' }}</span>
+                            </div>
+
+                            <div *ngIf="selectedResult['joining_status']=='Trainee'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Training Period In Month : </strong></label>
+                              <span> {{ selectedResult['trainee_period'] || '-' }}</span>
+                            </div>
+
+                            <div *ngIf="selectedResult['joining_status']=='Probation'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Probation Period In Month : </strong></label>
+                              <span> {{ selectedResult['probation_period'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Gender : </strong></label>
+                              <span> {{ selectedResult['gender'] || '-' }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Date Of Birth : </strong></label>
+                              <span> {{ selectedResult['birthdate'] | date:'dd-MM-yyyy'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Joining Date : </strong></label>
+                              <span> {{ selectedResult['joining_date'] | date:'dd-MM-yyyy'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Level : </strong></label>
+                              <span> {{ selectedResult['emp_level'] || '-'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Aadhar No : </strong></label>
+                              <span> {{ selectedResult['adhar'] || '-'}}</span>
+                            </div>
+
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+
+              
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Pan No : </strong></label>
+                <span> {{ selectedResult['pan'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Highest Qualification : </strong></label>
+                <span> {{ selectedResult['qualification'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Prev. Experience (In Yrs) : </strong></label>
+                <span> {{ selectedResult['experience'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Nationality : </strong></label>
+                <span> {{ selectedResult['nationality'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Marital Status : </strong></label>
+                <span> {{ selectedResult['marital_status'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Blood Group : </strong></label>
+                <span> {{ selectedResult['blood_group'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Induction Training : </strong></label>
+                <span> {{ selectedResult['isinduction'] || '-'}}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>EPF Applicable : </strong></label>
+                <span> {{ selectedResult['epf_app'] || '-'}}</span>
+              </div>
+
+              <div *ngIf="selectedResult['epf_app']=='Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>UAN No : </strong></label>
+                <span> {{ selectedResult['pf_no'] || '-' }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>ESIC Applicable : </strong></label>
+                <span> {{ selectedResult['esic_app'] || '-'}}</span>
+              </div>
+
+              <div *ngIf="selectedResult['esic_app']=='Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>ESIC No : </strong></label>
+                <span> {{ selectedResult['esic_no'] || '-' }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Photo : </strong></label>
+                <button class="btn btn-sm btn-info" (click)="viewDoc(selectedResult['photo'])">{{'common.view' | translate}}</button>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>References Name : </strong></label>
+                <span> {{ selectedResult['referenceName'] || '-'}}</span>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Last Date Of Working : </strong></label>
+                <span> {{ selectedResult['lastDateOfWorking'] || '-'}}</span>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Reason For Leaving : </strong></label>
+                <span> {{ selectedResult['reasonForLeaving'] || '-'}}</span>
+              </div>
+
+          </div>
+
+          
+          <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12"
+                  style="border-right: 1px solid lightgray;">
+                  <h3>Address (Permanent)  : </h3>
+                  <div class="clr-row">
+
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Flat/House No/ Area : </strong></label>
+                        <span> {{ selectedResult['permanent_flat'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Country : </strong></label>
+                        <span> {{ selectedResult['permanent_country'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>State : </strong></label>
+                        <span> {{ selectedResult['permanent_state'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>City : </strong></label>
+                        <span> {{ selectedResult['permanent_city'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Postal Code: </strong></label>
+                        <span> {{ selectedResult['permanent_pincode'] || '-'}}</span>
+                      </div>
+
+                  </div>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <h3>Address (Temporary):</h3>
+                  <div class="clr-row">
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Flat/House No/ Area : </strong></label>
+                        <span> {{ selectedResult['tempflat_no'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Country : </strong></label>
+                        <span> {{ selectedResult['temp_country'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>State : </strong></label>
+                        <span> {{ selectedResult['temp_state'] || '-'}}</span>
+                      </div>
+                      
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>City : </strong></label>
+                        <span> {{ selectedResult['temp_city'] || '-'}}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Postal Code: </strong></label>
+                        <span> {{ selectedResult['temp_pincode'] || '-'}}</span>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+        <div class="card">
+            <div class="card-header"
+                style="text-align: center;background-color: rgb(14, 67, 112); color: white;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Bank Account Details</div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                    </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div class="row container-fluid" id="system">
+                        <div class="clr-row">
+                          
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Account Number : </strong></label>
+                              <span> {{ selectedResult['acc_no'] || '-'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Bank Name : </strong></label>
+                              <span> {{ selectedResult['bank_name'] || '-'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Branch Name : </strong></label>
+                              <span> {{ selectedResult['branch_name'] || '-'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>IFSC / NEFT Code : </strong></label>
+                              <span> {{ selectedResult['ifsc_neft'] || '-'}}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Account Type : </strong></label>
+                              <span> {{ selectedResult['acc_type'] || '-'}}</span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="text-align: center;background-color: pink;color: black;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;color:black;">Academic Details</div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div  class="row container-fluid" id="div">
+                   
+                        <table class="table table-border" >
+                            <tr>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Degree/Diploma </th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Subject Of Specialization</th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Institute/University/Board</th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Marks Obtained </th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">From - To</th>
+                            </tr>
+                            <tr *ngFor="let data of selectedResult['academics']; let i=index;">
+                                <td style="text-align: left;">{{ data.qualification}}</td>
+                                <td style="text-align: left;">{{ data.specialization}}</td>
+                                <td style="text-align: left;">{{ data.institute_name}}</td>
+                                <td style="text-align: left;">{{ data.obtained_mark}}</td>
+                                <td style="text-align: left;">{{ data.year_from | date:'dd-MM-yyyy' }} - {{ data.year_to | date:'dd-MM-yyyy' }}</td>
+                            </tr>
+                            <tr *ngIf="academics?.length === 0">
+                                <td colspan="5">No Records Found</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="text-align: center;background-color: burlywood;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7"style="color: aliceblue;margin-top: -2px;text-align: left;color:black">Languages</div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div  class="row container-fluid" id="clr">
+                            <table class="table table-border">
+                                <tr>
+                                    <th style="font-weight: bolder;background-color:aquamarine;">Select Languages</th>
+                                    <th style="font-weight: bolder;background-color:aquamarine;">Speak</th>
+                                    <th style="font-weight: bolder;background-color:aquamarine;">Read</th>
+                                    <th style="font-weight: bolder;background-color:aquamarine;">Write</th>
+                                </tr>
+                                <tr *ngFor="let add of selectedResult['languages'] ">
+                                    <td style="text-align: left;">{{add.language}}</td>
+                                    <td style="text-align: left;">{{add.speak}}</td>
+                                    <td style="text-align: left;">{{add.read}}</td>
+                                    <td style="text-align: left;">{{add.write}}</td>
+                                </tr>
+                            </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Employment History</div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"> </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div class="row container-fluid" id="show">
+                        <table class="table table-border">
+                            <tr>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Company Name</th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Position</th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">From - To</th>
+                                <th style="font-weight: bolder;background-color:aquamarine;">Reason For Leaving</th>
+                            </tr>
+                            <tr *ngFor="let data of selectedResult['employeement']; let i=index;">
+                                <td>{{data.company_name}}</td>
+                                <td>{{data.position}}</td>
+                                <td>{{data.year_from | date: 'dd-MM-yyyy'}} - {{data.year_to | date: 'dd-MM-yyyy'}}</td>
+                                <td>{{data.reason}}</td>
+                            </tr>
+                            <tr *ngIf="employments?.length==0">
+                                <td colspan="4">No Records Found</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="text-align: center;background-color: burlywood;color: black;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;color:black">Documents
+                    </div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"> </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div  class="row container-fluid" id="in">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="font-weight: bolder;background-color:aquamarine;">Document Name</td>
+                                <td style="font-weight: bolder;background-color:aquamarine;">View Documents</td>
+                            </tr>
+                            <tr *ngFor="let data of selectedResult['documents']">
+                                <td>{{data.documentName}}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" (click)="viewDoc(data.fileName)">Uploaded Document</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      </div>
+    </div>
+     <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+
+ 
+
+<clr-modal [(clrModalOpen)]="isResignation" clrModalSize="xl" [clrModalClosable]="true">
+    <h3 class="modal-title">Employee Exit</h3>
+    <div class="modal-body">
+        <div class="card">            
+            <div class="card-block">
+                <div class="card-text">
+                    <form #empExitForm="ngForm">
+                        <div class="clr-row">
+
+                            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                                <label>Department : <span style="color: red;">*</span></label>
+                                <select name="department" [(ngModel)]="department" (change)="getDesignation1()" required>
+                                  <option></option>
+                                  <option *ngFor="let dept of departments">{{ dept.department_name }}</option>
+                                </select>
+                              </div>
+
+                              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                                <label>Designation : <span style="color: red;">*</span></label>
+                                <select name="designation" [(ngModel)]="designation" required  (change)="getActiveEmpBasedOnDeptOrDesignation()">
+                                  <option></option>
+                                  <option *ngFor="let designation of designations">{{ designation.designation }}</option>
+                                </select>
+                              </div>
+                              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                                <label>Select Employee : <span style="color: red;">*</span></label>
+                                <select name="emp_id" ngModel required >
+                                  <option></option>
+                                  <option *ngFor="let emp of activeEmployees" value="{{emp.emp_id}}">{{ emp.firstname }} {{ emp.lastname }} - ( {{ emp.emp_id }} )</option>
+                                </select>
+                              </div>
+
+                              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                                <label>Last Date Of Working : <span style="color: red;">*</span></label>
+                                <input type="date" name="lastDateOfWorking" ngModel required>
+                              </div>
+
+                              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                                <label>Reason For Leaving : <span style="color: red;">*</span></label>
+                                <input type="text" name="reasonForLeaving" ngModel required>
+                              </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button   class="btn btn-success" (click)="exitEmployee(empExitForm)">{{'common.save' | translate}}</button>
+                <button   class="btn btn-danger" (click)="isResignation = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+</clr-modal>

@@ -1,0 +1,403 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Export Authorization Log
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button class="btn btn-sm btn-primary" routerLink="/Exports" style="margin-right: 5px;">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-12" style="text-align: right;">
+            <button class="btn btn-sm btn-info" (click)="refresh()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>Authorization Type</clr-dg-column>
+            <clr-dg-column>License Number</clr-dg-column>
+            <clr-dg-column>Company Name</clr-dg-column>
+            <clr-dg-column>Product Name</clr-dg-column>
+            <clr-dg-column>Valid From</clr-dg-column>
+            <clr-dg-column>Valid Till</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>Approval Status</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let auth of authorizations; let i = index" [clrDgItem]="auth">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.authorization_type || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.authorization_license_number || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.company_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.product_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.valid_from_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ auth.valid_till_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="getStatusClass(auth.status)">
+                  {{ auth.status || 'Pending' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="getApprovalStatusClass(auth.approval_status)">
+                  {{ auth.approval_status || 'Pending' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(i)" title="View Log Details">
+                  <i class="fas fa-eye"></i> View Log
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="authorizations.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Log Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Authorization Details & Log</h3>
+  <div class="modal-body" *ngIf="selectedAuthorization">
+    
+    <!-- Section 1: Authorization Type -->
+    <div class="section-header">
+      <h4>1. Authorization Type</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-12">
+        <strong>Authorization Type:</strong> {{ selectedAuthorization.authorization_type || 'N/A' }}
+      </div>
+    </div>
+
+    <!-- Section 2: Applicant / Holder Details -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>2. Applicant / Holder Details</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Company Name:</strong> {{ selectedAuthorization.company_name || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Authorization Holder Name:</strong> {{ selectedAuthorization.authorization_holder_name || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Designation:</strong> {{ selectedAuthorization.designation || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Contact Number:</strong> {{ (selectedAuthorization.contact_number  | canadianPhone)|| 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Email ID:</strong> {{ selectedAuthorization.email_id || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>IEC Code:</strong> {{ selectedAuthorization.iec_code || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>GST/Tax ID:</strong> {{ selectedAuthorization.gst_tax_id || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Company Address:</strong> {{ selectedAuthorization.company_address || 'N/A' }}
+      </div>
+    </div>
+
+    <!-- Section 3: Authorization Document Details -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>3. Authorization Document Details</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>License Number:</strong> {{ selectedAuthorization.authorization_license_number || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Issuing Authority:</strong> {{ selectedAuthorization.issuing_authority || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>Issue Date:</strong> {{ selectedAuthorization.issue_date | date: 'dd-MM-yyyy' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Valid From:</strong> {{ selectedAuthorization.valid_from_date | date: 'dd-MM-yyyy' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Valid Till:</strong> {{ selectedAuthorization.valid_till_date | date: 'dd-MM-yyyy' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Status:</strong> 
+        <span [ngClass]="getStatusClass(selectedAuthorization.status)">
+          {{ selectedAuthorization.status || 'Pending' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Section 4: Shipment / Product Scope -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>4. Shipment / Product Scope</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Product Category:</strong> {{ selectedAuthorization.product_category || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Product Name:</strong> {{ selectedAuthorization.product_name || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>HS Code:</strong> {{ selectedAuthorization.hs_code || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>ITC Code:</strong> {{ selectedAuthorization.itc_code || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Drug License No:</strong> {{ selectedAuthorization.drug_license_no || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>Country of Origin:</strong> {{ selectedAuthorization.country_of_origin || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Country of Destination:</strong> {{ selectedAuthorization.country_of_destination || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Port of Entry/Exit:</strong> {{ selectedAuthorization.port_of_entry_exit || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>Authorized Quantity:</strong> {{ selectedAuthorization.authorized_quantity || 0 }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Unit:</strong> {{ selectedAuthorization.unit || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Used Quantity:</strong> {{ selectedAuthorization.used_quantity || 0 }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Remaining Quantity:</strong> {{ selectedAuthorization.remaining_quantity || 0 }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Controlled Substance:</strong> {{ selectedAuthorization.controlled_substance_check || 'No' }}
+      </div>
+    </div>
+
+    <!-- Section 5: Compliance & Restrictions -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>5. Compliance & Restrictions</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Product Restricted:</strong> {{ selectedAuthorization.is_product_restricted || 'No' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Storage Requirement:</strong> {{ selectedAuthorization.storage_requirement || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Hazardous Material:</strong> {{ selectedAuthorization.hazardous_material_declaration || 'No' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Schedule Drug Category:</strong> {{ selectedAuthorization.schedule_drug_category || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-12">
+        <strong>Special Conditions:</strong> {{ selectedAuthorization.special_conditions || 'N/A' }}
+      </div>
+    </div>
+
+    <!-- Section 6: File Uploads -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>6. Uploaded Documents</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-4">
+        <strong>Authorization Copy:</strong> 
+        <div *ngIf="selectedAuthorization.authorization_copy_file_url" style="margin-top: 5px;">
+          <a [href]="selectedAuthorization.authorization_copy_file_url" target="_blank" class="btn btn-sm btn-primary">
+            <i class="fas fa-eye"></i> View File
+          </a>
+        </div>
+        <span *ngIf="!selectedAuthorization.authorization_copy_file_url" style="color: #999;">N/A</span>
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Annexures:</strong> 
+        <div *ngIf="selectedAuthorization.annexures_file_url" style="margin-top: 5px;">
+          <a [href]="selectedAuthorization.annexures_file_url" target="_blank" class="btn btn-sm btn-primary">
+            <i class="fas fa-eye"></i> View File
+          </a>
+        </div>
+        <span *ngIf="!selectedAuthorization.annexures_file_url" style="color: #999;">N/A</span>
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Digital Signature:</strong> 
+        <div *ngIf="selectedAuthorization.digital_signature_file_url" style="margin-top: 5px;">
+          <a [href]="selectedAuthorization.digital_signature_file_url" target="_blank" class="btn btn-sm btn-primary">
+            <i class="fas fa-eye"></i> View File
+          </a>
+        </div>
+        <span *ngIf="!selectedAuthorization.digital_signature_file_url" style="color: #999;">N/A</span>
+      </div>
+    </div>
+
+    <!-- Section 8: Renewal & Alerts -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>8. Renewal & Alerts</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Auto Renewal Reminder (Days):</strong> {{ selectedAuthorization.auto_renewal_reminder_before || '30' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Expiry Alert:</strong> {{ selectedAuthorization.expiry_alert_toggle || 'Yes' }}
+      </div>
+    </div>
+
+    <!-- Section 9: Approval Workflow -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>9. Approval Workflow</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Requires Internal Approval:</strong> {{ selectedAuthorization.requires_internal_approval || 'Yes' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Approval Status:</strong> 
+        <span [ngClass]="getApprovalStatusClass(selectedAuthorization.approval_status)">
+          {{ selectedAuthorization.approval_status || 'Pending' }}
+        </span>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>Approver 1:</strong> {{ selectedAuthorization.approver1 || 'N/A' }}
+        <span *ngIf="selectedAuthorization.approver1_approved_date" class="label label-success" style="margin-left: 5px;">
+          Approved ({{ selectedAuthorization.approver1_approved_date | date: 'dd-MM-yyyy' }})
+        </span>
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Approver 2:</strong> {{ selectedAuthorization.approver2 || 'N/A' }}
+        <span *ngIf="selectedAuthorization.approver2_approved_date" class="label label-success" style="margin-left: 5px;">
+          Approved ({{ selectedAuthorization.approver2_approved_date | date: 'dd-MM-yyyy' }})
+        </span>
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Approver 3:</strong> {{ selectedAuthorization.approver3 || 'N/A' }}
+        <span *ngIf="selectedAuthorization.approver3_approved_date" class="label label-success" style="margin-left: 5px;">
+          Approved ({{ selectedAuthorization.approver3_approved_date | date: 'dd-MM-yyyy' }})
+        </span>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-12">
+        <strong>Approval Remarks:</strong> {{ selectedAuthorization.approval_remarks || 'N/A' }}
+      </div>
+    </div>
+
+    <!-- Section 7: Action Log History -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>7. Action Log History</h4>
+    </div>
+    
+    <div *ngIf="actionLogs.length === 0" style="text-align: center; padding: 20px; color: #999;">
+      <p>No action log available</p>
+    </div>
+
+    <div *ngIf="actionLogs.length > 0" class="log-container">
+      <div class="clr-row log-header" style="background-color: #f5f5f5; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+        <div class="clr-col-lg-3"><strong>{{'common.table.action' | translate}}</strong></div>
+        <div class="clr-col-lg-3"><strong>User</strong></div>
+        <div class="clr-col-lg-3"><strong>Date & Time</strong></div>
+        <div class="clr-col-lg-3"><strong>IP Address</strong></div>
+      </div>
+      
+      <div *ngFor="let log of actionLogs; let i = index" class="clr-row log-item" style="padding: 10px; margin-bottom: 8px; border-left: 3px solid #007cbb; background-color: #fafafa; border-radius: 4px;">
+        <div class="clr-col-lg-3">
+          <span [ngClass]="getActionClass(log.action)">
+            {{ log.action || 'N/A' }}
+          </span>
+        </div>
+        <div class="clr-col-lg-3">{{ log.user || 'N/A' }}</div>
+        <div class="clr-col-lg-3">
+          <span *ngIf="log.date">{{ log.date | date: 'dd-MM-yyyy HH:mm:ss' }}</span>
+          <span *ngIf="!log.date">N/A</span>
+        </div>
+        <div class="clr-col-lg-3">{{ log.ip || 'N/A' }}</div>
+        <div *ngIf="log.remarks" class="clr-col-lg-12" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+          <strong>Remarks:</strong> {{ log.remarks }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>Audit Trail</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Created By:</strong> {{ selectedAuthorization.created_by || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Created Date:</strong> {{ selectedAuthorization.created_date_time | date: 'dd-MM-yyyy HH:mm' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Last Modified By:</strong> {{ selectedAuthorization.last_modified_by || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Modified Date:</strong> 
+        <span *ngIf="selectedAuthorization.modified_date_time">
+          {{ selectedAuthorization.modified_date_time | date: 'dd-MM-yyyy HH:mm' }}
+        </span>
+        <span *ngIf="!selectedAuthorization.modified_date_time">N/A</span>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>IP Logged:</strong> {{ selectedAuthorization.ip_logged || 'N/A' }}
+      </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

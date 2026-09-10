@@ -1,0 +1,121 @@
+<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Generated Workorders Log
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/Generatewo">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="tableSearchInput">Search PO/FO:</label>
+          <input type="text" id="tableSearchInput"
+            placeholder="Type to filter forecast, product, WO..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <p class="gwolog-hint">
+        Entries appear here after <strong>Approve To Be Plan Work Orders</strong> or
+        <strong>Send for Requirement Analysis</strong> on Generate WO. Planning status is what was saved at that time.
+      </p>
+
+      <div class="gw-table-scroll" *ngIf="loading">
+        <span class="spinner spinner-inline"></span> Loading...
+      </div>
+
+      <div class="gw-forecast-list" *ngIf="!loading">
+        <div class="gw-forecast-empty" *ngIf="!forecastGroups?.length">
+          No work order log records found.
+        </div>
+
+        <div class="gw-forecast-block" *ngFor="let group of forecastGroups">
+          <div class="gw-forecast-header" [style.backgroundColor]="group.bg_color" (click)="toggleForecastCollapse(group)">
+            <span class="gw-forecast-arrow">{{ group.collapsed ? '▶' : '▼' }}</span>
+            <div class="gw-forecast-header-main">
+              <span class="gw-forecast-title">Forecast No: <strong>{{ group.order_no }}</strong>
+                <span class="gw-tag gw-tag--combi" *ngIf="group.hasCombiChild">Combi SFG</span>
+              </span>
+              <span class="gw-forecast-meta"><strong>Plan Month:</strong> {{ formatPlanMonth(group.planMonth) }}</span>
+              <span class="gw-forecast-meta"><strong>Billing:</strong> {{ group.billing_type }}</span>
+              <span class="gw-forecast-meta"><strong>Group:</strong> {{ group.mainGroupName || '-' }}</span>
+              <span class="gw-forecast-meta"><strong>Products:</strong> {{ group.productSummary || '-' }}</span>
+              <span class="gw-forecast-meta"><strong>WO Count:</strong> {{ group.totalCount }}</span>
+              <span class="gw-forecast-meta gw-meta-success"><strong>To Be Plan:</strong> {{ group.toBePlanCount }}</span>
+              <span class="gw-forecast-meta gw-meta-danger"><strong>To Be Not Plan:</strong> {{ group.toBeNotPlanCount }}</span>
+            </div>
+          </div>
+
+          <div class="gw-forecast-table-wrap" *ngIf="!group.collapsed">
+            <div class="gw-month-block" *ngFor="let mg of group.monthGroups">
+              <div class="gw-month-tab">
+                <clr-icon shape="calendar"></clr-icon>
+                <span class="gw-month-tab-label">Month: {{ mg.label }}</span>
+                <span class="gw-month-count">{{ mg.workOrders.length }} WO</span>
+              </div>
+              <div class="datagrid-wrapper gw-month-datagrid">
+                <clr-datagrid [clrDgStickyHeader]="true" class="gw-po-grid">
+                  <clr-dg-column>Sr.No.</clr-dg-column>
+                  <clr-dg-column>Work/batch order No</clr-dg-column>
+                  <clr-dg-column>Work/batch Date</clr-dg-column>
+                  <clr-dg-column>Order No</clr-dg-column>
+                  <clr-dg-column>Product Code</clr-dg-column>
+                  <clr-dg-column>Product Name</clr-dg-column>
+                  <clr-dg-column>Packing Type</clr-dg-column>
+                  <clr-dg-column>Batch Size</clr-dg-column>
+                  <clr-dg-column>Plan Month</clr-dg-column>
+                  <clr-dg-column>Unit</clr-dg-column>
+                  <clr-dg-column>Planning Status</clr-dg-column>
+                  <clr-dg-column>Forward Action</clr-dg-column>
+                  <clr-dg-column>Processed On</clr-dg-column>
+                  <clr-dg-column>Processed By</clr-dg-column>
+
+                  <clr-dg-row *ngFor="let wo of mg.workOrders; let i = index"
+                    class="gw-wo-row"
+                    [class.gw-wo-row--sfg]="isCombiChild(wo)"
+                    [style.--gw-row-bg]="group.bg_color">
+                    <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.workorder_no || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.order_no || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.product_code || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-product" [title]="wo.product_name || ''">
+                      <span class="gw-tag gw-tag--line" *ngIf="isCombiChild(wo)">SFG</span>
+                      {{ wo.product_name || '-' }}
+                    </clr-dg-cell>
+                    <clr-dg-cell>{{ wo.packing_type || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-num">{{ wo.batch_size || '0' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ planMonthLabel(wo.split_plan_month || wo.planMonth) }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.planUnit || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-action">
+                      <span
+                        class="badge"
+                        [ngClass]="getPlanningStatusBadgeClass(wo.status)"
+                        [title]="getPlanningStatusTooltip(wo.status)">
+                        {{ getPlanningStatusLabel(wo.status) }}
+                      </span>
+                    </clr-dg-cell>
+                    <clr-dg-cell>{{ getForwardActionLabel(wo) }}</clr-dg-cell>
+                    <clr-dg-cell>
+                      {{ processedOnDisplay(wo) ? (processedOnDisplay(wo) | date:'dd-MM-yyyy HH:mm') : '-' }}
+                    </clr-dg-cell>
+                    <clr-dg-cell [title]="processedByDisplay(wo)">{{ processedByDisplay(wo) }}</clr-dg-cell>
+                  </clr-dg-row>
+
+                  <clr-dg-placeholder>No work orders in this month.</clr-dg-placeholder>
+                </clr-datagrid>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,409 @@
+  <div class="card" >
+  <div class="card-header sh-page-header">
+    <div class="sh-header-row">
+      <div class="sh-header-title">Shortage Analysis</div>
+      <div class="sh-header-actions">
+        <div class="sh-view-tabs">
+          <button type="button" class="btn btn-sm"
+            [class.btn-primary]="activeView === 'shortages'"
+            [class.btn-outline]="activeView !== 'shortages'"
+            (click)="setActiveView('shortages')">Shortages</button>
+          <button type="button" class="btn btn-sm"
+            [class.btn-primary]="activeView === 'cancelled'"
+            [class.btn-outline]="activeView !== 'cancelled'"
+            (click)="setActiveView('cancelled')">Cancelled Indent</button>
+        </div>
+        <button class="btn btn-sm btn-info-outline sh-rules-btn" (click)="openRules()">
+          <clr-icon shape="help-info"></clr-icon> Rules
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+     <div class="search-container sh-search-compact">
+    <label for="tableSearchInput">Search:</label>
+  <input type="text" id="tableSearchInput" class="sh-search-input"
+       placeholder="Filter by Forecast No, material, client, WO, indent…"
+       [(ngModel)]="searchText"
+       (ngModelChange)="applyFilter()"
+       [disabled]="loading || cancelledLoading">
+</div>
+
+    <div class="card-text shortages-loading" *ngIf="activeView === 'shortages' && loading">
+      <p class="text-muted">Loading shortages…</p>
+    </div>
+    <div class="card-text" *ngIf="activeView === 'shortages' && !loading">
+
+
+
+<div class="shortages-rows-list">
+  <div class="card shortages-mat-card" *ngFor="let mat of visibleMaterials; trackBy: trackByMaterial">
+    <div class="shortages-mat-header">
+      <div class="shortages-mat-header__body">
+        <div class="shortages-mat-header__scroll">
+          <div class="shortages-mat-detail-grid">
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Material type</span>
+              <span class="shortages-mat-field__value" [title]="mat.mat_type">{{ mat.mat_type || '—' }}</span>
+            </div>
+            <div class="shortages-mat-field shortages-mat-field--name">
+              <span class="shortages-mat-field__label">Material name</span>
+              <span class="shortages-mat-field__value" [title]="mat.material_name">{{ mat.material_name || '—' }}</span>
+            </div>
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Client Material Code</span>
+              <span class="shortages-mat-field__value shortages-mat-field__value--code">{{ mat.material_code || '—' }}</span>
+            </div>
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Mother code</span>
+              <span class="shortages-mat-field__value shortages-mat-field__value--code">{{ mat.MotherCode || '—' }}</span>
+            </div>
+            <div class="shortages-mat-field shortages-mat-field--client">
+              <span class="shortages-mat-field__label">Client</span>
+              <span class="shortages-mat-field__value" [title]="mat.client_name">
+                {{ mat.client_name || '—' }}
+                <span *ngIf="mat.client_code" class="shortages-mat-field__sub">({{ mat.client_code }})</span>
+              </span>
+            </div>
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Work orders</span>
+              <span class="shortages-mat-field__value">{{ mat.wo_count || 0 }}</span>
+            </div>
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Shortage qty</span>
+              <span class="shortages-mat-field__value shortages-mat-field__value--qty">{{ mat.total_shortage || 0 }}</span>
+            </div>
+            <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">UOM</span>
+              <span class="shortages-mat-field__value">{{ getMaterialUom(mat) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="shortages-mat-actions">
+        <button
+          type="button"
+          class="btn btn-sm shortages-view-btn"
+          [class.shortages-view-btn--hide]="mat.detailExpanded && mat.detailLoaded"
+          [class.shortages-view-btn--loading]="mat.detailLoading"
+          (click)="toggleMaterialDetail(mat)"
+          [disabled]="mat.detailLoading"
+          [title]="mat.detailExpanded && mat.detailLoaded ? 'Hide work orders' : 'View work orders'"
+        >
+          <span *ngIf="mat.detailLoading" class="spinner spinner-inline shortages-view-btn__spinner"></span>
+          <clr-icon *ngIf="!mat.detailLoading" shape="eye"></clr-icon>
+          <span *ngIf="mat.detailLoading">Loading…</span>
+          <span *ngIf="!mat.detailLoading">{{ mat.detailExpanded && mat.detailLoaded ? 'Hide' : 'View' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="shortages-detail-loader" *ngIf="mat.detailLoading" role="status" aria-live="polite">
+      <span class="spinner shortages-detail-loader__spinner"></span>
+      <p class="shortages-detail-loader__text">
+        Loading work orders for <strong>{{ mat.material_name || mat.material_code }}</strong>…
+      </p>
+    </div>
+
+    <div class="shortages-mat-detail" *ngIf="mat.detailExpanded && mat.detailLoaded && !mat.detailLoading">
+<div class="card shortages-inner-card" *ngFor="let mats of mat['Client']; trackBy: trackByClient">
+   <div class="card-body">
+    
+   <clr-datagrid [clrDgLoading]="false" [clrDgStickyHeader]="true">
+ 
+      <clr-dg-column>Client Name</clr-dg-column>
+      <clr-dg-column>Product Name</clr-dg-column>
+      <clr-dg-column>Product Code</clr-dg-column>
+      <clr-dg-column>Bulk Code</clr-dg-column>
+      <clr-dg-column>Forecast No.</clr-dg-column>
+      <clr-dg-column>Workorder No</clr-dg-column>
+      <clr-dg-column>Required Qty (For WO)</clr-dg-column>
+      <clr-dg-column>Open PO</clr-dg-column>
+      <clr-dg-column>Mother code available qty</clr-dg-column>
+      <clr-dg-column class="sh-col-inhand">RM available qty</clr-dg-column>
+      <clr-dg-column class="sh-col-balance">Balance</clr-dg-column>
+      <clr-dg-column class="sh-col-shortage">Shortage qty</clr-dg-column>
+      <clr-dg-column>Unit</clr-dg-column>
+ 
+      <clr-dg-row *ngFor="let wo of mats.wos; let i = index; trackBy: trackByWo" [style.backgroundColor]="wo.bg_color">       
+        
+        <clr-dg-cell>{{ mat.client_name || '-' }} ({{ mat.client_code || '-' }})</clr-dg-cell>
+        <clr-dg-cell>{{ wo.product_name || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.product_code || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.bulk_code || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.order_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.workorder_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.batch_plan_qty || '0' }}</clr-dg-cell>
+        <clr-dg-cell>{{ mat.openPO || 0 }}</clr-dg-cell>
+        <clr-dg-cell>{{ mat.mother_available_qty || 0 }}</clr-dg-cell>
+        <clr-dg-cell class="sh-col-inhand">{{ wo.clmc_Inhand || 0 }}</clr-dg-cell>
+        <clr-dg-cell class="sh-col-balance">{{ wo.rm_remaining || 0 }}</clr-dg-cell>
+        <clr-dg-cell class="sh-col-shortage">{{ wo.rm_shortage || 0 }}</clr-dg-cell>
+        <clr-dg-cell>{{ wo.uom || mats.uom || mats.Matunit || getMaterialUom(mat) }}</clr-dg-cell>
+      </clr-dg-row>
+
+      <clr-dg-row style="font-weight:bold;">
+  <clr-dg-cell>Total</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>-</clr-dg-cell>
+  <clr-dg-cell>{{ mat.openPO || 0 }}</clr-dg-cell>
+  <clr-dg-cell>{{ mat.mother_available_qty || 0 }}</clr-dg-cell>
+  <clr-dg-cell class="sh-col-inhand">{{ mats.available_Stock_qty || 0 }}</clr-dg-cell>
+  <clr-dg-cell class="sh-col-balance">{{ mats.total_rm_balance || 0 }}</clr-dg-cell>
+  <clr-dg-cell class="sh-col-shortage">
+    <button class="btn btn-primary btn-sm" (click)="RaiseInd(mats,'Client', mat)"
+      [disabled]="!canRaiseClientIndent(mats)">
+      Raise Indent (CL): {{ mats.total_Client_shortage || mats.total_rm_shortage || 0 }}
+    </button>
+  </clr-dg-cell>
+  <clr-dg-cell>{{ getMaterialUom(mat) }}</clr-dg-cell>
+</clr-dg-row>
+ 
+ 
+</clr-datagrid>
+  </div>
+</div>
+    </div>
+  </div>
+
+  <p class="shortages-empty" *ngIf="!visibleMaterials?.length">No shortage materials found.</p>
+</div>
+
+  <!-- Cancelled Indent tab -->
+  <div class="card-text shortages-loading" *ngIf="activeView === 'cancelled' && cancelledLoading">
+    <p class="text-muted">Loading cancelled indents…</p>
+  </div>
+  <div class="card-text sh-cancelled-panel" *ngIf="activeView === 'cancelled' && !cancelledLoading">
+    <p class="text-muted small" *ngIf="!cancelledIndents?.length">No cancelled / returned indents.</p>
+    <div class="sh-cancelled-wrap" *ngIf="cancelledIndents?.length">
+      <table class="table table-bordered table-sm sh-cancelled-table">
+        <thead>
+          <tr>
+            <th>Sr</th>
+            <th>Client Name</th>
+            <th>Product Name</th>
+            <th>Bulk Code</th>
+            <th>Forecast No.</th>
+            <th>Material</th>
+            <th>Material Code</th>
+            <th>WO No</th>
+            <th>Indent No</th>
+            <th>Shortage Qty</th>
+            <th>UOM</th>
+            <th>Status</th>
+            <th>Remark</th>
+            <th>Action By / On</th>
+            <th>Proceed Indent</th>
+            <th>Permanent Cancel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of cancelledIndents; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ row.client_name || '—' }} <small *ngIf="row.client_code">({{ row.client_code }})</small></td>
+            <td>{{ row.product_name || '—' }}</td>
+            <td>{{ row.bulk_code || '—' }}</td>
+            <td>{{ row.forecast_no || '—' }}</td>
+            <td>{{ row.material_name || '—' }}</td>
+            <td>{{ row.material_code || '—' }}</td>
+            <td>{{ row.workorder_no || '—' }}</td>
+            <td>{{ row.indent_request_no || row.indent_no || '—' }}</td>
+            <td class="sh-qty-cell">{{ row.total_shortage || row.req_qty || 0 }}</td>
+            <td>{{ row.uom || '—' }}</td>
+            <td>
+              <span class="sh-ci-badge"
+                [class.sh-ci-badge--returned]="(row.indent_raw_status || '').toLowerCase() === 'returned'"
+                [class.sh-ci-badge--cancelled]="(row.indent_raw_status || '').toLowerCase() === 'cancelled'">
+                {{ row.indent_raw_status || '—' }}
+              </span>
+            </td>
+            <td class="sh-remark-cell">{{ row.planning_indent_remark || '—' }}</td>
+            <td>
+              {{ row.action_by_name || row.planning_indent_action_by || '—' }}
+              <br><small>{{ row.planning_indent_action_on || '' }}</small>
+            </td>
+            <td>
+              <button type="button" class="btn btn-success btn-sm"
+                (click)="proceedCancelledIndent(row)"
+                [disabled]="!canProceedCancelled(row) || row.proceedLoading">
+                <span *ngIf="row.proceedLoading" class="spinner spinner-inline"></span>
+                Proceed
+              </button>
+            </td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm"
+                (click)="openPermanentCancelModal(row)"
+                [disabled]="!canPermanentCancel(row)">
+                Permanent Cancel
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="shortages-more card-text" *ngIf="activeView === 'shortages' && !loading && hasMoreMaterials">
+    <span class="text-muted">
+      Showing {{ visibleMaterials.length }} of {{ totalMaterialsFiltered }} material(s) after filter.
+    </span>
+    <button type="button" class="btn btn-sm btn-outline" (click)="showMoreMaterials()">
+      Show more materials
+    </button>
+  </div>
+
+    </div>
+
+  </div>
+</div> 
+
+<!-- Permanent cancel modal -->
+<clr-modal [(clrModalOpen)]="permanentCancelModalOpen" [clrModalClosable]="!permanentCancelSubmitting">
+  <h3 class="modal-title">Permanent Cancel Indent</h3>
+  <div class="modal-body">
+    <p class="text-muted small" *ngIf="permanentCancelTarget">
+      Material: <strong>{{ permanentCancelTarget.material_name || permanentCancelTarget.material_code }}</strong>
+    </p>
+    <p class="text-danger small">This action cannot be undone. The indent will show status <strong>Cancelled</strong> and cannot be reprocessed.</p>
+    <label>Remark</label>
+    <textarea rows="3" class="sh-remark-input" [(ngModel)]="permanentCancelRemark"
+      [disabled]="permanentCancelSubmitting"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closePermanentCancelModal()" [disabled]="permanentCancelSubmitting">Close</button>
+    <button type="button" class="btn btn-danger" (click)="submitPermanentCancel()" [disabled]="permanentCancelSubmitting">
+      <span *ngIf="permanentCancelSubmitting" class="spinner spinner-inline"></span>
+      Permanent Cancel
+    </button>
+  </div>
+</clr-modal>
+
+<!-- ============================ CALCULATION RULES ============================ -->
+<clr-modal [(clrModalOpen)]="showRules" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Shortage Analysis &mdash; Calculation Rules</h3>
+  <div class="modal-body">
+    <div id="shortagesRulesContent" class="sh-rules">
+
+      <p class="sh-rules__note">
+        Work orders for a material are processed <strong>in sequence</strong>; the remaining
+        (balance) stock of one work order is carried forward as the available stock of the next.
+        Shortage is calculated on the <strong>client material code only</strong> (mother-code stock
+        is shown for reference but is not auto-consumed on this screen).
+        <strong>No value is ever negative</strong> &mdash; every result is clamped to a minimum of 0.
+      </p>
+
+      <h4 class="sh-rules__heading">1. Material header &mdash; stock &amp; PO</h4>
+
+      <table class="sh-rules__table">
+        <tr><th>Open PO</th><td>
+          Sum of unreceived PO line qty (<code>po_material.isreceive = no</code>) on POs that are
+          not cancelled/rejected, grouped by <strong>client material code</strong>.
+        </td></tr>
+        <tr><th>Mother code available qty</th><td>
+          Net free stock for the <strong>mother code</strong> &mdash; <strong>display only</strong>;
+          not used in shortage calculation on this screen.
+        </td></tr>
+        <tr><th>RM available qty</th><td>
+          Free client-code pool: stockbook <code>net available</code> plus add-back of open
+          <code>CANNOT_PLAN</code> bookings with <code>indent_status = Not Raised</code>
+          (same as WO-wise). After indent is raised, that booking stays reserved and the row leaves Shortages.
+        </td></tr>
+        <tr><th>Shortage qty</th><td>Per WO: client-code RM shortage after live stock check. Total row sums open shortages.</td></tr>
+        <tr><th>Unit</th><td>Material UOM.</td></tr>
+      </table>
+
+      <h4 class="sh-rules__heading">2. Net in hand formula (client code)</h4>
+
+      <p class="sh-rules__note">
+        Both RM (client code) and MC (mother code) In-Hand use the <strong>same formula</strong>. It is the
+        <strong>net free stock</strong> physically lying in store after removing everything that is already
+        consumed or reserved. It can never go below 0.
+      </p>
+
+      <table class="sh-rules__table">
+        <tr><th>Formula</th>
+          <td>
+            <code>Net In Hand = max(0, Available Qty &minus; Booked Qty &minus; Hold Qty)</code><br>
+            <code>Available Qty = Total Stock &minus; Issued Qty</code>
+          </td>
+        </tr>
+      </table>
+
+      <p class="sh-rules__subhead">What each value means</p>
+      <table class="sh-rules__table">
+        <tr>
+          <th>Total Stock</th>
+          <td>All received &amp; QC-approved (GRN-passed) stock of the material currently recorded in store.
+            <br><span class="sh-rules__src">Source: <code>vw_total_available_stock.total_stock_qty</code></span></td>
+        </tr>
+        <tr>
+          <th>Issued Qty</th>
+          <td>Total quantity already issued / consumed out of that stock (e.g. dispensed to production).
+            <br><span class="sh-rules__src">Source: <code>vw_total_available_stock.total_issued_qty</code></span></td>
+        </tr>
+        <tr>
+          <th>Available Qty</th>
+          <td><code>Total Stock &minus; Issued Qty</code> &mdash; the physical stock still lying in store,
+            <em>before</em> removing reservations / holds.
+            <br><span class="sh-rules__src">Source: <code>vw_total_available_stock.available_qty</code></span></td>
+        </tr>
+        <tr>
+          <th>Booked Qty</th>
+          <td>Stock already <strong>reserved for other demand</strong>. It is the sum of:
+            <ul class="sh-rules__list">
+              <li><strong>Planned WO deductions</strong> &mdash;
+                <code>deducted_from_RM + deducted_from_MC + deducted_from_Bulk</code> from
+                <code>WO_deductions</code> for <em>active</em> work orders (excludes Cancel / Hold / Rejected).</li>
+              <li><strong>MRP booked stock</strong> &mdash; qty booked against marketing orders / forecasts
+                (<code>mrp_bookedStock</code>).</li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <th>Hold Qty</th>
+          <td>Stock that is <strong>not usable</strong> because it is on hold / quarantine. It is the sum of:
+            <ul class="sh-rules__list">
+              <li><strong>Store lots on hold</strong> &mdash; <code>stock_book</code> rows with status On&nbsp;Hold / Hold.</li>
+              <li><strong>GRN qty on hold</strong> &mdash; <code>challan_materials.hold_qty</code> where the GRN is On&nbsp;Hold / Hold.</li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <th>Net In Hand</th>
+          <td><code>max(0, Available Qty &minus; Booked Qty &minus; Hold Qty)</code> &mdash; the free stock truly
+            usable for this material. Shown in the <strong>RM available qty</strong> column.</td>
+        </tr>
+      </table>
+
+      <h4 class="sh-rules__heading">3. Per work order (cascade)</h4>
+      <table class="sh-rules__table">
+        <tr><th>Required Qty (For WO)</th><td>The work order batch / plan quantity.</td></tr>
+        <tr><th>RM available qty</th><td>Client-code stock pool <strong>before</strong> this WO (first row = starting net; next rows = balance from previous WO).</td></tr>
+        <tr><th>Balance</th><td><code>max(0, RM available &minus; Required Qty)</code> &mdash; carried forward as RM available on the next row.</td></tr>
+        <tr><th>Shortage qty</th><td><code>max(0, Required Qty &minus; RM available)</code> on client code only (mother code not consumed).</td></tr>
+      </table>
+
+      <h4 class="sh-rules__heading">4. Total row (per client)</h4>
+      <table class="sh-rules__table">
+        <tr><th>RM available</th><td>Starting net pool before the first work order.</td></tr>
+        <tr><th>Balance</th><td>Pool remaining after the <em>last</em> work order.</td></tr>
+        <tr><th>Total shortage</th><td>Sum of per-WO client-code shortages.</td></tr>
+        <tr><th>Raise Indent (CL)</th><td>Raises indent on the <strong>client code</strong>. Enabled when RM shortage &gt; 0.</td></tr>
+      </table>
+
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="printRules()">
+      <clr-icon shape="printer"></clr-icon> Print
+    </button>
+    <button type="button" class="btn btn-primary" (click)="closeRules()">Close</button>
+  </div>
+</clr-modal>
+
+

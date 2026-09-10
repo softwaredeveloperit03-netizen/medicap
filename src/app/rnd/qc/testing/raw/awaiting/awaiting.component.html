@@ -1,0 +1,441 @@
+﻿<div class="container-fluid" *ngIf="isInit">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Awaiting Raw Material Testing</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/rnd/qc/testing/raw" style="background-color: red;color: white;">
+                  CLOSE
+                </button>
+              </div>
+            </div>
+        </div>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table">
+              <tr>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling No</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Specification No</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">A. R. No</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">view</th>
+              </tr>
+          
+              <tr *ngFor="let user of testings; let i = index">
+                  <td style="text-align: left;">{{i+1}}</td>
+                  <td style="text-align: left;">{{user.sampling_no}}</td>
+                  <td style="text-align: left;">{{user.specification_no}}</td>
+                  <td style="text-align: left;">{{user.material_name}}</td>
+                  <td style="text-align: left;">{{user.material_code}}</td>
+                  <td style="text-align: left;">{{user.grade}}</td>
+                  <td style="text-align: left;">{{user.ar_no}}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info" (click)="viewSpecification(i)">{{'common.view' | translate}}</button>
+                  </td>
+              </tr>
+              <tr *ngIf="testings?.length== 0">
+                  <td colspan="8">No Record Found!</td>
+              </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+</div>
+  
+<div class="container-fluid" *ngIf="!isInit">
+    <div class="card" *ngIf="pendings.length > 0 && !isMoa">
+        <div class="card-header">Awaiting Raw Material Testing</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 15%;">Testing No.</td>
+                        <td style="text-align: left;">: {{ selectedTesting['testing_no'] }}</td>
+                        <td style="text-align: left;width: 15%;">Sampling No.</td>
+                        <td style="text-align: left;">: {{ selectedTesting['sampling_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;">Specification No.</td>
+                        <td style="text-align: left;">: {{ selectedTesting['specification_no'] }}</td>
+                        <td style="text-align: left;width: 15%;">A. R. No.</td>
+                        <td style="text-align: left;">: {{ selectedTesting['ar_no'] }}</td>
+                    </tr>
+                </table>
+
+                <h3>Material Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 15%;">Material Code</td>
+                        <td style="text-align: left;">: {{ selectedTesting['material_code'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;">Material Name</td>
+                        <td style="text-align: left;">: {{ selectedTesting['material_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;">Grade</td>
+                        <td style="text-align: left;">: {{ selectedTesting['grade'] }}</td>
+                    </tr>
+                </table>
+
+                <h3>Tests:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Test</th>
+                        <th>Subtest</th>
+                        <th>{{'common.description' | translate}}</th>
+                        <th>Start</th>
+                    </tr>
+                
+                    <tr *ngFor="let user of pendings; let i = index">
+                        <td>{{user.test}}</td>
+                        <td>{{user.subtest}}</td>
+                        <td>{{user.description}}</td>
+                        <td>
+                            <button *ngIf="user.status == 'pending'" class="btn btn-sm btn-info" (click)="viewMOA(i)">start</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isInit = true">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+    <div class="card" *ngIf="rechecks.length > 0">
+        <div class="card-header">Observation failed tests recheck form:</div>
+        <div class="card-block">
+        <div class="card-text">
+            <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Test No:</label>
+                <input type="text" name="testing_no" [ngModel]="selectedTesting['testing_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Sampling No:</label>
+                <input type="text" name="sampling_no" [ngModel]="selectedTesting['sampling_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Specification No:</label>
+                <input type="text" name="specification_no" [ngModel]="selectedTesting['specification_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>A. R. No:</label>
+                <input type="text" name="ar_no" [ngModel]="selectedTesting['ar_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Material Name:</label>
+                <input type="text" name="material_name" [ngModel]="selectedTesting['material_name']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Material Grade</label>
+                <input type="text" name="material_grade" [ngModel]="selectedTesting['material_grade']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Material Code:</label>
+                <input type="text" name="item_code" [ngModel]="selectedTesting['material_code']" readonly>
+            </div>
+            </div>
+            <div *ngFor="let recheck of rechecks; let i = index" style="text-align: center;margin-bottom: 20px;">
+            <div class="clr-row" style="border: 1px solid; padding: 5px;background: black; color: white;">
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">Test</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{'common.description' | translate}}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">Result</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{'common.table.remark' | translate}}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">Start Time</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">End Time</div>
+            </div>
+
+            <div class="clr-row" style="border: 1px solid; padding: 5px;">
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.test }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.description }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <span style='color:red;text-decoration:line-through;background: lightblue;padding: 7px;'>
+                    <span style='color:black'>{{ recheck.result }}</span>
+                </span>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.remark }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.start_time }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.end_time }}</div>
+            </div>
+
+            <div class="clr-row" style="border: 1px solid; padding: 5px;">
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.test }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">{{ recheck.description }}</div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <input type="text" name="result{{ i }}" #result="ngModel" ngModel required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <input type="text" name="remark{{ i }}" ngModel required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <input type="time" name="start{{ i }}" ngModel required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <input type="time" name="end{{ i }}" ngModel required>
+                </div>
+            </div>
+            </div>
+        </div>
+        </div>
+        <div class="card-footer">
+        <button class="btn btn-danger">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+    <div class="card" *ngIf="isMoa && !isStart">
+        <div class="card-header">Testing</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width:15%;">Test No.:</td>
+                        <td style="text-align: left;">{{ selectedTesting['testing_no'] }}</td>
+                        <td style="text-align: left;width:15%;">Sampling No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['sampling_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Specification No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['specification_no'] }}</td>
+                        <td style="text-align: left;width:15%;">A. R. No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['ar_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Material Name:</td>
+                        <td style="text-align: left;" colspan="3">{{ selectedTesting['material_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Material Code:</td>
+                        <td style="text-align: left;">{{ selectedTesting['material_code'] }}</td>
+                        <td style="text-align: left;width:15%;">Material Grade:</td>
+                        <td style="text-align: left;">{{ selectedTesting['grade'] }}</td>
+                    </tr>
+                </table>
+
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;">Test:</td>
+                        <td style="text-align: left;">{{ selectedMOA['test'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Subtest:</td>
+                        <td style="text-align: left;" *ngIf="selectedMOA['subtest'] !== ''">{{ selectedMOA['subtest'] }}</td>
+                        <td style="text-align: left;" *ngIf="selectedMOA['subtest'] == ''">Not Applicable</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Description:</td>
+                        <td style="text-align: left;">{{ selectedMOA['description'] }}</td>
+                    </tr>
+                </table>
+
+                <div class="clr-row">
+                    <div class="clr-col-4"></div>
+                    <div class="clr-col-4">
+                        <div class="card clickable" (click)="updateSamplingTime('start')" style="background-color: green;">
+                            <div class="card-block">
+                                <div class="card-text" style="color: white;margin: 5%; font-size: 40px;text-align: center;">
+                                    START
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clr-col-4"></div>
+                </div>
+               
+            </div>
+        </div>
+        <div class="card-footer" *ngIf="!isStart">
+            <button class="btn btn-danger" (click)="isMoa = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+    <div class="card" *ngIf="isMoa && isStart">
+        <div class="card-header">Testing</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width:15%;">Test No.:</td>
+                        <td style="text-align: left;">{{ selectedTesting['testing_no'] }}</td>
+                        <td style="text-align: left;width:15%;">Sampling No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['sampling_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Specification No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['specification_no'] }}</td>
+                        <td style="text-align: left;width:15%;">A. R. No:</td>
+                        <td style="text-align: left;">{{ selectedTesting['ar_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Material Name:</td>
+                        <td style="text-align: left;" colspan="3">{{ selectedTesting['material_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:15%;">Material Code:</td>
+                        <td style="text-align: left;">{{ selectedTesting['material_code'] }}</td>
+                        <td style="text-align: left;width:15%;">Material Grade:</td>
+                        <td style="text-align: left;">{{ selectedTesting['grade'] }}</td>
+                    </tr>
+                </table>
+
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;">Test:</td>
+                        <td style="text-align: left;">{{ selectedMOA['test'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Subtest:</td>
+                        <td style="text-align: left;" *ngIf="selectedMOA['subtest'] !== ''">{{ selectedMOA['subtest'] }}</td>
+                        <td style="text-align: left;" *ngIf="selectedMOA['subtest'] == ''">Not Applicable</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Description:</td>
+                        <td style="text-align: left;">{{ selectedMOA['description'] }}</td>
+                    </tr>
+                </table>
+
+                <div *ngFor="let data of selectedMOA['method_details']">
+                    <h3>{{ data['name'] }}:</h3>
+        
+                    <div *ngIf="data['option'] == 'procedure'">
+                      <table class="table">
+                        <tr>
+                          <th style="width: 50px;">Sr.</th>
+                          <th>{{ data['name'] }}</th>
+                        </tr>
+                        <tr *ngFor="let list of data['list']; let i = index">
+                          <td>{{ i + 1 }}.</td>
+                          <td style="text-align: left;">{{ list.test_description }}</td>
+                        </tr>
+                      </table>
+                    </div>
+        
+                    <div *ngIf="data['option'] == 'chemical'">
+                      <table class="table">
+                        <tr>
+                          <th>Sr.</th>
+                          <th>Chemical Name</th>
+                          <th>Grade</th>
+                          <th>Make</th>
+                          <th>Medicap Lot No</th>
+                          <th>Qty</th>
+                          <th>{{'common.unit' | translate}}</th>
+                        </tr>
+                        <tr *ngFor="let list of data['list']; let i = index">
+                          <td>{{ i + 1 }}.</td>
+                          <td style="text-align: left;">{{ list.chemical_name }}</td>
+                          <td>{{ list.grade }}</td>
+                          <td>{{ list.make }}</td>
+                          <td style="padding: 0px;">
+                              <select name="batch_no" [(ngModel)]="list.batch_no" required style="margin: 0px; height: 33px;">
+                                  <option></option>
+                                  <option *ngFor="let batch of list['batches']">{{ batch.batch_no }}</option>
+                              </select>
+                          </td>
+                          <td style="padding: 0px;">
+                              <input type="text" name="qty" [(ngModel)]="list.qty" required style="margin: 0px; height: 33px;">
+                          </td>
+                          <td style="padding: 0px;">
+                            <select name="unit" [(ngModel)]="list.unit" required style="margin: 0px; height: 33px;">
+                                <option></option>
+                                <option value="liter">liter</option>
+                                <option value="ml">ml</option>
+                            </select>
+                        </td>
+                        </tr>
+                        <tr *ngIf="data['list']?.length == 0">
+                          <td colspan="6">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    <br>
+
+                    <div *ngIf="data['option'] == 'equipment'">
+                        <table class="table" style="margin-top: 0.5rem;">
+                            <tr>
+                                <th>Sr.</th>
+                                <th style="text-align: left;">Equipment Code</th>
+                                <th style="text-align: left;">Equipment Name</th>
+                                <th style="text-align: left;">Capacity</th>
+                                <th style="text-align: left;">Make</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                            </tr>
+                            <tr *ngFor="let list of data['list']; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td style="text-align: left;">{{ list.equipment_code }}</td>
+                                <td style="text-align: left;">{{ list.equipment_name }}</td>
+                                <td style="text-align: left;">{{ list.capacity }}</td>
+                                <td style="text-align: left;">{{ list.make }}</td>
+                                <td style="padding: 0px;">
+                                    <input type="time" name="usage_start_time" style="margin: 0px;" [(ngModel)]="list.usage_start_time" required>
+                                </td>
+                                <td style="padding: 0px;">
+                                    <input type="time" name="usage_end_time" style="margin: 0px;" [(ngModel)]="list.usage_end_time" required>
+                                </td>
+                            </tr>
+                            <tr *ngIf="data['list'].length == 0">
+                                <td colspan="7" style="text-align: center;">{{'common.noRecords' | translate}}</td>
+                            </tr>
+                        </table>
+                        <br>
+                    </div>
+
+                    <div *ngIf="data['option'] == 'hplc'">
+                        <table class="table" style="margin-top: 0.5rem;">
+                            <tr>
+                                <th>Sr.</th>
+                                <th style="text-align: left;">{{'common.name' | translate}}</th>
+                                <th style="text-align: left;">Packing</th>
+                                <th style="text-align: left;">Brand</th>
+                                <th style="text-align: left;">Impurity %</th>
+                            </tr>
+                            <tr *ngFor="let list of data['list']; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td style="text-align: left;">{{ list.name }}</td>
+                                <td style="text-align: left;">{{ list.packing }}</td>
+                                <td style="text-align: left;">{{ list.brand }}</td>
+                                <td style="padding: 0px;">
+                                    <input type="text" name="impurity{{i}}" [(ngModel)]="list.impurity" required style="margin: 0px; height: 33px;">
+                                </td>
+                            </tr>
+                            <tr *ngIf="data['list'].length == 0">
+                                <td colspan="7" style="text-align: center;">{{'common.noRecords' | translate}}</td>
+                            </tr>
+                        </table>
+                        <br>
+                    </div>
+                </div>
+
+                <form #testingForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-6">
+                            <label>Result:</label>
+                            <input type="text" name="result" ngModel required>
+                        </div>
+                        <div class="clr-col-6">
+                            <label>Remark:</label>
+                            <input type="text" name="remark" ngModel required>
+                        </div>
+                        <div class="clr-col-2">
+                            <button class="btn btn-danger" (click)="updateSamplingTime('end')" style="margin-top: 30px;">END</button>
+                        </div>
+                        <div class="clr-col-4">
+                            <label>End Time:</label>
+                            <input type="text" name="end_time" [ngModel]="end_time" required readonly tabindex="-1">
+                        </div>
+                    </div>
+                </form>
+               
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="submitTest(testingForm)">{{'common.submit' | translate}}</button>
+            <button class="btn btn-danger" (click)="isMoa = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

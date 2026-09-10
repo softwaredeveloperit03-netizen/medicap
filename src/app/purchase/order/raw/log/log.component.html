@@ -1,0 +1,442 @@
+<div class="vapp vapp--page" *ngIf="!isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Purchase Order Log</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+      <div class="vapp__toolbar vapp__toolbar--filters">
+        <div class="vapp__filter-group">
+          <label>Material Type<span class="vapp__required">*</span></label>
+          <select name="material_type" class="vapp__control" [(ngModel)]="po_type" required (change)="getAllPendingPO()" aria-label="Material Type">
+            <option>All</option>
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+            <option>Engg Store Mech</option>
+            <option>Engg Store Elect</option>
+            <option>Stationary</option>
+            <option>Housekeeping</option>
+            <option>Canteen</option>
+            <option>Building Material</option>
+            <option>Machine Spares (Dedicated)</option>
+            <option>Machine Spares (Common)</option>
+            <option>QC Materials</option>
+            <option>IT Materials</option>
+            <option>Others</option>
+            <option>Service</option>
+            <option>Equipment</option>
+          </select>
+        </div>
+        <div class="vapp__filter-group" style="flex:1; max-width:320px;">
+          <label>Search</label>
+          <input type="text" class="vapp__search" style="max-width:none;" placeholder="Search PO No, Vendor, Material, Status, Security Inward..." [(ngModel)]="searchQuery">
+        </div>
+        <div class="vapp__toolbar-actions">
+          <button type="button" class="vapp__btn vapp__btn--outline" (click)="clearFilter()">Clear Filter</button>
+          <button type="button" class="vapp__btn vapp__btn--primary" (click)="downloadExcel()" [disabled]="!(results?.length)">Download Excel</button>
+        </div>
+      </div>
+      <div class="vapp__table-wrap">
+        <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading" >
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>PO No.</clr-dg-column>
+          <clr-dg-column>Po Dt.</clr-dg-column>
+          <clr-dg-column>Materials</clr-dg-column>
+          <clr-dg-column>Entered By</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>Security Inward</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-column>Landing Price</clr-dg-column>
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <ul class="log__materials-list">
+                <li *ngFor="let item of result.materials">{{ item.material_name }},</li>
+              </ul>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_by }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.status | uppercase }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span class="log__security-status"
+                [class.log__security-status--received]="getSecurityInwardStatus(result) === 'Received'"
+                [class.log__security-status--pending]="getSecurityInwardStatus(result) === 'Pending'">
+                {{ getSecurityInwardStatus(result) }}
+              </span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="vapp__btn vapp__btn--view" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="vapp__btn vapp__btn--outline" (click)="viewLandingPrice(result)">View Landing Price</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} records
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vapp vapp--page" *ngIf="isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Purchase Order</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+        <table class="log__table log__table-summary table table-border">
+          <tr>
+            <td class="log__label-cell">PO No./Date:</td>
+            <td class="log__value-cell">{{ selectedPO?.['po_no'] }} // {{ selectedPO?.['entry_date'] | date:'dd-MM-yyyy' }}</td>
+            <td class="log__value-cell log__vendor-cell">{{ selectedPO?.['vendor_name'] }} - {{ selectedPO?.['vendor_no'] }}</td>
+            <td class="log__label-cell">PO Type:</td>
+            <td class="log__value-cell">{{ selectedPO?.['marketType'] }}</td>
+          </tr>
+          <tr>
+            <td class="log__label-cell">PO Status:</td>
+            <td class="log__value-cell">{{ selectedPO?.['status'] | uppercase }}</td>
+            <td class="log__label-cell">Security Inward:</td>
+            <td class="log__value-cell" colspan="2">
+              <span class="log__security-status"
+                [class.log__security-status--received]="getSecurityInwardStatus(selectedPO) === 'Received'"
+                [class.log__security-status--pending]="getSecurityInwardStatus(selectedPO) === 'Pending'">
+                {{ getSecurityInwardStatus(selectedPO) }}
+                <span *ngIf="selectedPO?.['is_security_receive']"> ({{ selectedPO?.['is_security_receive'] }})</span>
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        <form #poform="ngForm">
+          <div class="clr-row log__bill-ship-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="log__table-wrap">
+                <table class="log__table log__table-bill table table-border">
+                  <thead><tr><td class="log__billto-header" colspan="4">Bill To</td></tr></thead>
+                  <tbody>
+                    <tr><td class="log__label-cell">Name Of Company<span class="log__required">*</span></td><td class="log__value-cell" colspan="3">{{ selectedBill?.['company_name'] }}</td></tr>
+                    <tr><td class="log__label-cell">Address:</td><td class="log__value-cell">{{ selectedBill?.['address'] }}</td></tr>
+                    <tr><td class="log__label-cell">Location:</td><td class="log__value-cell">{{ selectedBill?.['area'] }}</td></tr>
+                    <tr><td class="log__label-cell">State/Province:</td><td class="log__value-cell">{{ selectedBill?.['present_state'] }}</td></tr>
+                    <tr><td class="log__label-cell">Postal Code:</td><td class="log__value-cell">{{ selectedBill?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="log__table-wrap">
+                <table class="log__table log__table-ship table table-border">
+                  <thead><tr><td class="log__shipto-header" colspan="4">Ship To</td></tr></thead>
+                  <tbody>
+                    <tr><td class="log__label-cell">Name Of Company<span class="log__required">*</span></td><td class="log__value-cell" colspan="3">{{ selectedShip?.['company_name'] }}</td></tr>
+                    <tr><td class="log__label-cell">Address:</td><td class="log__value-cell">{{ selectedShip?.['address'] }}</td></tr>
+                    <tr><td class="log__label-cell">Location:</td><td class="log__value-cell">{{ selectedShip?.['area'] }}</td></tr>
+                    <tr><td class="log__label-cell">State/Province:</td><td class="log__value-cell">{{ selectedShip?.['present_state'] }}</td></tr>
+                    <tr><td class="log__label-cell">Postal Code:</td><td class="log__value-cell">{{ selectedShip?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="log__section-title">Materials:</h3>
+          <div class="log__table-wrap log__materials-wrap">
+            <table class="log__table log__table-materials table table-border">
+              <thead>
+                <tr>
+                  <th class="log__th">{{'common.table.srNo' | translate}}</th>
+                  <th class="log__th log__th--left">Material Code</th>
+                  <th class="log__th log__th--left">Material Name</th>
+                  <th class="log__th">Discount %.</th>
+                  <th class="log__th">Qty</th>
+                  <th class="log__th">Quotation Amt.</th>
+                  <th class="log__th">Gross Total</th>
+                  <th class="log__th">Discount Amt.</th>
+                  <th class="log__th">Taxable</th>
+                  <th class="log__th">TAX %</th>
+                  <th class="log__th">Tax Total</th>
+                  <th class="log__th">Net Total</th>
+                  <th class="log__th">SGST</th>
+                  <th class="log__th">CGST</th>
+                  <th class="log__th">IGST</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of selectedPO?.['materials'] || []; let i = index">
+                  <td class="log__value-cell">{{ i + 1 }}</td>
+                  <td class="log__value-cell">{{ user.material_code }}</td>
+                  <td class="log__value-cell">{{ user.material_name }}</td>
+                  <td class="log__value-cell">{{ user.disc_per }} %</td>
+                  <td class="log__value-cell">{{ user.qty }} {{ user.unit }}</td>
+                  <td class="log__value-cell">{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                  <td class="log__value-cell">{{ user.gross_total }}</td>
+                  <td class="log__value-cell">{{ user.disc_amt }}</td>
+                  <td class="log__value-cell">{{ user.taxable_amt }}</td>
+                  <td class="log__value-cell">{{ user.gst }} %</td>
+                  <td class="log__value-cell">{{ user.tax_total }}</td>
+                  <td class="log__value-cell">{{ user.net_total }}</td>
+                  <td class="log__value-cell">{{ user.sgst }}</td>
+                  <td class="log__value-cell">{{ user.cgst }}</td>
+                  <td class="log__value-cell">{{ user.igst }}</td>
+                </tr>
+                <tr *ngIf="!(selectedPO?.['materials']?.length)">
+                  <td colspan="15" class="log__value-cell">No Record Found!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="clr-row">
+            <!-- Tax Splitup section
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+             <h3 class="log__section-title">Tax Splitup :</h3>
+              <div class="log__table-wrap">
+                <table class="log__table log__table-tax table table-border">
+                  <thead>
+                    <tr>
+                      <th class="log__th">Percentage</th>
+                      <th class="log__th">Taxable</th>
+                      <th class="log__th">IGST</th>
+                      <th class="log__th">SGST</th>
+                      <th class="log__th">CGST</th>
+                      <th class="log__th">TOTAL GST</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of selectedPO?.['gstSplitData'] || []">
+                      <td class="log__value-cell">{{ item.percentage }}%</td>
+                      <td class="log__value-cell">{{ item.taxable_amt }}</td>
+                      <td class="log__value-cell">{{ item.igst }}</td>
+                      <td class="log__value-cell">{{ item.sgst }}</td>
+                      <td class="log__value-cell">{{ item.cgst }}</td>
+                      <td class="log__value-cell">{{ item.totalGST }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="log__table-wrap" *ngIf="selectedPO?.['shipping_type'] == 'Company Account'">
+                <table class="log__table log__table-shipping table table-border">
+                  <thead>
+                    <tr>
+                      <th class="log__th">Shipping Amount</th>
+                      <th class="log__th">GST %</th>
+                      <th class="log__th">GST Amount</th>
+                      <th class="log__th">Shipping Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="log__value-cell">{{ selectedPO?.['shipping_handling'] || '-' }}</td>
+                      <td class="log__value-cell">{{ selectedPO?.['shipping_gst'] || '-' }}</td>
+                      <td class="log__value-cell">{{ selectedPO?.['shipping_Gst_amt'] || '-' }}</td>
+                      <td class="log__value-cell">{{ selectedPO?.['shipping_total'] || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            -->
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <h3 class="log__section-title">Delivery Schedule:</h3>
+              <div class="log__table-wrap">
+                <table class="log__table log__table-schedule table table-border">
+                  <thead>
+                    <tr>
+                      <th class="log__th">{{'common.table.srNo' | translate}}</th>
+                      <th class="log__th log__th--left">Material Name</th>
+                      <th class="log__th">Qty. <span class="log__required">*</span></th>
+                      <th class="log__th">Schedule Dil. Dt.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of selectedPO?.['schedule_data'] || []; let i = index">
+                      <td class="log__value-cell">{{ i + 1 }}</td>
+                      <td class="log__value-cell">{{ item.material_name }} - {{ item.material_code }}</td>
+                      <td class="log__value-cell">{{ item.qty }} - {{ item.unit }}</td>
+                      <td class="log__value-cell">{{ item.delivery_schedule_date | date:'dd-MM-yyyy' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="log__section-title">Terms & Conditions:</h3>
+              <div class="log__table-wrap">
+                <table class="log__table log__table-terms table table-border">
+                  <thead>
+                    <tr>
+                      <th class="log__th log__th--left">Term Heading</th>
+                      <th class="log__th log__th--left">Terms & Conditions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let term of selectedPO?.['terms_conditions'] || []">
+                      <td class="log__value-cell">{{ term.term_heading }}</td>
+                      <td class="log__value-cell">{{ term.term }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="log__section-title">Payment Terms: Total Payable: <span class="log__total-payable">{{ selectedPO?.['rounding'] }}</span></h3>
+              <div class="log__table-wrap">
+                <table class="log__table log__table-payment table table-border">
+                  <thead>
+                    <tr>
+                      <th class="log__th">Payment %</th>
+                      <th class="log__th log__th--left">Payment Conditions</th>
+                      <th class="log__th log__th--left">{{'common.amount' | translate}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let term of selectedPO?.['paymentTerms'] || []">
+                      <td class="log__value-cell">{{ term.pay_per }}</td>
+                      <td class="log__value-cell">{{ term.term }}</td>
+                      <td class="log__value-cell">{{ term.pay_amt }} {{ term.currency }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label class="log__narration"><strong>Narration :-</strong> <span class="log__value-cell">{{ selectedPO?.['narration'] || '-' }}</span></label>
+            </div>
+          </div>
+        </form>
+    </div>
+  <div class="card-footer" *ngIf="selectedPO?.['is_security_receive'] == 'No'">
+    <button class="btn btn-primary" [disabled]="selectedPO?.['status'] != 'Approved'" (click)="downloadPOReport()">{{'common.download' | translate}}</button>
+    <button class="btn btn-danger" *ngIf="selectedPO?.['status'] == 'Approved' || selectedPO?.['status'] == 'On_Hold'" (click)="purchaseOrderLogActionForStatusUpdate('Cancelled','Cancelled')">{{'common.cancel' | translate}}</button>
+    <button class="btn btn-info" *ngIf="selectedPO?.['status'] == 'Approved'" (click)="purchaseOrderLogActionForStatusUpdate('On_Hold','On_Hold')">Hold</button>
+    <button class="btn btn-success" *ngIf="selectedPO?.['status'] == 'On_Hold'" (click)="purchaseOrderLogActionForStatusUpdate('Approved','Release')">Release</button>
+    <button class="btn btn-primary" *ngIf="selectedPO?.['status'] == 'Approved' || selectedPO?.['status'] == 'On_Hold'" (click)="purchaseOrderLogActionForStatusUpdate('Sent_To_Amendment','Amendment')">Amendment</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+  <div class="card-footer" *ngIf="selectedPO?.['is_security_receive'] == 'Yes'">
+    <button class="btn btn-primary" [disabled]="selectedPO?.['status'] != 'Approved'" (click)="downloadPOReport()">{{'common.download' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+  </div>
+</div>
+ 
+
+  
+  <clr-modal [(clrModalOpen)]="isLanding" [clrModalClosable]="true" clrModalSize="xl" class="log__landing-modal">
+    <h3 class="modal-title">Landing Price</h3>
+    <div class="modal-body">
+      <div class="card log__landing-card">
+        <div class="card-block">
+          <div class="card-text">
+            <form #amendFOrm="ngForm">
+              <div class="log__landing-body">
+                <form #trasForm="ngForm">
+                  <div class="log__table-wrap" *ngIf="selectedPO?.['isLanding'] == 'NO'">
+                    <table class="log__table log__table-landing table table-border">
+                      <thead>
+                        <tr>
+                          <th class="log__landing-th">Transportation Heading</th>
+                          <th class="log__landing-th">Transportation Cost</th>
+                          <th class="log__landing-th">GST %</th>
+                          <th class="log__landing-th">GST Amt</th>
+                          <th class="log__landing-th">Total Transportation Cost</th>
+                          <th class="log__landing-th">{{'common.table.action' | translate}}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><input type="text" name="transHeadig" ngModel required class="log__landing-input" aria-label="Transportation Heading" title="Transportation Heading"></td>
+                          <td><input type="number" name="transportCost" [(ngModel)]="transportCost" (input)="calculatePercentage()" required class="log__landing-input" aria-label="Transportation Cost" title="Transportation Cost"></td>
+                          <td><input type="number" name="gstPerOnTransport" [(ngModel)]="gstPerOnTransport" (input)="calculatePercentage()" required class="log__landing-input" aria-label="GST %" title="GST %"></td>
+                          <td><input type="number" name="transportTaxAmt" [(ngModel)]="transportTaxAmt" readonly class="log__landing-input" aria-label="GST Amount" title="GST Amount"></td>
+                          <td><input type="number" name="totalTransportationCose" [(ngModel)]="totalTransportationCose" readonly class="log__landing-input" aria-label="Total Transportation Cost" title="Total Transportation Cost"></td>
+                          <td><button type="button" class="btn btn-sm btn-success" (click)="addTransportCost(trasForm)">{{'common.add' | translate}}</button></td>
+                        </tr>
+                        <tr *ngFor="let jau of transportCosts; let i = index">
+                          <td class="log__value-cell">{{ jau.transHeadig }}</td>
+                          <td class="log__value-cell">{{ jau.transportCost }}</td>
+                          <td class="log__value-cell">{{ jau.gstPerOnTransport }}</td>
+                          <td class="log__value-cell log__value-cell--right">{{ jau.transportTaxAmt }}</td>
+                          <td class="log__value-cell log__value-cell--right">{{ jau.totalTransportationCose }}</td>
+                          <td><button type="button" class="btn btn-sm btn-danger" (click)="delTraspotCost(i)">DEL</button></td>
+                        </tr>
+                        <tr class="log__landing-total-row">
+                          <td class="log__value-cell" colspan="3"><strong>{{'common.total' | translate}}</strong></td>
+                          <td class="log__value-cell log__value-cell--right">{{ totalTransGstAmt }}</td>
+                          <td class="log__value-cell log__value-cell--right">{{ finalTransAmt }}</td>
+                          <td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </form>
+
+                <div class="log__table-wrap" *ngIf="selectedPO?.['isLanding'] != 'NO'">
+                  <table class="log__table log__table-landing table table-border">
+                    <thead>
+                      <tr>
+                        <th class="log__landing-th">Transportation Heading</th>
+                        <th class="log__landing-th">Transportation Cost</th>
+                        <th class="log__landing-th">GST %</th>
+                        <th class="log__landing-th">GST Amt</th>
+                        <th class="log__landing-th">Total Transportation Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let jau of selectedPO?.['transportCosts'] || []">
+                        <td class="log__value-cell">{{ jau.transHeadig }}</td>
+                        <td class="log__value-cell">{{ jau.transportCost }}</td>
+                        <td class="log__value-cell">{{ jau.gstPerOnTransport }}</td>
+                        <td class="log__value-cell log__value-cell--right">{{ jau.transportTaxAmt }}</td>
+                        <td class="log__value-cell log__value-cell--right">{{ jau.totalTransportationCose }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="log__table-wrap" *ngIf="selectedPO?.['isLanding'] != 'NO'">
+                  <table class="log__table log__table-landing table table-border">
+                    <thead>
+                      <tr>
+                        <th class="log__landing-th">PO Value</th>
+                        <th class="log__landing-th">Transportation Cost</th>
+                        <th class="log__landing-th">GST Amt.</th>
+                        <th class="log__landing-th">Total Cost</th>
+                        <th class="log__landing-th">Landing Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="log__value-cell"><strong>{{ selectedPO?.['net_total'] }}</strong></td>
+                        <td class="log__value-cell"><strong>{{ selectedPO?.['transportCost'] }}</strong></td>
+                        <td class="log__value-cell"><strong>{{ selectedPO?.['transportTaxAmt'] }}</strong></td>
+                        <td class="log__value-cell"><strong>{{ totalLandingCost }}</strong></td>
+                        <td class="log__value-cell"><strong>{{ landingCost }}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button *ngIf="selectedPO?.['isLanding'] == 'NO'" class="btn btn-success" (click)="saveTransportCost()">{{'common.save' | translate}}</button>
+        </div>
+      </div>
+    </div>
+  </clr-modal>

@@ -1,0 +1,361 @@
+<div class="container-fluid" >
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Resignation Acceptance</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-success" routerLink="/hr/resignation/new" *ngIf="isuser == 'Yes'" >{{'common.new' | translate}}</button>
+          <button class="btn btn-sm btn-danger" routerLink="/hr/resignation/interview"  >Direct Exit</button>
+          <button class="btn btn-sm" routerLink="/hr" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button> 
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" >
+          
+          <clr-dg-column>Emp ID</clr-dg-column>
+          <clr-dg-column clrDgField="emp_name">{{'common.name' | translate}}</clr-dg-column>
+          <clr-dg-column clrDgField="department">{{'common.department' | translate}}</clr-dg-column>
+          <clr-dg-column clrDgField="designation">{{'common.designation' | translate}}</clr-dg-column>
+          <clr-dg-column clrDgField="expected_releaving">Expected Relieving Date</clr-dg-column>
+          <clr-dg-column>Resign. Acceptance</clr-dg-column>
+          <clr-dg-column>Exit Interview</clr-dg-column>
+          <clr-dg-column>Exp. letter</clr-dg-column>
+
+          <clr-dg-row *ngFor="let user of resignations; let i = index" [clrDgItem]="user">
+              <clr-dg-cell>{{user.emp_id}}</clr-dg-cell>
+              <clr-dg-cell>{{user.emp_name}}</clr-dg-cell>
+              <clr-dg-cell>{{user.department}}</clr-dg-cell>
+              <clr-dg-cell>{{user.designation}}</clr-dg-cell>
+              <clr-dg-cell>{{user.expected_releaving | date : 'dd-MM-YYYY'}}</clr-dg-cell>
+              <clr-dg-cell>
+              <button [disabled]="user.resignation_status != 'pending'" class="btn btn-sm btn-success" (click)="resignationAcceptance(i)" >Resign. Acceptance</button>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button [disabled]="user.resignation_status == 'Completed'" class="btn btn-sm btn-success" (click)="exitInterview(i)" >Exit Interview</button>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button [disabled]="user.exp_letter != 'pending'" class="btn btn-sm btn-primary" (click)="expLetter(i)" >Generate Exp. Letter</button>
+                <button style="margin-top: 15px;" [disabled]="user.exp_letter != 'Inprocess'" class="btn btn-sm btn-success" (click)="downloadPDF(user.emp_id)" >View Exp. Letter</button>
+              </clr-dg-cell>
+          </clr-dg-row>
+          <!-- <clr-dg-footer class="clarity-footer">
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+              {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+              of {{pagination.totalItems}} users
+            </clr-dg-pagination>
+          </clr-dg-footer> -->
+
+      </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+
+<clr-modal [(clrModalOpen)]="resigacc" clrModalSize="xl" [clrModalClosable]="true">
+  <h3 class="modal-title">Resignation Acceptance</h3>
+  <div class="modal-body">
+      <div class="card">            
+          <div class="card-block">
+              <div class="card-text">
+                   
+                      <div class="clr-row">
+                          <div  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            
+                            <table class="table table-border">
+                              <tr>
+                                <td colspan="4" style="text-align: center;background-color: aquamarine;"><b> {{selectedResult['resignation_type']}}</b></td>
+                              </tr>
+                              <tr>
+                                <td style="text-align: left;"><b>Department :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['department']}}</b></td>
+                                <td style="text-align: left;"><b>Employee Id :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['emp_id']}}</b></td>
+                              </tr>
+                              <tr>
+                                <td style="text-align: left;"><b>Employee Name :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['emp_name']}}</b></td>
+                                <td style="text-align: left;"><b>Designation :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['designation']}}</b></td>
+                              </tr>
+                              <tr>
+                                <td style="text-align: left;"><b>Date of Resignation :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['resignation_date']}}</b></td>
+                                <td style="text-align: left;"><b>Expected Releaving Date :</b></td>
+                                <td style="text-align: left;"><b>{{selectedResult['expected_releaving']}}</b></td>
+                              </tr>
+                              <tr>
+                                <td style="text-align: left;"><b>Description/Resignation Content :</b></td>
+                                <td colspan="3" style="text-align: left;"><b>{{selectedResult['description']}}</b></td>
+                
+                              </tr>
+                            </table>
+
+                          </div>
+                    </div>
+                    <form #acceptForm="ngForm" (ngSubmit)="submitResignation(acceptForm)">
+                      <div class="clr-row">
+                          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Resignation Status: <span style="color:red">*</span></label>
+                              <select name="resignation_status" ngModel required>
+                                  <option value="" disabled>Select Status</option>
+                                  <option value="Accepted">Accepted</option>
+                                  <option value="Rejected">{{'common.rejected' | translate}}</option>
+                              </select>
+                          </div>
+                          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Relieving On Date: <span style="color:red">*</span></label>
+                              <input type="date" name="releaving_date" ngModel required>
+                          </div>
+                          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                              <label>Remark: <span style="color:red">*</span></label>
+                              <textarea rows="2" name="resignation_remark" ngModel required></textarea>
+                          </div>
+                          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                              <br>
+                              <button type="submit" class="btn btn-primary">{{'common.submit' | translate}}</button>
+                          </div>
+                      </div>
+                  </form>
+              </div>
+          </div>
+          <div class="card-footer">
+            
+          </div>
+      </div>
+  </div>
+</clr-modal>
+
+
+
+
+ <clr-modal [(clrModalOpen)]="exinter" clrModalSize="xl" [clrModalClosable]="true">
+  <h3 class="modal-title">Exit Interview</h3>
+  <div class="modal-body">
+      <div class="card">            
+          <div class="card-block">
+              <div class="card-text">
+                  <div class="clr-row">
+                    <div  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      
+                      <table class="table table-border">
+                        <tr>
+                          <td colspan="4" style="text-align: center;background-color: aquamarine;"><b> {{selectedResult['resignation_type']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Department :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['department']}}</b></td>
+                          <td style="text-align: left;"><b>Employee Id :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['emp_id']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Employee Name :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['emp_name']}}</b></td>
+                          <td style="text-align: left;"><b>Designation :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['designation']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Date of Resignation :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['resignation_date']}}</b></td>
+                          <td style="text-align: left;"><b>Expected Releaving Date :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['expected_releaving']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Description/Resignation Content :</b></td>
+                          <td colspan="3" style="text-align: left;"><b>{{selectedResult['description']}}</b></td>
+          
+                        </tr>
+                      </table>
+
+                    </div>
+                    
+                    <div  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      <table class="table table-border">
+                        <tr>
+                          <td style="background-color:#144196;color:white;"><b>Sr. No.</b></td>
+                          <td style="background-color:#144196;color:white;text-align:left;"><b>Parameters</b></td>
+                          <td style="background-color:#144196;color:white;text-align:left;"><b>{{'common.description' | translate}}</b></td>
+                          <td style="background-color:#144196;color:white;"><b>{{'common.remarks' | translate}}</b></td>
+                        </tr>
+                        <tr *ngFor="let item of checkListData; let i =index;">
+                          <td>{{i + 1}}</td>
+                          <td>{{item.check_point}}</td>
+                          <td>{{item.description}}</td>
+                          <td style="padding: 0px !important;margin: 0px;">
+        
+                            <div *ngIf="item.evaluation_parameter=='1'">
+                              <input  type="text" min="0" name="check" [(ngModel)]="item.check"
+                              required
+                                style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            </div>
+          
+                            <div *ngIf="item.evaluation_parameter=='2'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Yes</option>
+                              <option>No</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='3'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>OK</option>
+                              <option>Not Ok</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='4'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Satisfactory</option>
+                              <option>Not Satisfactory</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='5'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Applicable</option>
+                              <option>Not Applicable</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='6'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Cleaned</option>
+                              <option>Not Cleaned</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='7'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Sealed </option>
+                              <option>Unsealed</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='8'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Verified</option>
+                              <option>Not Verified</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                            <div *ngIf="item.evaluation_parameter=='9'">
+                            <select  name="check" [(ngModel)]="item.check" required
+                              style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                              <option>Covered</option>
+                              <option>Uncovered</option>
+                              <option>NA</option>
+                            </select>
+                          </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+              </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary" (click)="saveExitInterview()">{{'common.submit' | translate}}</button>
+          </div>
+      </div>
+  </div>
+</clr-modal> 
+
+
+ <clr-modal [(clrModalOpen)]="expltr" clrModalSize="xl" [clrModalClosable]="true">
+  <h3 class="modal-title">Generate Experience Letter</h3>
+  <div class="modal-body">
+      <div class="card">            
+          <div class="card-block">
+              <div class="card-text">
+                  <div class="clr-row">
+                    <div  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      
+                      <table class="table table-border">
+                        <tr>
+                          <td colspan="4" style="text-align: center;background-color: aquamarine;"><b> {{selectedResult['resignation_type']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Department :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['department']}}</b></td>
+                          <td style="text-align: left;"><b>Employee Id :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['emp_id']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Employee Name :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['emp_name']}}</b></td>
+                          <td style="text-align: left;"><b>Designation :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['designation']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Date of Resignation :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['resignation_date']}}</b></td>
+                          <td style="text-align: left;"><b>Expected Releaving Date :</b></td>
+                          <td style="text-align: left;"><b>{{selectedResult['expected_releaving']}}</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: left;"><b>Description/Resignation Content :</b></td>
+                          <td colspan="3" style="text-align: left;"><b>{{selectedResult['description']}}</b></td>
+                        </tr>
+                      </table>
+
+                    </div>
+                    
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                      <label>Responsibilities</label>
+                      <textarea name="responsibilities" [(ngModel)]="responsibilities" required></textarea>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                      <label>Key Skills</label>
+                      <textarea name="key_skill" [(ngModel)]="key_skill" required></textarea>
+                    </div>
+                
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      <table  class="table table-border">
+                        <tr>
+                          <td style="text-align: center;background-color: aquamarine;"><b>Last Salary 
+                            (<span><input type="checkbox" name="last" [(ngModel)]="last" (change)="salCalc()"></span>
+                            <span  style="color: red; font-size: 10px;">Please Tick If Salary Is Due</span> )</b></td>
+                          <td style="text-align: center;background-color: aquamarine;"><b>Current Sal 
+                            (<span><input type="checkbox" name="curr" [(ngModel)]="curr" (change)="salCalc()"></span>
+                            <span  style="color: red; font-size: 10px;">Please Tick If Salary Is Due</span> )
+                          </b></td>
+                          <td style="text-align: center;background-color: aquamarine;"><b>Final Amount</b></td>
+                        </tr>
+                        <tr>
+                          <td style="text-align: center;"><b>{{ lastInhand | number:'1.2-2' }}</b></td>
+                          <td style="text-align: center;"><b>{{ currInhand | number:'1.2-2' }}</b></td>
+                          <td style="text-align: center;">
+                              <b>{{ TotalPendingSal | number:'1.2-2' }}</b>
+                          </td>
+                      </tr>
+                      </table>
+                     </div>
+                  </div>
+              </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary" (click)="generateletter(reginationForm)">{{'common.submit' | translate}}</button>
+
+          </div>
+      </div>
+  </div>
+</clr-modal> 
+
+
+
+
+
+
+ 

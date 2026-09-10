@@ -1,0 +1,182 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+declare let alertify: any;
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  badge?: number;
+}
+
+interface SidebarTab {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  plant_id: any;
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.plant_id = this.service.getPlantConfigFields('plant_id');
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit() {
+    this.get_rights();
+    this.AllRecord1();
+    this.updateFilteredCards();
+    const savedPalette = localStorage.getItem('purchase_order_raw_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights: any;
+  loggedInDept: string | null = null;
+
+  searchQuery = '';
+  selectedTabId = 'all';
+  showPalette = false;
+  filteredCards: DeptCard[] = [];
+  unreadPo = 0;
+
+  readonly sidebarTabs: SidebarTab[] = [
+    { id: 'all', label: 'All Modules', icon: 'fa-th-large' },
+    { id: 'rmpmindend', label: 'RM/PM PO from Requisition', icon: 'fa-plus-circle' },
+    { id: 'indend', label: 'GM PO from Requisition', icon: 'fa-plus-circle' },
+    { id: 'approval', label: 'PO for Review', icon: 'fa-user-check' },
+    { id: 'log', label: 'PO Log', icon: 'fa-clipboard-list' },
+    { id: 'storestatus', label: 'PO Status From Stores', icon: 'fa-warehouse' },
+  ];
+
+  private allCards: DeptCard[] = [
+    // { id: 'new', title: 'Direct PO', description: 'Create direct PO', route: 'new', icon: 'fa-file-alt', category: 'PO', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'rmpmindend', title: 'RM/PM PO from Requisition', description: 'PO from RM/PM requisition', route: 'rmpmindend', icon: 'fa-plus-circle', category: 'PO', gradient: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)' },
+    { id: 'indend', title: 'GM PO from Requisition', description: 'PO from GM requisition', route: 'indend', icon: 'fa-plus-circle', category: 'PO', gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)' },
+    { id: 'approval', title: 'PO for Review', description: 'Review and approve POs', route: 'approval', icon: 'fa-user-check', category: 'PO', gradient: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' },
+    { id: 'log', title: 'PO Log', description: 'Purchase order log', route: 'log', icon: 'fa-clipboard-list', category: 'PO', gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)' },
+    // { id: 'ammendment', title: 'PO Amendment', description: 'Amend purchase orders', route: 'ammendment', icon: 'fa-file-alt', category: 'PO', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    // { id: 'rejected', title: 'Rejected Material', description: 'Rejected materials', route: 'rejected', icon: 'fa-times-circle', category: 'PO', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'storestatus', title: 'PO Status From Stores', description: 'PO status from stores', route: 'storestatus', icon: 'fa-warehouse', category: 'PO', gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)' },
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  get_rights() {
+    this.service.get('hr/employee.php?type=getrights&emp_id=' + localStorage.getItem('emp_id') + '&dep_name=' + encodeURIComponent(this.loggedInDept || '')).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.isuser = r.isuser || 'No';
+      this.ischecker = r.ischecker || 'No';
+      this.isapprover = r.isapprover || 'No';
+      this.qms_approver = r.qms_approver || 'No';
+      this.dept_head = r.dept_head || 'No';
+      this.isauditor = r.isauditor || 'No';
+      this.plant_head = r.plant_head || 'No';
+      this.shift_allocator = r.shift_allocator || 'No';
+      this.syncBadgesAndUpdate();
+      this.cdr.markForCheck();
+    });
+  }
+
+  AllRecord1() {
+    this.service.get('purchase/po/raw.php?type=getAllPendingPOForNotification').subscribe((response: any) => {
+      this.unreadPo = response['Pending_Po'] || 0;
+      this.syncBadgesAndUpdate();
+      this.cdr.markForCheck();
+    });
+  }
+
+  private syncBadgesAndUpdate(): void {
+    this.allCards.forEach(c => {
+      c.badge = c.id === 'approval' && this.unreadPo > 0 ? this.unreadPo : undefined;
+    });
+    this.updateFilteredCards();
+  }
+
+  get selectedTabLabel(): string {
+    const tab = this.sidebarTabs.find((t) => t.id === this.selectedTabId);
+    return tab ? tab.label : 'All Modules';
+  }
+
+  getTabBadge(tabId: string): number | null {
+    if (tabId === 'approval' && this.unreadPo > 0) return this.unreadPo;
+    return null;
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      const matchTab = this.selectedTabId === 'all' || c.id === this.selectedTabId;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchTab && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectTab(tabId: string): void {
+    this.selectedTabId = tabId;
+    this.updateFilteredCards();
+  }
+
+  trackByTabId(_index: number, tab: SidebarTab): string {
+    return tab.id;
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('purchase_order_raw_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

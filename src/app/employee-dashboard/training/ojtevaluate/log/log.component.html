@@ -1,0 +1,142 @@
+﻿<div class="container-fluid" >
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Training Attendance Log</div>
+              <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                 <button class="btn btn-sm" routerLink="/employee-dashboard/training/ojtevaluate" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                
+                <table class="table table-border">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade / Level:</th>
+                          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Employee Id</th>
+                         <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Employee Name</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Emp. Department</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">training In Department</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">From - To</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                      </tr>
+                    <tr *ngFor="let training of trainings; let i = index">
+                        <td style="text-align: left;">{{ i+1 }}.</td>
+                        <td style="text-align: left;">{{ training.training_category }}</td>
+                          <td style="text-align: left;">{{ training.emp_id }}</td>
+                         <td style="text-align: left;font-weight: bolder;">{{ training.firstname }} {{ training.lastname }}</td>
+                        <td style="text-align: left;">{{ training.department }}</td>
+                        <td style="text-align: left;">{{ training.in_department }}</td>
+                        <td>{{ training.empTraningDateFrom  | date: 'dd-MM' }} - {{ training.empTraningDateTo  | date: 'dd-MM-yyyy' }}</td>
+                        <td style="padding: 0px; vertical-align: middle;">
+                          <button class="btn btn-sm btn-success" (click)="viewDetails(training.otherDet,i)">{{'common.view' | translate}}</button>
+                        </td> 
+                    </tr>
+                    <tr *ngIf="trainings?.length == 0">
+                        <td colspan="8">{{'common.noRecords' | translate}}</td>
+                    </tr>
+                </table>
+ 
+            </div>
+        </div>
+    </div>
+  </div>
+   
+  <clr-modal [(clrModalOpen)]="isOtherDetails1" clrModalSize="xl" clrModalClosable="false">
+    <h3 class="modal-title">View Other Details</h3>
+    <div class="modal-body">
+        <form #externalForm="ngForm">
+            <div class="clr-row">
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+   
+                      <table class="table table-border">
+                          <tr>
+                              <td style="background-color: aquamarine;font-weight: bolder;text-align: left;">Sr. No.</td>
+                              <td style="background-color: aquamarine;font-weight: bolder;text-align: left;">Subject</td>
+                              <td style="background-color: aquamarine;font-weight: bolder;text-align: left;">Specific</td>
+                              <td style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.type' | translate}}</td>
+                              <td style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.table.action' | translate}}</td>
+                           </tr>
+                           <tr *ngFor="let item of othersDetailsData1; let i = index;" >
+                              <td style="font-weight: bolder;text-align: left;">{{i+1}}</td>
+                              <td style="font-weight: bolder;text-align: left;">{{item.subject}}</td>
+                              <td style="font-weight: bolder;text-align: left;">{{item.sub_type}}</td>
+                              <td style="font-weight: bolder;text-align: left;">{{item.type}}</td>
+                              <td *ngIf="item.type != 'Self Learning'" >
+                                <span *ngIf="item.attendance == 'Present'" style="color: green;"><b>{{item.attendance}}</b></span>
+                                <span *ngIf="item.attendance != 'Present'" style="color: red;"><b>{{item.attendance}}</b></span>
+                              </td>
+                              <td *ngIf="item.type == 'Self Learning'" >
+                                <button *ngIf="item.attendance == 'Pending'" class="btn btn-sm btn-success" (click)="proccedForSelfLearning(item.fileNm,i)">Procced</button>
+                                <button *ngIf="item.attendance == 'Reading'" class="btn btn-sm btn-primary" (click)="retraining(item.fileNm,i)">Re-Reading</button>
+                                <button *ngIf="item.attendance == 'Reading'" class="btn btn-sm btn-success" (click)="completeTraining(item.fileNm,i)">Complete</button>
+                                <span *ngIf="item.attendance == 'Present'"  style="color: green;font-weight: bolder;" >{{item.attendance}}</span>
+                              </td>
+                          </tr>
+                      </table>
+                  </div>
+            </div>
+        </form>
+  
+    </div>
+    <div class="modal-footer">
+          <button  class="btn btn-danger" (click)="isOtherDetails1 = false">{{'common.close' | translate}}</button>
+    </div>
+  </clr-modal>
+   
+  
+  <clr-modal [(clrModalOpen)]="isProceed" clrModalSize="xl" [clrModalClosable]="true">
+    <h3 class="modal-title">Self Learning</h3>
+    <div class="modal-body">
+      <div class="card">
+        <div class="card-block">
+          <div class="card-text">
+              <div class="modal-body ">
+                <div class="clr-row">
+                    <div class="clr-col-12">
+
+                        <table class="table">
+                            <tr>
+                                <td style="font-weight: bolder;text-align: left;">Topic : {{selecteddTopic['sub_type']}}</td>
+                                <td style="font-weight: bolder;text-align: right;">Duration : {{selecteddTopic['timing']}} Mins</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bolder;text-align: left;">Start Date : {{selecteddTopic['sub_type']}}</td>
+                                <td style="font-weight: bolder;text-align: right;">Start Time : {{selecteddTopic['timing']}} Mins</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bolder;text-align: left;">Type : {{selecteddTopic['type']}}</td>
+                                <td style="font-weight: bolder;text-align: right;">File Close In : {{formatTime()}} Mins
+                                              <button *ngIf="!isPaused"  class="btn btn-sm btn-danger" (click)="pauseTimer()">Pause</button>
+                                              <button *ngIf="isPaused" class="btn btn-sm  btn-success" (click)="resumeTimer()">Resume</button>
+
+                                </td>
+                            </tr>
+                        </table>
+                        
+                    </div>
+                </div>
+                <div class="clr-row">
+                    <div *ngIf="!isPaused" class="clr-col-12">
+                        <iframe [src]="pdfSrc" width="100%" height="1000px"></iframe>
+                    </div>
+                    <div *ngIf="isPaused" class="clr-col-12">
+                        <span style="font-weight: bolder; color: yellowgreen;">Resume Timer To View Document !!!!!!</span>
+                    </div>
+                </div>
+          </div>
+        </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="isProceed = false">{{'common.close' | translate}}</button>
+         </div>
+      </div>
+    </div>
+  </clr-modal>
+  
+  
+ 
+  
+  

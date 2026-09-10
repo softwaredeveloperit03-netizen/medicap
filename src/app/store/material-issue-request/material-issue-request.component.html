@@ -1,0 +1,115 @@
+<div class="card"*ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-5" style="color: aliceblue;margin-top: -2px;text-align: left;">Material Issue Request From RND</div>
+          <div class="clr-col-lg-7" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/store" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-5">
+              <label>Search </label>
+              <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+            </div>
+          </div>
+
+          <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                <clr-dg-column>Material Type</clr-dg-column>
+                <clr-dg-column>Material Name</clr-dg-column>
+                <clr-dg-column>Material Code</clr-dg-column>
+                <clr-dg-column>Feasibility Form No.</clr-dg-column>
+                <clr-dg-column>Req. Qty.</clr-dg-column>
+                <clr-dg-column>Requested By/ON</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column >{{'common.table.action' | translate}}</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let product of filteredMaterials; let i = index" [clrDgItem]="product">
+                  <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.material_type || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.material_name || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.reqMaterialCode || '-'}}</clr-dg-cell>
+                  <clr-dg-cell><strong>{{product.feasibilityFormNo || '-'}}</strong></clr-dg-cell>
+                  <clr-dg-cell>{{product.requestQty }} {{product.reqUnit }}</clr-dg-cell>
+                  <clr-dg-cell>{{product.requestByName || '-'}} - ( {{product.requestBy}} ) / {{product.requestOn | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.status | uppercase}}</clr-dg-cell>
+                  <clr-dg-cell >
+                      <button class="btn btn-sm btn-success"  (click)="view(product)">{{'common.view' | translate}}</button>
+                  </clr-dg-cell>
+                </clr-dg-row>
+            </clr-datagrid>
+          </div>
+
+        </div>
+    </div>
+</div>
+
+  
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> Material Issuance Form </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+            <form #materialIssueForm="ngForm" class="clr-row">
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Feasibility Form No. : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="feasibilityFormNo" [(ngModel)]="selectedMaterial['feasibilityFormNo']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Material Name : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="material_name" [(ngModel)]="selectedMaterial['material_name']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Material Code : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="reqMaterialCode" [(ngModel)]="selectedMaterial['reqMaterialCode']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Req. Qty. : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="requestQty" [(ngModel)]="selectedMaterial['requestQty']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Req. Qty. Unit: <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="reqUnit" [(ngModel)]="selectedMaterial['reqUnit']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedMaterial['materialFrom'] != 'Indent'">
+                    <label><strong>Medicap Lot No : <span style="color: red;">*</span></strong></label>
+                    <select name="batchNo" name="batch_no" ngModel (change)="onBatchChange($event.target.value)" required>
+                        <option value="">--Select--</option>
+                        <option *ngFor="let batch of batches" [value]="batch.batch_no">{{batch.batch_no}} {{batch.available_qty}} {{batch.unit}}</option>
+                    </select>
+                </div>
+
+                <div *ngIf="selectedBatch['grn_no']" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Receiving no : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="grn_no" [(ngModel)]="selectedBatch['grn_no']" readonly required>
+                </div>
+
+                <div *ngIf="selectedBatch['ar_no']" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Medicap Lot No : <span style="color: red;">*</span></strong></label>
+                    <input type="text" name="ar_no" [(ngModel)]="selectedBatch['ar_no']" readonly required>
+                </div>
+
+            </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" (click)="issueMaterial(materialIssueForm)">Issue Material</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+

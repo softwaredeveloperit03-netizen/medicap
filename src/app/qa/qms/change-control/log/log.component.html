@@ -1,0 +1,814 @@
+<div class="cc-log-view">
+  <div class="cc-card" *ngIf="!isView">
+    <div class="cc-card-header">
+      <span>Change Control Log</span>
+      <button type="button" class="cc-btn cc-btn-close" routerLink="/qa/qms/change-control">
+        <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+      </button>
+    </div>
+    <div class="cc-card-body">
+      <div class="cc-filter-row" *ngIf="Department=='Quality Assurance'">
+        <label><strong>Department <span class="cc-required">*</span>:</strong></label>
+        <select name="department_name" [(ngModel)]="department_name" required (change)="getCcLog($event.target.value)" class="cc-select">
+          <option></option>
+          <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+        </select>
+      </div>
+      <div class="cc-table-wrap">
+        <table class="cc-table">
+          <thead>
+            <tr>
+              <th>CC No.</th>
+              <th>Department</th>
+              <th>Title Of Change Control</th>
+              <th>Changed Requested For</th>
+              <th>Initiate By / On</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let result of results; let i = index">
+              <td><strong>{{ result.ctrl_no }}</strong></td>
+              <td>{{ result.department_name }}</td>
+              <td>{{ result.titleOfcc }}</td>
+              <td>{{ result.changeReqFor }}</td>
+              <td>{{ result.entryBy }} / {{ result.entryDate | date:'dd/MM/yyyy' }}</td>
+              <td><span class="cc-badge">{{ result.statusMeha === 'To_QA_FinalRev' ? 'QA HEAD' : result.statusMeha === 'For_QA_Review_After_Assessment' ? 'Reviewed By QA' : result.statusMeha }}</span></td>
+              <td><button type="button" class="cc-btn cc-btn-view" (click)="view(i)">View</button></td>
+            </tr>
+            <tr *ngIf="!results?.length"><td colspan="6" class="cc-empty">No Records Found</td></tr>
+          </tbody>
+        </table>
+          </div>
+      </div>
+  </div>
+
+    <div class="card" *ngIf="isView">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Review Of Change By
+                    QA Head
+                </div>
+                <div class="clr-col-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                    <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">
+                        <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #reviewForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-12 clr-col-12 clr-col-sm-12 clr-col-xs-12">
+    
+                            <table class="table table-border">
+                                <tr>
+                                    <td style="text-align: left; font-weight: bolder;">CC No.</td>
+                                    <td style="text-align: left; font-weight: bolder; color:blue; ">
+                                        {{selectedResult['ctrl_no']}}</td>
+                                    <td style="text-align: left; font-weight: bolder;">Change Control Issued By</td>
+                                    <td style="text-align: left; font-weight: bolder; color:blue; ">
+                                        {{selectedResult['entryBy']}} / {{selectedResult['department_name']}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; font-weight: bolder;">Initiated By </td>
+                                    <td style="text-align: left; font-weight: bolder; color:blue; ">
+                                        {{selectedResult['entryBy']}}</td>
+                                    <td style="text-align: left; font-weight: bolder;">Department</td>
+                                    <td style="text-align: left; font-weight: bolder; color:blue; ">
+                                        {{selectedResult['department_name']}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; font-weight: bolder;">Changed Requested For</td>
+                                    <td style="text-align: left; font-weight: bolder; color:blue;">
+                                        {{selectedResult['changeReqFor']}}
+                                    </td>
+    
+                                    <td *ngIf="selectedResult['changeReqFor'] === 'Other'"
+                                        style="text-align: left; font-weight: bolder;">Specify Change Request</td>
+                                    <td *ngIf="selectedResult['changeReqFor'] === 'Other'"
+                                        style="text-align: left; font-weight: bolder; color:blue;" colspan="3">
+                                        {{selectedResult['changeReqForOther']}}
+                                    </td>
+    
+                                </tr>
+    
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder;" colspan="4">
+                                        <b>REASON & JUSTIFICATION OF PROPOSED CHANGE:</b><br><br>
+                                        <span style="color: blue;">{{selectedResult['justification'] || 'NA'}}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder;" colspan="4">
+                                        <b>Is the Change due to CAPA:</b><br><br>
+                                        <span style="color: blue;">{{selectedResult['changeCAPA'] || 'NA'}}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder;">
+                                        <b>CAPA:</b></td><td>
+                                        <span style="color: blue;">{{selectedResult['capaDetails'] || 'NA'}}
+                                        </span>
+                                    </td>
+                               
+                                    <td style="text-align: left;font-weight: bolder;" >
+                                        <b>Dated On:</b></td>
+                                        <td>
+                                        <span style="color: blue;">{{selectedResult['capaDate'] || 'NA'}}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; font-weight: bolder;" colspan="4">
+                                        <b>DETAILS OF PROPOSED CHANGE:</b><br><br>
+                                        <span style="color: blue;">{{selectedResult['proposed'] || 'NA'}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; font-weight: bolder;" colspan="4">
+                                        <b>COMMENTS BY INITIATION DEPARTMENT HOD:</b><br><br>
+                                        <span style="color: blue;">{{selectedResult['concernHodComment'] || 'NA'}}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="cc-sig-blocks">
+                                <div class="cc-sig-block">
+                                    <div class="cc-sig-label">Initiator (Digital Signature)</div>
+                                    <div class="cc-sig-content">
+                                        <span class="cc-sig-tick">✓</span>
+                                        <div class="cc-sig-details">
+                                            <span class="cc-sig-name">{{ selectedResult['initiatedBy'] || selectedResult['entryBy'] }}</span>
+                                            <span class="cc-sig-meta">User ID: {{ selectedResult['entryBy'] }} | Dept: {{ selectedResult['department_name'] }}</span>
+                                            <span class="cc-sig-date">{{ selectedResult['entryDate'] | date:'dd/MM/yyyy' }} {{ selectedResult['entryDate'] | date:'shortTime' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="cc-sig-block" *ngIf="selectedResult['concernHodBy']">
+                                    <div class="cc-sig-label">Department Head (Digital Signature)</div>
+                                    <div class="cc-sig-content">
+                                        <span class="cc-sig-tick">✓</span>
+                                        <div class="cc-sig-details">
+                                            <span class="cc-sig-name">{{ selectedResult['authBy'] || selectedResult['concernHodBy'] }}</span>
+                                            <span class="cc-sig-date">{{ selectedResult['concernHodOn'] | date:'dd/MM/yyyy' }} {{ selectedResult['concernHodOn'] | date:'shortTime' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3> Impact assessment of Proposed Change:</h3>
+                            <h4> EVALUATION AND IMPACT ASSESSMENT OF PROPOSED CHANGE: (To be filled up by Quality
+                                Assurance)</h4>
+                            <table class="table table-bordered">
+    
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Status</th>
+                                    <th>Responsible Dept</th>
+                                    <th>Remarks</th>
+                                </tr>
+    
+                                <!-- Product Quality -->
+                                <tr>
+                                    <td>Product Quality</td>
+                                    <td style="color: blue;">{{ selectedResult.productQualityCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptproductQualityCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.productQualityRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Standard Operating Procedure (SOP) -->
+                                <tr>
+                                    <td>Standard Operating Procedure (SOP)</td>
+                                    <td style="color: blue;">{{ selectedResult.sopCheck == 1 ? 'Checked' : 'Not Checked' }}
+                                    </td>
+                                    <td style="color: blue;">{{ selectedResult.DeptsopCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.sopRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Specification -->
+                                <tr>
+                                    <td>Specification</td>
+                                    <td style="color: blue;">{{ selectedResult.specificationCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptspecificationCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.specificationRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Standard Test Procedure (STP) -->
+                                <tr>
+                                    <td>Standard Test Procedure (STP)</td>
+                                    <td style="color: blue;">{{ selectedResult.stpCheck == 1 ? 'Checked' : 'Not Checked' }}
+                                    </td>
+                                    <td style="color: blue;">{{ selectedResult.DeptstpCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.stpRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Safety Data Sheet (SDS) -->
+                                <tr>
+                                    <td>Safety Data Sheet (SDS)</td>
+                                    <td style="color: blue;">{{ selectedResult.sdsCheck == 1 ? 'Checked' : 'Not Checked' }}
+                                    </td>
+                                    <td style="color: blue;">{{ selectedResult.DeptsdsCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.sdsRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Method of Analysis & Awareness (MOA) -->
+                                <tr>
+                                    <td>Method of Analysis & Awareness (MOA)</td>
+                                    <td style="color: blue;">{{ selectedResult.moaAwrCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptmoaAwrCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.moaAwrRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Batch Manufacturing Record (BMR) -->
+                                <tr>
+                                    <td>Batch Manufacturing Record (BMR) / Master Formula Record (MFR)</td>
+                                    <td style="color: blue;">{{ selectedResult.bmrMfrCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptbmrMfrCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.bmrMfrRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Equipment & Materials -->
+                                <tr>
+                                    <td>Equipment</td>
+                                    <td style="color: blue;">{{ selectedResult.equipmentCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptequipmentCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.equipmentRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Measurements</td>
+                                    <td style="color: blue;">{{ selectedResult.measurementsCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptmeasurementsCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.measurementsRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Raw Materials</td>
+                                    <td style="color: blue;">{{ selectedResult.materialCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptmaterialCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.materialRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Validation & Stability -->
+                                <tr>
+                                    <td>Validation</td>
+                                    <td style="color: blue;">{{ selectedResult.validationCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptvalidationCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.validationRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Stability Studies</td>
+                                    <td style="color: blue;">{{ selectedResult.stabilityStudiesCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptstabilityStudiesCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.stabilityStudiesRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Process Validation (PV)</td>
+                                    <td style="color: blue;">{{ selectedResult.pvCheck == 1 ? 'Checked' : 'Not Checked' }}
+                                    </td>
+                                    <td style="color: blue;">{{ selectedResult.DeptpvCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.pvRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Analytical Method Validation (AMV)</td>
+                                    <td style="color: blue;">{{ selectedResult.amvCheck == 1 ? 'Checked' : 'Not Checked' }}
+                                    </td>
+                                    <td style="color: blue;">{{ selectedResult.DeptamvCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.amvRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Statutory & Certifications -->
+                                <tr>
+                                    <td>Statutory Compliance</td>
+                                    <td style="color: blue;">{{ selectedResult.statutoryCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptstatutoryCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.statutoryRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>FDA License</td>
+                                    <td style="color: blue;">{{ selectedResult.fdaLicenseCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptfdaLicenseCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.fdaLicenseRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>WHO License</td>
+                                    <td style="color: blue;">{{ selectedResult.whoLicenseCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptwhoLicenseCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.whoLicenseRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <!-- Other Checks -->
+                                <tr>
+                                    <td>Environmental Compliance</td>
+                                    <td style="color: blue;">{{ selectedResult.environmentCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptenvironmentCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.environmentRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Machine Maintenance</td>
+                                    <td style="color: blue;">{{ selectedResult.machineCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptmachineCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.machineRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Workforce Skills & Training</td>
+                                    <td style="color: blue;">{{ selectedResult.skillsCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptskillsCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.skillsRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Workplace Safety</td>
+                                    <td style="color: blue;">{{ selectedResult.safetyCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptsafetyCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.safetyRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td>Vendor Compliance</td>
+                                    <td style="color: blue;">{{ selectedResult.vendorCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DeptvendorCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.vendorRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td> Training</td>
+                                    <td style="color: blue;">{{ selectedResult.trainingCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td style="color: blue;">{{ selectedResult.DepttrainingCheck  || 'NA'  }}</td>
+                                    <td style="color: blue;">{{ selectedResult.trainingRemarks  || 'NA'  }}</td>
+                                </tr>
+    
+                            </table>
+                            <table class="table  table-border">
+                                <tr>
+                                    <td colspan="2" style="text-align: left; font-weight: bolder; padding: 5px;">
+                                        Classification</td>
+                                    <td colspan="2" style="color: blue;">{{ selectedResult.classification }} </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;" colspan="4">
+                                        <span style="text-align: left;"><b>REVIEW OF ACTION PLAN & APPROVAL BY
+                                                QA:</b></span><br><br>
+                                        <span style="text-align: left;color: blue;"> {{ selectedResult.APPROVAL_QA
+                                            }}</span>
+                                    </td>
+                                </tr>
+    
+                            </table>
+                            <table class="table table-border">
+                                <tr>
+                                    <td colspan="5" style="text-align: center;font-weight: bolder;font-size: 13px;">
+                                        CC Consent & Review By Dept.</td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="width: 25%; text-align: left;font-weight: bolder;background-color: aquamarine;">
+                                        Department</td>
+                                    <td colspan="2"
+                                        style="width: 50%; text-align: left;font-weight: bolder;background-color: aquamarine;">
+                                        <b>Impact assessment and action plan
+                                            :</b>
+                                    </td>
+                                    <td colspan="2"
+                                        style="width: 50%; text-align: left;font-weight: bolder;background-color: aquamarine;">
+                                        <b>Responsibility/TCD:</b>
+                                    </td>
+                                </tr>
+                                <tr *ngFor="let item of selectedResult['deptReview']; ">
+                                    <td style="text-align: left;color: blue;">{{item.department }}</td>
+                                    <td colspan="2" style="text-align: left;color: blue;">{{item.ImpactDept || 'NA'}}</td>
+                                    <td colspan="2" style="text-align: left; color : blue;">{{item.Responsibility || 'NA'}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+    
+                    <form #changeForm="ngForm">
+                        <div class="clr-row">
+                            <div class="clr-col-12">
+                                <table class="table table-border">
+                                    <tr>
+                                        <td style="text-align: left;" colspan="9"><b>Department Affected Documents :</b>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Sr. No.</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Department
+                                                Name</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Name of the
+                                                Document</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Document No.</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Existing
+                                                Reference
+                                                No.</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Revised Reference
+                                                No.</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>TCD </b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Remarks</b></td>
+                                    </tr>
+    
+                                    <tr *ngFor="let dep of selectedResult['departmentChangeData'];  let i = index">
+                                        <td style="text-align: left;color: blue;"><b>{{i + 1}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.departmentName}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.documentName}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.documentNo}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.existingRefNo}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.revisedRefNo}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.tcDate}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{dep.remarks}}</b></td>
+    
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </form><br><br>
+                    <form #equipmentForm="ngForm">
+                        <div class="clr-row">
+                            <div class="clr-col-12">
+                                <table class="table table-border">
+                                    <tr>
+                                        <td style="text-align: left;" colspan="9"><b>Equipment to be revised /
+                                                updated</b>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Sr. No.</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Department
+                                                Name</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Equipment</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Equipment
+                                                Code</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>New Equipment
+                                                Code</b></td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>TCD Sign &
+                                                Date</b>
+                                        </td>
+                                        <td style="text-align: left; background-color: aquamarine;"><b>Remarks</b></td>
+                                    </tr>
+    
+                                    <tr *ngFor="let equip of selectedResult['equipmentChangeData']; let i = index">
+                                        <td style="text-align: left;color: blue;"><b>{{i + 1}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.departmentName}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.equipmentName}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.equipmentCode}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.newEquipmentCode}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.tcdSignDate}}</b></td>
+                                        <td style="text-align: left;color: blue;"><b>{{equip.remarks}}</b></td>
+    
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="clr-col-lg-12">
+                        <label><strong>REVIEW OF ACTION PLAN & APPROVAL BY QA:</strong></label>
+                        <p style="color: blue; border: 1px solid black;">{{ selectedResult.ACTION_PLAN }}</p>
+                    </div>
+                    <div class="clr-row">
+                        <div class="clr-col-lg-12">
+                            <form #documentForm="ngForm">
+                                <div class="clr-row">
+                                    <div class="clr-col-12">
+                                        <table class="table table-border">
+                                            <tr>
+                                                <td colspan="10" style="text-align: left;"><b>Document Change
+                                                        Records:</b></td>
+                                            </tr>
+                                            <tr style="background-color: aquamarine;">
+                                                <td><b>Sr. No.</b></td>
+                                                <td><b>Name of the Document</b></td>
+                                                <td><b>Document No.</b></td>
+                                                <td><b>Updated by</b></td>
+                                                <td><b>Department</b></td>
+                                                <td><b>Verified by</b></td>
+                                                <td><b>Remarks</b></td>
+    
+                                            </tr>
+    
+                                            <!-- Input Row for Adding New Data -->
+    
+                                            <!-- Display Added Data -->
+                                            <tr *ngFor="let doc of  selectedResult['documentChangeData'] ; let i = index">
+                                                <td style="color: blue;"><b>{{ i + 1 }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.documentName }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.documentNo }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.updatedBy }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.department }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.verifiedBy }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.remarks  || 'NA'  }}</b></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </form>
+                            <form #equipmentFormMeha="ngForm">
+                                <div class="clr-row">
+                                    <div class="clr-col-12">
+                                        <table class="table table-border">
+                                            <tr>
+                                                <td colspan="8" style="text-align: left;"><b>Equipment Review</b></td>
+                                            </tr>
+                                            <tr style="background-color: aquamarine;">
+                                                <td><b>Sr. No.</b></td>
+                                                <td><b>Name of the Equipment</b></td>
+                                                <td><b>PO No.</b></td>
+                                                <td><b>Updated by</b></td>
+                                                <td><b>Department</b></td>
+                                                <td><b>Verified by</b></td>
+                                                <td><b>Remarks</b></td>
+    
+                                            </tr>
+    
+                                            <!-- Input Row for Adding New Data -->
+    
+                                            <!-- Display Added Data -->
+                                            <tr
+                                                *ngFor="let equip of  selectedResult['equipmentChangeDataTwo'] ; let i = index">
+                                                <td style="color: blue;"><b>{{ i + 1 }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.equipmentName }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.poNo }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.updatedBy }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.department }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.verifiedBy }}</b></td>
+                                                <td style="color: blue;"><b>{{ equip.remarks  || 'NA'  }}</b></td>
+    
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </form>
+    
+                            <form #documentEquipmentForm="ngForm">
+                                <div class="clr-row">
+                                    <div class="clr-col-12">
+                                        <table class="table table-border">
+                                            <tr>
+                                                <td colspan="7" style="text-align: left;"><b>Training Review:</b></td>
+                                            </tr>
+                                            <tr style="background-color: aquamarine;">
+                                                <td><b>Sr. No.</b></td>
+                                                <td><b>Name of the Document/Equipment</b></td>
+                                                <td><b>Document No.</b></td>
+                                                <td><b>Training Date</b></td>
+                                                <td><b>Reviewed by QA</b></td>
+                                                <td><b>Remarks</b></td>
+    
+                                            </tr>
+    
+                                            <!-- Display Added Data -->
+                                            <tr
+                                                *ngFor="let doc of  selectedResult['documentEquipmentData'] ; let i = index">
+                                                <td style="color: blue;"><b>{{ i + 1 }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.documentEquipmentName }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.documentNo }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.trainingDate }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.reviewedByQA }}</b></td>
+                                                <td style="color: blue;"><b>{{ doc.remarks  || 'NA'  }}</b></td>
+    
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </form>
+    
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Status</th>
+                                    <th>Responsible Dept</th>
+                                    <th>Remarks</th>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Product Quality</strong></td>
+                                    <td style="color: blue;">{{selectedResult.productQualityCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.productQualityQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.productQualityRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Standard Operating Procedure (SOP)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.sopCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.sopQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.sopRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Specification</strong></td>
+                                    <td style="color: blue;">{{selectedResult.specificationCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.specificationQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.specificationRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Standard Test Procedure (STP)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.stpCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.stpQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.stpRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Safety Data Sheet (SDS)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.sdsCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.sdsQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.sdsRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Method of Analysis & Awareness (MOA)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.moaAwrCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.moaAwrQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.moaAwrRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Batch Manufacturing Record (BMR) / Master Formula Record (MFR)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.bmrMfrCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.bmrMfrQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.bmrMfrRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Equipment</strong></td>
+                                    <td style="color: blue;">{{selectedResult.equipmentCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.equipmentQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.equipmentRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Measurements</strong></td>
+                                    <td style="color: blue;">{{selectedResult.measurementsCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.measurementsQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.measurementsRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Raw Materials</strong></td>
+                                    <td style="color: blue;">{{selectedResult.materialCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.materialQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.materialRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Validation</strong></td>
+                                    <td style="color: blue;">{{selectedResult.validationCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.validationQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.validationRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Stability Studies</strong></td>
+                                    <td style="color: blue;">{{selectedResult.stabilityStudiesCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.stabilityStudiesQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.stabilityStudiesRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Process Validation (PV)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.pvCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.pvQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.pvRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Analytical Method Validation (AMV)</strong></td>
+                                    <td style="color: blue;">{{selectedResult.amvCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.amvQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.amvRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Statutory Compliance</strong></td>
+                                    <td style="color: blue;">{{selectedResult.statutoryCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.statutoryQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.statutoryRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>FDA License</strong></td>
+                                    <td style="color: blue;">{{selectedResult.fdaLicenseCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.fdaLicenseQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.fdaLicenseRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>WHO License</strong></td>
+                                    <td style="color: blue;">{{selectedResult.whoLicenseCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.whoLicenseQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.whoLicenseRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Environmental Compliance</strong></td>
+                                    <td style="color: blue;">{{selectedResult.environmentCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.environmentQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.environmentRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Machine Maintenance</strong></td>
+                                    <td style="color: blue;">{{selectedResult.machineCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.machineQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.machineRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Workforce Skills & Training</strong></td>
+                                    <td style="color: blue;">{{selectedResult.skillsCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.skillsQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.skillsRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Workplace Safety</strong></td>
+                                    <td style="color: blue;">{{selectedResult.safetyCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.safetyQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.safetyRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Vendor Compliance</strong></td>
+                                    <td style="color: blue;">{{selectedResult.vendorCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.vendorQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.vendorRemarks2  || 'NA' }}</td>
+                                </tr>
+    
+                                <tr>
+                                    <td><strong>Training</strong></td>
+                                    <td style="color: blue;">{{selectedResult.trainingCompletion  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.trainingQAReview2  || 'NA' }}</td>
+                                    <td style="color: blue;">{{selectedResult.trainingRemarks2  || 'NA' }}</td>
+                                </tr>
+                            </table>
+    
+    
+                        </div>
+                    </div>
+                    <div class="clr-col-lg-4">
+                        <label><strong>DETAILS OF PROPOSED CHANGE:</strong></label>
+                        <input type="text" name="EffectivenessOpp" style="color: blue;"
+                            [(ngModel)]="selectedResult.EffectivenessOpp" required>
+    
+                    </div>
+                    <div class="clr-col-lg-12">
+                        <label><strong>Comments for Effectiveness Monitoring Required:</strong></label>
+                        <input type="text" name="Effectiveness" style="color: blue;"
+                            [(ngModel)]="selectedResult.Effectiveness" required>
+                    </div>
+                <br>
+                <div class="clr-col-lg-4">
+                    <label><strong>Effective Medicap Lot No:</strong></label>
+                    <input type="text" name="BatchNo"  style="color: blue;" [(ngModel)]="selectedResult.BatchNo" required>
+                </div>
+                <div class="clr-col-lg-12">
+                    <label><strong>Comments for Verification of Effectiveness:</strong></label>
+                    <input type="text" name="Verification"  style="color: blue;" [(ngModel)]="selectedResult.Verification" required>
+                </div>
+                <br>
+                <div class="clr-col-lg-12">
+                    <label><strong>Change Control Closure:</strong></label>
+                    <input type="text" name="Closure"  style="color: blue;" [(ngModel)]="selectedResult.Closure" required>
+                </div>
+            </form>
+        </div>
+    </div>
+      <div class="card-footer">
+            <button class="btn btn-primary" (click)="download()"><clr-icon shape="download"></clr-icon> DOWNLOAD</button>
+          <button class="btn btn-danger" (click)="isView = false">CLOSE</button>
+      </div>
+  </div>
+</div>

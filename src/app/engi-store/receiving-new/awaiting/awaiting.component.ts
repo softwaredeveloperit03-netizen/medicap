@@ -1,0 +1,569 @@
+﻿import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import { DatePipe } from '@angular/common';
+import { RouterModule, Routes } from '@angular/router';
+declare let alertify;
+@Component({
+  selector: 'app-awaiting',
+  templateUrl: './awaiting.component.html',
+  styleUrls: ['./awaiting.component.css'],
+  providers: [DatePipe]
+})
+export class AwaitingComponent implements OnInit {
+
+  department_name = localStorage.getItem('department'); // Fetching from localStorage
+ 
+  maxDate;
+  minDate;
+  plant_id = localStorage.getItem('plant_id');
+  
+
+  constructor(private service: DataAccessService, private datePipe: DatePipe) {
+    this.maxDate = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+    this.minDate = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+  }
+
+  ngOnInit() {
+
+    this.plant_id = localStorage.getItem('plant_id');
+  
+    this.getPendingInwords();
+    this.getCheckPointData();
+    this.getCheckPointData1();
+    this.getInitiatByData();
+    this.getCOntainerTypes();
+ 
+  }
+
+
+
+
+  containerSubTypes;
+  getSubtypesByContainer_type(container_type) {
+    this.service.get('master/master.php?type=getSubtypesByContainer_type&container_type='+container_type).subscribe((response) => {
+      this.containerSubTypes = response;
+    });
+  }
+
+  containerTypes;
+  getCOntainerTypes() {
+    this.service.get('master/master.php?type=getCOntainerTypes').subscribe((response) => {
+      this.containerTypes = response;
+    });
+  }
+
+
+
+
+
+
+
+ 
+ 
+    typeOfDev = 'Planned';
+    devScope = 'Material';
+    getInitiatByData() {
+      this.service.get('common.php?type=getInitiatByData').subscribe((response) => {
+        this.identifiedBy = response['identifiedBy'];
+      });
+    }
+    identifiedBy = '';
+
+  
+    
+  devDetDoc: File;
+  standProceSysDoc: File;
+
+  onFileChanged0(event) {
+    if (event.target.files.length === 1) {
+      this.devDetDoc = event.target.files[0];
+    }
+  }
+
+  onFileChanged00(event) {
+    if (event.target.files.length === 1) {
+      this.standProceSysDoc = event.target.files[0];
+    }
+  }
+ 
+  
+  selectedReport = [];
+  batches=[];
+  isDeviation = false;
+
+  dev_labelList;
+
+  get_save_sampling_batchfor_deviation() {
+    this.service.get('store/receive.php?type=get_save_sampling_batchfor_deviation&challan_no=' + this.selectedPO['challan_no'] +'&vendor_no='+this.selectedPO['vendor_no']).subscribe(response => {
+      this.dev_labelList = response;
+      if(this.dev_labelList?.length!=0){
+        this.isDeviation = true;
+      }
+    });
+  }
+
+  selectedPO = [];
+
+  qtyReceived=0;
+  containerTotal=0;
+  finalcontainr = 0;
+  result=0;
+
+  labelList;
+
+  get_save_sampling_batch() {
+    this.qtyReceived=0;
+    this.containerTotal=0;
+    this.service.get('store/receive.php?type=get_save_sampling_batch&challan_no=' + this.selectedPO['challan_no'] +'&material_code=' + this.selectedPO['material_code']).subscribe(response => {
+      this.labelList = response;
+      this.Checkleverages(response);
+      
+      for (let i = 0; i < this.labelList.length; i++) {
+        this.qtyReceived += +this.labelList[i]['qty_received'];
+        this.containerTotal += +this.labelList[i]['total_containers'];
+      }
+
+      let test = this.containerTotal;
+      this.finalcontainr = Math.ceil(test);
+      this.labelList['total_containers'] = this.finalcontainr;
+
+      if (this.selectedPO['qty'] > 0) {
+        this.result = this.qtyReceived - this.selectedPO['qty'];
+      } else {
+        this.result = this.qtyReceived - this.selectedPO['challan_qty'];
+      }
+
+      if (this.result >= 0) {
+        this.po_stat = 'Extra';
+      } else {
+        this.po_stat = 'Short';
+      }
+    });
+  }
+ 
+  lev = "NotTriggred";
+
+  Checkleverages(response){
+
+    let levrageQty = 0;
+    const labelList = response;
+    let poQty = this.selectedPO['qty'];
+    let leverages = this.selectedPO['leverages'];
+    let additionalQty =  poQty * (leverages / 100); 
+    levrageQty = Number(poQty) + Number(additionalQty);
+    let  qtyReceived =0;
+    for (let i = 0; i < labelList.length; i++) {
+      qtyReceived += +labelList[i]['qty_received'];
+    }    
+    if(leverages > 0){
+      if(qtyReceived >= levrageQty ){
+        alert('Leverages Triggred '+leverages + '% Of Po Quantity');
+        this.lev = "Triggred";
+      }
+    }
+
+  }
+  
+  results;
+  getPendingInwords() {
+    this.results=[];
+    this.service.get('store/raw.php?type=getPendingReceivingsGeneralMaterial').subscribe(response => {
+      this.results = response;
+    });
+  }
+  
+ 
+  scopeItem= '';
+  detailsOfDev= '';
+  standProcedureSystem= '';
+
+  challan_qty = 0;
+
+  isView = false;
+  viewResult(data) {
+    this.challan_qty = 0;
+    this.selectedPO = data;
+    this.isView = true;
+    this.qty_received = this.selectedPO['qty'];
+    this.batch_no = '#Autogenerated';
+    this.pack_size = +this.selectedPO['qty'];
+    this.getContainerNo(1);
+    this.get_save_sampling_batch();
+    this.get_save_sampling_batchfor_deviation();
+
+    this.scopeItem = this.selectedPO['material_name']+" ("+this.selectedPO['material_code']+")";
+    this.detailsOfDev = "The COA has not been received with the consignment.";
+    this.standProcedureSystem = "The COA must be received along with the consignment.";
+    this.challan_qty = this.selectedPO['qty'];
+  }
+
+
+
+
+  isDamage = false;
+  checkdamage(value) {
+    if (value == 'Yes') {
+      this.isDamage = true;
+    } else {
+      this.isDamage = false;
+    }
+  }
+  
+  selectedFile2: File;
+  coa_file;
+  onFileChanged3(event) {
+    this.selectedFile2 = event.target.files[0];
+  }
+
+
+  coa_received = 'Not Applicable';
+  
+
+
+  addlabel(data) {
+    
+    if (!data.valid) {
+      alertify.error('All fields are required');
+      return;
+    }
+    if (data.value.coa_received == 'No') {
+      alertify.error('Please Fill Deviation Form');
+    }
+
+    let temp = data.value;
+    temp['unit'] = this.selectedPO['unit'];
+
+    const uploadData = new FormData();
+    for (let key in temp) {
+      let value = temp[key];
+      uploadData.append(key, value);
+    } 
+
+    if (this.selectedFile2 !== undefined) {
+      uploadData.append('coa_file', this.selectedFile2, this.selectedFile2.name);
+    }
+
+    uploadData.append('materialForName', this.selectedPO['materialForName']);
+    uploadData.append('materialFor', this.selectedPO['materialFor']);
+    uploadData.append('trackingId', this.selectedPO['trackingId']);
+    uploadData.append('clientGrpCode', this.selectedPO['clientGrpCode']);
+    uploadData.append('clientSubGrpCode', this.selectedPO['clientSubGrpCode']);
+    uploadData.append('tax_invoice', this.selectedPO['tax_invoice']);
+
+    this.service.post('store/receive.php?type=cyclonesave_sampling_batchAlutin&material_code=' + this.selectedPO['material_code']+ '&challan_no=' + this.selectedPO['challan_no']+'&mfg_by='+this.selectedPO['vendor_no']+ '&ch_no=' + this.selectedPO['ch_no'], uploadData).subscribe(response => {
+          if (response['status'] === 'success') {
+          alertify.success(this.service.t('common.savedSuccess'));
+          data.resetForm();
+          this.get_save_sampling_batch()
+          this.get_save_sampling_batchfor_deviation()
+          this.coa_file='';
+        } else {
+          alertify.error('Failed: An error occured, Please try again!');
+        }
+      });
+      
+    
+  }
+ 
+ 
+
+
+  deleteLabel(batch_no) {
+    this.service.post('store/receive.php?type=delete_save_sampling_batch&batch_no=' + batch_no, JSON.stringify(batch_no)).subscribe(response => {
+      if(response['status']=='success') {
+        alertify.success(response['msg']);
+        this.get_save_sampling_batch(); 
+      } else{
+        alertify.error(response['msg']);
+      }
+    });
+  }
+
+
+ 
+  justification;
+
+  quality_impact;
+ 
+
+
+  getClass(data){
+    if(data['isOPenPO'] == 'YES'){
+      return 'open';
+    }else{
+      return 'Jadugar';
+    }
+  }
+ 
+  batch_no='';
+  checkPointData;
+  checklist;
+
+  isdamagecontainer = 'No';
+
+  receiveMaterial(data) {
+
+    if (!data.valid) {
+      alertify.error('All fields are required');
+      return;
+    }
+  
+    if (this.labelList?.length == 0) {
+      alertify.error('Please Add Batch Details');
+      return;
+    }
+  
+    let temp = data.value;
+    temp['dedusting_applicable'] = 'No';
+    temp['isdamagecontainer'] = this.isdamagecontainer;
+
+    const uploadData = new FormData();
+  
+    Object.keys(temp).forEach(key => {
+      let value = temp[key];
+      uploadData.append(key, value);
+    });
+ 
+    uploadData.append("material_code", this.selectedPO['material_code']);
+    uploadData.append("challan_no", this.selectedPO['challan_no']);
+    uploadData.append("po_no", this.selectedPO['po_no']);
+       
+    uploadData.append("receiving_details", JSON.stringify(temp));
+    uploadData.append("checklist", JSON.stringify(this.checkPointData));
+    uploadData.append("damageChecklist", JSON.stringify(this.checkPointData1));
+
+    if (this.lev == "NotTriggred") {
+      uploadData.append('inprocessStatus', 'inprocess');
+    } else {
+      uploadData.append('inprocessStatus', 'TO_PLANT_HEAD');
+    }  
+    
+    this.service.post('store/raw.php?type=receiveMaterial&id=' + this.selectedPO['id']+ '&challan_id=' + this.selectedPO['challan_id']+'&from_dept=Stores', uploadData).subscribe(response => {
+      if (response['status'] === 'success') {
+        alertify.success('Material Received Successfully');
+  
+        data.resetForm();
+        this.labelList = [];
+        this.lev = "NotTriggred";
+        this.isView = false;
+        data.resetForm();
+        this.getPendingInwords();
+      } else {
+        alertify.error('Failed: An error occured, Please try again!');
+      }
+    });
+  }
+
+
+
+
+  po_status = '';
+ 
+
+
+  reject_receiveMaterial(data,data1){
+    if (!data.valid) {
+      alertify.error('All fields are required');
+      return;
+    }
+    if (this.po_status) {
+
+    }
+    let temp = data.value;
+     
+
+    const uploadData = new FormData();
+  
+    Object.keys(temp).forEach(key => {
+      let value = temp[key];
+      if (key == 'dedusting') {
+        uploadData.append(key, JSON.stringify(value));
+      } else if (key == 'deviation') {
+        uploadData.append(key, JSON.stringify(value));
+      } else {
+        uploadData.append(key, value);
+      }
+    });
+
+    let temp1 = data1.value;
+    Object.keys(temp1).forEach(key => {
+      let value = temp1[key];
+      uploadData.append(key, value);
+    });
+
+    uploadData.append("material_code", this.selectedPO['material_code']);
+    uploadData.append('batches', JSON.stringify(this.labelList));
+    uploadData.append("challan_no", this.selectedPO['challan_no']);
+ 
+    this.service.post('store/raw.php?type=reject_receiveMaterial&id=' + this.selectedPO['id']+ '&challan_id=' + this.selectedPO['challan_id'], uploadData).subscribe(response => {
+      if (response['status'] === 'success') {
+      alertify.success('Material Received Successfully');
+      data.resetForm();
+      this.labelList = [];
+     
+      this.isView = false;
+      data.resetForm();
+      data1.resetForm();
+      this.getPendingInwords();
+    } else {
+      alertify.error('Failed: An error occured, Please try again!');
+    }
+  });
+  }
+ 
+ 
+
+    devScope1 = '';
+
+  saveDeviation(data) {
+    if (!data.valid) {
+      alert('All fields are required');
+      return;
+    }
+
+    let formData = new FormData();
+    const temp = data.value;
+
+    // Append form values to FormData
+
+    for (let key in temp) {
+      if (temp.hasOwnProperty(key)) {
+        formData.append(key, temp[key]);
+      }
+    }
+
+    if(temp['devScope'] == 'Other'){
+      formData.append('devScope', this.devScope1);
+    }
+  
+    if (this.devDetDoc) {
+      formData.append('devDetDoc', this.devDetDoc, this.devDetDoc.name);
+    }
+    if (this.standProceSysDoc) {
+      formData.append('standProceSysDoc', this.standProceSysDoc, this.standProceSysDoc.name);
+    }
+
+    console.log(formData);
+    this.service
+      .post('deviation1.php?type=saveQmsDeviations', formData)
+      .subscribe(
+        (response) => {
+          if (response['status'] === 'success') {
+            
+            alert('Deviation Initiated Successfully. Proceed...');
+            this.isDeviation = false;
+            data.resetForm();
+          } else {
+            alert('Failed: An error occurred, please try again!');
+          }
+        }
+        
+      );
+  }
+
+
+
+
+
+
+
+
+  selectedBatch =[];
+  hold_qty =0;
+
+  selectBat(index){
+    index =index -1;
+    this.selectedBatch = this.labelList[index];
+  }
+
+  calculate_qty(value){
+
+    if (isNaN(value)) {
+      alertify.error('Number Only');
+      return false;
+    } 
+
+    if (value > Number(this.selectedBatch['total_containers'])) {
+      alertify.error('cant Exceed Container Than '+ this.selectedBatch['total_containers']);
+      return false;
+    }
+
+    this.hold_qty =0;
+    let pack_size = this.selectedBatch['pack_size'];
+    this.hold_qty = Number(pack_size) * Number(value);
+
+  }
+
+ 
+
+  po_stat
+ 
+ qty_received = 0;
+ pack_size = 0;
+ total_containers = 0;
+  getContainerNo(value) {
+
+    if (isNaN(value)) {
+      value = 0;
+      alertify.error('Please Enter Numeric Value');
+      return;
+    } 
+
+      if (this.qty_received % this.pack_size !== 0) {
+          this.total_containers = Math.ceil(this.qty_received / this.pack_size);
+      } else {
+          this.total_containers = this.qty_received / this.pack_size;
+      }
+
+  }
+
+ 
+
+  getCheckPointData(){
+    this.service.get('store/raw.php?type=getCheckPointByForm&module=Receiving&form=Receiving').subscribe(response => {
+      this.checkPointData = response;
+    });
+  }
+
+  checkPointData1;
+  getCheckPointData1(){
+      this.service.get('master/checklist.php?type=getCheckPointByForm&module=Receiving&form=Damage').subscribe(response => {
+      this.checkPointData1 = response;
+    });
+  }
+  
+  searchQuery;
+
+  get filteredMaterials(): any[] {
+    if (!this.searchQuery || this.searchQuery.trim() === '') {
+      return this.results; // If search query is empty or whitespace, return all materials
+    }
+
+    const query = this.searchQuery.toLowerCase().trim(); // Convert search query to lowercase and trim whitespace
+
+    return this.results.filter((material) => {
+      // Check if any field of the material contains the search query
+      return Object.entries(material).some(([key, value]) => {
+        if (key === 'entry_date') {
+          // Convert the value to a Date object if it's not already
+          const dateValue = typeof value === 'string' ? new Date(value) : value;
+          // Check if the date value is valid and includes the search query
+          return (
+            dateValue instanceof Date &&
+            dateValue.toISOString().slice(0, 10).includes(query)
+          );
+        } else {
+          // Convert field value to lowercase and check if it includes the search query
+          return value && value.toString().toLowerCase().includes(query);
+        }
+      });
+    });
+  }
+
+
+  
+
+
+
+
+} 

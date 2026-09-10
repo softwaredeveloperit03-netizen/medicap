@@ -1,0 +1,149 @@
+﻿<div class="pam" *ngIf="!isHeading">
+  <div class="pam-shell">
+    <header class="pam-top">
+      <div class="pam-top__text">
+        <h1 class="pam-top__title">Purchase approval matrix</h1>
+        <p class="pam-top__hint">Define PO value bands and approver routing. Save adds a row pending approval.</p>
+      </div>
+      <button type="button" class="pam-top__close" routerLink="/master/commercial">{{'common.close' | translate}}</button>
+    </header>
+
+    <div class="pam-main">
+      <form #matrixForm="ngForm" class="pam-form" novalidate>
+        <!-- New rule: grid form (no table/colspan issues) -->
+        <section class="pam-panel pam-panel--new" aria-labelledby="pam-new-heading">
+          <div class="pam-panel__head">
+            <h2 id="pam-new-heading" class="pam-panel__title">New rule</h2>
+            <span class="pam-panel__tag">Draft</span>
+          </div>
+          <div class="pam-grid">
+            <div class="pam-field pam-field--wide">
+              <label class="pam-label" for="pam-po-type">PO type <span class="pam-req">*</span></label>
+              <select id="pam-po-type" class="pam-control" name="po_type" ngModel required>
+                <option value=""></option>
+                <option>Raw Material</option>
+                <option>Packing Material</option>
+                <option>Engg Store Mech</option>
+                <option>Engg Store Elect</option>
+                <option>Stationary</option>
+                <option>Housekeeping</option>
+                <option>Canteen</option>
+                <option>Building Material</option>
+                <option>Machine Spares (Dedicated)</option>
+                <option>Machine Spares (Common)</option>
+                <option>QC Materials</option>
+                <option>IT Materials</option>
+                <option>Others</option>
+                <option>Service</option>
+                <option>Equipment</option>
+              </select>
+            </div>
+            <div class="pam-field">
+              <label class="pam-label" for="pam-v-from">PO value from <span class="pam-req">*</span></label>
+              <input id="pam-v-from" class="pam-control" type="number" name="poValueFrom" ngModel required />
+            </div>
+            <div class="pam-field">
+              <label class="pam-label" for="pam-v-to">PO value to <span class="pam-req">*</span></label>
+              <input id="pam-v-to" class="pam-control" type="number" name="poValueTo" ngModel required />
+            </div>
+            <div class="pam-field">
+              <label class="pam-label" for="pam-first">Approval to <span class="pam-req">*</span></label>
+              <select id="pam-first" class="pam-control" name="firstApprover" [(ngModel)]="firstApprover" required>
+                <option value=""></option>
+                <option>TO_PLANT_HEAD</option>
+                <option>TO_CFO</option>
+                <option>TO_DIRECTOR</option>
+              </select>
+            </div>
+            <div class="pam-field">
+              <label class="pam-label" for="pam-sec-req">Further approval <span class="pam-req">*</span></label>
+              <select id="pam-sec-req" class="pam-control" name="secAppReq" [(ngModel)]="secAppReq" required>
+                <option value=""></option>
+                <option>YES</option>
+                <option>NO</option>
+              </select>
+            </div>
+            <div class="pam-field">
+              <label class="pam-label" for="pam-second">Next approver <span class="pam-req">*</span></label>
+              <select
+                id="pam-second"
+                class="pam-control"
+                name="secondtApprover"
+                [(ngModel)]="secondtApprover"
+                [required]="secAppReq === 'YES'"
+                *ngIf="secAppReq === 'YES'"
+              >
+                <option value=""></option>
+                <option *ngIf="firstApprover == 'TO_PLANT_HEAD'">TO_CFO</option>
+                <option *ngIf="firstApprover == 'TO_CFO' || firstApprover == 'TO_PLANT_HEAD'">TO_DIRECTOR</option>
+              </select>
+              <div class="pam-control pam-control--static" *ngIf="secAppReq !== 'YES'">Not required</div>
+            </div>
+            <div class="pam-field pam-field--submit">
+              <span class="pam-label pam-label--ghost">&nbsp;</span>
+              <button type="button" class="pam-btn pam-btn--save" (click)="savePurchaseApprovalMatrix(matrixForm)">Save rule</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Existing rows: plain table, one row = one data row -->
+        <section class="pam-panel pam-panel--list" aria-labelledby="pam-list-heading">
+          <div class="pam-panel__head">
+            <h2 id="pam-list-heading" class="pam-panel__title">Saved rules</h2>
+          </div>
+          <div class="pam-table-wrap">
+            <table class="pam-tbl">
+              <thead>
+                <tr>
+                  <th scope="col" class="pam-th pam-th--c">#</th>
+                  <th scope="col" class="pam-th">PO type</th>
+                  <th scope="col" class="pam-th pam-th--c">From</th>
+                  <th scope="col" class="pam-th pam-th--c">To</th>
+                  <th scope="col" class="pam-th">1st approver</th>
+                  <th scope="col" class="pam-th pam-th--c">2nd</th>
+                  <th scope="col" class="pam-th">Next</th>
+                  <th scope="col" class="pam-th">Entered</th>
+                  <th scope="col" class="pam-th pam-th--c">{{'common.status' | translate}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="(matrixList || []).length === 0" class="pam-tr pam-tr--empty">
+                  <td colspan="9" class="pam-td pam-td--empty">No rules yet. Add one above.</td>
+                </tr>
+                <tr
+                  *ngFor="let item of matrixList || []; let i = index"
+                  class="pam-tr pam-tr--data"
+                  [class.pam-tr--pending]="item.status == 'Pending'"
+                  [class.pam-tr--ok]="item.status == 'Approved'"
+                >
+                  <td class="pam-td pam-td--c">{{ i + 1 }}</td>
+                  <td class="pam-td">{{ item.po_type }}</td>
+                  <td class="pam-td pam-td--c pam-td--num">{{ item.poValueFrom }}</td>
+                  <td class="pam-td pam-td--c pam-td--num">{{ item.poValueTo }}</td>
+                  <td class="pam-td pam-td--small">{{ item.firstApprover }}</td>
+                  <td class="pam-td pam-td--c pam-td--small">{{ item.secAppReq }}</td>
+                  <td class="pam-td pam-td--small">{{ item.secondtApprover || '—' }}</td>
+                  <td class="pam-td pam-td--small pam-td--muted">{{ item.entryBy }} / {{ item.entryOn }}</td>
+                  <td class="pam-td pam-td--c pam-td--act">
+                    <ng-container *ngIf="item.status == 'Approved'">
+                      <div class="pam-st pam-st--ok">{{'common.approved' | translate}}</div>
+                      <div class="pam-st-sub">{{ item.approveBy }} / {{ item.approveOn }}</div>
+                    </ng-container>
+                    <ng-container *ngIf="item.status == 'Pending'">
+                      <div class="pam-st pam-st--wait">{{'common.pending' | translate}}</div>
+                      <button type="button" class="pam-btn pam-btn--approve pam-btn--tbl" (click)="approvePurchaseApprovalMatrix(item)">{{'common.approve' | translate}}</button>
+                    </ng-container>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </form>
+    </div>
+
+    <footer class="pam-foot">
+      <button type="button" class="pam-btn pam-btn--close" routerLink="/master/commercial">{{'common.close' | translate}}</button>
+    </footer>
+  </div>
+</div>

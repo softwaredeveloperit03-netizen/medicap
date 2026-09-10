@@ -1,0 +1,432 @@
+<div class="container-fluid">
+  <div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Order Report</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <!-- <div  class="clr-col-lg-3">
+            <label>Search </label>
+            <input type="text" name="search"  (keyup)="serch_po($event.target.value)" [(ngModel)]="search">
+          </div> -->
+        <div class="clr-col-lg-4">
+          <label>Search </label>
+          <input type="text" name="search" [(ngModel)]="searchQuery">
+        </div>
+        <div class="datagrid-wrapper">
+
+          <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+            <clr-dg-column>Sr.</clr-dg-column>
+            <clr-dg-column>Po Type</clr-dg-column>
+            <clr-dg-column>Approval Date</clr-dg-column>
+            <clr-dg-column>P.O Date</clr-dg-column>
+            <clr-dg-column>Po No</clr-dg-column>
+            <clr-dg-column>Purchase Requisition No</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>View</clr-dg-column>
+            <clr-dg-column>Follow-Up</clr-dg-column>
+            <clr-dg-column>Follow-Up History</clr-dg-column>
+        
+            <clr-dg-row *clrDgItems="let user of filteredMaterials; let i = index" [clrDgItem]="user">
+                <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.indent_no?.length > 0 ? user.indent_no : 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+                <clr-dg-cell [ngClass]="{
+                    'status-rejected': user.status === 'Rejected',
+                    'status-approved': user.status === 'Approved',
+                    'status-cancelled': user.status === 'Cancelled',
+                    'status-on-hold': user.status === 'On Hold'
+                }">{{ user.status }}</clr-dg-cell>
+                <clr-dg-cell><button class="btn btn-sm btn-info" (click)="viewOrder(user.id)">{{'common.view' | translate}}</button></clr-dg-cell>
+                <clr-dg-cell><button class="btn btn-sm btn-info" (click)="folowup(user.id)">Follow-Up</button></clr-dg-cell>
+                <clr-dg-cell><button class="btn btn-sm btn-info" (click)="history(user.id)">History</button></clr-dg-cell>
+            </clr-dg-row>
+        
+            <!-- <clr-dg-footer>
+              <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+                 <clr-dg-page-size [clrPageSizeOptions]="[10,20]" (clrPageSizeChange)="onPageSizeChange($event)">
+                  Users per page
+                </clr-dg-page-size>
+                {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+                of {{pagination.totalItems}} 
+              </clr-dg-pagination>
+            </clr-dg-footer>  -->
+          <!-- </clr-datagrid> -->
+        </clr-datagrid>
+
+        </div>
+
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Order Log</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="viewf()" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+
+
+          <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+            <tr>
+              <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Supplier Details
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color: rgb(14, 67, 112);">Vendor Name</td>
+              <td style="text-align: left;width: 40%;">{{ selectedOrder['vendor_name'] }}</td>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Manufacturer Name:</td>
+              <td style="text-align: left; " *ngIf="selectedOrder['manufacturar']">{{ selectedOrder['manufacturar'] }}
+              </td>
+              <td style="text-align: left; " *ngIf="!selectedOrder['manufacturar']">NA</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;color: rgb(14, 67, 112); width: 20%;">Address:</td>
+              <td style="text-align: left;width: 40%;">{{ selectedOrder['address'] }}</td>
+
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+              <td style="text-align: left;">{{ selectedOrder['state_name'] }}</td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                  </td>
+
+                  <td style="text-align: left;">{{ selectedBill?.company_name }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedBill?.address }}</td>
+                </tr>
+
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedBill?.area }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedBill?.present_state }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedBill?.pin }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Ship To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left;">
+                    {{ selectedShip['company_name'] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedShip['address'] }}</td>
+                </tr>
+
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedShip['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedShip['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedShip['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div><br>
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;width: 15%;">PO No.:</td>
+              <td style="text-align: left;">{{ selectedOrder['po_no'] }}</td>
+              <td style="text-align: left;width: 15%;">PO Date:</td>
+              <td style="text-align: left;">{{ selectedOrder['entry_date'] |date:'dd-MM-yyyy'}}</td>
+              <td style="text-align: left;width: 15%;">Transport:</td>
+              <td style="text-align: left;" *ngIf="selectedOrder['transport'].length>0">{{ selectedOrder['transport'] }}
+              </td>
+              <td style="text-align: left;" *ngIf="selectedOrder['transport'].length==0">N/A</td>
+            </tr>
+
+          </table>
+        </div>
+
+        <div class="unique-table-wrapper">
+          <table class="table table-border unique-table" *ngIf="plant_id!='72'">
+            <tr>
+              <th>Sr.</th>
+              <th>Material Type</th>
+              <th>Material Name</th>
+              <th>Material Code</th>
+              <th>Qty</th>
+              <th>Quotation Amt.</th>
+              <th>Gross Total</th>
+              <th>Discount %</th>
+              <th>Discount</th>
+              <th>Tax Total</th>
+              <th>Net Total</th>
+              <th>Scheduled Dil.Dt</th>
+            </tr>
+            <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{user.material_subtype}}{{user.material_subtype1}}</td>
+              <td>{{user.material_name}} - {{user.gradeName}}</td>
+              <td>{{user.material_code}}</td>
+              <td>{{user.qty}} {{user.unit}}</td>
+              <td>{{user.quotation_amt}} / {{user.quotation_per}}</td>
+              <td>{{user.gross_total}}</td>
+              <td>{{user.disc_per}}</td>
+              <td style="text-align: right;">{{user.disc_amt}}</td>
+              <td>{{user.tax_total}}</td>
+              <td>{{user.net_total}}</td>
+              <td *ngIf="user.delivery_schedule_date!='0000-00-00'">{{user.delivery_schedule_date |date:'dd-MM-yyyy'}}
+              </td>
+              <td *ngIf="user.delivery_schedule_date=='0000-00-00'">N/A</td>
+            </tr>
+            <tr *ngIf="selectedOrder['materials']?.length==0">
+              <td colspan="9">No Record Found!</td>
+            </tr>
+          </table>
+
+          <table *ngIf="selectedOrder['po_type'] != 'Services'" class="table table-border">
+            <tr>
+              <th style="text-align:left">Gross Total</th>
+              <th style="text-align:left">Discount </th>
+              <th style="text-align:left">Tax Total</th>
+              <th style="text-align:left">Other Charges</th>
+              <th style="text-align:left">Shipping & Handling</th>
+              <th style="text-align:left">{{'common.total' | translate}}</th>
+            </tr>
+            <tr>
+              <td style="padding:0px"><input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']"
+                  style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="discount" [(ngModel)]="selectedOrder['disc_amt']"
+                  required style="margin:0px" readonly>
+              </td>
+              <td style="padding:0px"><input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']"
+                  required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="other_charges"
+                  [(ngModel)]="selectedOrder['other_charges']" required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="shipping_handling"
+                  [(ngModel)]="selectedOrder['shipping_handling']" required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']"
+                  required style="margin:0px" readonly></td>
+            </tr>
+          </table>
+        </div>
+
+        <br>
+
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Terms & Conditions:</label>
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left;">Sr</th>
+                <th style="text-align: left;">Term Heading</th>
+                <th style="text-align: left;">Terms</th>
+              </tr>
+              <tr *ngFor="let term of terms_condition;let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{term.term_heading }}</td>
+                <td style="text-align: left;">{{term.term }}</td>
+              </tr>
+            </table>
+
+
+            <br>
+          </div>
+        </div>
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Additional Terms & Conditions:</label>
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left;">Sr</th>
+                <th style="text-align: left;">Term Heading</th>
+              </tr>
+              <tr *ngFor="let term of additional_terms;let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{term.additional_term }}</td>
+              </tr>
+            </table>
+
+            <br>
+          </div>
+          <div *ngIf="selectedOrder['po_type'] == 'Services'"
+            class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Notes:</label>
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left;">Sr</th>
+                <th style="text-align: left;">Note</th>
+              </tr>
+              <tr *ngFor="let term of selectedOrder['notes'];let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{term.note }}</td>
+              </tr>
+            </table>
+
+            <br>
+          </div>
+        </div>
+        <div *ngIf="selectedOrder['po_type'] != 'Services'"
+          class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Shipping & Handling Charges: </label>
+
+        </div>
+        <table *ngIf="selectedOrder['po_type'] != 'Services'" class="table table-border">
+          <tr>
+            <th style="text-align: left;">TAX %</th>
+            <th style="text-align:left;">Total Amount</th>
+
+          </tr>
+          <tr>
+            <td style="text-align: left;">{{selectedOrder.shipping_gst}} </td>
+            <td style="text-align: left;"> {{selectedOrder['shipping_handling']}}</td>
+
+          </tr>
+        </table>
+
+        <div class="clr-row">
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark:</label>
+            <input type="text" name="remark" [(ngModel)]="selectedOrder['remark']" readonly>
+          </div>
+
+        </div>
+
+
+
+
+
+      </div>
+    </div>
+
+    <div class="card-footer" *ngIf="selectedOrder['status']!='Rejected'">
+      <button class="btn btn-primary" [disabled]="selectedOrder['status']!='Approved' "
+        (click)="downloadPOReport()">{{'common.download' | translate}}</button>
+
+
+
+    </div>
+  </div>
+
+
+
+
+
+
+  <clr-modal [(clrModalOpen)]="is_hold_cancel" [clrModalClosable]="true">
+    <h3 class="modal-title">Send Follow - Up Email:</h3>
+
+
+    <div class="modal-body">
+
+      <div class="card">
+        <div class="card-block">
+
+          <div class="card-text">
+            <form #addMaterialForm="ngForm">
+
+              <div class="modal-body">
+
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <label>Schedule Delivery Date :<br>
+                    <b>{{delivery_schedule_date |date:'dd-MM-yyyy'}}</b></label>
+
+                </div>
+
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <label>Message<span style="color: red">*</span></label>
+                  <input type="text" name="message" [(ngModel)]="message" required>
+
+                </div>
+
+              </div>
+            </form>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-success" (click)="sendEmail(addMaterialForm)">Send</button>
+          </div>
+        </div>
+
+       
+      </div>
+
+
+
+
+    </div>
+
+  </clr-modal>
+
+
+  <clr-modal [(clrModalOpen)]="ishistory" [clrModalClosable]="true">
+    <h3 class="modal-title">Follow - Up History:</h3>
+    <div class="modal-body">
+      <div class="card">
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left;">Sr</th>
+                <th style="text-align: left;">Message</th>
+                <th style="text-align: left;">Follow Up Date</th>
+                <th style="text-align: left;">Follow Up By</th>
+              </tr>
+              <tr *ngFor="let term of followhistory ; let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{term.message }}</td>
+                <td style="text-align: left;">{{term.entry_date }}</td>
+                <td style="text-align: left;">{{term.entry_by }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="ishistory =false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+  </clr-modal>

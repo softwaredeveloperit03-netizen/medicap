@@ -1,0 +1,349 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify: any;
+
+interface HrCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'dept_head' | 'isuser' | 'trainig_cordinator';
+  badgeCount?: () => number;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  isLogin = false;
+  plant_id: any;
+  software_type = '';
+  loggedInDept: string | null = null;
+  unreadrinterview = 0;
+  unreadrmanreq = 0;
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  isTrainingCordi = 'No';
+  rights: any;
+  trainig_cordinator = 'No';
+  searchQuery = '';
+  selectedCategory = 'All';
+  selectedSidebarModule: 'ALL' | 'EMPLOYEE_MANAGEMENT' | 'RECRUITMENT' | 'LABOUR_MANAGEMENT' | 'HR_MASTER' = 'ALL';
+  showPalette = false;
+  private readonly employeeManagementIds = new Set([
+    'emp-form',
+    'employees',
+    'leaves',
+    'resignation',
+    'JobResp',
+    'payrole',
+    'user',
+  ]);
+  private readonly recruitmentManagementIds = new Set([
+    'recruitment',
+    'emp-form',
+    'employees',
+    'medical',
+    'resignation',
+  ]);
+  private readonly labourManagementIds = new Set([
+    'labour-management',
+    'labour-new',
+    'labours-log',
+    'labours-attendance',
+    'labours-salary',
+    'labours-salary-log',
+    'contractor-management',
+  ]);
+  private readonly hrMasterIds = new Set([
+    'master-designation',
+    'master-qualification',
+    'master-hra',
+    'master-salary-head',
+    'master-holiday'
+  ]);
+  private readonly hrOtherIds = new Set([
+    'achivement',
+    'govagency',
+    'apprisaldash',
+    'letter',
+    'loan',
+    'training',
+    'whatsappNo',
+  ]);
+
+  /** Hidden from main dashboard tiles - remove an id here to show it again later */
+  private readonly dashboardHiddenIds = new Set([
+    'labour-new',
+    'labours-log',
+    'labours-attendance',
+    'labours-salary',
+    'labours-salary-log',
+    'contractor-management',
+    'payrole',
+    'achivement',
+    'govagency',
+    'apprisaldash',
+    'letter',
+    'loan',
+    'training',
+    'whatsappNo',
+    
+    'master-designation',
+    'master-qualification',
+    'master-hra',
+    'master-salary-head',
+  ]);
+
+  private pharmaHiddenIds = new Set([
+    'training', 'induction-training', 'apprisaldash', 'direct-appraisal', 'performance', 'resignation-releaving',
+    'master-appraisal', 'achivement', 'mid-appraisal', 'managers-appraisal'
+  ]);
+
+  hrCards: HrCard[] = [];
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  constructor(private service: DataAccessService) {
+    this.plant_id = this.service.getPlantConfigFields('plant_id');
+    this.loggedInDept = localStorage.getItem('department');
+    this.software_type = this.service.getPlantConfigFields('software_type') || '';
+    this.initHrCards();
+  }
+
+  private initHrCards(): void {
+    const comp = this;
+    this.hrCards = [
+      { id: 'recruitment', title: 'Recruitment', description: 'Manpower requisition and interviews', route: 'recruitment', icon: 'fa-users', category: 'Recruitment', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', badgeCount: () => comp.unreadrmanreq + comp.unreadrinterview },
+      { id: 'emp-form', title: 'Employee Form', description: 'Employee onboarding and forms', route: 'emp-form', icon: 'fa-user-plus', category: 'Recruitment', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+      { id: 'employees', title: 'Employee Data', description: 'View and manage employee records', route: 'employees', icon: 'fa-users', category: 'Recruitment', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+      // { id: 'medical', title: 'Medical Checkup', description: 'Medical checkup records', route: 'medical', icon: 'fa-user-md', category: 'Recruitment', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+      { id: 'resignation', title: 'Employee Exit', description: 'Resignation and relieving', route: 'resignation/res', icon: 'fa-user-minus', category: 'Recruitment', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+      // { id: 'attendance', title: 'Attendance', description: 'Mark and view attendance', route: 'attendance', icon: 'fa-calendar-alt', category: 'Attendance', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+      // { id: 'shift', title: 'Shift Management', description: 'Manage shifts and rosters', route: 'shift', icon: 'fa-hourglass-half', category: 'Attendance', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+      { id: 'leaves', title: 'Leave Management', description: 'Apply and approve leaves', route: 'employees/leaves', icon: 'fa-calendar-times', category: 'Attendance', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+      { id: 'payrole', title: 'Payroll & Salary', description: 'Payroll and salary processing', route: 'payrole', icon: 'fa-money-bill-wave-alt', category: 'Attendance', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', showWhen: 'dept_head' },
+      { id: 'user', title: 'User Management', description: 'Manage system users and access', route: 'user', icon: 'fa-user-cog', category: 'Attendance', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)', showWhen: 'dept_head' },
+      { id: 'labour-management', title: 'Labour Management', description: 'Labour registration, attendance, salary and contractors', route: 'labours', icon: 'fa-hard-hat', category: 'Labour', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+      { id: 'labour-new', title: 'New Labour', description: 'Add new labour entry', route: 'labours/new', icon: 'fa-user-plus', category: 'Labour', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', showWhen: 'isuser' },
+      { id: 'labours-log', title: 'Labours List', description: 'View labour list and details', route: 'labours/log', icon: 'fa-clipboard-list', category: 'Labour', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+      { id: 'labours-attendance', title: 'Labour Attendance', description: 'Labour attendance records', route: 'labours/attendance', icon: 'fa-calendar-alt', category: 'Labour', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+      { id: 'labours-salary', title: 'Salary Calculation', description: 'Calculate labour salary', route: 'labours/salary', icon: 'fa-money-bill', category: 'Labour', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+      { id: 'labours-salary-log', title: 'Salary Report', description: 'Labour salary reports', route: 'labours/salary-log', icon: 'fa-file-invoice-dollar', category: 'Labour', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+      { id: 'contractor-management', title: 'Contractor Management', description: 'Manage contractors', route: 'labours/contractor-management', icon: 'fa-hard-hat', category: 'Labour', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+      { id: 'achivement', title: 'Achievement', description: 'Employee achievements', route: 'achivement', icon: 'fa-award', category: 'Others', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+      { id: 'govagency', title: 'Government Agencies', description: 'Government agency compliance', route: 'govagency', icon: 'fa-building', category: 'Others', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+      { id: 'apprisaldash', title: 'Appraisal', description: 'Performance appraisal', route: 'apprisaldash', icon: 'fa-chart-line', category: 'Others', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+      { id: 'letter', title: 'Letters & Notice', description: 'Letters and notices', route: 'letter', icon: 'fa-envelope-open', category: 'Others', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+      { id: 'loan', title: 'Loan', description: 'Employee loan management', route: 'loan', icon: 'fa-hand-holding-usd', category: 'Others', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+      { id: 'training', title: 'Induction Training', description: 'Induction and training programs', route: 'training', icon: 'fa-graduation-cap', category: 'Others', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+      { id: 'whatsappNo', title: 'Alert & Notification', description: 'Alerts and notifications', route: 'whatsappNo', icon: 'fa-bell', category: 'Others', gradient: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)' },
+      { id: 'JobResp', title: 'Job Responsibility', description: 'Job roles and responsibilities', route: 'JobResp', icon: 'fa-tasks', category: 'Others', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+      { id: 'master-designation', title: 'Position', description: 'Manage designations', route: 'master/designation', icon: 'fa-id-badge', category: 'Masters', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhen: 'dept_head' },
+      { id: 'master-qualification', title: 'Qualification', description: 'Manage qualifications', route: 'master/qualification', icon: 'fa-graduation-cap', category: 'Masters', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', showWhen: 'dept_head' },
+      { id: 'master-hra', title: 'HRA Master', description: 'HRA master data', route: 'master/hra', icon: 'fa-id-card-alt', category: 'Masters', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', showWhen: 'dept_head' },
+      { id: 'master-salary-head', title: 'Salary Head', description: 'Salary head master', route: 'master/salary-head', icon: 'fa-money-bill-alt', category: 'Masters', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhen: 'dept_head' },
+      { id: 'master-holiday', title: 'Holidays List', description: 'Manage holiday calendar', route: 'master/holiday', icon: 'fa-calendar-alt', category: 'Masters', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', showWhen: 'dept_head' },
+    ];
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    this.validateUser();
+    this.getNotification();
+    const savedPalette = localStorage.getItem('hr_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(function(p) { return p.name === savedPalette; });
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+  }
+
+  goToDeptHomePage(): void {
+    const loggedInDept = localStorage.getItem('department');
+    this.service.navigateToSpecificDeptHome(loggedInDept);
+  }
+
+  getNotification(): void {
+    this.getPendingreqman();
+    this.getPendingInterview();
+  }
+
+  getPendingreqman(): void {
+    this.service.get('notification.php?type=getRequisitionrevisionNotification').subscribe((response: any) => {
+      this.unreadrmanreq = Number(response['Pending_req']);
+      if (this.unreadrmanreq > 0 && alertify) {
+        alertify.warning(response['text']);
+      }
+    });
+  }
+
+  getPendingInterview(): void {
+    this.service.get('notification.php?type=getPendingInterviews').subscribe((response: any) => {
+      this.unreadrinterview = Number(response['Pending_interview']);
+      if (this.unreadrinterview > 0 && alertify) {
+        alertify.warning(response['text']);
+      }
+    });
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.isuser = r.isuser || 'No';
+      this.ischecker = r.ischecker || 'No';
+      this.isapprover = r.isapprover || 'No';
+      this.qms_approver = r.qms_approver || 'No';
+      this.dept_head = r.dept_head || 'No';
+      this.isauditor = r.isauditor || 'No';
+      this.isTrainingCordi = r.trainig_cordinator || 'No';
+      this.plant_head = r.plant_head || 'No';
+      this.shift_allocator = r.shift_allocator || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+    });
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.hrCards.map(function(c) { return c.category; }))));
+  }
+
+  private isCardVisibleOnDashboard(c: HrCard): boolean {
+    const employeeSidebarActive =
+      this.selectedSidebarModule === 'EMPLOYEE_MANAGEMENT' && this.employeeManagementIds.has(c.id);
+    const labourSidebarActive =
+      this.selectedSidebarModule === 'LABOUR_MANAGEMENT' && this.labourManagementIds.has(c.id);
+    const masterSidebarActive =
+      this.selectedSidebarModule === 'HR_MASTER' && this.hrMasterIds.has(c.id);
+    if (this.dashboardHiddenIds.has(c.id) && !employeeSidebarActive && !labourSidebarActive && !masterSidebarActive) {
+      return false;
+    }
+    if (this.software_type === 'Pharma ERP' && this.pharmaHiddenIds.has(c.id)) {
+      return false;
+    }
+    if (c.showWhen === 'dept_head' && this.dept_head !== 'Yes') {
+      return false;
+    }
+    if (c.showWhen === 'isuser' && this.isuser !== 'Yes') {
+      return false;
+    }
+    if (c.showWhen === 'trainig_cordinator' && this.trainig_cordinator !== 'Yes') {
+      return false;
+    }
+    return true;
+  }
+
+  getFilteredCards(): HrCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.hrCards.filter((c: HrCard) => {
+      if (!this.isCardVisibleOnDashboard(c)) {
+        return false;
+      }
+      const matchSidebar =
+        this.selectedSidebarModule === 'ALL' ||
+        (this.selectedSidebarModule === 'EMPLOYEE_MANAGEMENT' && this.employeeManagementIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'RECRUITMENT' && this.recruitmentManagementIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'LABOUR_MANAGEMENT' && this.labourManagementIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'HR_MASTER' && this.hrMasterIds.has(c.id));
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchSidebar && matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: HrCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('hr_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  selectSidebarModule(module: 'ALL' | 'EMPLOYEE_MANAGEMENT' | 'RECRUITMENT' | 'LABOUR_MANAGEMENT' | 'HR_MASTER'): void {
+    this.selectedSidebarModule = module;
+    this.selectedCategory = 'All';
+    this.searchQuery = '';
+  }
+
+  getOtherHrSidebarCards(): HrCard[] {
+    const cardsById = new Map(this.hrCards.map(function(c) { return [c.id, c] as [string, HrCard]; }));
+    return Array.from(this.hrOtherIds)
+      .map(function(id) { return cardsById.get(id); })
+      .filter((c): c is HrCard => !!c && this.isCardVisibleOnDashboard(c));
+  }
+
+  showAllTabs(): void {
+    this.selectSidebarModule('ALL');
+  }
+
+  checkLogin(formData: any): void {
+    const data = formData.value;
+    this.service.post(
+      'checkLogin.php?type=newLogin&username=' + encodeURIComponent(data['username']) + '&password=' + encodeURIComponent(data['password']),
+      JSON.stringify(data)
+    ).subscribe((response: any) => {
+      if (response['status'] === 'success') {
+        localStorage.setItem('token', response['token']);
+        localStorage.setItem('department', response['department']);
+        localStorage.setItem('designation', response['designation']);
+        localStorage.setItem('user', response['user']);
+        localStorage.setItem('checker', response['checker']);
+        localStorage.setItem('approver', response['approver']);
+        localStorage.setItem('username', response['username']);
+        this.service.username = response['username'];
+        this.service.userChange();
+        if (response['department'] === 'Human Resource') {
+          this.isLogin = true;
+        }
+      } else {
+        this.isLogin = false;
+      }
+    });
+  }
+
+  validateUser(): void {
+    const token = localStorage.getItem('token');
+    const dept = localStorage.getItem('department');
+    this.isLogin = !!(token && dept === 'Human Resource');
+  }
+}

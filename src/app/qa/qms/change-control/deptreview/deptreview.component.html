@@ -1,0 +1,348 @@
+<div class="cc-dept-con-view">
+    <div class="cc-card" *ngIf="!isView">
+        <div class="cc-card-header">
+            <span>Change Control For Dept. & Review</span>
+            <button type="button" class="cc-btn cc-btn-close" routerLink="/qa/qms/change-control">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+        </div>
+        <div class="cc-card-body">
+            <div class="cc-table-wrap">
+                <table class="cc-table">
+                    <thead>
+                        <tr>
+                            <th>CC No.</th>
+                            <th>Department</th>
+                            <th>Type of Change</th>
+                            <th>Initiate By / On</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let result of results; let i = index">
+                            <td><strong>{{ result.ctrl_no }}</strong></td>
+                            <td>{{ result.department_name }}</td>
+                            <td>{{ result.changeReqFor }}</td>
+                            <td>{{ result.entryBy }} / {{ result.entryDate | date:'dd/MM/yyyy' }}</td>
+                            <td><span class="cc-badge">{{ result.status }}</span></td>
+                            <td><button type="button" class="cc-btn cc-btn-view" (click)="view(i)">View</button></td>
+                        </tr>
+                        <tr *ngIf="!results?.length"><td colspan="6" class="cc-empty">No Records Found</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-card cc-view-form" *ngIf="isView">
+        <div class="cc-card-header">
+            <span>Change Control For Dept. & Review</span>
+            <button type="button" class="cc-btn cc-btn-close" (click)="isView=false">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+        </div>
+        <div class="cc-card-body">
+            <form #reviewForm="ngForm" class="cc-form">
+              <section class="cc-section">
+                <h3 class="cc-section-title">Change Control Details</h3>
+                <table class="cc-view-table">
+                  <tr>
+                    <td class="cc-view-label">CC No.</td>
+                    <td class="cc-view-value">{{ selectedResult['ctrl_no'] }}</td>
+                    <td class="cc-view-label">Change Control Issued By</td>
+                    <td class="cc-view-value">{{ selectedResult['entryBy'] }} / {{ selectedResult['department_name'] }}</td>
+                  </tr>
+                  <tr>
+                    <td class="cc-view-label">Initiated By</td>
+                    <td class="cc-view-value">{{ selectedResult['entryBy'] }}</td>
+                    <td class="cc-view-label">Department</td>
+                    <td class="cc-view-value">{{ selectedResult['department_name'] }}</td>
+                  </tr>
+                  <tr>
+                    <td class="cc-view-label">Changed Requested For</td>
+                    <td class="cc-view-value" [attr.colspan]="selectedResult['changeReqFor'] === 'Other' ? 1 : 3">{{ selectedResult['changeReqFor'] }}</td>
+                    <td class="cc-view-label" *ngIf="selectedResult['changeReqFor'] === 'Other'">Specify Change Request</td>
+                    <td class="cc-view-value" *ngIf="selectedResult['changeReqFor'] === 'Other'" colspan="2">{{ selectedResult['changeReqForOther'] }}</td>
+                  </tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>REASON & JUSTIFICATION OF PROPOSED CHANGE:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['justification'] || 'NA' }}</td></tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>Is the Change due to CAPA:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['changeCAPA'] || 'NA' }}</td></tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>CAPA:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['capaDetails'] || 'NA' }}</td></tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>Dated On:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['capaDate'] || 'NA' }}</td></tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>DETAILS OF PROPOSED CHANGE:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['proposed'] || 'NA' }}</td></tr>
+                  <tr><td class="cc-view-label" colspan="4"><b>COMMENTS BY INITIATION DEPARTMENT HOD:</b></td></tr>
+                  <tr><td class="cc-view-value" colspan="4">{{ selectedResult['concernHodComment'] || 'NA' }}</td></tr>
+                </table>
+                <div class="cc-sig-blocks">
+                                <div class="cc-sig-block">
+                                    <div class="cc-sig-label">Initiator (Digital Signature)</div>
+                                    <div class="cc-sig-content">
+                                        <span class="cc-sig-tick">✓</span>
+                                        <div class="cc-sig-details">
+                                            <span class="cc-sig-name">{{ selectedResult['initiatedBy'] || selectedResult['entryBy'] }}</span>
+                                            <span class="cc-sig-date">{{ selectedResult['entryDate'] | date:'dd/MM/yyyy' }} {{ selectedResult['entryDate'] | date:'shortTime' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="cc-sig-block" *ngIf="selectedResult['concernHodBy']">
+                                    <div class="cc-sig-label">Department Head (Digital Signature)</div>
+                                    <div class="cc-sig-content">
+                                        <span class="cc-sig-tick">✓</span>
+                                        <div class="cc-sig-details">
+                                            <span class="cc-sig-name">{{ selectedResult['authBy'] || selectedResult['concernHodBy'] }}</span>
+                                            <span class="cc-sig-date">{{ selectedResult['concernHodOn'] | date:'dd/MM/yyyy' }} {{ selectedResult['concernHodOn'] | date:'shortTime' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+              </section>
+              <section class="cc-section">
+                <h3 class="cc-section-title">Impact assessment of Proposed Change</h3>
+                <p class="cc-section-subtitle">EVALUATION AND IMPACT ASSESSMENT OF PROPOSED CHANGE (To be filled up by Quality Assurance)</p>
+                <div class="cc-table-wrap">
+                  <table class="cc-impact-table">
+                    <thead>
+                      <tr>
+                        <th>Process</th>
+                        <th>Status</th>
+                        <th>Responsible Dept</th>
+                        <th>Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+
+                                <tr>
+                                    <td>Product Quality</td>
+                                    <td class="cc-cell-value">{{ selectedResult.productQualityCheck == 1 ? 'Checked' : 'Not Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptproductQualityCheck }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.productQualityRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Standard Operating Procedure (SOP) -->
+                                <tr>
+                                    <td>Standard Operating Procedure (SOP)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.sopCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptsopCheck || 'NA'}}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.sopRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Specification -->
+                                <tr>
+                                    <td>Specification</td>
+                                    <td class="cc-cell-value">{{ selectedResult.specificationCheck == 1 ? 'Checked' :
+                                        'Not Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptspecificationCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.specificationRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Standard Test Procedure (STP) -->
+                                <tr>
+                                    <td>Standard Test Procedure (STP)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.stpCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptstpCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.stpRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Safety Data Sheet (SDS) -->
+                                <tr>
+                                    <td>Safety Data Sheet (SDS)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.sdsCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptsdsCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.sdsRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Method of Analysis & Awareness (MOA) -->
+                                <tr>
+                                    <td>Method of Analysis & Awareness (MOA)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.moaAwrCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptmoaAwrCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.moaAwrRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Batch Manufacturing Record (BMR) -->
+                                <tr>
+                                    <td>Batch Manufacturing Record (BMR) / Master Formula Record (MFR)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.bmrMfrCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptbmrMfrCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.bmrMfrRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Equipment & Materials -->
+                                <tr>
+                                    <td>Equipment</td>
+                                    <td class="cc-cell-value">{{ selectedResult.equipmentCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptequipmentCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.equipmentRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Measurements</td>
+                                    <td class="cc-cell-value">{{ selectedResult.measurementsCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptmeasurementsCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.measurementsRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Raw Materials</td>
+                                    <td class="cc-cell-value">{{ selectedResult.materialCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptmaterialCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.materialRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Validation & Stability -->
+                                <tr>
+                                    <td>Validation</td>
+                                    <td class="cc-cell-value">{{ selectedResult.validationCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptvalidationCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.validationRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Stability Studies</td>
+                                    <td class="cc-cell-value">{{ selectedResult.stabilityStudiesCheck == 1 ? 'Checked' :
+                                        'Not Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptstabilityStudiesCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.stabilityStudiesRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Process Validation (PV)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.pvCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptpvCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.pvRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Analytical Method Validation (AMV)</td>
+                                    <td class="cc-cell-value">{{ selectedResult.amvCheck == 1 ? 'Checked' : 'Not Checked'
+                                        }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptamvCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.amvRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Statutory & Certifications -->
+                                <tr>
+                                    <td>Statutory Compliance</td>
+                                    <td class="cc-cell-value">{{ selectedResult.statutoryCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptstatutoryCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.statutoryRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>FDA License</td>
+                                    <td class="cc-cell-value">{{ selectedResult.fdaLicenseCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptfdaLicenseCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.fdaLicenseRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>WHO License</td>
+                                    <td class="cc-cell-value">{{ selectedResult.whoLicenseCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptwhoLicenseCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.whoLicenseRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <!-- Other Checks -->
+                                <tr>
+                                    <td>Environmental Compliance</td>
+                                    <td class="cc-cell-value">{{ selectedResult.environmentCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptenvironmentCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.environmentRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Machine Maintenance</td>
+                                    <td class="cc-cell-value">{{ selectedResult.machineCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptmachineCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.machineRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Workforce Skills & Training</td>
+                                    <td class="cc-cell-value">{{ selectedResult.skillsCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptskillsCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.skillsRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Workplace Safety</td>
+                                    <td class="cc-cell-value">{{ selectedResult.safetyCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptsafetyCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.safetyRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Vendor Compliance</td>
+                                    <td class="cc-cell-value">{{ selectedResult.vendorCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DeptvendorCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.vendorRemarks || 'NA' }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td> Training</td>
+                                    <td class="cc-cell-value">{{ selectedResult.trainingCheck == 1 ? 'Checked' : 'Not
+                                        Checked' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.DepttrainingCheck || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ selectedResult.trainingRemarks || 'NA' }}</td>
+                                </tr>
+                  </tbody>
+                </table>
+                </div>
+              </section>
+              <section class="cc-section">
+                <h3 class="cc-section-title">Classification & QA Review</h3>
+                <table class="cc-view-table">
+                  <tr>
+                    <td class="cc-view-label">Classification</td>
+                    <td class="cc-view-value">{{ selectedResult.classification }}</td>
+                  </tr>
+                  <tr>
+                    <td class="cc-view-label">REVIEW OF ACTION PLAN & APPROVAL BY QA</td>
+                    <td class="cc-view-value cc-text">{{ selectedResult.APPROVAL_QA || 'NA' }}</td>
+                  </tr>
+                </table>
+              </section>
+              <section class="cc-section">
+                <h3 class="cc-section-title">Dept. Consent & Review</h3>
+                <div class="cc-grid-2">
+                  <div class="cc-field">
+                    <label>Impact assessment and action plan <span class="cc-required">*</span></label>
+                    <input type="text" name="ImpactDept" ngModel required class="cc-input" title="Impact assessment and action plan">
+                  </div>
+                  <div class="cc-field">
+                    <label>Responsibility/TCD <span class="cc-required">*</span></label>
+                    <input type="text" name="Responsibility" ngModel required class="cc-input" title="Responsibility/TCD">
+                  </div>
+                </div>
+              </section>
+            </form>
+        </div>
+        <div class="cc-card-footer">
+            <button type="button" class="cc-btn cc-btn-primary" (click)="update(reviewForm)">SUBMIT</button>
+            <button type="button" class="cc-btn cc-btn-danger" (click)="isView = false">CLOSE</button>
+        </div>
+    </div>
+</div>

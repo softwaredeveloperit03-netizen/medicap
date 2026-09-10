@@ -1,0 +1,168 @@
+﻿<div class="card">
+  <div class="card-header">
+    <div class="clr-row rights-header-row">
+      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 rights-header-title">User Rights</div>
+      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 rights-header-actions">
+        <a class="btn btn-sm btn-success" [routerLink]="['/hr/user/Additional']" [queryParams]="{returnTo: '/hr/employees/rights'}">Additional Rights</a>
+        <a class="btn btn-sm btn-danger" routerLink="/hr/user">{{'common.close' | translate}}</a>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-block-inner">
+      <div class="filter-header-panel">
+        <div class="filter-item">
+          <label class="filter-label"><strong>Select Department</strong></label>
+          <select
+            name="search_department"
+            [(ngModel)]="search_department"
+            (ngModelChange)="search_department = $event; getRights()"
+            class="form-control filter-select"
+          >
+            <option value="ALL EMP">ALL EMP</option>
+            <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label"><strong>Search</strong></label>
+          <div class="search-input-wrapper">
+            <input
+              type="text"
+              class="form-control search-input"
+              placeholder="Search by Emp ID, Name, Department, or Designation..."
+              [(ngModel)]="searchText"
+              (input)="onSearchChange()"
+              name="universalSearch"
+            />
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary clear-btn"
+              (click)="clearSearch()"
+              *ngIf="searchText"
+              title="Clear Search"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="filter-item count-item">
+          <label class="filter-label"><strong>Count</strong></label>
+          <div class="count-display">
+            <strong>{{ displayCount }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <form #rightForm="ngForm">
+        <div class="loading-overlay" *ngIf="loading">
+          <div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
+        </div>
+        <div class="card-text unique-table-wrapper">
+          <table class="table unique-table">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white; width: 50px;">S.No</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Check</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Emp Id</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.name' | translate}}</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.department' | translate}}</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Position</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">User Rights</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Checker Rights</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Approver Rights</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">QMS Approver</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Auditor</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Dept Head</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Shift Management</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Training Cordinator</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Task Assigner</th>
+            </tr>
+            <tr *ngIf="results.length === 0">
+              <td colspan="15" class="no-data-cell">
+                <strong *ngIf="searchText">No results found for "{{ searchText }}"</strong>
+                <strong *ngIf="!searchText">No data available</strong>
+              </td>
+            </tr>
+            <tr *ngFor="let user of results; let i = index; trackBy: trackByEmpId">
+              <td style="text-align: center; font-weight: bold;">{{ i + 1 }}</td>
+              <td class="checkbox-cell">
+                <input type="checkbox" [ngModel]="user.check" [name]="'check' + i" (ngModelChange)="user.check = $event" [id]="'check_' + user.emp_id + '_' + i" />
+              </td>
+              <td class="emp-id-cell">{{ user.emp_id }}</td>
+              <td style="text-align: left;">{{ fullName(user) }}</td>
+              <td style="text-align: left;">{{ user.department }}</td>
+              <td style="text-align: left;">{{ user.designation }}</td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.isuser" [name]="'isuser' + i" (ngModelChange)="user.isuser = $event" class="table-dropdown">
+                  <option [value]="user.isuser || 'No'">{{ user.isuser || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.ischecker" [name]="'ischecker' + i" (ngModelChange)="user.ischecker = $event" class="table-dropdown">
+                  <option [value]="user.ischecker || 'No'">{{ user.ischecker || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.isapprover" [name]="'isapprover' + i" (ngModelChange)="user.isapprover = $event" class="table-dropdown">
+                  <option [value]="user.isapprover || 'No'">{{ user.isapprover || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.qms_approver" [name]="'qms_approver' + i" (ngModelChange)="user.qms_approver = $event" class="table-dropdown">
+                  <option [value]="user.qms_approver || 'No'">{{ user.qms_approver || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.isauditor" [name]="'isauditor' + i" (ngModelChange)="user.isauditor = $event" class="table-dropdown">
+                  <option [value]="user.isauditor || 'No'">{{ user.isauditor || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.dept_head" [name]="'dept_head' + i" (ngModelChange)="user.dept_head = $event" class="table-dropdown">
+                  <option [value]="user.dept_head || 'No'">{{ user.dept_head || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.shift_allocator" [name]="'shift_allocator' + i" (ngModelChange)="user.shift_allocator = $event" class="table-dropdown">
+                  <option [value]="user.shift_allocator || 'No'">{{ user.shift_allocator || 'No' }}</option>
+                  <option value="No">No</option>
+                  <option value="Allocator">Allocator</option>
+                  <option value="Reviewer">Reviewer</option>
+                  <option value="Both">Both</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.trainig_cordinator" [name]="'trainig_cordinator' + i" (ngModelChange)="user.trainig_cordinator = $event" class="table-dropdown">
+                  <option [value]="user.trainig_cordinator || 'No'">{{ user.trainig_cordinator || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+              <td class="dropdown-cell">
+                <select [ngModel]="user.task_assigner" [name]="'task_assigner' + i" (ngModelChange)="user.task_assigner = $event" class="table-dropdown">
+                  <option [value]="user.task_assigner || 'No'">{{ user.task_assigner || 'No' }}</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <button type="button" class="btn btn-primary btn-save" (click)="submitright()" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'SAVE' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

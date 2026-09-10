@@ -1,0 +1,144 @@
+<div class="card recv-page" *ngIf="!isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Awaiting Dispensing Request</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/dispensing/raw">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                  <th>Sr.</th>
+                  <th>{{'common.date' | translate}}</th>
+                  <th>Plant</th>
+                  <th>BOM For</th>
+                  <th>Receiving no</th>
+                  <th style="text-align: left;">Product Name</th>
+                  <th>Batch/Lot No.</th>
+              
+                  <th style="text-align: left;">Product Type</th>
+                  <th style="text-align: left;">Product Code</th>
+                  <th>Batch Size</th>
+                  <th>Request By</th>
+                  <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ result.request_date | date :'dd-MM-yyyy' }}</td>
+                  <td>{{ result.company_unit}}</td>
+                  <td>{{ result.bom_for}}</td>
+                  <td>{{ result.document_no}}</td>
+                  <td style="text-align: left;">{{ result.product_name }}</td>
+                  <td>{{ result.batch_no }}</td>
+                  <td style="text-align: left;">{{ result.product_type }}</td>
+                  <td style="text-align: left;">{{ result.product_code }}</td>
+                  <td style="text-align: left;">{{ result.min_output_qty }} {{ result.unit }} - {{ result.max_output_qty }} {{ result.unit }}</td>
+                  <td>{{ result.firstname }}-{{ result.request_by }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                  </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="9">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Details</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView=false"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+        
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Receiving no:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['document_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Plant :</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['company_unit']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>BOM For.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['bom_for']}}</td>
+                    </tr>
+                </table>
+          
+                <h3>Material Details:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align: left;">Material Subtype</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <th style="text-align: left;">Grade</th>
+                        <th>LOD %</th>
+                        <th>LOD Qty</th>
+                        <!-- <th>Available Qty</th> -->
+                        <th>Batch Qty</th>
+                        <th>Approved Qty</th>
+                        <!-- <th>Shortage Qty</th> -->
+                       
+                    </tr>
+                    <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                        <td style="text-align: left;">{{ comp.grade }}</td>
+                        <td>{{ comp.lod_per }}</td>
+                        <td>{{ comp.lod_qty }}</td>
+                        <!-- <td>{{ comp.av_qty }}</td> -->
+                        <td>{{ comp.batch_qty }} {{ comp.unit }}</td>
+                        <td><span *ngIf="selectedResult['bom_for']=='EOU'">{{ comp.EOU_STOCK}}</span>  <span *ngIf="selectedResult['bom_for']=='PART-A'">{{ comp.PARTA_STOCK}}</span>    </td>
+                        <!-- <td>{{ comp.batch_qty-(comp.EOU_STOCK*1 + comp.PARTA_STOCK*1) }}</td> -->
+                        
+                    </tr>
+                    <tr *ngIf="selectedResult['materials'].length == 0">
+                        <td colspan="6">{{'common.noRecords' | translate}}</td>
+                    </tr>
+                </table>
+
+                <!-- <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+                        <label>Remark:</label>
+                        <select name="remark" [(ngModel)]="remark" required>
+                            <option *ngIf="selectedResult['materials'].EOU_STOCK! == 0 || selectedResult['materials'].PARTA_STOCK! == 0  ">Accept</option>
+                            <option>Reject</option>
+                            <option>On Hold</option>
+                        </select>
+                    </div>
+                </div> -->
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="save('Accept')">Accept</button>
+           <!-- <button class="btn btn-primary" (click)="save('Accept')" *ngIf="selectedResult['materials'].EOU_STOCK! == 0 || selectedResult['materials'].PARTA_STOCK! == 0  ">Accept</button> -->
+           <button class="btn btn-danger" (click)="save('Reject')">{{'common.reject' | translate}}</button>
+           <button class="btn btn-success" (click)="save('On Hold')">ON HOLD</button>
+        </div>
+    </div>
+</div>
+

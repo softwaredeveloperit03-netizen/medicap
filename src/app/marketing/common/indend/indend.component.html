@@ -1,0 +1,253 @@
+<div class="container-fluid" *ngIf="!isShow && !isGeneralMaterial">
+  <div class="card">
+    <div class="card-header">Purchase Requisition History / Log</div>
+    <div class="card-block">
+      <div class="card-text">
+        <button class="btn btn-sm btn-info" (click)="isShow = true">New Purchase Requisition</button>
+        <button class="btn btn-sm btn-info" (click)="newGeneralIndend()">New General Purchase Requisition</button>
+
+        <h3>Raw & Packing Material Purchase Requisition Log</h3>
+        <clr-datagrid>
+          <clr-dg-column>No</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Qty</clr-dg-column>
+          <clr-dg-column>Requirement</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      
+          <clr-dg-row *ngFor="let user of indend_materials">
+              <clr-dg-cell>{{user.indend_no}}</clr-dg-cell>
+              <clr-dg-cell>{{user.material_type}} {{user.material_subtype}}</clr-dg-cell>
+              <clr-dg-cell>{{user.material_name}}</clr-dg-cell>
+              <clr-dg-cell>{{user.grade}}</clr-dg-cell>
+              <clr-dg-cell>{{user.required_qty}} {{user.unit}}</clr-dg-cell>
+              <clr-dg-cell>{{user.requirement}}</clr-dg-cell>
+              <clr-dg-cell>{{user.status}}</clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+
+        <h3>General Material Purchase Requisition Log</h3>
+        <clr-datagrid>
+          <clr-dg-column>No</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Qty</clr-dg-column>
+          <clr-dg-column>Requirement</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      
+          <clr-dg-row *ngFor="let user of generalIndends">
+              <clr-dg-cell>{{user.indend_no}}</clr-dg-cell>
+              <clr-dg-cell>{{user.material_type}}</clr-dg-cell>
+              <clr-dg-cell>{{user.material_name}}</clr-dg-cell>
+              <clr-dg-cell>{{user.required_qty}}</clr-dg-cell>
+              <clr-dg-cell>{{user.requirement}}</clr-dg-cell>
+              <clr-dg-cell>{{user.status}}</clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isShow">
+  <div class="card">
+    <div class="card-header">New Purchase Requisition of Material</div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type</label>
+            <select name="material_type" id="material_type" [(ngModel)]="material_type" (change)="checkMaterialType($event.target.value)" required>
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Chemicals</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Subtype:</label>
+            <select *ngIf="isRawMaterial" name="material_subtype" [(ngModel)]="material_subtype" required (change)="getMaterials()">
+                <option>API</option>
+                <option>Excipients</option>
+                <option>Liquid</option>
+              </select>
+              <select *ngIf="isPackingMaterial" name="material_subtype" [(ngModel)]="material_subtype" required (change)="getMaterials()">
+                <option>Primary</option>
+                <option>Secondary</option>
+                <option>Tritiary</option>
+              </select>
+              <select *ngIf="isChemicalMaterial" name="material_subtype" [(ngModel)]="material_subtype" required (change)="getMaterials()">
+                <option>Analytical</option>
+                <option>Commercials</option>
+                <option>Senitizations</option>
+              </select>
+              <input *ngIf="isOther" type="material_subtype" [(ngModel)]="material_subtype" required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Name:</label>
+            <select name="material_name" [(ngModel)]="material_name"(change)="getMaterialGrades($event.target.selectedIndex)" required>
+              <option></option>
+              <option *ngFor="let material of materials">{{ material['material_name'] }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+            <label>Grade:</label>
+              <select name="grade" [(ngModel)]="grade" (change)="getMaterialCode($event.target.selectedIndex)" required>
+                <option></option>
+                <option *ngFor="let grade of grades">{{ grade.grade }}</option>
+              </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+            <label>Requirement</label>
+            <select name="requirement" [(ngModel)]="requirement" required>
+              <option>Urgent</option>
+              <option>Regular</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Required Qty (Unit: {{ unit }})</label>
+            <input type="text" name="required_qty" [(ngModel)]="required_qty" required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Vendor</label>
+            <select name="vendor" [(ngModel)]="vendor" required>
+              <option></option>
+              <option *ngFor="let vendor of vendors" [value]="vendor.vendor_no">{{ vendor['vendor_name'] }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+            <label>Within Days</label>
+            <input type="text" name="within_days" [(ngModel)]="within_days" required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Purpose</label>
+            <select name="purpose" [(ngModel)]="purpose" required>
+              <option>Production</option>
+              <option>Testing</option>
+              <option>Trail</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="addMaterial()">ADD TO LIST</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">Purchase Requisition / Requisition Material List</div>
+    <div class="card-block">
+      <div class="card-text">
+        <clr-datagrid>
+            <clr-dg-column>Material Type</clr-dg-column>
+            <clr-dg-column>Material Name</clr-dg-column>
+            <clr-dg-column>Grade</clr-dg-column>
+            <clr-dg-column>Req. Qty</clr-dg-column>
+            <clr-dg-column>{{'common.unit' | translate}}</clr-dg-column>
+            <clr-dg-column>Requirement</clr-dg-column>
+            <clr-dg-column>Purpose</clr-dg-column>
+            <clr-dg-column>Del</clr-dg-column>
+        
+            <clr-dg-row *ngFor="let user of materialList; let i = index">
+                <clr-dg-cell>{{user.material_type}} - {{ user.material_subtype }}</clr-dg-cell>
+                <clr-dg-cell>{{user.material_name}}</clr-dg-cell>
+                <clr-dg-cell>{{user.grade}}</clr-dg-cell>
+                <clr-dg-cell>{{user.required_qty}}</clr-dg-cell>
+                <clr-dg-cell>{{user.unit}}</clr-dg-cell>
+                <clr-dg-cell>{{user.requirement}}</clr-dg-cell>
+                <clr-dg-cell>{{user.purpose}}</clr-dg-cell>
+                <clr-dg-cell><clr-icon shape="trash" class="is-error" (click)="deleteProduct(i)"></clr-icon></clr-dg-cell>
+            </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-success" (click)="saveIndend()">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isShow = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isGeneralMaterial">
+  <div class="card">
+    <div class="card-header">General Purchase Requisition</div>
+    <div class="card-block">
+      <div class="card-text">
+        <form #generalForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Type:</label>
+              <select name="material_type" ngModel (change)="getGeneralMaterials($event.target.value)" required>
+                <option></option>
+                <option>Staionary</option>
+                <option>Engineering Spares</option>
+                <option>Equipments</option>
+                <option>Reference Standard</option>
+                <option>Impurities</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_no" ngModel required>
+                <option></option>
+                <option *ngFor="let material of general_materials" [value]="material.material_no">{{ material.material_name }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Requirement</label>
+              <select name="requirement" ngModel required>
+                <option>Urgent</option>
+                <option>Regular</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty</label>
+              <input type="number" name="required_qty" ngModel required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Purpose</label>
+              <select name="purpose" ngModel required>
+                <option>Production</option>
+                <option>Testing</option>
+                <option>Trail</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="addGeneralMaterial(generalForm)">{{'common.save' | translate}}</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">Purchase Requisition / Requisition Material List</div>
+    <div class="card-block">
+      <div class="card-text">
+        <clr-datagrid>
+            <clr-dg-column>Material Type</clr-dg-column>
+            <clr-dg-column>Material No</clr-dg-column>
+            <clr-dg-column>Req. Qty</clr-dg-column>
+            <clr-dg-column>Requirement</clr-dg-column>
+            <clr-dg-column>Purpose</clr-dg-column>
+            <clr-dg-column>Del</clr-dg-column>
+        
+            <clr-dg-row *ngFor="let user of materialList; let i = index">
+                <clr-dg-cell>{{user.material_type}}</clr-dg-cell>
+                <clr-dg-cell>{{user.material_no}}</clr-dg-cell>
+                <clr-dg-cell>{{user.required_qty}}</clr-dg-cell>
+                <clr-dg-cell>{{user.requirement}}</clr-dg-cell>
+                <clr-dg-cell>{{user.purpose}}</clr-dg-cell>
+                <clr-dg-cell><clr-icon shape="trash" class="is-error" (click)="deleteProduct(i)"></clr-icon></clr-dg-cell>
+            </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-success" (click)="saveGeneralIndend()">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isGeneralMaterial = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

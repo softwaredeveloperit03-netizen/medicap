@@ -1,0 +1,195 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhenNutraceutical?: boolean;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  pageTitle = 'Engineering Department';
+  sectionLabel = 'Engineering Section';
+  software_type = '';
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+  rights: any;
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  trainig_cordinator = 'No';
+  loggedInDept = localStorage.getItem('department');
+
+  cards: DeptCard[] = [
+    { id: 'preventive', title: 'Preventive Maint.', route: 'preventive', icon: 'fa-tools', category: 'Maintenance', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'calibration', title: 'Calibration', route: 'calibration', icon: 'fa-balance-scale', category: 'Maintenance', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'maintenance', title: 'Breakdown Maint.', route: 'maintenance', icon: 'fa-wrench', category: 'Maintenance', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'ahu', title: 'AHU Section', route: 'ahu', icon: 'fa-wind', category: 'Systems', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhenNutraceutical: false },
+    { id: 'equip-qualification', title: 'Equipment Qualif.', route: 'equip-qualification', icon: 'fa-toolbox', category: 'Systems', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', showWhenNutraceutical: false },
+    { id: 'water', title: 'Water System Docs.', route: 'water', icon: 'fa-tint', category: 'Systems', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', showWhenNutraceutical: false },
+    { id: 'electricity', title: 'Electricity Cons.', route: 'electricity', icon: 'fa-bolt', category: 'Systems', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'facility', title: 'Facility Operation', route: 'facility', icon: 'fa-building', category: 'Systems', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)', showWhenNutraceutical: false },
+    { id: 'aircompressor', title: 'Air Compressor', route: 'aircompressor', icon: 'fa-fan', category: 'Systems', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', showWhenNutraceutical: false },
+    { id: 'en020', title: 'Chilling & Brine Plant', route: 'en020', icon: 'fa-snowflake', category: 'Systems', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', showWhenNutraceutical: false },
+    { id: 'external', title: 'Equip. History Card', route: 'external', icon: 'fa-file-alt', category: 'Systems', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhenNutraceutical: false },
+    { id: 'nitrogen', title: 'Op. of Nitro. Plant', route: 'nitrogen', icon: 'fa-industry', category: 'Systems', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', showWhenNutraceutical: false },
+    { id: 'eurotherm', title: 'Eurotherm Database', route: 'eurotherm', icon: 'fa-industry', category: 'Other', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+  ];
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(private service: DataAccessService) {}
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (!this.showCard(c)) {
+        return false;
+      }
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  ngOnInit(): void {
+    this.software_type = this.service.getPlantConfigFields('software_type') || '';
+    this.get_rights();
+    const savedPalette = localStorage.getItem('engineering_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) return;
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' + encodeURIComponent(empId) + '&dep_name=' + encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.isuser = r.isuser || 'No';
+      this.ischecker = r.ischecker || 'No';
+      this.isapprover = r.isapprover || 'No';
+      this.qms_approver = r.qms_approver || 'No';
+      this.dept_head = r.dept_head || 'No';
+      this.isauditor = r.isauditor || 'No';
+      this.plant_head = r.plant_head || 'No';
+      this.shift_allocator = r.shift_allocator || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+    });
+  }
+
+  getCategories(): string[] {
+    return ['All', ...Array.from(new Set(this.cards.filter(c => this.showCard(c)).map(c => c.category)))];
+  }
+
+  showCard(card: DeptCard): boolean {
+    if (card.showWhenNutraceutical === false && this.software_type === 'Nutraceutical') return false;
+    return true;
+  }
+
+  getFilteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      if (!this.showCard(c)) return false;
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('engineering_dashboard_palette', palette.name);
+    } catch {}
+  }
+}

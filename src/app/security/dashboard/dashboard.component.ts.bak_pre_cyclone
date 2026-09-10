@@ -1,0 +1,207 @@
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  HostListener,
+  OnInit,
+} from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  dept_head = 'No';
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+  categories: string[] = ['All'];
+  filteredCards: DeptCard[] = [];
+
+  private allCards: DeptCard[] = [
+    // { id: 'gatepass', title: 'Gate Pass', description: 'Manage gate pass entries', route: 'gatepass', icon: 'fa-warehouse', category: 'Movement', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'inword', title: 'Material Inward', description: 'Material inward records', route: 'inword', icon: 'fa-sign-in-alt', category: 'Movement', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'materialoutword', title: 'Material Outward', description: 'Material outward records', route: 'materialoutword', icon: 'fa-sign-out-alt', category: 'Movement', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'outward', title: 'Outward Gate Pass', description: 'Outward gate pass management', route: 'outward', icon: 'fa-sign-out-alt', category: 'Movement', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    // { id: 'stockTranferOutword', title: 'Stock Transfer Outward', description: 'Stock transfer outward', route: 'stockTranferOutword', icon: 'fa-exchange-alt', category: 'Movement', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    // { id: 'stocktransin', title: 'Stock Transfer Inward', description: 'Stock transfer inward', route: 'stocktransin', icon: 'fa-exchange-alt', category: 'Movement', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'attendence', title: 'Emp. Entry / Exit', description: 'Employee entry and exit log', route: 'attendence', icon: 'fa-users', category: 'Attendance', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'labour-entry', title: 'Labour Entry / Exit', description: 'Labour entry and exit log', route: 'labour-entry', icon: 'fa-hard-hat', category: 'Attendance', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'emp-gatepass', title: 'Emp. Gate Pass', description: 'Employee gate pass', route: 'emp-gatepass', icon: 'fa-id-card', category: 'Attendance', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'entry', title: 'Vehicle Entry', description: 'Vehicle entry and registration', route: 'entry', icon: 'fa-truck', category: 'Other', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    // { id: 'round', title: 'Security Round', description: 'Security round checks', route: 'round', icon: 'fa-shield-alt', category: 'Other', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    // { id: 'aid', title: 'First Aid', description: 'First aid incidents and log', route: 'aid', icon: 'fa-first-aid', category: 'Other', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    // { id: 'key', title: 'Key Management', description: 'Key issue and return', route: 'key', icon: 'fa-key', category: 'Other', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+    this.cdr.markForCheck();
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.categories, (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectCategory(entry.filterKey);
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.allCards.filter((c) => {
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.categories = ['All', ...Array.from(new Set(this.allCards.map(c => c.category)))];
+    this.get_rights();
+    this.updateFilteredCards();
+    const savedPalette = localStorage.getItem('security_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.cdr.markForCheck();
+    });
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('security_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

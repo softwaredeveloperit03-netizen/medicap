@@ -1,0 +1,145 @@
+<div class="dashboard-shell" [style.background]="selectedPalette.background">
+  <ng-container *ngIf="getFilteredCards() as cards">
+    <div class="compact-layout">
+      <aside class="compact-sidebar" [class.compact-sidebar--open]="mobileSidebarOpen">
+        <div class="compact-sidebar__head">
+          <span class="compact-sidebar__title">{{ sidebarTitle }}</span>
+          <span class="compact-sidebar__count">{{ cards.length }}</span>
+        </div>
+        <nav class="compact-sidebar__tabs" [attr.aria-label]="sidebarTitle">
+          <app-sidebar-guide-link
+            [moduleId]="selectedCategoryId !== 'all' ? selectedCategoryId : 'admin-favility'"
+            [section]="currentCategory?.name || 'All Modules'"
+            [title]="selectedCategoryId !== 'all' ? (currentCategory?.name || 'Favility') : 'Favility Department'"
+          ></app-sidebar-guide-link>
+          <button
+            type="button"
+            class="compact-nav-item compact-nav-item--all compact-nav-item--menu"
+            [class.active]="selectedCategoryId === 'all'"
+            (click)="showAllTabs()"
+          >
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span>All Tabs</span>
+            <em class="compact-nav-count">{{ countForCategory('all') }}</em>
+          </button>
+
+          <button
+            type="button"
+            *ngFor="let cat of categories; trackBy: trackByCatId"
+            class="compact-nav-item compact-nav-item--menu"
+            [class.active]="cat.id === selectedCategoryId"
+            (click)="selectCategory(cat.id)"
+          >
+            <i class="fas" [ngClass]="cat.icon" aria-hidden="true"></i>
+            <span>{{ cat.name }}</span>
+            <em class="compact-nav-count">{{ countForCategory(cat.id) }}</em>
+          </button>
+          <a
+            class="compact-nav-item"
+            routerLink="/preventiveimain"
+            title="PM Intimation"
+            aria-label="PM Intimation"
+          >
+            <i class="fas fa-tools" aria-hidden="true"></i>
+            <span>PM Intimation</span>
+          </a>
+          <app-dept-calibration-sidebar-link></app-dept-calibration-sidebar-link>
+          <a
+            class="compact-nav-item compact-nav-item--dept-head"
+            routerLink="/hrfordepthead"
+            title="Dept Head"
+            aria-label="Dept Head"
+          >
+            <i class="fas fa-user-tie" aria-hidden="true"></i>
+            <span>Dept Head</span>
+          </a>
+        </nav>
+      </aside>
+
+      <div class="compact-main">
+        <div class="dash-header dash-header--single-line">
+          <div class="title-block">
+            <h2>{{ pageTitle }}</h2>
+          </div>
+          <div class="header-actions-row dept-hub-header-actions">
+            <button
+              *ngIf="isNarrowViewport"
+              type="button"
+              class="sidebar-toggle-btn"
+              (click)="toggleMobileSidebar()"
+              aria-label="Toggle menu"
+            >
+              <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-box dash-header__search">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                placeholder="Search by name or category"
+                aria-label="Search modules"
+              />
+            </div>
+            <button type="button" class="close-btn dept-hub-header-close" (click)="onCloseDashboard()" aria-label="Close">
+              <i class="fas fa-times"></i>
+              Close
+            </button>
+          </div>
+        </div>
+
+        <h3 class="section-label">
+          {{ selectedCategoryId === 'all' ? 'Facility Modules' : (currentCategory?.name || 'Facility Modules') }}
+        </h3>
+
+        <div class="tiles-grid">
+          <a
+            *ngFor="let card of cards; trackBy: trackByCardId"
+            class="tile-card"
+            [attr.href]="card.route"
+            (click)="openCard(card, $event)"
+            [ngStyle]="{ 'box-shadow': selectedPalette.cardShadow }"
+          >
+            <div class="icon-wrap" [style.background]="card.gradient">
+              <i class="fas" [ngClass]="card.icon"></i>
+            </div>
+            <div class="tile-body">
+              <div class="tile-title">{{ card.title }}</div>
+              <p class="tile-description" *ngIf="card.description">{{ card.description }}</p>
+            </div>
+          </a>
+
+          <div class="empty-state" *ngIf="cards.length === 0">
+            <i class="fas fa-search"></i>
+            <p>No modules match your search. Try another keyword or category.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <div
+    class="compact-sidebar-backdrop"
+    *ngIf="isNarrowViewport && mobileSidebarOpen"
+    (click)="closeMobileSidebar()"
+    aria-hidden="true"
+  ></div>
+
+  <button class="palette-fab" type="button" (click)="togglePalette()" title="Change theme" aria-label="Change theme">
+    <i class="fas fa-palette"></i>
+  </button>
+
+  <div class="palette-drawer" *ngIf="showPalette">
+    <button
+      *ngFor="let palette of paletteOptions"
+      type="button"
+      class="palette-chip"
+      [class.active]="palette === selectedPalette"
+      [style.background]="palette.swatch"
+      [title]="palette.name"
+      (click)="setPalette(palette)"
+      [attr.aria-label]="'Theme ' + palette.name"
+    >
+      <span class="sr-only">{{ palette.name }}</span>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,715 @@
+﻿<div class="card" *ngIf="!isView && !is_prepare_work_order && !is_view_work_order">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Batch Planning</div>
+      <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-success" routerLink="/production/batch-planning/approval" *ngIf="isapprover == 'Yes'">Approvals</button>
+        <button class="btn btn-sm btn-danger" routerLink="/fproduction">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="clr-row">
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+        <label>Product Name:<span style="color: red;"><b>*</b></span></label>
+        <input type="text" name="product_name" [(ngModel)]="product_name" required>
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+        <label>From Date</label>
+        <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+        <label>To Date</label>
+        <input type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+      </div>
+      <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+        <button class="btn btn-danger" (click)="getPlans()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+      </div>
+    </div>
+    <div class="card-text">
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column style="text-align: left;">{{'common.date' | translate}}</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Plan No.</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Plan Type</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Product Code</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Product Name</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Plan For</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Plan Based On</clr-dg-column>
+        <clr-dg-column style="text-align: left;">No Of Batches Planned</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Batch Qty</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Planned Qty</clr-dg-column>
+        <clr-dg-column style="text-align: left;">{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column style="text-align: left;">Plan Completion (%)</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+          <clr-dg-cell>{{i+1}}.</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.plan_no }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.plan_type }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.product_code }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.product_name }} {{ res.grade }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.plan_for }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.plan_based_on }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.total_batches }} </clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.batch_size }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.planned_qty }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.status }}</clr-dg-cell>
+          <clr-dg-cell style="text-align: left;">{{ res.plan_comp_status}} </clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button></clr-dg-cell>
+
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users Per Page</clr-dg-page-size>
+            {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+            of {{pagination.totalItems}} Users
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Plan Details</div>
+      <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <th style="text-align: left;">Plan No.</th>
+          <th style="text-align: left;">Plan Date</th>
+          <th style="text-align: left;">Product Name</th>
+          <th>Planned Qty</th>
+          <th>No. Of Batches Planned</th>
+          <th>Material Available For Plan</th>
+          <!-- <th>No. of Fresh Batches</th> -->
+          <th>{{'common.status' | translate}}</th>
+          <!-- <th>{{'common.table.action' | translate}}</th> -->
+        </tr>
+        <tr>
+          <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+          <td style="text-align: left;">{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+          <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+          <td>{{ selectedResult['planned_qty'] }} {{ selectedResult['unit'] }}</td>
+          <td>{{ selectedResult['total_batches'] }}</td>
+          <td>{{ selectedResult['no_of_batches_can_planned'] }}</td>
+          <!-- <td>{{ selectedResult['fresh_batches'] }}</td> -->
+          <td>{{ selectedResult['status'] }}</td>
+          <!-- <td><button class="btn btn-sm btn-info" (click)="is_view_shortages = true;is_view_batches=false">VIEW
+              SHORTAGES</button></td> -->
+
+        </tr>
+      </table>
+
+      <div class="clr-row" *ngIf="!is_view_shortages && is_view_batches">
+        <h3>Batch Details:</h3>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Planned Date</th>
+            <th>Planned Batch Size</th>
+            <th>MFR No</th>
+            <th>BFR No</th>
+            <!-- <th>Approved By</th>
+            <th>Approvd Date</th> -->
+            <th colspan="3">{{'common.table.action' | translate}}</th>
+
+          </tr>
+          <tr *ngFor="let comp of batches_list; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.plan_date | date: 'dd-MM-yyyy' }}</td>
+            <td>{{ comp.batch_size }}</td>
+            <td>{{ comp.mfr_no }}</td>
+            <td>{{ comp.bfr_no }}</td>
+            <!-- <td>{{ comp.approved_by }}</td>
+            <td>{{ comp.approved_date | date: 'dd-MM-yyyy' }}</td> -->
+
+            <td>
+              <button [disabled]="comp.id>0" class="btn btn-sm btn-info" (click)="prepareWorkOrder()">Prepare MFG Work
+                Order </button>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="viewWorkOrder(i)">View Work Order </button>
+            </td>
+            <td>
+              <!-- <button class="btn btn-sm btn-info">Send For QA Approval </button>
+            </td> -->
+          </tr>
+
+        </table>
+      </div>
+
+      <div *ngIf="is_view_shortages">
+        <h3>Raw Materials:</h3>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Material Type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Unit Qty</th>
+            <th>Overages (%)</th>
+            <th>Total Qty</th>
+            <th>Batch Qty(kg)</th>
+            <th>Plan Qty</th>
+            <th>Available Stock</th>
+            <th>No Of Batches Can Be Planed</th>
+            <th>Short Qty</th>
+
+          </tr>
+          <tr *ngFor="let comp of raw_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.material_type }}</td>
+            <td>{{ comp.material_code }}</td>
+            <td>{{ comp.material_name }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.total_qty }}</td>
+            <td>{{ comp.batch_qty }}</td>
+            <td>{{ comp.plan_qty }}</td>
+            <td>{{ comp.avbl_stock }}</td>
+            <td>{{ comp.batches_can_plan }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+              comp.shortage_qty }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+              }}</td>
+
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td colspan="8">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+        <!-- <h3 style="margin-top: 5px;">Packing Materials:</h3>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Material type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Unit Qty</th>
+            <th>Overages (%)</th>
+            <th>Total Qty</th>
+            <th>Batch Qty(kg)</th>
+            <th>Plan Qty</th>
+            <th>Available Stock</th>
+            <th>No Of Batches Can Be Planed</th>
+            <th>Short Qty</th>
+
+          </tr>
+          <tr *ngFor="let comp of packing_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.material_type }}</td>
+            <td>{{ comp.material_code }}</td>
+            <td>{{ comp.material_name }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.total_qty }}</td>
+            <td>{{ comp.batch_qty }}</td>
+            <td>{{ comp.plan_qty }}</td>
+            <td>{{ comp.avbl_stock }}</td>            
+            <td>{{ comp.batches_can_plan }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+              comp.shortage_qty }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+              }}</td>
+
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td colspan="8">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table> -->
+        <button class="btn btn-sm btn-info" (click)="is_view_shortages = false;is_view_batches= true;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<div class="card" *ngIf="is_prepare_work_order">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Work Order</div>
+      <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger"
+          (click)="isView=true;is_view_batches=true;is_prepare_work_order=false;clearWorkOrder()">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="clr-row">
+      <table class="table table-border">
+        <tr>
+          <th style="text-align: left;">Plan No.</th>
+          <th style="text-align: left;">Plan Date</th>
+          <th style="text-align: left;">Product Name</th>
+          <th>Planned Qty</th>
+          <th>No. Of Batches Planned</th>
+          <th>Material Available For Plan</th>
+          <th>{{'common.status' | translate}}</th>
+        </tr>
+        <tr>
+          <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+          <td style="text-align: left;">{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+          <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+          <td>{{ selectedResult['planned_qty'] }} {{ selectedResult['unit'] }}</td>
+          <td>{{ selectedResult['total_batches'] }}</td>
+          <td>{{ selectedResult['no_of_batches_can_planned'] }}</td>
+          <td>{{ selectedResult['status'] }}</td>
+
+        </tr>
+      </table>
+    </div>
+    <form #basicForm="ngForm">
+      <div class="clr-row">
+
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3" *ngIf="software_type!='Pharma ERP'">
+          <label>eBMR:<span style="color: red;"><b>*</b></span></label>
+          <select name="ebmr_status" [(ngModel)]="ebmr_status" required>
+            <option value="applicable">Applicable</option>
+            <option value="notaplicable">Not Applicable</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3" *ngIf="plant_type =='Formulation'">
+          <label>Calculation Type</label>
+          <select name="calculation_type" [(ngModel)]="calculation_type" required>
+            <option value="Assay Basis">N/A</option>
+            <option value="LOD Basis">LOD Basis</option>
+            <option value="Assay Basis">Assay Basis</option>
+
+          </select>
+        </div>
+       
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>Batch Overages</label>
+          <select name="batch_overages" [(ngModel)]="batch_overages">
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3" *ngIf="batch_overages=='Yes'">
+          <label>Overages %</label>
+          <input type="number" name="overages_percent" min="1" max="5" [(ngModel)]="overages_percent" >
+          
+
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>No. Of Lots </label>
+          <input type="number" name="no_of_lots" min="1" max="10" [(ngModel)]="no_of_lots" required>
+          <span style="color: red;" *ngIf="no_of_lots.invalid && no_of_lots.touched">No Of Lots Between 1 To 10</span>
+        </div> 
+         <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3" *ngIf="has_coated_batches=='Yes'">
+          <label>No. Of Lots (Coated) </label>
+          <input type="number" name="no_of_lots_coated" min="1" max="10" [(ngModel)]="no_of_lots_coated" required>
+          <span style="color: red;" *ngIf="no_of_lots_coated.invalid && no_of_lots_coated.touched">No Of Coted Lots
+            Between 1 to 10</span>
+        </div>
+
+        <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+          <button class="btn btn-danger" (click)="generateData(basicForm)" style="margin-top: 33px;">Generate</button>
+        </div>
+      </div>
+    </form>
+    <div class="card-text">
+
+      <div style="clear: both">
+        <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Raw Materials:</h3>
+        <h3 style="float: right; color: rgb(6, 34, 16); font-weight: bold;">Work Order For Batch Size:
+          {{selectedResult['planned_batch_size']}} {{selectedResult['rm_batch_size_unit']}}</h3>
+      </div>
+      <!-- <table class="table" style="margin-top:10px">
+        <tr>
+          <th style="background-color: #dcebf7; color:black;">Sr. NOO</th>
+          <th style="background-color: #dcebf7; color:black;">Material type</th>
+          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">LOD</th>
+          <th style="background-color: #dcebf7; color:black;">Assay</th>
+ 
+
+        </tr>
+        <tr *ngFor="let comp of work_order_raw_materials; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ comp.material_subtype }}</td>
+          <td>{{ comp.material_code }}</td>
+          <td>{{ comp.material_name }}</td>
+          <td>{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td>{{ comp.total_qty }}</td>
+          <td>{{ comp.batch_qty }}</td>
+          <td>{{ comp.batch_overages}}</td>
+          <td>{{ comp.total_final_qty }}</td>
+          <td>{{ comp.lod_status }}</td>
+          <td>{{ comp.assay_status }}</td>
+ 
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table> -->
+
+      <table  class="table table-border" style="margin-top:0px">
+        <ng-container *ngFor="let stage of groupedMaterials | keyvalue">
+          
+            <tr>
+              <th style="background-color: aquamarine;font-weight: bold;text-align: left;" colspan="13">Stage: {{ stage.key }}</th>
+            </tr>
+            <tr>
+              <th style="background-color: #dcebf7; color:black;">Sr. NOO</th>
+              <th style="background-color: #dcebf7; color:black;">Material Type</th>
+              <th style="background-color: #dcebf7; color:black;">Material Code</th>
+              <th style="background-color: #dcebf7; color:black;">Material Name</th>
+              <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+              <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+              <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+              <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+              <th style="background-color: #dcebf7; color:black;">Batch Qty(Kg)</th>
+              <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+              <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+              <th style="background-color: #dcebf7; color:black;">LOD</th>
+              <th style="background-color: #dcebf7; color:black;">Assay</th>
+              <!-- <th style="background-color: #dcebf7; color:black;">Available Stock</th> -->
+
+            </tr>
+        
+            <tr *ngFor="let comp of stage.value; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{ comp.material_subtype }}</td>
+              <td>{{ comp.material_code }}</td>
+              <td>{{ comp.material_name }}</td>
+              <td>{{ comp.grade }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+              <td>{{ comp.total_qty }}</td>
+              <td>{{ comp.batch_qty }}</td>
+              <td>{{ comp.batch_overages}}</td>
+              <td>{{ comp.total_final_qty }}</td>
+              <td>{{ comp.lod_status }}</td>
+              <td>{{ comp.assay_status }}</td>
+              <!-- <td>{{ comp.avbl_stock }}</td> -->
+            </tr>
+        </ng-container>
+      </table>
+
+
+
+      <table class="table" style="margin-top:10px" *ngIf="work_order_lots.length>0">
+        <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Lot Wise Raw Materials:</h3>
+        <tr *ngFor="let lot of work_order_lots; let i = index">
+          <div style="clear: both">
+            <h3 style="float: left; color: rgb(6, 34, 16); font-weight: bold;">Lot No:
+              {{lot.lot_no}}</h3>
+          </div>
+          <table class="table" style="margin-top:10px">
+            <tr>
+              <th style="background-color: #2196f3; color:black;">Sr.</th>
+              <th style="background-color: #2196f3; color:black;">Material Type</th>
+              <th style="background-color: #2196f3; color:black;">Material Code</th>
+              <th style="background-color: #2196f3; color:black;">Material Name</th>
+              <th style="background-color: #2196f3; color:black;">Batch Total Qty</th>
+
+
+            </tr>
+            <tr *ngFor="let comp of lot.lots; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{ comp.material_subtype }}</td>
+              <td>{{ comp.material_code }}</td>
+              <td>{{ comp.material_name }}</td>
+              <td>{{ comp.each_lot_qty }}</td>
+            </tr>
+            <tr *ngIf="raw_materials?.length == 0">
+              <td colspan="8">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <div *ngIf="work_order_common_materials.length>0">
+        <div style="clear: both">
+          <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Common Raw Materials :</h3>
+        </div>
+        <table class="table" style="margin-top:10px">
+          <tr>
+            <th style="background-color: #80ed9c; color:black;">Sr.</th>
+            <th style="background-color: #80ed9c; color:black;">Material Type</th>
+            <th style="background-color: #80ed9c; color:black;">Material Code</th>
+            <th style="background-color: #80ed9c; color:black;">Material Name</th>
+            <th style="background-color: #80ed9c; color:black;">Batch Total Qty</th>
+
+
+          </tr>
+          <tr *ngFor="let comp of work_order_common_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.material_subtype }}</td>
+            <td>{{ comp.material_code }}</td>
+            <td>{{ comp.material_name }}</td>
+            <td>{{ comp.each_lot_qty }}</td>
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td colspan="8">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <table class="table" style="margin-top:10px" *ngIf="coatd_work_order_lots.length>0">
+        <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Lot Wise Coating Materials:</h3>
+        <tr *ngFor="let lot of coatd_work_order_lots; let i = index">
+          <div style="clear: both">
+
+            <h3 style="float: left; color: rgb(6, 34, 16); font-weight: bold;">Lot No:
+              {{lot.lot_no}}</h3>
+          </div>
+          <table class="table" style="margin-top:10px">
+            <tr>
+              <th style="background-color: #eda5e7; color:black;">Sr.</th>
+              <th style="background-color: #eda5e7; color:black;">Material Type</th>
+              <th style="background-color: #eda5e7; color:black;">Material Code</th>
+              <th style="background-color: #eda5e7; color:black;">Material Name</th>
+              <th style="background-color: #eda5e7; color:black;">Batch Total Qty</th>
+
+
+            </tr>
+            <tr *ngFor="let comp of lot.lots; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{ comp.material_subtype }}</td>
+              <td>{{ comp.material_code }}</td>
+              <td>{{ comp.material_name }}</td>
+              <td>{{ comp.each_lot_qty }}</td>
+            </tr>
+            <tr *ngIf="raw_materials?.length == 0">
+              <td colspan="8">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <!-- <div style="clear: both">
+        <h3 style="float: left;color: rgb(94, 19, 77); font-weight: bold;">Packing Materials:</h3>
+        <h3 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Size: {{selectedResult['pack_size']}} -
+          {{selectedResult['pack_unit']}}</h3>
+      </div>
+      <table class="table" style="margin-top:10px">
+        <tr>
+          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+          <th style="background-color: #dcebf7; color:black;">Material type</th>
+          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Available Stock</th>
+
+        </tr>
+        <tr *ngFor="let comp of work_order_packing_materials; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ comp.material_subtype }}</td>
+          <td>{{ comp.material_code }}</td>
+          <td>{{ comp.material_name }}</td>
+          <td>{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td>{{ comp.total_qty }}</td>
+          <td>{{ comp.batch_qty }}</td>
+          <td>{{ comp.batch_overages}}</td>
+          <td>{{ comp.total_final_qty }}</td>
+          <td>{{ comp.avbl_stock }}</td>
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table> -->
+    </div>
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Instructions</div>
+
+        </div>
+
+      </div>
+      <div class="card-block">
+        <div class="clr-row">
+          <ul class="list">
+            <li>Assay /LOD if yes will be considered during dispensing as auto calculated against A.R.No and results
+              from QC,no need to do manual calculations.</li>
+            <li>If Any Raw material is having Equivalency Factor it will be automatically calculated during dispensing
+              of the material,please ensure Equivalancy Factor has been added in Raw material Master. </li>
+            <li>Batch overages has been given for matching dispatch quntity taking required batch quntity of Each
+              material additional it is not impacting the formulation changes.Its optional to be added or not decision
+              is with User department.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="saveData(basicForm)">Send For Approval</button>
+        <button class="btn btn-danger"
+          (click)="isView=true;is_view_batches=true;is_prepare_work_order=false;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="is_view_work_order">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">View Work Order</div>
+      <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger"
+          (click)="isView=true;is_view_batches=true;is_view_work_order=false;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="clr-row">
+      <table class="table table-border">
+        <tr>
+          <th style="text-align: left;">Plan No.</th>
+          <th style="text-align: left;">Plan Date</th>
+          <th style="text-align: left;">Product Name</th>
+          <th>Planned Qty</th>
+          <th>No. of Batches Planned</th>
+          <th>Material Available For Plan</th>
+          <th>{{'common.status' | translate}}</th>
+        </tr>
+        <tr>
+          <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+          <td style="text-align: left;">{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+          <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+          <td>{{ selectedResult['planned_qty'] }} {{ selectedResult['unit'] }}</td>
+          <td>{{ selectedResult['total_batches'] }}</td>
+          <td>{{ selectedResult['no_of_batches_can_planned'] }}</td>
+          <td>{{ selectedResult['status'] }}</td>
+
+        </tr>
+      </table>
+    </div>
+
+    <div class="card-text">
+
+      <div style="clear: both">
+        <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Raw Materials:</h3>
+        <h3 style="float: right; color: rgb(6, 34, 16); font-weight: bold;">Work Order For Batch Size:
+          {{selectedResult['planned_batch_size']}} kg</h3>
+      </div>
+      <table class="table" style="margin-top:10px">
+        <tr>
+          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+          <th style="background-color: #dcebf7; color:black;">Material Type</th>
+          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Qty(Kg)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">LOD</th>
+          <th style="background-color: #dcebf7; color:black;">Assay</th>
+          <th style="background-color: #dcebf7; color:black;">Available Stock</th>
+
+
+        </tr>
+        <tr *ngFor="let comp of work_order_raw_materials; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ comp.material_subtype }}</td>
+          <td>{{ comp.material_code }}</td>
+          <td>{{ comp.material_name }}</td>
+          <td>{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td>{{ comp.total_unit_qty }}</td>
+          <td>{{ comp.batch_qty }}</td>
+          <td>{{ comp.batch_overages}}</td>
+          <td>{{ comp.total_batch_qty }}</td>
+          <td>{{ comp.lod_status }}</td>
+          <td>{{ comp.assay_status }}</td>
+          <td>{{ comp.avbl_stock }}</td>
+
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <!-- <div style="clear: both">
+        <h3 style="float: left;color: rgb(94, 19, 77); font-weight: bold;">Packing Materials:</h3>
+        <h3 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Size: {{selectedResult['pack_size']}}
+          -
+          {{selectedResult['pack_unit']}}</h3>
+      </div>
+      <table class="table" style="margin-top:10px">
+        <tr>
+          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+          <th style="background-color: #dcebf7; color:black;">Material type</th>
+          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Available Stock</th>
+
+        </tr>
+        <tr *ngFor="let comp of work_order_packing_materials; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ comp.material_subtype }}</td>
+          <td>{{ comp.material_code }}</td>
+          <td>{{ comp.material_name }}</td>
+          <td>{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td>{{ comp.total_unit_qty }}</td>
+          <td>{{ comp.batch_qty }}</td>
+          <td>{{ comp.batch_overages}}</td>
+          <td>{{ comp.total_batch_qty }}</td>
+          <td>{{ comp.avbl_stock }}</td>
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table> -->
+    </div>
+
+
+
+    <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView=true;is_view_batches=true;is_view_work_order=false">{{'common.close' | translate}}</button>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,316 @@
+<div class="card recv-page" *ngIf="!isView && !isView1 && !isStockSummary">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Issuance Record</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Material Type</label>
+          <select name="material_type" [(ngModel)]="material_type" (ngModelChange)="getMaterialOutDetails()">
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+      <div class="bincard-scroll">
+        <table class="table table-border recv-kv-table">
+          <tr>
+            <th>{{'common.table.srNo' | translate}}</th>
+            <th>Material Type</th>
+            <th>Subtype</th>
+            <th>Material Name</th>
+            <th>Code</th>
+            <th>Received Qty</th>
+            <th>Issued Qty</th>
+            <th>Balance Qty</th>
+            <th>View</th>
+          </tr>
+          <tr *ngFor="let result of filteredMaterials; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ result.material_type }}</td>
+            <td>{{ result.material_subtype }}</td>
+            <td>{{ result.material_name }}</td>
+            <td>{{ result.material_code }}</td>
+            <td>{{ result.qty1 }} {{ result.uom || result.unit }}</td>
+            <td>{{ result.Issue | number:'1.0-3' }} {{ result.uom || result.unit }}</td>
+            <td>{{ result.EOU_STOCK | number:'1.2-2' }} {{ result.uom || result.unit }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+            </td>
+          </tr>
+          <tr *ngIf="loading">
+            <td colspan="9" style="text-align:center;">Loading...</td>
+          </tr>
+          <tr *ngIf="!loading && !filteredMaterials?.length">
+            <td colspan="9" style="text-align:center;">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+  </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView && !isView1 && !isStockSummary">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Stock Book</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Name:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_name']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Type:</b></td>
+          <td style="text-align: left;width:30%;">{{selectedResult['material_type']}}</td>
+          <td style="text-align: left;width:20%"><b>Material Subtype:</b></td>
+          <td style="text-align: left;width:30%">{{selectedResult['material_subtype']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Printed:</b></td>
+          <td style="text-align: left;">{{selectedResult['isprinted']}}</td>
+          <td style="text-align: left;"><b>For Product:</b></td>
+          <td style="text-align: left;">{{selectedResult['for_product']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Product Name:</b></td>
+          <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] !== 'Packing Material'">
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Grade:</b></td>
+          <td style="text-align: left;">{{selectedResult['grade']}}</td>
+          <td style="text-align: left;"><b>Material Nature:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_nature']}}</td>
+        </tr>
+
+      </table>
+
+      <h3>Material Receiving Notes:</h3>
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th>Sr.</th>       
+          <th>Receiving no</th>
+          <th>Date</th>
+          <th>Medicap Lot No</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Received Qty</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Sampling Qty</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Dispensing Qty</th>
+
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Balance Qty</th>
+        </tr>
+        <tr *ngFor="let result of selectedResult['stock_data']; let i = index">
+          <td>{{ i + 1 }}.</td>        
+          <td style="text-align: left;">{{ result.grn_no }}</td>
+          <td style="text-align: left;">{{ result.grn_date |date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{ result.batch_no }}</td>
+          <td style="text-align: right;">{{ result.qty | number:'1.2-2'}}</td>
+          <td style="text-align: right;">{{ result.sampling_qty | number:'1.2-2'}}</td>
+          <td style="text-align: right;">{{ result.dispensing_qty | number:'1.2-2'}}</td>
+          <td style="text-align: right;">{{ result.bal_stock | number:'1.2-2'}} </td>
+        </tr>
+        <tr *ngIf="detailLoading">
+          <td colspan="8" style="text-align:center;">Loading receiving notes...</td>
+        </tr>
+        <tr *ngIf="!detailLoading && !selectedResult['stock_data']?.length">
+          <td colspan="8" style="text-align:center;">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadgrn()">{{'common.download' | translate}}</button>
+  </div>
+
+</div>
+
+<!-- stock_summary -->
+<div class="card recv-page" *ngIf="isStockSummary && !isView && !isView1">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Stock Summary</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isStockSummary = false;isView=true;view1=false">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Name:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_name']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Type:</b></td>
+          <td style="text-align: left;width:30%;">{{selectedResult['material_type']}}</td>
+          <td style="text-align: left;width:20%"><b>Material Subtype:</b></td>
+          <td style="text-align: left;width:30%">{{selectedResult['material_subtype']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Printed:</b></td>
+          <td style="text-align: left;">{{selectedResult['isprinted']}}</td>
+          <td style="text-align: left;"><b>For Product:</b></td>
+          <td style="text-align: left;">{{selectedResult['for_product']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Product Name:</b></td>
+          <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] !== 'Packing Material'">
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr> 
+          <td style="text-align: left;"><b>Grade:</b></td>
+          <td style="text-align: left;">{{selectedResult['grade']}}</td>
+          <td style="text-align: left;"><b>Material Nature:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_nature']}}</td>
+        </tr>
+
+      </table>
+     
+      <h3>Goods Issue Details:</h3>
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th>Sr.</th>
+          <th>Type Of Transaction</th>
+          <th>Receiving no</th>          
+          <th>Medicap Lot No</th> 
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Issued Qty</th> 
+        </tr>
+        <tr *ngFor="let result of stock_summary; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ result.issued_for }}</td>          
+          <td style="text-align: left;">{{ result.grn_no}}</td>
+          <td style="text-align: left;">{{ result.batch_no }}</td> 
+          <td style="text-align: right;">{{ result.issued_Qty }}</td> 
+        </tr>
+      </table>
+    </div>
+  </div>
+  <!-- <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadgrn()">{{'common.download' | translate}}</button>
+  </div> -->
+
+</div>
+<!-- end_Stock_summary -->
+
+
+<div class="card recv-page" *ngIf="isView1 && !isView && !isStockSummary">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Bin Card</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView1=false;isView1 = false;isStockSummary = true;">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Name:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_name']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width:20%;"><b>Material Type:</b></td>
+          <td style="text-align: left;width:30%;">{{selectedResult['material_type']}}</td>
+          <td style="text-align: left;width:20%"><b>Material Subtype:</b></td>
+          <td style="text-align: left;width:30%">{{selectedResult['material_subtype']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Printed:</b></td>
+          <td style="text-align: left;">{{selectedResult['isprinted']}}</td>
+          <td style="text-align: left;"><b>For Product:</b></td>
+          <td style="text-align: left;">{{selectedResult['for_product']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+          <td style="text-align: left;"><b>Product Name:</b></td>
+          <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['material_type'] !== 'Packing Material'">
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;" colspan="3">{{selectedResult['material_code']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Grade:</b></td>
+          <td style="text-align: left;">{{selectedResult['grade']}}</td>
+          <td style="text-align: left;"><b>Material Nature:</b></td>
+          <td style="text-align: left;">{{selectedResult['material_nature']}}</td>
+        </tr>
+
+      </table>
+
+      <h3>GRN Details:</h3>
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th>Receiving no</th>
+          <th>Medicap Lot No</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Received Qty</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Issued Qty</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Balance Qty</th>
+        </tr>
+        <tr>
+          <td style="text-align: left;">{{ selectedGRN['grn_no'] }}</td>
+          <td style="text-align: left;">{{ selectedGRN['medicap_lot_no'] || selectedGRN['batch_no'] || selectedGRN['ar_no'] }}</td>
+          <td style="text-align: right;">{{ selectedGRN['received_qty'] }} {{ selectedGRN['unit'] }}</td>
+          <td style="text-align: right;">{{ selectedGRN['issue_qty'] | number:'1.2-2' }} {{ selectedGRN['unit'] }}</td>
+          <!-- <td style="text-align: right;">{{ balance_qty }}</td> -->
+          <td style="text-align: right;">{{  selectedGRN['received_qty']-selectedGRN['issue_qty'] }}</td>
+        </tr>
+      </table>
+
+      <!-- <h3>Issued Entries: <button class="btn btn-sm btn-info" (click)="isNewIssue = true">NEW ISSUANCE ENTRY</button></h3> -->
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th>Sr.</th>
+          <th>Issued For</th>
+          <th>Issued Date</th>
+          <th>Product Name</th>
+          <th>Medicap Lot No</th>
+          <th>Work Order No</th>
+          <th>Qty Issued</th>
+          <th>Issued By</th>
+        </tr>
+        <tr *ngFor="let result of issued; let i = index">
+          <td style="text-align: left;">{{i+1}}</td>
+          <td style="text-align: left;">{{result.issue_for}}</td>
+          <td style="text-align: left;">{{result.entry_date |date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{result.product_name}} {{result.grade}}</td>
+          <td style="text-align: left;">{{result.batch_no}}</td>
+          <td style="text-align: left;">{{result.work_order_no}}</td>
+          <td style="text-align: left;">{{result.qty}}</td>
+          <td style="text-align: left;">{{result.entry_by}}</td>
+        </tr>
+        <tr *ngIf="issued?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadIssueRecords()">{{'common.download' | translate}}</button>
+  </div>
+</div>
+ 

@@ -1,0 +1,135 @@
+<div class="card recv-page">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Retest Allocation</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/qc/sampling/retest">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <p style="margin-bottom: 0.75rem; color: #565656;">
+      Materials sent from Store Retest Calendar appear here for QC / Micro person allocation.
+    </p>
+    <div class="clr-row">
+      <div class="clr-col-lg-3">
+        <label>Material Code</label>
+        <input type="text" [(ngModel)]="material_code" (keyup)="filterEquipment()">
+      </div>
+      <div class="clr-col-lg-3">
+        <label>Category</label>
+        <input type="text" [(ngModel)]="category" (keyup)="filterEquipment()">
+      </div>
+      <div class="clr-col-lg-3">
+        <label>Material Name</label>
+        <input type="text" [(ngModel)]="material_name" (keyup)="filterEquipment()">
+      </div>
+      <div class="clr-col-lg-3">
+        <label>Receiving no.</label>
+        <input type="text" [(ngModel)]="grn_no" (keyup)="filterEquipment()">
+      </div>
+    </div>
+    <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading">
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>Material Type</clr-dg-column>
+      <clr-dg-column>Category</clr-dg-column>
+      <clr-dg-column>Material Code</clr-dg-column>
+      <clr-dg-column>Material Name</clr-dg-column>
+      <clr-dg-column>Medicap Lot No</clr-dg-column>
+      <clr-dg-column>Receiving no.</clr-dg-column>
+      <clr-dg-column>Release Date</clr-dg-column>
+      <clr-dg-column>Retest Date</clr-dg-column>
+      <clr-dg-column>Due Days</clr-dg-column>
+      <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_type || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_subtype || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_code || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_name || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.batch_no || res.ar_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.grn_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.release_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.retest_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.due_days }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-info btn-sm" (click)="allocate(res)">Allocate Person</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+      <clr-dg-placeholder *ngIf="!loading && !results?.length">
+        No retest intimations from Store. Ask Store to generate calendar and send intimation to QC.
+      </clr-dg-placeholder>
+    </clr-datagrid>
+
+    <h3 style="margin: 1.25rem 0 0.5rem;">Could not open Retest Sampling</h3>
+    <p style="margin-bottom: 0.75rem; color: #565656;">
+      After you allocate a QC person, the line goes to <strong>Retest → Sampling</strong> automatically using the same receiving no.
+      Only lines that could not be queued appear below.
+    </p>
+    <clr-datagrid class="recv-datagrid">
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>Material Code</clr-dg-column>
+      <clr-dg-column>Material Name</clr-dg-column>
+      <clr-dg-column>Medicap Lot No</clr-dg-column>
+      <clr-dg-column>Receiving no.</clr-dg-column>
+      <clr-dg-column>Retest Date</clr-dg-column>
+      <clr-dg-column>Due</clr-dg-column>
+      <clr-dg-column>QC Person</clr-dg-column>
+      <clr-dg-column>Status</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let res of allocatedResults; let i = index" [clrDgItem]="res">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_code || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_name || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.batch_no || res.ar_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.grn_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.retest_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.due_label || res.due_days }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.qc_person || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.retest_next_step || 'Could not open Retest Sampling.' }}</clr-dg-cell>
+      </clr-dg-row>
+      <clr-dg-placeholder *ngIf="!allocatedResults?.length">
+        No allocation issues. Open <strong>Retest → Sampling</strong> for allocated lines.
+      </clr-dg-placeholder>
+    </clr-datagrid>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isPerson" clrModalSize="lg">
+  <h3 class="modal-title">Allocate Sampling Person</h3>
+  <div class="modal-body">
+    <form #samplingForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>Sampling Person (QC)</label>
+          <select name="qc_person" ngModel required>
+            <option></option>
+            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} - {{ employee.emp_id }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Sampling Person (Micro)</label>
+          <select name="micro_person" ngModel required>
+            <option></option>
+            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} - {{ employee.emp_id }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Alternate QC</label>
+          <select name="qc_alternate_person" ngModel required>
+            <option></option>
+            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} - {{ employee.emp_id }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Alternate Micro</label>
+          <select name="micro_alternate_person" ngModel required>
+            <option></option>
+            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} - {{ employee.emp_id }}</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="savePerson(samplingForm)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isPerson = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

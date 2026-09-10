@@ -1,0 +1,274 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Import Details
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button type="button" class="btn btn-sm" routerLink="/Exports/landed" style="background-color: red; color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-12" style="text-align: right;">
+            <button type="button" class="btn btn-sm btn-info" (click)="refresh()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading">
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>PO No</clr-dg-column>
+            <clr-dg-column>Packaging Slip</clr-dg-column>
+            <clr-dg-column>Supplier Name</clr-dg-column>
+            <clr-dg-column>Item Code</clr-dg-column>
+            <clr-dg-column>Item Description</clr-dg-column>
+            <clr-dg-column>{{'common.quantity' | translate}}</clr-dg-column>
+            <clr-dg-column>UOM</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let record of importData; let i = index" [clrDgItem]="record">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.po_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.challan_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.supplier_name || record.vendor_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.item_code || record.material_code || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.item_description || record.material_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.quantity || record.qty || 0 }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.uom || record.unit || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button type="button" class="btn btn-sm btn-info" (click)="view(i)" title="View/Edit Details">
+                  <i class="fas fa-edit"></i> Details
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="importData.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View/Edit Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Import Details</h3>
+  <div class="modal-body" *ngIf="isView && selectedRecord && (selectedRecord.po_no || selectedRecord.grn_no || selectedRecord.challan_no)">
+    <form #importForm="ngForm">
+      <!-- Basic Information -->
+      <div class="section-header">
+        <h4>Basic Information</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-4">
+          <label>PO No:</label>
+          <input type="text" name="poNo" [(ngModel)]="poNo" readonly>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Receiving no:</label>
+          <input type="text" name="grnNo" [(ngModel)]="grnNo">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Date:</label>
+          <input type="date" name="grnDate" [(ngModel)]="grnDate">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Supplier Name:</label>
+          <input type="text" name="supplierName" [(ngModel)]="supplierName">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Invoice Date:</label>
+          <input type="date" name="invDate" [(ngModel)]="invDate">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Invoice No:</label>
+          <input type="text" name="invNo" [(ngModel)]="invNo">
+        </div>
+      </div>
+
+      <!-- Shipping Information -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Shipping Information</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>BL / AWB No:</label>
+          <input type="text" name="blAwbNo" [(ngModel)]="blAwbNo">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Port of Loading:</label>
+          <div class="port-search-wrapper">
+            <input type="text"
+                   name="portOfLoading"
+                   [(ngModel)]="searchTextLoading"
+                   (input)="filterPortsLoading()"
+                   (focus)="onPortLoadingFocus()"
+                   (blur)="closePortDropdowns()"
+                   placeholder="Search port...">
+            <div class="port-dropdown" *ngIf="showPortsLoading && filteredPortsLoading.length > 0">
+              <div class="port-option"
+                   *ngFor="let port of filteredPortsLoading"
+                   (mousedown)="selectPortLoading(port)">
+                {{ port }}
+              </div>
+            </div>
+            <div class="port-dropdown" *ngIf="showPortsLoading && filteredPortsLoading.length === 0">
+              <div class="port-option">No ports found</div>
+            </div>
+          </div>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Port of Discharge:</label>
+          <div class="port-search-wrapper">
+            <input type="text"
+                   name="portOfDischarge"
+                   [(ngModel)]="searchTextDischarge"
+                   (input)="filterPortsDischarge()"
+                   (focus)="onPortDischargeFocus()"
+                   (blur)="closePortDropdowns()"
+                   placeholder="Search port...">
+            <div class="port-dropdown" *ngIf="showPortsDischarge && filteredPortsDischarge.length > 0">
+              <div class="port-option"
+                   *ngFor="let port of filteredPortsDischarge"
+                   (mousedown)="selectPortDischarge(port)">
+                {{ port }}
+              </div>
+            </div>
+            <div class="port-dropdown" *ngIf="showPortsDischarge && filteredPortsDischarge.length === 0">
+              <div class="port-option">No ports found</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Incoterms:</label>
+          <select name="incoterms" [(ngModel)]="incoterms">
+            <option value="">Select Incoterms</option>
+            <option *ngFor="let term of incotermsList" [value]="term">{{ term }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Mode:</label>
+          <select name="mode" [(ngModel)]="mode">
+            <option value="">Select Mode</option>
+            <option value="Air">Air</option>
+            <option value="Sea">Sea</option>
+            <option value="Road">Road</option>
+            <option value="Rail">Rail</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Financial Information -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Financial Information</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-4">
+          <label>Currency:</label>
+          <select name="currency" [(ngModel)]="currency" (change)="calculateRsValues()">
+            <option value="">Select Currency</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="INR">INR</option>
+            <option value="JPY">JPY</option>
+            <option value="CNY">CNY</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Exchange Rate:</label>
+          <input type="number" name="exchangeRate" [(ngModel)]="exchangeRate" (input)="calculateRsValues()" step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Basic Invoice Value:</label>
+          <input type="number" name="basicInvoiceValue" [(ngModel)]="basicInvoiceValue" (input)="calculateRsValues()" step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-4">
+          <label>Packing Charges:</label>
+          <input type="number" name="packingCharges" [(ngModel)]="packingCharges" (input)="calculateRsValues()" step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Design / Mould Cost (if any):</label>
+          <input type="number" name="designMouldCost" [(ngModel)]="designMouldCost" (input)="calculateRsValues()" step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Invoice Value in Rs:</label>
+          <input type="number" name="invValueInRs" [(ngModel)]="invValueInRs" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-4">
+          <label>Packing Charges in Rs:</label>
+          <input type="number" name="packingChargesInRs" [(ngModel)]="packingChargesInRs" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Design / Mould Cost in Rs:</label>
+          <input type="number" name="designMouldCostInRs" [(ngModel)]="designMouldCostInRs" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Item Details -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Item Details</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>Item Code:</label>
+          <input type="text" name="itemCode" [(ngModel)]="itemCode">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Item Description:</label>
+          <input type="text" name="itemDescription" [(ngModel)]="itemDescription">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-4">
+          <label>Quantity:</label>
+          <input type="number" name="quantity" [(ngModel)]="quantity" step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>UOM:</label>
+          <input type="text" name="uom" [(ngModel)]="uom">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Invoice Rate:</label>
+          <input type="number" name="invRate" [(ngModel)]="invRate" (input)="calculateRsValues()" step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Rate in Rs:</label>
+          <input type="number" name="rateInRs" [(ngModel)]="rateInRs" readonly step="0.01">
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+    <button type="button" class="btn btn-success" (click)="save(importForm)" [disabled]="!selectedRecord || (!selectedRecord.po_no && !selectedRecord.grn_no && !selectedRecord.challan_no)">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>

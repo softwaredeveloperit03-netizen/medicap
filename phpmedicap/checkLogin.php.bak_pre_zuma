@@ -1,0 +1,457 @@
+<?php
+
+
+ini_set('display_startup_errors', 1);
+  ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+
+
+require 'db1.php';
+require 'token.php';
+
+
+
+
+if ($_GET["type"] == "newLogin") {
+ 
+
+        $plant_id = $_GET["plant_id"];
+        $user_name = $_GET["username"];
+        $password = $_GET["password"];
+   
+
+        $sql = "SELECT e.*,p.is_corporate,p.version_no as plant_code,p.licence_no,p.logo_path FROM employee e LEFT JOIN plant p ON p.plant_id = e.plant_id 
+        WHERE  e.emp_id = '$user_name' AND BINARY  e.password = '$password' AND e.plant_id = '$plant_id' ";
+                        
+        $result = $conn->query($sql);
+        if($result->num_rows > 0) {
+            while($row = $result->fetch_assoc()){
+                if($row["status"] =='Active') {
+                    
+                   
+                    $username = $row["firstname"]." (".$row["emp_id"].")";
+                    $loger_id =    $row["emp_id"];
+                    $string = $row["emp_id"]."$".$row["department"]."$".$entry_date."$".$row["plant_id"];
+                    $key1 = generateRandomString();
+                    $key2 = generateRandomString();
+                    $passcode = encrypt('encrypt',$string,$key1,$key2);
+                    
+                    $txt = '{"emp_id": "'.$row["emp_id"].'", "department": "'.$row["department"].'","token": '.$passcode.', "key1": "'.$key1.'", "key2": "'.$key2.'", "entry_date": "'.$entry_date.'"}';
+                    $myfile = file_put_contents('token.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+                       $sql6 = "INSERT INTO token (emp_id,plant_id,department,token,key1,key2,entry_date) VALUES ('".$row["emp_id"]."','".$_GET["plant_id"]."','".$row["department"]."','$passcode','$key1','$key2','$entry_date')";
+                    if($conn->query($sql6)) {
+                         
+         
+                        $output = Array();
+                        $output['status'] = 'success';
+                        $output['token'] = $passcode;
+                        $output['department'] = $row["department"];
+                        $output['designation'] = $row["designation"];
+                        $output['username'] = $username;
+                        $output['ISNEW'] = $row['ISNEW'];
+                        $output['is_corporate'] = $row['is_corporate'];
+                        $output['plant_id'] = $row["plant_id"];
+                        $output['plant_code'] = $row["plant_code"];
+                        $output['licence_no'] = $row["licence_no"];
+                        $output['logo_path'] = $row["logo_path"];
+                        $output['loger_id'] = $loger_id;
+                        $output['type'] = 'employee';
+             
+             
+                        $sql1 = "SELECT * FROM emp_rights WHERE emp_id='".$row["emp_id"]."'";
+                        $result = $conn->query($sql1);
+                        if ($result->num_rows > 0){
+                            $row1 = $result->fetch_assoc() ;
+                            $output['status'] = 'success';
+                            echo json_encode($output);
+                            exit;
+                            
+                        }else{
+                            echo "{\"status\":\"'Contact To Admin For User Rights..'\"}";
+                        }
+       
+                    }else {
+                        echo "{\"status\":\"'SomeThing Went Wrong Please Try Again After Some Time..'\"}";
+                    }
+                    
+                }else{
+                      echo "{\"status\":\"'Your Account not yet approved. Please contact HR'\"}";   
+                }
+    	    }
+        }else{
+            echo "{\"status\":\"'Invalid Username Or Password'\"}";
+        }
+  
+}
+
+
+
+else if ($_GET["type"] == "hoLogin") {
+ 
+
+        $plant_id = $_GET["plant_id"];
+        $user_name = $_GET["username"];
+        $password = $_GET["password"];
+   
+
+        $sql = "SELECT e.*,p.licence_no,p.logo_path,p.plant_name FROM employee e LEFT JOIN plant p ON p.plant_id = e.plant_id 
+        WHERE  e.emp_id = '$user_name' AND BINARY  e.password = '$password'  ";
+                        
+        $result = $conn->query($sql);
+        if($result->num_rows > 0) {
+            while($row = $result->fetch_assoc()){
+                if($row["status"] =='Active') {
+                    
+                   
+                    $username = $row["firstname"]." (".$row["emp_id"].")";
+                    $loger_id =    $row["emp_id"];
+                    $string = $row["emp_id"]."$".$row["department"]."$".$entry_date."$".$row["plant_id"];
+                    $key1 = generateRandomString();
+                    $key2 = generateRandomString();
+                    $passcode = encrypt('encrypt',$string,$key1,$key2);
+                    
+                    $txt = '{"emp_id": "'.$row["emp_id"].'", "department": "'.$row["department"].'","token": '.$passcode.', "key1": "'.$key1.'", "key2": "'.$key2.'", "entry_date": "'.$entry_date.'"}';
+                    $myfile = file_put_contents('token.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+                       $sql6 = "INSERT INTO token (emp_id,plant_id,department,token,key1,key2,entry_date) VALUES ('".$row["emp_id"]."','".$_GET["plant_id"]."','".$row["department"]."','$passcode','$key1','$key2','$entry_date')";
+                    if($conn->query($sql6)) {
+                         
+         
+                        $output = Array();
+                        $output['status'] = 'success';
+                        $output['token'] = $passcode;
+                        $output['department'] = $row["department"];
+                        $output['designation'] = $row["designation"];
+                        $output['plant_name'] = $row["plant_name"];
+                        $output['username'] = $username;
+                        $output['ISNEW'] = $row['ISNEW'];
+                        $output['plant_id'] = $row["plant_id"];
+                        $output['licence_no'] = $row["licence_no"];
+                        $output['logo_path'] = $row["logo_path"];
+                        $output['employee_type'] = $row["employee_type"];
+                        $output['loger_id'] = $loger_id;
+                        $output['type'] = 'employee';
+             
+             
+                        $sql1 = "SELECT * FROM emp_rights WHERE emp_id='".$row["emp_id"]."'";
+                        $result = $conn->query($sql1);
+                        if ($result->num_rows > 0){
+                            $row1 = $result->fetch_assoc() ;
+                            $output['status'] = 'success';
+                            echo json_encode($output);
+                            exit;
+                            
+                        }else{
+                            echo "{\"status\":\"'Contact To Admin For User Rights..'\"}";
+                        }
+       
+                    }else {
+                        echo "{\"status\":\"'SomeThing Went Wrong Please Try Again After Some Time..'\"}";
+                    }
+                    
+                }else{
+                      echo "{\"status\":\"'Your Account not yet approved. Please contact HR'\"}";   
+                }
+    	    }
+        }else{
+            echo "{\"status\":\"'Invalid Username Or Password'\"}";
+        }
+  
+}
+
+else if ($_GET["type"] == "EXTERNALlOGIN") {
+    
+        $plant_id = $_GET["plant_id"];
+        $user_name = $_GET["username"];
+        $password = $_GET["password"];
+   
+
+        $sql = "SELECT e.*,p.plant_name,p.version_no as plant_code,p.logo_path FROM client e LEFT JOIN plant p ON p.plant_id = e.plant_id 
+        WHERE  e.email = '$user_name' AND BINARY  e.password = '$password'  ";
+                        
+        $result = $conn->query($sql);
+        if($result->num_rows > 0) {
+            while($row = $result->fetch_assoc()){
+                if($row["status"] =='Active') {
+                    
+                    $row["department"] = 'Marketing';
+                    $username = $row["LglNm"]." (".$row["client_code"].")";
+                    $loger_id = $row["client_code"];
+                    $string = $row["client_code"]."$".$row["department"]."$".$entry_date."$".$row["plant_id"];
+                    $key1 = generateRandomString();
+                    $key2 = generateRandomString();
+                    $passcode = encrypt('encrypt',$string,$key1,$key2);
+                    
+                    $txt = '{"client_code": "'.$row["client_code"].'", "department": "'.$row["department"].'","token": '.$passcode.', "key1": "'.$key1.'", "key2": "'.$key2.'", "entry_date": "'.$entry_date.'"}';
+                    $myfile = file_put_contents('token.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+                       $sql6 = "INSERT INTO token (emp_id,plant_id,department,token,key1,key2,entry_date) VALUES ('".$row["client_code"]."','".$_GET["plant_id"]."','".$row["department"]."','$passcode','$key1','$key2','$entry_date')";
+                    if($conn->query($sql6)) {
+                         
+         
+                        $output = Array();
+                        $output['status'] = 'success';
+                        $output['token'] = $passcode;
+                        $output['department'] = $row["department"];
+                        $output['username'] = $username;
+                        $output['plant_name'] = $row['plant_name'];
+                        $output['plant_id'] = $row["plant_id"];
+                        $output['logo_path'] = $row["logo_path"];
+                        $output['loger_id'] = $loger_id;
+                        $output['type'] = 'CLIENT';
+                        $output['status'] = 'success';
+                        echo json_encode($output);
+                        exit;
+                         
+       
+                    }else {
+                        echo "{\"status\":\"'SomeThing Went Wrong Please Try Again After Some Time..'\"}";
+                    }
+                    
+                }else{
+                      echo "{\"status\":\"'Your Account not yet approved. Please contact ADMIN'\"}";   
+                }
+    	    }
+        }else{
+            
+            
+                $sql = "SELECT e.*,p.plant_name,p.version_no as plant_code,p.logo_path FROM vendor e LEFT JOIN plant p ON p.plant_id = e.plant_id 
+                WHERE  e.contact_email = '$user_name' AND BINARY  e.password = '$password'  ";
+                                
+                $result = $conn->query($sql);
+                if($result->num_rows > 0) {
+                    while($row = $result->fetch_assoc()){
+                        if($row["status"] != 'Pending') {
+                            
+                            $row["department"] = 'Purchase';
+                            $username = $row["vendor_name"]." (".$row["vendor_no"].")";
+                            $loger_id = $row["vendor_no"];
+                            $string = $row["vendor_no"]."$".$row["department"]."$".$entry_date."$".$row["plant_id"];
+                            $key1 = generateRandomString();
+                            $key2 = generateRandomString();
+                            $passcode = encrypt('encrypt',$string,$key1,$key2);
+                            
+                            $txt = '{"vendor_no": "'.$row["vendor_no"].'", "department": "'.$row["department"].'","token": '.$passcode.', "key1": "'.$key1.'", "key2": "'.$key2.'", "entry_date": "'.$entry_date.'"}';
+                            $myfile = file_put_contents('token.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+                               $sql6 = "INSERT INTO token (emp_id,plant_id,department,token,key1,key2,entry_date) VALUES ('".$row["vendor_no"]."','".$_GET["plant_id"]."','".$row["department"]."','$passcode','$key1','$key2','$entry_date')";
+                            if($conn->query($sql6)) {
+                                 
+                 
+                                $output = Array();
+                                $output['status'] = 'success';
+                                $output['token'] = $passcode;
+                                $output['department'] = $row["department"];
+                                $output['username'] = $username;
+                                $output['plant_name'] = $row['plant_name'];
+                                $output['plant_id'] = $row["plant_id"];
+                                $output['logo_path'] = $row["logo_path"];
+                                $output['loger_id'] = $loger_id;
+                                $output['type'] = 'VENDOR';
+                                $output['status'] = 'success';
+                                echo json_encode($output);
+                                exit;
+                                 
+               
+                            }else {
+                                echo "{\"status\":\"'SomeThing Went Wrong Please Try Again After Some Time..'\"}";
+                            }
+                            
+                        }else{
+                              echo "{\"status\":\"'Your Account not yet approved. Please contact ADMIN'\"}";   
+                        }
+            	    }
+                }else{
+                    echo "{\"status\":\"'Invalid Username Or Password'\"}";
+                }
+        
+        
+
+        }
+    
+}
+
+else if ($_GET["type"] == "resetPassword") {
+    $sql = "UPDATE employee SET password='".$input["new_password"]."' WHERE emp_id='".$input["emp_id"]."'";
+    
+    if ($conn->query($sql)) {
+        $sql = "UPDATE employee SET ISNEW='NO' WHERE emp_id='".$input["emp_id"]."'";
+        $conn->query($sql);
+        echo "{\"status\":\"success\"}";
+    } else {
+        echo "{\"status\":\"".$conn->error."\"}";
+    }
+} 
+
+else if ($_GET["type"] == "resetPasswordClient") {
+    
+    $sql = "UPDATE client SET password='".$input["new_password"]."' WHERE email = '".$input["emp_id"]."'";
+    
+    if ($conn->query($sql)) {
+        $sql = "UPDATE client SET ISNEW = 'NO' WHERE email = '".$input["emp_id"]."'";
+        $conn->query($sql);
+        echo "{\"status\":\"success\"}";
+    } else {
+        echo "{\"status\":\"".$conn->error."\"}";
+    }
+    
+} 
+
+
+else if ($_GET['type'] == 'forgotPassword'){
+    
+    $date = new DateTime();
+    $formattedDate = $date->format('Y-m-d H:i:s'); // Format the date first
+
+  
+    $sql1 = "SELECT * FROM employee WHERE emp_id='".$input['emp_id']."'";
+    $result1 = $conn->query($sql1);
+    if ($result1->num_rows > 0) {
+ 
+         $sql= "Update employee set tempPassword = '".$input["new_password"]."' ,passStatus = 'Inprocess' ,
+        lastModifiedOn = '$formattedDate'  where emp_id = '".$input["emp_id"]."'";
+                  
+    	if($conn->query($sql)){
+            echo "{\"status\":\"success\"}";    
+    	} else {
+    		echo "{\"status\":\"".$conn->error."\"}";
+    	}
+	
+    }else{
+        echo "{\"status\":\"NotFound\"}";
+    }
+    
+ 
+}
+
+else if($_GET["type"] == "UserAccess") {
+ 
+    
+    $output = Array();
+    $sql = "SELECT * FROM emp_rights WHERE emp_id='".$_GET['data']."'";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) {
+        
+        $row = $result->fetch_assoc() ; 
+        $addtionalData = json_decode($row['additional'],true);
+        foreach($addtionalData as $val)
+        {
+            if($_GET['Action'] =='create')
+            {
+            if($val['department']==$_GET['ComponentName'] && $val['user']=='Yes')
+            {
+            $val['additional'] = json_decode($val['additional']);
+            $output['data'] = $val;
+            $output['status'] = 'sucess';
+            $output['ComponentName'] = $_GET['ComponentName'];
+            $output['access'] = '1';
+            }
+            }
+            else if($_GET['Action'] == 'approve')
+            {
+            if($val['department']==$_GET['ComponentName'] && $val['approver']=='Yes')
+            {
+            $val['additional'] = json_decode($val['additional']);
+            $output['data'] = $val;
+            $output['status'] = 'sucess';
+            $output['ComponentName'] = $_GET['ComponentName'];
+            $output['access'] = '1';
+            }
+            }
+            
+        }
+        if($_GET['data']=='master')
+            {
+            $row['additional'] = json_decode($row['additional']);
+            $output['data'] = $row;
+            $output['status'] = 'sucess';
+            $output['accessMessage'] = 'master has access for all component';
+            $output['access'] = '2';
+            }
+    }
+    else
+    {
+        $output['status'] = 'Failed';
+    }
+    echo json_encode($output);exit;
+}
+
+else if ($_GET["type"] == "validateUser") {
+    $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+    $result = $conn->query($sql);
+    $_GET["emp_id"] = "";
+    $_GET["department"] = "";
+    
+    if ($result->num_rows > 0) {
+        while($row = $result->fetch_assoc()){
+            $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+            $string = explode("$",$string);
+            $_GET["emp_id"] = $string[0];
+            $_GET["department"] = $string[1];
+        }
+        
+        $_GET["emp_email"] = "";
+        $sql = "SELECT * FROM employee WHERE emp_id='".$_GET["emp_id"]."' limit 1";
+        $result = $conn->query($sql);
+        if($result->num_rows > 0) {
+            while($row = $result->fetch_assoc()) {
+                $_GET["emp_email"] = $row["emp_email"];
+            }
+        }
+        
+        echo "{\"status\":\"success\",\"token\":\"$token\", \"emp_email\":\"".$_GET["emp_email"]."\"}";
+    } else {
+        echo "{\"status\":\"invalid\"}";
+    }
+}
+
+else if ($_GET["type"] == "verifyPassword") {
+    $emp_id   = isset($_GET["emp_id"])   ? $conn->real_escape_string(trim($_GET["emp_id"]))   : '';
+    $password = isset($_GET["password"]) ? $conn->real_escape_string(trim($_GET["password"])) : '';
+    $plant_id = isset($_GET["plant_id"]) ? $conn->real_escape_string(trim($_GET["plant_id"])) : '';
+
+    if ($emp_id === '' || $password === '') {
+        echo json_encode(array('status' => 'invalid', 'message' => 'emp_id and password required'));
+        exit;
+    }
+
+    $sql = "SELECT emp_id, status FROM employee WHERE emp_id = '$emp_id' AND BINARY password = '$password'";
+    if ($plant_id !== '') {
+        $sql .= " AND plant_id = '$plant_id'";
+    }
+    $sql .= " LIMIT 1";
+    $result = $conn->query($sql);
+
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        if ($row["status"] == 'Active') {
+            echo json_encode(array('status' => 'success'));
+        } else {
+            echo json_encode(array('status' => 'invalid', 'message' => 'Account not active'));
+        }
+    } else {
+        echo json_encode(array('status' => 'invalid', 'message' => 'Invalid password'));
+    }
+}
+
+else if ($_GET["type"] == "sessionLogout") {
+    $token   = isset($_GET["token"])   ? $conn->real_escape_string(trim($_GET["token"]))   : '';
+    $emp_id  = isset($_GET["emp_id"])  ? $conn->real_escape_string(trim($_GET["emp_id"]))  : '';
+    $plant_id = isset($_GET["plant_id"]) ? $conn->real_escape_string(trim($_GET["plant_id"])) : '';
+
+    if ($token !== '') {
+        $sql = "DELETE FROM token WHERE token = '$token'";
+    } elseif ($emp_id !== '' && $plant_id !== '') {
+        $sql = "DELETE FROM token WHERE emp_id = '$emp_id' AND plant_id = '$plant_id'";
+    } elseif ($emp_id !== '') {
+        $sql = "DELETE FROM token WHERE emp_id = '$emp_id'";
+    } else {
+        echo json_encode(array('status' => 'error', 'message' => 'token or emp_id (and optionally plant_id) required'));
+        exit;
+    }
+
+    if ($conn->query($sql)) {
+        echo json_encode(array('status' => 'success', 'message' => 'Session logged out'));
+    } else {
+        echo json_encode(array('status' => 'error', 'message' => $conn->error));
+    }
+}
+?>

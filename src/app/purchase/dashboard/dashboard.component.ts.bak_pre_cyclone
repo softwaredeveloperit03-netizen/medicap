@@ -1,0 +1,464 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { DataAccessService } from 'src/app/data-access.service';
+import { purchasePath } from '../purchase-route.constants';
+
+declare let alertify: any;
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  badge?: number;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  dept_head = 'No';
+  trainig_cordinator = 'No';
+  qms_approver = 'No';
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  categories: string[] = ['All'];
+  filteredCards: DeptCard[] = [];
+  groupedCards: { category: string; cards: DeptCard[] }[] = [];
+
+  unreadQuotations = 0;
+  unreadPo = 0;
+  unreadindent = 0;
+  unreadVendor = 0;
+  unreadExpiry = 0;
+
+  private allCards: DeptCard[] = [
+    // Row 1 — Vendor & Quotation
+    {
+      id: 'vendor-registration',
+      title: 'Vendor Registration',
+      description: 'Register new vendor',
+      route: purchasePath('vendor', 'registration'),
+      icon: 'fa-user-plus',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
+    },
+    {
+      id: 'vendor-approval',
+      title: 'Vendor For Approval',
+      description: 'Approve pending vendors',
+      route: purchasePath('vendor', 'approval'),
+      icon: 'fa-user-check',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)'
+    },
+    {
+      id: 'vendor-log',
+      title: 'Vendor Log',
+      description: 'Vendor activity log',
+      route: purchasePath('vendor', 'log'),
+      icon: 'fa-clipboard-list',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+    },
+    {
+      id: 'vendor-approved-log',
+      title: 'Approved Vendor Log',
+      description: 'View approved vendors',
+      route: purchasePath('vendor', 'approvedVendorLog'),
+      icon: 'fa-circle-check',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
+    },
+    {
+      id: 'vendor-map-material',
+      title: 'Map Material',
+      description: 'Map material to vendor',
+      route: purchasePath('vendor', 'material', 'map'),
+      icon: 'fa-link',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)'
+    },
+    {
+      id: 'quotation-enter',
+      title: 'Enter Quotation',
+      description: 'Create new quotation entry',
+      route: purchasePath('quotation', 'new'),
+      icon: 'fa-file-circle-plus',
+      category: 'Quotation',
+      gradient: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
+    },
+    // {
+    //   id: 'quotation-approval',
+    //   title: 'Quotation For Approval',
+    //   description: 'Compare and approve vendor quotations by material',
+    //   route: purchasePath('quotation', 'approval'),
+    //   icon: 'fa-user-check',
+    //   category: 'Quotation',
+    //   gradient: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
+    // },
+    {
+      id: 'quotation-comparative',
+      title: 'Quotation Comparative Report',
+      description: 'Compare quotations vendor-wise',
+      route: purchasePath('quotation', 'comparative'),
+      icon: 'fa-scale-balanced',
+      category: 'Quotation',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)'
+    },
+    {
+      id: 'quotation-log',
+      title: 'Quotation Log',
+      description: 'View quotation log records',
+      route: purchasePath('quotation', 'log'),
+      icon: 'fa-clipboard-list',
+      category: 'Quotation',
+      gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+    },
+    // Row 2 — Purchase Requisition & PO
+    {
+      id: 'purchase-requisition',
+      title: 'Purchase Requisition',
+      description: 'Manage RM/PM & GM purchase requisitions',
+      route: '/purchase/purchase-requisition',
+      icon: 'fa-file-lines',
+      category: 'Purchase Requisition',
+      gradient: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)'
+    },
+    // {
+    //   id: 'indent-new',
+    //   title: 'New Purchase Requisition',
+    //   description: 'Create new purchase requisition',
+    //   route: purchasePath('indend', 'raw', 'new'),
+    //   icon: 'fa-file-circle-plus',
+    //   category: 'Purchase Requisition',
+    //   gradient: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
+    // },
+    {
+      id: 'indent-rmpm',
+      title: 'RM/PM/GM Purchase Requisition Processing',
+      description: 'Process RM/PM/GM purchase requisitions',
+      route: '/purchase/indend/processing',
+      icon: 'fa-gears',
+      category: 'Purchase Requisition',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)'
+    },
+    {
+      id: 'indent-log',
+      title: 'Purchase Requisition Log',
+      description: 'View purchase requisition log',
+      route: purchasePath('indend', 'raw'),
+      icon: 'fa-clipboard-list',
+      category: 'Purchase Requisition',
+      gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+    },
+    {
+      id: 'indent-correction',
+      title: 'Correction',
+      description: 'Purchase requisition correction',
+      route: purchasePath('indend', 'raw', 'correction'),
+      icon: 'fa-pen-to-square',
+      category: 'Purchase Requisition',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)'
+    },
+    {
+      id: 'po-rmpm',
+      title: 'RM/PM PO from Purchase Requisition',
+      description: 'PO from RM/PM purchase requisition',
+      route: purchasePath('order', 'raw', 'rmpmindend'),
+      icon: 'fa-file-circle-plus',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
+    },
+    {
+      id: 'po-gm',
+      title: 'GM PO from Purchase Requisition',
+      description: 'PO from GM purchase requisition',
+      route: purchasePath('order', 'raw', 'indend'),
+      icon: 'fa-file-circle-plus',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)'
+    },
+    {
+      id: 'po-review',
+      title: 'PO for Review',
+      description: 'Review and approve POs',
+      route: purchasePath('order', 'raw', 'approval'),
+      icon: 'fa-user-check',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
+    },
+    // Row 3 — PO log, status, reports
+    {
+      id: 'po-log',
+      title: 'PO Log',
+      description: 'Purchase order log',
+      route: purchasePath('order', 'raw', 'log'),
+      icon: 'fa-clipboard-list',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+    },
+    {
+      id: 'po-ammendment',
+      title: 'PO Amendment',
+      description: 'Amend purchase orders',
+      route: purchasePath('order', 'raw', 'ammendment'),
+      icon: 'fa-file-signature',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'
+    },
+    {
+      id: 'po-store-status',
+      title: 'PO Status From Stores',
+      description: 'PO status from stores',
+      route: purchasePath('order', 'raw', 'storestatus'),
+      icon: 'fa-warehouse',
+      category: 'Purchase',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)'
+    },
+    {
+      id: 'post-receiving-status',
+      title: 'Post Receiving Status',
+      description: 'Material receiving, sampling, and QC status',
+      route: purchasePath('post-receiving-status'),
+      icon: 'fa-truck-ramp-box',
+      category: 'Post Receiving Status',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)'
+    },
+    {
+      id: 'reports',
+      title: 'Purchase Report',
+      description: 'Department reports and analytics dashboard',
+      route: purchasePath('reports'),
+      icon: 'fa-chart-column',
+      category: 'Purchase Report',
+      gradient: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)'
+    },
+    // Additional modules (not shown in default grid screenshot)
+    {
+      id: 'vendor-for-editing',
+      title: 'Vendor For Correction',
+      description: 'Correct data returned by QA, then resubmit for approval',
+      route: purchasePath('vendor', 'for-editing'),
+      icon: 'fa-edit',
+      category: 'Vendor Registration',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)'
+    },
+    {
+      id: 'stock',
+      title: 'Purchase Stock',
+      description: 'Raw and packing material stock status',
+      route: purchasePath('stock'),
+      icon: 'fa-warehouse',
+      category: 'Stock',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)'
+    },
+    {
+      id: 'quotation-report',
+      title: 'Quotation Report',
+      description: 'Quotation analytics and reports',
+      route: purchasePath('quotation', 'report'),
+      icon: 'fa-chart-pie',
+      category: 'Quotation',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
+    },
+  ];
+
+  /** Sidebar category order — matches department dashboard layout */
+  private readonly categoryOrder = [
+    'Vendor Registration',
+    'Quotation',
+    'Purchase Requisition',
+    'Purchase',
+    'Post Receiving Status',
+    'Purchase Report',
+    'Stock',
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    const used = new Set(this.allCards.map(c => c.category));
+    this.categories = ['All', ...this.categoryOrder.filter(c => used.has(c))];
+    this.route.queryParamMap.subscribe(params => {
+      const category = this.normalizeCategoryParam(params.get('category') || '');
+      if (category && this.categories.includes(category)) {
+        this.selectedCategory = category;
+      } else if (!category) {
+        this.selectedCategory = 'All';
+      }
+      this.updateFilteredCards();
+    });
+    this.get_rights();
+    this.getPurchaseNotifications();
+    const savedPalette = localStorage.getItem('purchase_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  private normalizeCategoryParam(category: string): string {
+    const c = category.trim();
+    const aliases: Record<string, string> = {
+      'Indent': 'Purchase Requisition',
+      'Purchase Order': 'Purchase',
+    };
+    return aliases[c] || c;
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+      this.qms_approver = r.qms_approver || 'No';
+      this.cdr.markForCheck();
+    });
+  }
+
+  getPurchaseNotifications(): void {
+    this.service.get('purchase/indent.php?type=getCheckedIndendsForNotification').subscribe((res: any) => {
+      this.unreadindent = res['Pending_indent'] || 0;
+      if (this.unreadindent > 0 && typeof alertify !== 'undefined') { alertify.warning(res['text']); }
+      this.syncBadgesAndUpdate();
+    });
+    this.service.get('purchase/po/raw.php?type=getAllPendingPOForNotification').subscribe((res: any) => {
+      this.unreadPo = res['Pending_Po'] || 0;
+      if (this.unreadPo > 0 && typeof alertify !== 'undefined') { alertify.warning(res['text']); }
+      this.syncBadgesAndUpdate();
+    });
+    this.service.get('purchase/quotation.php?type=getPendingQuotationsForNotification').subscribe((res: any) => {
+      this.unreadQuotations = res['Pending_quatation'] || 0;
+      if (this.unreadQuotations > 0 && typeof alertify !== 'undefined') { alertify.warning(res['text']); }
+      this.syncBadgesAndUpdate();
+    });
+    this.service.get('purchase/vendor.php?type=getPendingVendorsNotification').subscribe((res: any) => {
+      this.unreadVendor = res['Pending_Vendor'] || 0;
+      if (this.unreadVendor > 0 && typeof alertify !== 'undefined') { alertify.warning(res['text']); }
+      this.syncBadgesAndUpdate();
+    });
+    this.service.get('notification.php?type=ExpiryNotification').subscribe((res: any) => {
+      this.unreadExpiry = res['Pending_expiry'] || 0;
+      if (this.unreadExpiry > 0 && typeof alertify !== 'undefined') { alertify.warning(res['text']); }
+      this.syncBadgesAndUpdate();
+    });
+  }
+
+  private syncBadgesAndUpdate(): void {
+    const byId: Record<string, number> = {
+      'quotation-log': this.unreadQuotations,
+      'indent-processing': this.unreadindent,
+      'po-review': this.unreadPo,
+      'vendor-approval': this.unreadVendor,
+    };
+    this.allCards.forEach(c => {
+      const n = byId[c.id];
+      c.badge = n != null && n > 0 ? n : undefined;
+    });
+    this.updateFilteredCards();
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+    this.buildGroupedCards();
+    this.cdr.markForCheck();
+  }
+
+  /** Group the filtered cards into separated grid sections, ordered by categoryOrder. */
+  private buildGroupedCards(): void {
+    const order = this.categoryOrder;
+    const groups = new Map<string, DeptCard[]>();
+    this.filteredCards.forEach(card => {
+      if (!groups.has(card.category)) {
+        groups.set(card.category, []);
+      }
+      groups.get(card.category)!.push(card);
+    });
+    this.groupedCards = Array.from(groups.keys())
+      .sort((a, b) => {
+        const ia = order.indexOf(a);
+        const ib = order.indexOf(b);
+        return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
+      })
+      .map(category => ({ category, cards: groups.get(category)! }));
+  }
+
+  trackByCategory(_index: number, group: { category: string }): string {
+    return group.category;
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('purchase_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

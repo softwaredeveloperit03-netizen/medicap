@@ -1,0 +1,133 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Batch Manufacturing Status</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/planning/production">CLOSE</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="clr-row">
+                <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                    <label>Product Type:<span style="color: red;"><b>*</b></span></label>
+                    <select name="product_type" [(ngModel)]="product_type" required>
+                      <option></option>
+                      <option>API</option>
+                      <option>Excipient</option>
+                      <option>Liquid</option>
+                    </select>
+                </div> -->
+                <div class="clr-col-lg-3 clr-col-md-6">
+                    <label>From Date</label>
+                    <input type="date" name="from_date" [(ngModel)]="from_date" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-6">
+                    <label>To Date</label>
+                    <input type="date" name="to_date" [(ngModel)]="to_date" required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+                    <button class="btn btn-danger" (click)="getStartedBatches()" style="margin-top: 33px;">Search</button>
+                </div>
+              </div>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Plan No</th>
+                    <th>Product Type</th>
+                    <th>Product Code</th>
+                    <th>Product Name</th>
+                    <th>Grade</th>
+                    <th>Batch Size</th>
+                    <th>Action</th>
+                </tr>
+                <tr *ngFor="let res of results;let i=index;">
+                    <td>{{i+1}}</td>
+                    <td>{{ res.plan_no }}</td>
+                    <td>{{ res.product_type }}</td>
+                    <td>{{ res.product_code }}</td>
+                    <td>{{ res.product_name }}</td>
+                    <td>{{ res.grade }}</td>
+                    <td>{{ res.batch_size }}</td>
+                    <td><button class="btn btn-sm" (click)="view(i)">Proceed</button></td>
+                </tr>
+                <tr *ngIf="results?.length==0">
+                    <td colspan="7">No Record Found!</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+  <div class="card-footer"><button class="btn btn-primary" (click)="download()">Download</button></div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header">Batch Manufacturing Status</div>
+    <div class="card-block">
+        <div class="card-text">
+            <h3>Product Details:</h3>
+            <table class="table">
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b>Generic Name</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['generic_name']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b> Dosage Form</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b> Shelf Life</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['shelf_life']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b>Starting Date</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['entry_date']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b> Completed Date</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['complete_date']}}</td>
+                </tr>
+    
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b>Label Claim</b></td>
+                    <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['label_claim']}}</td>
+                </tr>
+            </table>
+        
+            <h3>Stages:</h3>
+            <form #stageForm="ngForm">
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left;">Sr.</th>
+                        <th style="text-align: left;">Stage</th>
+                        <th>Date</th>
+                        <th>Started Time</th>
+                        <th>Completed Time</th>
+                      <!--   <th style="text-align: left;">Action</th> -->
+                    </tr>
+                    <tr *ngFor="let comp of selectedResult['stages']; let i = index">
+                        <td style="text-align: left;">{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.stage }}</td>
+                        <td>{{ comp.start_date }}</td>
+                        <td>{{ comp.start_time }}</td>
+                        <td>{{ comp.complete_time }}</td>
+                       <!--  <td style="text-align: left;">
+                            <button *ngIf="comp.status == 'pending'" class="btn btn-sm btn-info" (click)="start(comp.stage, i)">START STAGE</button>
+                            <button *ngIf="comp.status == 'start'" class="btn btn-sm btn-info" (click)="complete(comp.stage, i)">COMPLETE STAGE</button>
+                        </td> -->
+                    </tr>
+                    <tr *ngIf="selectedResult['stages'].length == 0">
+                        <td colspan="4">No Records Found!</td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" (click)="isView = false">CLOSE</button>
+    </div>
+</div>

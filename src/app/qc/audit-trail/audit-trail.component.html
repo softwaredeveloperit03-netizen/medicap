@@ -1,0 +1,144 @@
+<div class="atqc-shell">
+  <aside class="atqc-sidebar">
+    <div class="atqc-sidebar__title">Audit Trail QC</div>
+    <nav class="atqc-sidebar__nav">
+      <button
+        type="button"
+        class="atqc-sidebar__item"
+        *ngFor="let item of sidebarItems"
+        [class.atqc-sidebar__item--active]="activeView === item.id"
+        (click)="setView(item.id)"
+      >
+        <i class="fas" [ngClass]="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </button>
+    </nav>
+  </aside>
+
+  <main class="atqc-main">
+    <header class="atqc-header">
+      <h1>Audit Trail QC — 21 CFR Part 11</h1>
+      <button type="button" class="atqc-close" routerLink="/qc">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </header>
+
+    <section class="atqc-info">
+      Electronic audit trail for Quality Control — captures date/time, module, form, activity, IP address, user, and
+      session duration for GMP and 21 CFR Part 11 review. Data shown is limited to the <strong>Quality Control</strong>
+      department only.
+    </section>
+
+    <section class="atqc-filters" *ngIf="activeView !== 'archive'">
+      <label>
+        From
+        <input type="date" [(ngModel)]="fromDate" />
+      </label>
+      <label>
+        To
+        <input type="date" [(ngModel)]="toDate" />
+      </label>
+      <button type="button" class="atqc-btn atqc-btn--primary" (click)="refreshKpis()" [disabled]="loading">
+        Refresh KPIs
+      </button>
+    </section>
+
+    <section class="atqc-kpis" *ngIf="activeView === 'hub'">
+      <div class="atqc-kpi">
+        <strong>{{ kpis.events }}</strong>
+        <span>EVENTS</span>
+      </div>
+      <div class="atqc-kpi">
+        <strong>{{ kpis.today }}</strong>
+        <span>TODAY</span>
+      </div>
+      <div class="atqc-kpi">
+        <strong>{{ kpis.users }}</strong>
+        <span>USERS</span>
+      </div>
+      <div class="atqc-kpi">
+        <strong>{{ kpis.modules }}</strong>
+        <span>MODULES</span>
+      </div>
+      <div class="atqc-kpi">
+        <strong>{{ kpis.open_sessions }}</strong>
+        <span>OPEN SESSIONS</span>
+      </div>
+      <div class="atqc-kpi">
+        <strong>{{ kpis.archived_reports }}</strong>
+        <span>ARCHIVED REPORTS</span>
+      </div>
+    </section>
+
+    <section class="atqc-actions" *ngIf="activeView === 'hub'">
+      <button
+        type="button"
+        class="atqc-action-card"
+        *ngFor="let action of quickActions"
+        (click)="setView(action.id)"
+      >
+        <span class="atqc-action-card__icon" [ngClass]="'atqc-action-card__icon--' + action.tone">
+          <i class="fas" [ngClass]="action.icon"></i>
+        </span>
+        <span class="atqc-action-card__label">{{ action.label }}</span>
+      </button>
+    </section>
+
+    <section class="atqc-panel" *ngIf="activeView !== 'archive'">
+      <h2>
+        {{
+          activeView === 'hub'
+            ? 'Recent activity'
+            : activeView === 'login'
+              ? 'Login / Logout activity'
+              : 'Audit Trail Log'
+        }}
+      </h2>
+
+      <div class="atqc-loading" *ngIf="loading">Loading audit trail...</div>
+
+      <div class="atqc-table-wrap" *ngIf="!loading">
+        <table class="atqc-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Module</th>
+              <th>Form</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Activity</th>
+              <th>User</th>
+              <th>IP</th>
+              <th>Dur(s)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of displayRows()">
+              <td>{{ row.event_date }}</td>
+              <td>{{ row.module }}</td>
+              <td>{{ row.form }}</td>
+              <td>{{ formatDateTime(row.from_time) }}</td>
+              <td>{{ formatDateTime(row.to_time) }}</td>
+              <td>{{ row.activity }}</td>
+              <td>{{ row.user_label }}</td>
+              <td>{{ row.ip_address }}</td>
+              <td>{{ row.duration_sec }}</td>
+            </tr>
+            <tr *ngIf="displayRows().length === 0">
+              <td colspan="9" class="atqc-empty">No Quality Control audit trail records found for the selected period.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="atqc-panel atqc-panel--archive" *ngIf="activeView === 'archive'">
+      <h2>Report Archive</h2>
+      <p class="atqc-archive-note">
+        Archived audit trail PDF reports will appear here. Currently <strong>{{ kpis.archived_reports }}</strong>
+        archived report(s) for Quality Control.
+      </p>
+      <div class="atqc-empty-state">No archived reports yet.</div>
+    </section>
+  </main>
+</div>

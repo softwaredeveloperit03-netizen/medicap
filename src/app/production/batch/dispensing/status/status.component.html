@@ -1,0 +1,257 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Dispensing Status</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/prod-f-ebmr/batch/dispensing" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4">
+                  <label *ngIf="plant_type != 'API/ Excipients'">Dosage Form:<span style="color: red">*</span></label>
+                  <label *ngIf="plant_type == 'API/ Excipients'">Product Type:<span style="color: red">*</span></label>
+                   <select name="dosage_form" [(ngModel)]="dosage_form" required>
+                        <option></option>
+                        <option *ngFor="let dosage of dosages">{{ dosage.dosage_form_type}}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3">
+                    <label>From Date</label>
+                    <input type="date" name="from_date" [(ngModel)]="from_date" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3">
+                    <label>To Date</label>
+                    <input type="date" name="to_date"  [(ngModel)]="to_date" required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2">
+                    <button class="btn btn-danger" (click)="getDispensingLog()" style="margin-top: 33px;">search</button>
+                </div>
+            </div>
+            <table class="pharmacy-table">
+                <thead>
+                  <tr>
+                    <th>Sr.</th>
+                    <th>BMR No.</th>
+                    <th *ngIf="plant_type != 'API/ Excipients'">Dosage Form</th>
+                    <th *ngIf="plant_type == 'API/ Excipients'">Product Type</th>
+                    <th>Product Code</th>
+                    <th>Product Name</th>
+                    <th>MFR No</th>
+                    <th>Medicap Lot No</th>
+                    <th>Batch Size</th>
+                    <th>View</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let res of results; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ res.bmr_no }}</td>
+                    <td>{{ res.dosage_form }}</td>
+                    <td>{{ res.product_code }}</td>
+                    <td>{{ res.product_name }}</td>
+                    <td>{{ res.mfr_no }}</td>
+                    <td>{{ res.batch_number }}</td>
+                    <td>{{ res.batch_size }}</td>
+                    <td>
+                      <button class="btn btn-sm btn-info" (click)="view(i)">View</button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="results?.length === 0">
+                    <td colspan="9">No Record Found!</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="download()">Download</button>
+        </div>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Dispensing Status Details</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <h3>Product Details:</h3>
+            <table class="table pharma-table">
+                <tr>
+                  <td class="pharma-cell-label"><b>Product Name</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['product_name'] }}</td>
+                  <td class="pharma-cell-label"><b>Product Code</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['product_code'] }}</td>
+                </tr>
+                <tr>
+                  <td class="pharma-cell-label"><b>Batch Size</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['batch_size'] }}</td>
+                  <td class="pharma-cell-label"><b>Medicap Lot No</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['batch_number'] }}</td>
+                </tr>
+                <tr>
+                  <td class="pharma-cell-label"><b>BMR NO</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['document_no'] }}</td>
+                  <td class="pharma-cell-label" *ngIf="plant_type != 'API/ Excipients'"><b>Dosage Form</b></td>
+                  <td class="pharma-cell-label" *ngIf="plant_type == 'API/ Excipients'"><b>Product Type</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['dosage_form'] }}</td>
+                </tr>
+                <tr>
+                 
+                  <td class="pharma-cell-label"><b>Shelf Life</b></td>
+                  <td class="pharma-cell-value">{{ selectedResult['shelf_life'] }}</td>
+                </tr>
+                <tr>
+                  <td class="pharma-cell-label"><b>Label Claim</b></td>
+                  <td colspan="3" class="pharma-cell-value"><ul>
+                    <li *ngFor="let item of label_claim; let i = index">
+                      <div class="list-item">
+                        <div class="index-column">{{ i + 1 }}</div>
+                        <div class="content-column">
+                            <table class="table pharma-table">
+                                <tr>
+                                    <td class="pharma-cell-label"><b>Appearance</b></td>
+                                    <td class="pharma-cell-value"> {{ item.apperance }}</td>
+                                    <td class="pharma-cell-label"><b>Each Unit Type:</b></td>
+                                    <td class="pharma-cell-value">{{ item.each_unit_type }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="pharma-cell-label"><b>Other Description:</b></td>
+                                    <td class="pharma-cell-value">{{ item.other_description }}</td>
+                                    <td class="pharma-cell-label"><b>Material Name:</b></td>
+                                    <td class="pharma-cell-value">{{ item.material_name }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="pharma-cell-label"><b>Grade</b></td>
+                                    <td class="pharma-cell-value">{{ item.grade  }}</td>
+                                    <td class="pharma-cell-label"><b>Strength</b></td>
+                                    <td class="pharma-cell-value">{{ item.strength }} {{ item.unit }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="pharma-cell-label"><b>Dose Unit Type:</b></td>
+                                   
+                                    <td class="pharma-cell-value">{{ item.dose_unit_type }}</td>
+                                  </tr>
+                                  <tr>
+                            </table>
+                         
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                  
+                  </td>
+                </tr>
+              </table>
+              
+            <h3 *ngIf="plant_id!='67'">LAF Details:</h3>
+            <table class="table" *ngIf="plant_id!='67'">
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b> LAF start Time</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_start_time']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b>LAF Stop Time </b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_stop_time']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b> LAF ID:</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_id']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b>Pressure</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['pressure']}}</td>
+                </tr>
+            </table>
+            <h4>Clearances Details:</h4>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Checkpoint</th>
+                    <!-- <th>Observation</th> -->
+                    <th>Remark</th>
+                </tr>
+                <tr *ngFor="let res of clearances;let i=index">
+                    <td>{{i+1}}</td>
+                    <td>{{res.checkpoint}}</td>
+                    <!-- <td>{{res.observation}}</td> -->
+                    <td>{{res.remarkss}}</td>
+                </tr>
+            </table>
+            <h4>Instruction Details:</h4>
+            <table class="table">
+                <tr>
+                    <th style="text-align: left;">Sr.</th>
+                    <th style="text-align: left;">Instruction</th>
+                </tr>
+                <tr *ngFor="let res of checkpoints;let i=index">
+                    <td style="text-align: left;">{{i+1}}</td>
+                    <td style="text-align: left;">{{res.checkpoint}}</td>
+                    <td style="text-align: left;">{{res.remarkss}}</td>
+                    
+                </tr>
+            </table>
+            <h4>Material List:</h4>
+            <div style="overflow-x:scroll;overflow-y:scroll">
+                <table class="table">
+                    <tr>
+                        <th rowspan="2" style="border: 1px solid gray;vertical-align:middle;">Sr No.</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;" rowspan="2">Item Code</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Name Of Ingredients</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">PHh Spec</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Std.batch Size 110 lit</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">OA</th>
+                        <th style="text-align: left;border: 1px solid  gray;vertical-align:middle;"  rowspan="2">Actual dispensed Qty including % OA</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">UOM</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Medicap lot no</th>
+                        <th style="text-align: left; border: 1px solid gray;" colspan="3">Weight(kg)</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Issued By (RM Store)</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Checked By (Prod)</th>
+                        <th style="text-align: left; border: 1px solid gray;vertical-align:middle;"  rowspan="2">Verified By (QA)</th>
+                        <!-- <th style="text-align: left;">Process</th> -->
+                    </tr>
+                    <tr>
+                        <th style="text-align: left; border: 1px solid gray;">Gross wt</th>
+                        <th style="text-align: left; border: 1px solid gray;">net wt</th>
+                        <th style="text-align: left; border: 1px solid gray;">Tare wt</th>
+                    </tr>
+                    <tr *ngFor="let result of selectedResult['materials']; let i = index">
+                        <td style="border: 1px solid gray;">{{i+1}}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.material_code }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.material_name }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.grade }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.batch_qty }}</td>
+                        <!-- <td style="text-align: left;">{{ result.qty }} {{ result.unit }}</td> -->
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.overages }} %</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.qty }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.unit }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.ar_no }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.gross_wt }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{+result.gross_wt + +result.tare_wt}}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.tare_wt }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.issued_by }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.checked_by }}</td>
+                        <td style="text-align: left;border: 1px solid gray;">{{ result.verified_by }}</td>
+                        <!-- <td style="text-align: left;">{{ result.process }}</td> -->
+                    </tr>
+                    <tr *ngIf="selectedResult['materials']?.length == 0">
+                        <td colspan="7">No. Records Found</td>
+                    </tr>
+                </table>
+            </div>
+            
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadPdf()">Download</button>
+        <button class="btn btn-danger" (click)="isView=false">close</button>
+    </div>
+</div>

@@ -1,0 +1,192 @@
+﻿<div class="card recv-page" *ngIf="!isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Line Clearance</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/dispensing/packing/activity"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>{{'common.date' | translate}}</th>
+                    <th>Plan No</th>
+                    <th>BFR For</th>
+                    <th>MFR No</th>
+                    <th>Product Name</th>
+                    <th>Batch/Lot No.</th>
+                    <th>Product Type</th>
+                    <th>Product Code</th>
+                    <th>Batch Size</th>
+                    <th>Request By</th>                    
+                    <th>Line Clearance</th>        
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ result.store_status_entry_date | date:'dd-MM-yyyy' }}</td>
+                    <td>{{ result.plan_no}}</td>
+                    <td>{{ result.bfr_no }}</td>
+                    <td>{{result.mfr_no}}</td>
+                    <td>{{ result.product_name }}</td>
+                    <td>{{ result.batch_number }}</td>
+                    <td>{{ result.product_type }}</td>
+                    <td>{{ result.product_code }}</td>
+                    <td>{{ result.batch_size }}</td>
+                    <td>{{ result.store_status_entry_by }}</td>
+                    <td>{{ result.store_lc_status }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="12">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Details</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView=false"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>BMR No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['document_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr']}}</td>
+
+                    </tr>
+                </table>
+
+
+                <form #dispensingData="ngForm">
+                    <div class="clr-row" style="margin-top:20px;">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+                            <label>Balance:</label>
+                            <select name="balance_eqip_code" [(ngModel)]="balance_eqip_code" required
+                                style="margin: 0px;height: 33px;">
+                                <option></option>
+                                <option *ngFor="let unit of equipments" value="{{unit.equipment_code}}">{{
+                                    unit.equipment_name }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+                            <label>LAF ID:</label>
+                            <select name="laf_eqip_code" [(ngModel)]="laf_eqip_code" required
+                                style="margin: 0px;height: 33px;">
+                                <option></option>
+                                <option *ngFor="let unit1 of laf_equipments" value={{unit1.equipment_code}}>{{
+                                    unit1.equipment_name }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+                            <label>Pressure Differential Reading:</label>
+                            <input type="number" name="pleasure_diff_reading" [(ngModel)]="pleasure_diff_reading" required>
+                        </div>
+                        
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+                            <label>Line Clearance Type </label>
+                            <select name="line_clearance_type" [(ngModel)]="line_clearance_type" required
+                                (change)="getChecklist($event.target.selectedIndex)"
+                                style="margin: 0px;height: 33px;">
+                                <option>Batch to Batch</option>
+                                <option>Product To Product</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <div class="card recv-page">
+                            <div class="card-block">
+                                <div class="card-title" style="font-size: 15px;">Previous Product Details</div>
+                                <div class="card-text">
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                                            <label>Product Name:</label>
+                                            <input type="text" name="identication_qty"
+                                                [(ngModel)]="identication_qty" readonly>
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                                            <label>Batch Number:</label>
+                                            <input type="text" name="composite_qty" [(ngModel)]="composite_qty"
+                                            readonly>
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                                            <label>Date Of Cleaning:</label>
+                                            <input type="text" name="composite_qty" [(ngModel)]="composite_qty"
+                                            readonly>
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                                            <label>Cleaned By:</label>
+                                            <input type="text" name="composite_qty" [(ngModel)]="composite_qty"
+                                            readonly>
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                                            <label>Checked By:</label>
+                                            <input type="text" name="composite_qty" [(ngModel)]="composite_qty"
+                                            readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th style="text-align: left;">Observation</th>
+                            <th>Select</th>
+                        </tr>
+                        <tr *ngFor="let hr of checklist;let i = index" style="margin: 0px;">
+                            <td style="padding: 0px !important; margin: 0px;">{{i+1.}}</td>
+                            <td style="text-align:left;padding: 0px !important;margin: 0px;">{{hr.observation}}</td>
+                            <td style="padding: 0px !important;margin: 0px;">
+                                <!-- <input type="checkbox" name="check" [(ngModel)]="hr.check"  required  style="width:75% !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important;"> -->
+                                <select name="check" [(ngModel)]="hr.check" required
+                                    style="width:75% !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                    <option>NA</option>
+                                </select>
+                            </td>
+                            
+                        </tr>
+                    </table>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-6 clr-col-xs-12">
+                        <label>Line Clearance Remaks:</label>
+                        <input type="text" name="line_clearance_remarks" [(ngModel)]="line_clearance_remarks"
+                            required>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <!-- <button class="btn btn-primary" *ngIf="selectedResult['dispensing_status'] == 'done'" (click)="saveDispensingActivity(dispensingData)">{{'common.save' | translate}}</button> -->
+            <button class="btn btn-primary" (click)="startRLAF(dispensingData)">{{'common.save' | translate}}</button>
+            <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

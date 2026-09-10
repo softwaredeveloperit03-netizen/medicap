@@ -1,0 +1,52 @@
+<?php
+    require '../db.php';
+    require '../token.php';
+    header('Access-Control-Allow-Origin: *');
+    date_default_timezone_set("Asia/Kolkata");
+    $token = $_GET["token"];
+    $timestamp = time();
+    $entry_date = date("Y-m-d h:i:s", $timestamp);
+    $input = json_decode(file_get_contents('php://input'),true);
+
+    $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+    $result = $conn->query($sql);
+    $_GET["emp_id"] = "";
+    $_GET["department"] = "";
+    if($result->num_rows > 0){
+    while($row = $result->fetch_assoc()){
+	    $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+	    $string = explode("$",$string);
+	    $_GET["emp_id"] = $string[0];
+	    $_GET["department"] = $string[1];
+	    break;
+    }
+
+    $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "'.$_GET["type"].'", "actiontime": "'.$entry_date.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'"}';
+    $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+    
+    if ($_GET["type"] == "getsample") {
+        $output = Array();
+        $sql = "SELECT * FROM sample_request";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "saveSample") {
+      echo  $sql = "INSERT INTO sample_request (plant_id,name_client,temp_name, address, temp_address, temp_country, temp_no, temp_email, requirement, type, avd_country, grade, testing, unit, system, color, core_tablet, enter, equip_avail, expected, requried, recommeded) 
+        VALUES ('".$_GET["plant_id"]."','".$input["name_client"]."', '".$input["temp_name"]."', '".$input["address"]."', '".$input["temp_address"]."', '".$input["temp_country"]."', 
+        '".$input["temp_no"]."', '".$input["temp_email"]."', '".$input["requirement"]."', '".$input["type"]."', '".$input["avd_country"]."', '".$input["grade"]."', '".$input["testing"]."', 
+        '".$input["unit"]."', '".$input["system"]."', '".$input["color"]."', '".$input["core_tablet"]."', '".$input["enter"]."', '".$input["equip_avail"]."', '".$input["expected"]."', '".$input["requried"]."', '".$input["recommeded"]."' )";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } 
+
+}
+
+$conn->close();
+?>

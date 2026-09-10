@@ -1,0 +1,195 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-layer-group"></i>
+      Stage &amp; Step Master
+      <span class="eb-sub">Define manufacturing stages and their ordered steps</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-solid" (click)="openMapModal()"><i class="fas fa-diagram-project"></i> Map Stages to BMR Config</button>
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Dosage form filter</span>
+      <select class="eb-select" [(ngModel)]="dosageFilter" (ngModelChange)="selectedStage=null; loadStages()">
+        <option value="">All dosage forms</option>
+        <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+      </select>
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-solid" (click)="newStage()"><i class="fas fa-plus"></i> New Stage</button>
+  </div>
+
+  <div class="eb-split">
+    <!-- stages -->
+    <div class="eb-card eb-panel">
+      <div class="eb-panel-head">
+        <span><i class="fas fa-layer-group"></i> Stages ({{ stages.length }})</span>
+      </div>
+      <div class="eb-panel-body">
+        <div *ngIf="!stages.length" class="eb-empty">No stages yet. Click “New Stage”.</div>
+        <div
+          *ngFor="let s of stages"
+          class="eb-list-item"
+          [class.active]="selectedStage?.id === s.id"
+          (click)="selectStage(s)"
+        >
+          <div class="eb-list-main">
+            <span class="eb-seq">{{ s.seq_no }}</span>
+            <div>
+              <div class="eb-list-title">{{ s.stage_name }}</div>
+              <div class="eb-list-sub">
+                <span class="eb-badge eb-badge-muted">{{ s.stage_code }}</span>
+                <span *ngIf="s.dosage_form" class="eb-badge eb-badge-type">{{ s.dosage_form }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="eb-row-actions">
+            <button class="eb-icon-btn" (click)="$event.stopPropagation(); editStage(s)" title="Edit"><i class="fas fa-pen"></i></button>
+            <button class="eb-icon-btn danger" (click)="$event.stopPropagation(); deleteStage(s)" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- steps -->
+    <div class="eb-card eb-panel">
+      <div class="eb-panel-head">
+        <span><i class="fas fa-list-ol"></i> Steps {{ selectedStage ? '— ' + selectedStage.stage_name : '' }}</span>
+        <button class="eb-btn eb-btn-sm eb-btn-outline" (click)="newStep()" [disabled]="!selectedStage"><i class="fas fa-plus"></i> Step</button>
+      </div>
+      <div class="eb-panel-body">
+        <div *ngIf="!selectedStage" class="eb-empty">Select a stage to manage its steps.</div>
+        <div *ngIf="selectedStage && !steps.length" class="eb-empty">No steps in this stage yet.</div>
+        <div *ngFor="let st of steps" class="eb-list-item">
+          <div class="eb-list-main">
+            <span class="eb-seq alt">{{ st.seq_no }}</span>
+            <div>
+              <div class="eb-list-title">{{ st.step_name }}</div>
+              <div class="eb-list-sub">
+                <span class="eb-badge eb-badge-muted">{{ st.step_code }}</span>
+                <span *ngIf="st.description" class="eb-list-desc">{{ st.description }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="eb-row-actions">
+            <button class="eb-icon-btn" (click)="editStep(st)" title="Edit"><i class="fas fa-pen"></i></button>
+            <button class="eb-icon-btn danger" (click)="deleteStep(st)" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- stage modal -->
+<div class="eb-modal-backdrop" *ngIf="stageModalOpen" (click)="stageModalOpen=false">
+  <div class="eb-modal" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>{{ editingStage ? 'Edit Stage' : 'New Stage' }}</h3>
+      <button class="eb-modal-close" (click)="stageModalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Stage name *</span>
+          <input class="eb-input" [(ngModel)]="stageForm.stage_name" placeholder="e.g. Compounding / Mixing" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Dosage form</span>
+          <select class="eb-select" [(ngModel)]="stageForm.dosage_form">
+            <option value="">— Generic / All —</option>
+            <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Sequence no.</span>
+          <input class="eb-input" type="number" [(ngModel)]="stageForm.seq_no" />
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Description</span>
+          <textarea class="eb-textarea" [(ngModel)]="stageForm.description" placeholder="Purpose / scope of this stage"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="stageModalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="saveStage()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- step modal -->
+<div class="eb-modal-backdrop" *ngIf="stepModalOpen" (click)="stepModalOpen=false">
+  <div class="eb-modal" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>{{ editingStep ? 'Edit Step' : 'New Step' }}</h3>
+      <button class="eb-modal-close" (click)="stepModalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Step name *</span>
+          <input class="eb-input" [(ngModel)]="stepForm.step_name" placeholder="e.g. Charge WFI to vessel" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Sequence no.</span>
+          <input class="eb-input" type="number" [(ngModel)]="stepForm.seq_no" />
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Description</span>
+          <textarea class="eb-textarea" [(ngModel)]="stepForm.description" placeholder="Detail of this step"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="stepModalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="saveStep()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- map stages to BMR config modal -->
+<div class="eb-modal-backdrop" *ngIf="mapModalOpen" (click)="mapModalOpen=false">
+  <div class="eb-modal eb-modal-lg" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3><i class="fas fa-diagram-project"></i> Map Stages &amp; Steps to BMR Configuration</h3>
+      <button class="eb-modal-close" (click)="mapModalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-field eb-col-full">
+        <span class="eb-field-label">BMR Configuration <span class="eb-req">*</span></span>
+        <select class="eb-select" [(ngModel)]="mapConfigId" (ngModelChange)="onMapConfigChange()">
+          <option value="">Select a configuration…</option>
+          <option *ngFor="let c of mapConfigs" [value]="c.id">{{ c.bmr_no }} · {{ c.dosage_form }} · {{ c.process_type }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="mapConfigId">
+        <p class="eb-hint" *ngIf="mapLoading"><i class="fas fa-spinner fa-spin"></i> Loading stages…</p>
+        <p class="eb-hint" *ngIf="!mapLoading && !mapStages.length">No stages found for this configuration's dosage form. Create stages first.</p>
+
+        <div class="eb-map-stage" *ngFor="let st of mapStages">
+          <label class="eb-map-stage-head">
+            <input type="checkbox" [(ngModel)]="st._include" />
+            <b>{{ st.seq_no }}. {{ st.stage_name }}</b>
+            <span class="eb-hint">{{ st.steps.length }} step(s)</span>
+          </label>
+          <div class="eb-map-steps" *ngIf="st._include">
+            <label class="eb-map-step" *ngFor="let sp of st.steps">
+              <input type="checkbox" [(ngModel)]="sp._include" /> {{ sp.seq_no }}. {{ sp.step_name }}
+            </label>
+            <span class="eb-hint" *ngIf="!st.steps.length">No steps in this stage.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="mapModalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="saveMap()" [disabled]="!mapConfigId"><i class="fas fa-fingerprint"></i> Sign &amp; Save Mapping</button>
+    </div>
+  </div>
+</div>

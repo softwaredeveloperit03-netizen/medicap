@@ -1,0 +1,219 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-industry"></i>
+      {{ recordType }} Batch Execution
+      <span class="eb-sub" *ngIf="isEbmr">QA-allotted batches — Open for execution with Checking, Review, Approval, HTML and PDF</span>
+      <span class="eb-sub" *ngIf="!isEbmr">Execute approved {{ recordType }} profiles batch-wise with operator fill &amp; sign-off</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Status</span>
+      <select class="eb-select" [(ngModel)]="statusFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="Batch no, product, plan, WO…" />
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-outline" *ngIf="isEbmr" (click)="load()"><i class="fas fa-rotate"></i> Refresh</button>
+    <button class="eb-btn eb-btn-solid" *ngIf="!isEbmr" (click)="newBatch()"><i class="fas fa-play"></i> Start New Batch</button>
+  </div>
+
+  <!-- eBMR: QA-allotted batch log -->
+  <div class="eb-table-wrap" *ngIf="isEbmr">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th>Medicap Lot No</th>
+          <th>Plan / WO</th>
+          <th>Product</th>
+          <th>Profile</th>
+          <th>Batch size</th>
+          <th>Progress</th>
+          <th>Prod. Head</th>
+          <th>QA Head</th>
+          <th>Status</th>
+          <th style="width:360px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="loading">
+          <td colspan="10" class="eb-empty">Loading batch log…</td>
+        </tr>
+        <tr *ngIf="!loading && !filtered.length">
+          <td colspan="10" class="eb-empty">
+            No batches ready for eBMR execution. Complete Batch Planning → QA batch number → dispensing → work allocation first.
+          </td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td class="eb-strong">{{ r.batch_no || r.batch_number }}</td>
+          <td>
+            <span *ngIf="r.plan_no" class="eb-badge eb-badge-muted">{{ r.plan_no }}</span>
+            <span *ngIf="r.work_order_no" class="eb-hint">{{ r.work_order_no }}</span>
+          </td>
+          <td>{{ r.product_name || r.product_code || '—' }}</td>
+          <td><span class="eb-badge eb-badge-muted">{{ r.profile_code || '—' }}</span></td>
+          <td>{{ r.batch_size }} {{ r.batch_size_uom || r.pack_unit || '' }}</td>
+          <td>
+            <div class="eb-prog" *ngIf="r.steps_total; else noProg">
+              <div class="eb-prog-bar"><span [style.width.%]="progressPct(r)"></span></div>
+              <span class="eb-prog-txt">{{ r.steps_checked }}/{{ r.steps_total }}</span>
+            </div>
+            <ng-template #noProg><span class="eb-hint">—</span></ng-template>
+          </td>
+          <td>
+            <span class="eb-badge" [ngClass]="r.prod_signoff==='Approved' ? 'eb-badge-ok' : (r.prod_signoff==='Rejected' ? 'eb-badge-crit' : 'eb-badge-muted')">{{ r.prod_signoff || 'Pending' }}</span>
+          </td>
+          <td>
+            <span class="eb-badge" [ngClass]="r.qa_signoff==='Approved' ? 'eb-badge-ok' : (r.qa_signoff==='Rejected' ? 'eb-badge-crit' : 'eb-badge-muted')">{{ r.qa_signoff || 'Pending' }}</span>
+          </td>
+          <td><span class="eb-badge" [ngClass]="statusClass(execStatusLabel(r))">{{ execStatusLabel(r) }}</span></td>
+          <td>
+            <div class="eb-row-actions eb-batch-actions">
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="openBatch(r, 'open')" title="Open BMR execution (all tabs)">
+                <i class="fas fa-pen-to-square"></i> Open
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" *ngIf="r.correction_count" (click)="openBatch(r, 'correction')" title="Correction">
+                <i class="fas fa-pen-ruler"></i>
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'checking')" title="Checking">
+                <i class="fas fa-user-check"></i> Check
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'review')" title="Review">
+                <i class="fas fa-clipboard-check"></i> Review
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'approval')" title="Approval">
+                <i class="fas fa-stamp"></i> Approve
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'html_record')" title="HTML BMR">
+                <i class="fas fa-file-code"></i> HTML
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-ghost" type="button" (click)="openBatch(r, 'pdf')" title="PDF">
+                <i class="fas fa-file-pdf"></i> PDF
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- eBPR: existing batch list -->
+  <div class="eb-table-wrap" *ngIf="!isEbmr">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th>Medicap Lot No</th>
+          <th>Plan / WO</th>
+          <th>Product</th>
+          <th>Profile</th>
+          <th>Batch size</th>
+          <th>Progress</th>
+          <th>Prod. Head</th>
+          <th>QA Head</th>
+          <th>Status</th>
+          <th style="width:360px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!filtered.length">
+          <td colspan="10" class="eb-empty">No batches yet. Start a new {{ recordType }} batch.</td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td class="eb-strong">{{ r.batch_no }}</td>
+          <td>
+            <span *ngIf="r.plan_no" class="eb-badge eb-badge-muted">{{ r.plan_no }}</span>
+            <span *ngIf="r.work_order_no" class="eb-hint">{{ r.work_order_no }}</span>
+            <span *ngIf="!r.plan_no && !r.work_order_no">—</span>
+          </td>
+          <td>{{ r.product_name || r.product_code || '—' }}</td>
+          <td><span class="eb-badge eb-badge-muted">{{ r.profile_code }}</span></td>
+          <td>{{ r.batch_size }} {{ r.batch_size_uom }}</td>
+          <td>
+            <div class="eb-prog">
+              <div class="eb-prog-bar"><span [style.width.%]="progressPct(r)"></span></div>
+              <span class="eb-prog-txt">{{ r.steps_checked }}/{{ r.steps_total }}</span>
+            </div>
+          </td>
+          <td><span class="eb-badge" [ngClass]="r.prod_signoff==='Approved' ? 'eb-badge-ok' : (r.prod_signoff==='Rejected' ? 'eb-badge-crit' : 'eb-badge-muted')">{{ r.prod_signoff }}</span></td>
+          <td><span class="eb-badge" [ngClass]="r.qa_signoff==='Approved' ? 'eb-badge-ok' : (r.qa_signoff==='Rejected' ? 'eb-badge-crit' : 'eb-badge-muted')">{{ r.qa_signoff }}</span></td>
+          <td><span class="eb-badge" [ngClass]="statusClass(r.status)">{{ r.status }}</span></td>
+          <td>
+            <div class="eb-row-actions eb-batch-actions">
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="openBatch(r, 'open')" title="Open execution (all tabs)"><i class="fas fa-pen-to-square"></i> Open</button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" *ngIf="r.correction_count" (click)="openBatch(r, 'correction')"><i class="fas fa-pen-ruler"></i></button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'checking')" title="Checking"><i class="fas fa-user-check"></i> Check</button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'review')" title="Review"><i class="fas fa-clipboard-check"></i> Review</button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'approval')" title="Approval"><i class="fas fa-stamp"></i> Approve</button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openBatch(r, 'html_record')" title="HTML"><i class="fas fa-file-code"></i> HTML</button>
+              <button class="eb-btn eb-btn-sm eb-btn-ghost" type="button" (click)="openBatch(r, 'pdf')" title="PDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- eBPR manual start modal only -->
+<div class="eb-modal-backdrop" *ngIf="modalOpen && !isEbmr" (click)="modalOpen=false">
+  <div class="eb-modal" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>Start New {{ recordType }} Batch</h3>
+      <button class="eb-modal-close" (click)="modalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Planned work order (from Batch Planning)</span>
+          <select class="eb-select" [(ngModel)]="form.work_order_id" (ngModelChange)="onWorkOrderChange()">
+            <option value="">Manual batch (no work order link)…</option>
+            <option *ngFor="let w of workOrders" [value]="w.id">
+              {{ w.plan_no }} · {{ w.batch_number }} · {{ w.product_name || w.product_code }} ({{ w.work_order_no }})
+            </option>
+          </select>
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Approved profile *</span>
+          <select class="eb-select" [(ngModel)]="form.profile_id" (ngModelChange)="onProfileChange()">
+            <option value="">Select an approved profile…</option>
+            <option *ngFor="let p of profiles" [value]="p.id">{{ p.profile_code }} — {{ p.profile_name }} ({{ p.dosage_form }})</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Medicap Lot No *</span>
+          <input class="eb-input" [(ngModel)]="form.batch_no" placeholder="e.g. ENX-2406-001" [readonly]="!!form.work_order_id" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Product</span>
+          <select class="eb-select" *ngIf="boundProducts.length" [(ngModel)]="form.product_code" (ngModelChange)="pickProduct()">
+            <option value="">Select bound product…</option>
+            <option *ngFor="let p of boundProducts" [value]="p.product_code">{{ p.product_name || p.product_code }}</option>
+          </select>
+          <input class="eb-input" *ngIf="!boundProducts.length" [(ngModel)]="form.product_code" placeholder="Product code" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Batch size</span>
+          <input class="eb-input" [(ngModel)]="form.batch_size" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Batch size UOM</span>
+          <input class="eb-input" [(ngModel)]="form.batch_size_uom" placeholder="e.g. Vials, L" />
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="modalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="startBatch()"><i class="fas fa-play"></i> Start &amp; Execute</button>
+    </div>
+  </div>
+</div>

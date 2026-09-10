@@ -1,0 +1,182 @@
+<div class="card rcd-form" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        CAPA Tracking Log ({{ formNo }}) — {{ sopRef }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" routerLink="/qa/corrective-preventive-action" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table" style="margin-bottom: 1rem">
+      <tr>
+        <td class="rcd-form__label-cell">TITLE:</td>
+        <td colspan="3" class="rcd-form__title-cell">CORRECTIVE ACTION / PREVENTATIVE ACTION LOG</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">FORM NO.:</td>
+        <td class="rcd-form__value-cell">{{ formNo }}</td>
+        <td class="rcd-form__label-cell">REF:</td>
+        <td class="rcd-form__value-cell">{{ sopRef }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">REVISION NO.:</td>
+        <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+        <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+        <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+      </tr>
+    </table>
+
+    <div class="clr-row" style="margin-bottom: 0.75rem">
+      <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12" style="display: flex; align-items: flex-end">
+        <button class="btn btn-primary" type="button" (click)="getLog()">{{ 'common.search' | translate }}</button>
+      </div>
+    </div>
+
+    <clr-datagrid>
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>CAPA No.</clr-dg-column>
+      <clr-dg-column>Initiation Date</clr-dg-column>
+      <clr-dg-column>Document Title</clr-dg-column>
+      <clr-dg-column>Source</clr-dg-column>
+      <clr-dg-column>Classification</clr-dg-column>
+      <clr-dg-column>Dept</clr-dg-column>
+      <clr-dg-column>Target Date</clr-dg-column>
+      <clr-dg-column>Status</clr-dg-column>
+      <clr-dg-column>Closed Date</clr-dg-column>
+      <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.capa_no || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.initiation_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.capa_document_title }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.source_type || row.source_reference || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.classification || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.dept_code || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ (row.corrective_target_date || row.preventative_target_date) | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <span class="label" [ngClass]="getStatusClass(row.status)">{{ getStatusLabel(row.status) }}</span>
+        </clr-dg-cell>
+        <clr-dg-cell>{{ row.closed_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" type="button" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button class="btn btn-sm btn-primary" type="button" (click)="downloadForm(row.id)">PDF</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+
+      <clr-dg-footer>
+        <clr-dg-pagination #pagination [clrDgPageSize]="15">
+          {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} CAPAs
+        </clr-dg-pagination>
+      </clr-dg-footer>
+    </clr-datagrid>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" type="button" (click)="downloadLog()">{{ 'common.download' | translate }} Log PDF</button>
+    <button class="btn btn-danger" type="button" routerLink="/qa/corrective-preventive-action">Close</button>
+  </div>
+</div>
+
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        CAPA Detail — {{ selectedRecord.capa_no || ('#' + selectedRecord.id) }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" type="button" (click)="closeView()" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">CAPA No.</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.capa_no || 'Pending assignment' }}</td>
+        <td class="rcd-form__label-cell">Status</td>
+        <td class="rcd-form__value-cell">
+          <span class="label" [ngClass]="getStatusClass(selectedRecord.status)">{{ getStatusLabel(selectedRecord.status) }}</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Document Title</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.capa_document_title }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Responsible Person</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.responsible_person }}</td>
+        <td class="rcd-form__label-cell">Position</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.responsible_position }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Initiation Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.initiation_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Classification</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.classification }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Source Type</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.source_type }}</td>
+        <td class="rcd-form__label-cell">Source Reference</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.source_reference }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Description of Event</td>
+        <td class="rcd-form__value-cell" colspan="3" style="white-space: pre-wrap">{{ selectedRecord.description_of_event }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Corrective Actions</td>
+        <td class="rcd-form__value-cell" colspan="3" style="white-space: pre-wrap">{{ selectedRecord.corrective_actions }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Preventative Actions</td>
+        <td class="rcd-form__value-cell" colspan="3" style="white-space: pre-wrap">{{ selectedRecord.preventative_actions }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Dept Approval</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.dept_approve_by || '—' }}</td>
+        <td class="rcd-form__label-cell">QA Approval</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.qa_approve_by || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Closure Proof</td>
+        <td class="rcd-form__value-cell" colspan="3" style="white-space: pre-wrap">{{ selectedRecord.closure_proof || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Closed By QA</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.closed_by || '—' }}</td>
+        <td class="rcd-form__label-cell">Closed Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.closed_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Effectiveness (CA)</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.eff_corrective_result || '—' }}</td>
+        <td class="rcd-form__label-cell">Effectiveness (PA)</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.eff_preventative_result || '—' }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" type="button" (click)="downloadForm(selectedRecord.id)">Download PDF</button>
+    <button class="btn btn-danger" type="button" (click)="closeView()">Back</button>
+  </div>
+</div>

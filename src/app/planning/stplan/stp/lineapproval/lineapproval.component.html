@@ -1,0 +1,343 @@
+<div class="card">
+  <div class="card-header">
+    <div class="clr-row">
+      <div class="clr-col-lg-6 header-title">Line Approval</div>
+      <div class="clr-col-lg-6" style="text-align: right;">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <clr-tabs>
+      <clr-tab>
+        <button clrTabLink>Line Approval</button>
+        <clr-tab-content *clrIfActive>
+          <div class="search-container filter-bar">
+            <label for="approvalSearchInput">Search:</label>
+            <input
+              type="text"
+              id="approvalSearchInput"
+              class="form-control"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="searchText"
+              (ngModelChange)="onSearchChange()">
+            <span class="lb-page-label" *ngIf="!loading">
+              Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} –
+              {{ calculateStartSrNo() + (approvalList?.length || 0) }} of {{ totalRecords }}
+            </span>
+          </div>
+          <div class="datagrid-wrapper vs-grid-wrap">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="96">Delivery Date</clr-dg-column>
+              <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+              <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="110">Forecast No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+              <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Lines</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="150">Responsible Person</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Start Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Start Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">End Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">End Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="70">Hours</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="130">Stock Status</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="180">Action</clr-dg-column>
+              <clr-dg-row *ngFor="let wo of approvalList; let i = index; trackBy: trackByWo"
+                class="lb-tint-row"
+                [ngStyle]="{ '--lb-row-bg': wo.bg_color || 'transparent' }">
+                <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planMonth || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.deliveryDate ? (wo.deliveryDate | date:'dd/MM/yyyy') : '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ wo.plan_qty ?? wo.batch_size ?? '0' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ getBomBatchSize(wo) }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button class="btn btn-sm btn-info vs-btn-compact" (click)="View2(wo)">View ({{ wo.selectedLines?.length || 0 }})</button>
+                </clr-dg-cell>
+                <clr-dg-cell>{{ wo.responsible_person || '-' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_start_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_start_time || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_end_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_end_time || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.no_of_hours_required || '0.00' }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <span *ngIf="wo.stockComplete && wo.stockVerified" class="badge badge-success">Stock Complete</span>
+                  <span *ngIf="!wo.stockComplete && wo.hasShortage && wo.stockVerified && wo.indentRaised" class="badge badge-info">Indent Raised</span>
+                  <span *ngIf="!wo.stockComplete && wo.hasShortage && wo.stockVerified && !wo.indentRaised" class="badge badge-danger">Shortage Found</span>
+                  <span *ngIf="!wo.stockVerified" class="badge badge-success">Booked at Verify</span>
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <div class="la-actions">
+                    <button class="btn btn-sm btn-success vs-btn-compact" (click)="approveWorkOrder(wo)">Approve</button>
+                    <button class="btn btn-sm btn-danger vs-btn-compact" (click)="rejectWorkOrder(wo)">Reject</button>
+                    <button class="btn btn-sm btn-primary vs-btn-compact" (click)="verifyStock(wo)" [disabled]="isVerifyingStock(wo)">
+                      <span *ngIf="!isVerifyingStock(wo)">Recheck Stock</span>
+                      <span *ngIf="isVerifyingStock(wo)">Verifying...</span>
+                    </button>
+                    <button class="btn btn-sm btn-warning vs-btn-compact" (click)="ViewShortages(wo)"
+                      [disabled]="!wo.hasShortage || !wo.shortageMaterials || wo.shortageMaterials.length === 0">View Shortages</button>
+                    <button class="btn btn-sm btn-info vs-btn-compact" (click)="raiseIndent(wo)"
+                      [disabled]="!wo.hasShortage || !wo.shortageMaterials || wo.shortageMaterials.length === 0 || wo.indentRaised">
+                      {{ wo.indentRaised ? 'Indent Raised' : 'Raise Indent' }}
+                    </button>
+                  </div>
+                </clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No work orders pending line approval</clr-dg-placeholder>
+              <clr-dg-footer *ngIf="totalRecords > 0">
+                <clr-dg-pagination
+                  #paginationApproval
+                  [clrDgPage]="currentPage"
+                  [clrDgPageSize]="pageSize"
+                  [clrDgTotalItems]="totalRecords"
+                  (clrDgPageChange)="onPageChange($event)"
+                  (clrDgPageSizeChange)="onPageSizeChange($event)">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                  {{ paginationApproval.firstItem + 1 }} - {{ paginationApproval.lastItem + 1 }} of {{ paginationApproval.totalItems }} work orders
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="getLogData()">Log</button>
+        <clr-tab-content *clrIfActive>
+          <div class="search-container filter-bar">
+            <label for="logSearchInput">Search:</label>
+            <input 
+              type="text" 
+              id="logSearchInput"
+              class="form-control"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="logSearchText"
+              (ngModelChange)="applyLogFilter()">
+            <span class="lb-page-label" *ngIf="!logLoading">
+              Showing {{ logTotalRecords ? logStartSrNo() + 1 : 0 }} –
+              {{ logStartSrNo() + (logData?.length || 0) }} of {{ logTotalRecords }}
+            </span>
+            <button class="btn btn-primary btn-print" (click)="printLog()">Print</button>
+          </div>
+          <div id="logTable" class="datagrid-wrapper vs-grid-wrap">
+            <clr-datagrid [clrDgLoading]="logLoading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+              <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+              <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Lines</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="150">Responsible Person</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Status</clr-dg-column>
+              <clr-dg-row *ngFor="let wo of logData; let i = index; trackBy: trackByWo"
+                class="lb-tint-row"
+                [ngStyle]="{ '--lb-row-bg': wo.bg_color || 'transparent' }">
+                <clr-dg-cell>{{ logStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.workorder_no }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.product_code }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.product_name">{{ wo.product_name }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ wo.plan_qty }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planUnit }}</clr-dg-cell>
+                <clr-dg-cell>{{ getBomBatchSize(wo) }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button class="btn btn-sm btn-info vs-btn-compact" (click)="View2(wo)">View ({{ wo.selectedLines?.length || 0 }})</button>
+                </clr-dg-cell>
+                <clr-dg-cell>{{ wo.responsible_person || '-' }}</clr-dg-cell>
+                <clr-dg-cell><span class="badge badge-success">Approved</span></clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No approved work orders found</clr-dg-placeholder>
+              <clr-dg-footer *ngIf="logTotalRecords > 0">
+                <clr-dg-pagination
+                  #paginationLaLog
+                  [clrDgPage]="logCurrentPage"
+                  [clrDgPageSize]="logPageSize"
+                  [clrDgTotalItems]="logTotalRecords"
+                  (clrDgPageChange)="onLogPageChange($event)"
+                  (clrDgPageSizeChange)="onLogPageSizeChange($event)">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                  {{ paginationLaLog.firstItem + 1 }} - {{ paginationLaLog.lastItem + 1 }} of {{ paginationLaLog.totalItems }} work orders
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+    </clr-tabs>
+  </div>
+</div>
+
+<!-- View Selected Lines Modal -->
+<div *ngIf="isView2" class="fullpage-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5>Work Order: {{ selectedWo?.workorder_no }} - Selected Lines</h5>
+      <div class="work-order-info" style="margin-top: 10px; font-size: 13px; color: #666;">
+        <span><strong>Product:</strong> {{ selectedWo?.product_name }} ({{ selectedWo?.product_code }})</span> | 
+        <span><strong>Plan Qty:</strong> {{ selectedWo?.plan_qty }} {{ selectedWo?.planUnit }}</span>
+      </div>
+    </div>
+    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead style="background-color: rgb(14, 67, 112); color: white; position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th style="text-align: left;">Line No.</th>
+            <th style="text-align: left;">Line Name</th>
+            <th style="text-align: left;">Section</th>
+            <th style="text-align: left;">Line Type</th>
+            <th style="text-align: left;">For Group</th>
+            <th style="text-align: left;">Equipments</th>
+            <th style="text-align: left;">Mfg Min Capacity</th>
+            <th style="text-align: left;">Mfg Max Capacity</th>
+            <th style="text-align: left;">Filling Min Capacity</th>
+            <th style="text-align: left;">Filling Max Capacity</th>
+            <th style="text-align: left;">Stages</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let config of selectedWo['selectedLines']; let j = index">
+            <td style="text-align: left;">{{ config.line_no || '-' }}</td>
+            <td style="text-align: left;">{{ config.line_name || '-' }}</td>
+            <td style="text-align: left;">{{ config.Section || '-' }}</td>
+            <td style="text-align: left;">{{ config.lineType || '-' }}</td>
+            <td style="text-align: left;">{{ config.group_name || '-' }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="config.equipmentList && config.equipmentList.length > 0">
+                {{ config.equipmentList.length }} Equipment(s)
+              </span>
+              <span *ngIf="!config.equipmentList || config.equipmentList.length === 0" style="color: #999;">No Equipment</span>
+            </td>
+            <td style="text-align: left;">{{ config.MfgLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.MfgLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="config.stages && config.stages.length > 0" 
+                    [title]="getStagesDisplay(config.stages)">
+                {{ config.stages.length }} Stage(s)
+              </span>
+              <span *ngIf="!config.stages || config.stages.length === 0" style="color: #999;">-</span>
+            </td>
+          </tr>
+          <tr *ngIf="!selectedWo['selectedLines'] || selectedWo['selectedLines'].length === 0">
+            <td colspan="11" style="text-align: center; padding: 20px; color: #999;">
+              No lines selected for this work order
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+      <button class="btn btn-secondary" (click)="isView2 = false">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Shortages Modal -->
+<clr-modal [(clrModalOpen)]="isShortages" clrModalSize="xl" class="full-modal">
+  <h3 class="modal-title">Shortage Materials: {{ selectedWo?.workorder_no }}</h3>
+  <div style="padding: 10px 15px; background-color: #e8f4f8; border-bottom: 1px solid #ddd; font-size: 12px; color: #555;">
+    <strong>Note:</strong> Available Stock shown is the current stock after all bookings and material issues have been accounted for.
+  </div>
+
+  <div class="modal-body">
+    <div class="work-order-info" style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+      <div class="clr-row">
+        <div class="clr-col-md-4">
+          <strong>Product:</strong> {{ selectedWo?.product_name }} ({{ selectedWo?.product_code }})
+        </div>
+        <div class="clr-col-md-4">
+          <strong>Plan Qty:</strong> {{ selectedWo?.plan_qty }} {{ selectedWo?.planUnit }}
+        </div>
+        <div class="clr-col-md-4">
+          <strong>Stock & Indent Status:</strong> 
+          <span *ngIf="selectedWo?.stockComplete" class="badge badge-success" style="font-size: 13px; padding: 5px 10px;">
+            <strong>Stock Available - No Indent Required</strong>
+          </span>
+          <span *ngIf="!selectedWo?.stockComplete && selectedWo?.hasShortage && selectedWo?.indentRaised" class="badge badge-info" style="font-size: 13px; padding: 5px 10px;">
+            <strong>Stock Not Available - Indent Already Raised</strong>
+          </span>
+          <span *ngIf="!selectedWo?.stockComplete && selectedWo?.hasShortage && !selectedWo?.indentRaised" class="badge badge-warning" style="font-size: 13px; padding: 5px 10px;">
+            Stock Not Available - Indent Not Raised
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead style="background-color: rgb(14, 67, 112); color: white; position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th style="text-align: left;">Sr. No.</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">Material Type</th>
+            <th style="text-align: left;">Unit</th>
+            <th style="text-align: right;">Required Qty</th>
+            <th style="text-align: right;">Available (Own Code)</th>
+            <th style="text-align: right;">Shortage</th>
+            <th style="text-align: left;">Indent Status</th>
+            <th style="text-align: left;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mat of shortageMaterials; let i = index">
+            <td style="text-align: left;">{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ mat.material_code || '-' }}</td>
+            <td style="text-align: left;">{{ mat.material_name || '-' }}</td>
+            <td style="text-align: left;">{{ mat.mat_type || '-' }}</td>
+            <td style="text-align: left;">{{ mat.unit || '-' }}</td>
+            <td style="text-align: right;">{{ mat.requiredQty | number:'1.2-2' }}</td>
+            <td style="text-align: right;">
+              <span [style.color]="mat.current_total_available >= mat.requiredQty ? 'green' : 'orange'" [style.font-weight]="'bold'">
+                {{ (mat.current_total_available || 0) | number:'1.2-2' }}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <span [style.color]="mat.shortage > 0 ? 'red' : 'green'" [style.font-weight]="mat.shortage > 0 ? 'bold' : 'normal'">
+                {{ mat.shortage || '0.00' | number:'1.2-2' }}
+              </span>
+            </td>
+            <td style="text-align: left;">
+              <span *ngIf="mat.stockAvailable" class="badge badge-success">Stock Available</span>
+              <span *ngIf="!mat.stockAvailable && mat.indent_raised" class="badge badge-info">Indent Raised</span>
+              <span *ngIf="!mat.stockAvailable && !mat.indent_raised" class="badge badge-warning">Indent Not Raised</span>
+              <span *ngIf="mat.indent_no" style="font-size: 11px; color: #666; display: block; margin-top: 2px;">
+                Indent No: {{ mat.indent_no }}
+              </span>
+            </td>
+            <td style="text-align: left;">
+              <span *ngIf="mat.stockAvailable" class="badge badge-success">Stock Available</span>
+              <span *ngIf="!mat.stockAvailable" class="badge badge-danger">Stock Not Available</span>
+            </td>
+          </tr>
+          <tr *ngIf="!shortageMaterials || shortageMaterials.length === 0">
+            <td colspan="10" style="text-align: center; padding: 20px; color: #999;">
+              No shortage materials found for this work order
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="raiseIndent(selectedWo)" [disabled]="!shortageMaterials || shortageMaterials.length === 0 || selectedWo?.indentRaised">
+      <span *ngIf="selectedWo?.indentRaised">Indent Already Raised</span>
+      <span *ngIf="!selectedWo?.indentRaised">Raise Indent</span>
+    </button>
+    <button type="button" class="btn btn-secondary" (click)="isShortages = false">Close</button>
+  </div>
+</clr-modal>
+

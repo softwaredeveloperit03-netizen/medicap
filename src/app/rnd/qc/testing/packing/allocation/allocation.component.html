@@ -1,0 +1,150 @@
+<div class="container-fluid" *ngIf="!isViewForm">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Allocation of Testing</div>
+                <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/rnd/qc/testing/packing" style="background-color: red;color: white;">
+                    CLOSE
+                </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving no</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">A. R. No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                    </tr>
+                    <tr *ngFor="let material of materials; let i = index">
+                        <td style="text-align: left;">{{ material.material_name }}</td>
+                        <td style="text-align: left;">{{ material.material_subtype }}</td>
+                        <td style="text-align: left;">{{ material.material_code }}</td>
+                        <td style="text-align: left;">{{ material.grade }}</td>
+                        <td style="text-align: left;">{{ material.grn_no }}</td>
+                        <td style="text-align: left;">{{ material.ar_no }}</td>
+                        <td style="text-align: left;">{{ material.status }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" (click)="viewForm(i)">PROCEED</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="materials?.length == 0">
+                        <td colspan="8">{{'common.noRecords' | translate}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isViewForm">
+    <div class="card">
+        <div class="card-header">Allocation of Testing</div>
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Material Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Material Name:</b></td>
+                        <td style="text-align: left;width: 35%;">{{ selectedMaterial['material_name'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Material Type:</b></td>
+                        <td style="text-align: left;">{{ selectedMaterial['material_subtype'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                        <td style="text-align: left;width: 35%;">{{ selectedMaterial['material_code'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Grade:</b></td>
+                        <td style="text-align: left;">{{ selectedMaterial['grade'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Specification No:</b></td>
+                        <td style="text-align: left;width: 35%;">{{ selectedMaterial['specification_no'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Sampling No:</b></td>
+                        <td style="text-align: left;">{{ selectedMaterial['sampling_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                        <td style="text-align: left;width: 35%;">{{ selectedMaterial['grn_no'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Medicap Lot No:</b></td>
+                        <td style="text-align: left;">{{ selectedMaterial['ar_no'] }}</td>
+                    </tr>
+                </table>
+
+                <div *ngIf="selectedMaterial['ismoa'] !== 'approve'">
+                    <h4 style="color: red; text-align: center;">Method Of Analysis Is Pending</h4>
+                </div>
+
+                <div *ngIf="selectedMaterial['status'] == 'pending' && selectedMaterial['ismoa'] == 'approve'" >
+                    <br>
+                    <h4 style="margin-top:5px;">Allocate Tests:</h4>
+                    <table class="table">
+                        <tr>
+                          <th>Test</th>
+                          <th>Subtest</th>
+                          <th>{{'common.description' | translate}}</th>
+                          <th>Outside Testing</th>
+                          <th style="min-width: 200px;">Persons / Lab</th>
+                        </tr>
+                        <tr *ngFor="let user of selectedMaterial['spec_tests']; let i = index">
+                          <td style="text-align: left;">{{user.test}}</td>
+                          <td style="text-align: left;" *ngIf="user.subtest !== ''">{{user.subtest}}</td>
+                          <td style="text-align: left;" *ngIf="user.subtest == ''">Not Applicable</td>
+                          <td style="text-align: left;">{{user.description}}</td>
+                          <td style="padding: 0px;">
+                            <select style="padding: 2px;width: 90%;" name="outside" ngModel="{{ user.isoutside }}" (change)="updateTests(i, 'outside', $event.target.value)">
+                              <option></option>
+                              <option>Yes</option>
+                              <option>No</option>
+                            </select>
+                          </td>
+                          <td style="padding: 0px;">
+                            <select *ngIf="user.isoutside == 'No'" name="testing_person" style="padding: 2px;width: 90%;" ngModel="{{ user.person }}" (change)="updateTests(i, 'person', $event.target.value)" required>
+                              <option></option>
+                              <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.emp_id }} - {{ employee.emp_name }}</option>
+                            </select>
+                            <select *ngIf="user.isoutside == 'Yes'" name="lab_name" style="padding: 2px;width: 90%;" ngModel="{{ user.lab_name }}" (change)="updateTests(i, 'lab', $event.target.value)" required>
+                                <option></option>
+                                <option *ngFor="let lab of labs">{{ lab.lab_name }}</option>
+                            </select>
+                          </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div *ngIf="selectedMaterial['status'] == 'inprocess'">
+                    <br>
+                    <h4 style="margin-top:5px;">Allocated Tests:</h4>
+                    <table class="table">
+                        <tr>
+                          <th>Test</th>
+                          <th>Subtest</th>
+                          <th>{{'common.description' | translate}}</th>
+                          <th>Outside Testing</th>
+                          <th style="min-width: 200px;">Persons / Lab</th>
+                        </tr>
+                        <tr *ngFor="let user of selectedMaterial['testing_tests']; let i = index">
+                          <td>{{user.test}}</td>
+                          <td *ngIf="user.subtest !== ''">{{user.subtest}}</td>
+                          <td *ngIf="user.subtest == ''">Not Applicable</td>
+                          <td>{{user.description}}</td>
+                          <td>{{user.isoutside}}</td>
+                          <td *ngIf="user.isoutside == 'No'">{{ user.person }}</td>
+                          <td *ngIf="user.isoutside == 'Yes'">{{ user.lab_name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="button" class="btn btn-primary" (click)="allocateTestingPerson()" *ngIf="selectedMaterial['specification_no'] !== '' && selectedMaterial['status'] == 'pending'">{{'common.submit' | translate}}</button>
+            <button class="btn btn-danger" (click)="isViewForm = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,341 @@
+<div class="card" *ngIf="!isView&&!isEdit">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Products List</div>
+            <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/regulatory-new">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+ 
+            <div class="clr-row">
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Plant Name : &nbsp;&nbsp;<span style="color: red">*</span></label>
+                    <select name="plantID" [(ngModel)]="plantID" required   (change)="getproductlist()">
+                        <option></option>
+                        <option *ngFor="let plant of plants" value="{{ plant.plant_id }}">{{ plant.display_name }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-5">
+                    <label>Search </label>
+                    <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+                </div>
+            </div>
+
+            <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                <clr-dg-column>Sr. No.</clr-dg-column>
+                <clr-dg-column>Product Code</clr-dg-column>
+                <clr-dg-column>Product Name</clr-dg-column>
+                <clr-dg-column>Nature of dose</clr-dg-column>
+                <clr-dg-column>Dosage Form</clr-dg-column>
+                <clr-dg-column>Entry Date</clr-dg-column>
+                <clr-dg-column>Entry By</clr-dg-column>
+                 <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+
+
+
+
+                <clr-dg-row *ngFor="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+
+                    <clr-dg-cell>{{ i+1 }}.</clr-dg-cell>
+                    <clr-dg-cell>{{ result.product_code || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{ result.product_name || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{ result.dosage_type || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{ result.dosage_form || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{ result.entry_date | date:'dd-MM-yyyy'}}</clr-dg-cell>
+                    <clr-dg-cell>{{ result.entry_by || 'NA'}}</clr-dg-cell>
+                     <clr-dg-cell>
+                        <button class="btn btn-sm btn-info btn-icon" (click)="view(i)"><clr-icon shape="eye"
+                                class="is-warning"></clr-icon></button>
+                     </clr-dg-cell>
+           
+
+                </clr-dg-row>
+                <!-- <clr-dg-footer>
+                    <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+                        of {{pagination.totalItems}} result
+                    </clr-dg-pagination>
+                </clr-dg-footer> -->
+            </clr-datagrid>
+        </div>
+        </div>
+    </div>
+ </div>
+
+
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">New Product Entry Form
+            </div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                 <button class="btn btn-sm btn-danger" (click)="isView=false"
+                    style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <td style="text-align:left; border:1px solid black;width:20%"><b>Product Name:</b></td>
+                    <td style="text-align:left; border:1px solid black;width:25%" colspan="5">
+                        {{selectedResult['product_name'] ||
+                        'NA'}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left; border:1px solid black;width:20%"><b>Manufactured Under:</b></td>
+                    <td style="text-align:left; border:1px solid black;width:25%" colspan="5">
+                        {{selectedResult['manufactured_under']
+                        || 'NA'}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left; border:1px solid black;width:20%"><b>Product Code:</b></td>
+                    <td style="text-align:left; border:1px solid black;width:25%">{{selectedResult['product_code'] ||
+                        'NA'}}</td>
+                    <td style="text-align:left; border:1px solid black;"><b>Grade:</b></td>
+                    <td style="text-align:left; border:1px solid black;">{{selectedResult['grade'] || 'NA'}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left; border:1px solid black;"><b>Type of Dosage:</b></td>
+                    <td style="text-align:left; border:1px solid black;">{{selectedResult['dosage_type'] || 'NA'}}</td>
+                    <td style="text-align:left; border:1px solid black;"><b>Dosage Form:</b></td>
+                    <td style="text-align:left; border:1px solid black;">{{selectedResult['dosage_form'] || 'NA'}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left; border:1px solid black;"><b>Shelf Life: (Months)</b></td>
+                    <td style="text-align:left; border:1px solid black;">{{selectedResult['shelf_life'] || 'NA'}}</td>
+                </tr>
+            </table>
+
+
+            <div class="col-lg-12">
+                <div>
+                    <div class="card">
+                        <div class="card-header" style="text-align: center">
+                            <div class="clr-row" style="margin-bottom: -10px;">
+                                <div class="clr-col-7" style="color: aliceblue;height:35px;text-align: left;">Label
+                                    Claim (Generic Profile of Product)</div>
+                            </div>
+                        </div>
+
+                        <table class="table table-border">
+                            <tr>
+                                <th style="text-align:left">Product Color</th>
+                                <th style="text-align:left">Material Name</th>
+                                <th style="text-align:left">Each Unit</th>
+                                <th style="text-align:left">Grade</th>
+                                <th style="text-align:left">Other description</th>
+                                <th style="text-align:left">Strength</th>
+                                <th style="text-align:left">{{'common.unit' | translate}}</th>
+                            </tr>
+                            <tr *ngFor="let comp of label_claim; let i = index">
+                                <td style="text-align:left;">{{ comp.apperance || 'NA' }}</td>
+                                <td style="text-align:left;">{{ comp.material_name || 'NA' }}</td>
+                                <td style="text-align:left;">{{ comp.each_unit_type || 'NA' }}</td>
+                                <td>{{ comp.qty ? comp.qty + ' ' + (comp.grade || '') : 'NA' }}</td>
+                                <td>{{ comp.other_description || 'NA' }}</td>
+                                <td>{{ comp.strength || 'NA' }}</td>
+                                <td>{{ comp.unit || 'NA' }}</td>
+                            </tr>
+                        </table>
+
+                    </div>
+                </div>
+
+                <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;" *ngIf="plant_id!='67'">
+                    <tr>
+                        <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">
+                            Packing Configuration (Optional)</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;color: rgb(14, 67, 112);">Configuration Title:</td>
+                        <td style="text-align: left;" colspan="3">{{ selectedResult?.configuration }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;color: rgb(14, 67, 112); width: 20%;">Primary Packing:</td>
+                        <td style="text-align: left;width: 40%;">{{ selectedResult['primary_packing'] }}</td>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Mono Carton Packing:</td>
+                        <td style="text-align: left;">{{ selectedResult['ismono'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Unit:</td>
+                        <td style="text-align: left;">{{ selectedResult['unit'] }}</td>
+                        <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);"> Outer Carton Packing:</td>
+                        <td style="text-align: left;">{{ selectedResult['isouter'] }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="card" *ngIf="plant_id=='67'">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                            Packing Configuration</div>
+                        <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow1()">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Packing Type</label>
+                            <input type="text" [(ngModel)]="selectedResult.packing_type" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Primary Packing</label>
+                            <input type="text" [(ngModel)]="selectedResult.primary_packing" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Secondary Packing</label>
+                            <input type="text" [(ngModel)]="selectedResult.secondary_packing" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Pack Size</label>
+                            <input type="text" [(ngModel)]="selectedResult.pack_sizes" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>No of pouch in 1 jar</label>
+                            <input type="text" [(ngModel)]="selectedResult.nos_pouch" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Capsule Size</label>
+                            <input type="text" [(ngModel)]="selectedResult.capsule_size" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Mono Carton</label>
+                            <input type="text" [(ngModel)]="selectedResult.mono_cartain" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Scoop Additional</label>
+                            <input type="text" [(ngModel)]="selectedResult.scoop_add" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Shrink</label>
+                            <input type="text" [(ngModel)]="selectedResult.Shrink" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Wad Sealing</label>
+                            <input type="text" [(ngModel)]="selectedResult.wad_sealing" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Qty in 1 Mono</label>
+                            <input type="text" [(ngModel)]="selectedResult.mono_qty" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Master Carton</label>
+                            <input type="text" [(ngModel)]="selectedResult.master_cartain" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Qty in master Carton</label>
+                            <input type="text" [(ngModel)]="selectedResult.master_mono_qty" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6">
+                            <label>Tertiary Packing</label>
+                            <input type="text" [(ngModel)]="selectedResult.tertiary_packing" readonly>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-6"
+                            *ngIf="selectedResult.tertiary_packing === 'Yes'">
+                            <label>Tertiary Packing Data</label>
+                            <input type="text" [(ngModel)]="selectedResult.tertiary_packing_data" readonly>
+                        </div>
+                    </div>
+
+
+                    <h3>Attachments:</h3>
+                    <table class="table">
+                        <tr>
+                            <td style="text-align: left;">Product License:</td>
+                            <td>
+                                <button class="btn btn-sm" (click)="openlic(selectedResult['product_lic'])">VIEW
+                                    FILE</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;">FSC:</td>
+                            <td>
+                                <button class="btn btn-sm" (click)="openfsc(selectedResult['fsc'])">VIEW FILE</button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="plant_id !='67'">
+                            <td style="text-align: left;">COPP:</td>
+                            <td>
+                                <button class="btn btn-sm" (click)="opencopp(selectedResult['copp'])">VIEW FILE</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;">Uploaded Photo :</td>
+                            <td>
+                                <button class="btn btn-sm" (click)="openphoto(selectedResult['photo'])">VIEW
+                                    FILE</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="row container-fluid">
+
+                        <div class="clr-row">
+                    
+
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <label style="color: black;margin-top: -2px;text-align: left;">Mocup:</label>
+                                <table class="table">
+                                    <tr>
+                                        <th>Change Part Mocup</th>
+                                        <th>Mocup No</th>
+ 
+                                    </tr>
+                                    <tr *ngFor="let art of mopcup; let i = index">
+                                        <td>{{art.mocup}}</td>
+                                        <td>{{art.mocup_no}}</td>
+ 
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <table class="table">
+                            <tr>
+                                <td style="text-align: left;">ArtWork File:</td>
+                                <td *ngIf="selectedResult['artwork_file'] !=''">
+                                    <button class="btn btn-sm" (click)="viewArt(selectedResult['artwork_file'])">VIEW
+                                        FILE</button>
+                                </td>
+                                <td *ngIf="selectedResult['artwork_file'] ==''">
+                                    <button class="btn btn-sm" (click)="viewArt(selectedResult['artwork_file'])"
+                                        disabled>VIEW FILE</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;">Mocup File:</td>
+                                <td *ngIf="selectedResult['mopcup_file'] !=''">
+                                    <button class="btn btn-sm" (click)="viewShade(selectedResult['mopcup_file'])">VIEW
+                                        FILE</button>
+                                </td>
+                                <td *ngIf="selectedResult['mopcup_file'] ==''">
+                                    <button class="btn btn-sm" (click)="viewShade(selectedResult['mopcup_file'])"
+                                        disabled>VIEW FILE</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+
+
+                </div>
+            </div>
+        </div>
+
+        
+    </div>
+</div>
+
+        

@@ -1,0 +1,52 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify: any; 
+
+@Component({
+  selector: 'app-change-control-review',
+  templateUrl: './review.component.html'
+})
+export class ChangeControlReviewComponent implements OnInit {
+
+  isView = false;
+  results;
+  ctrl_no='';
+
+  selectedReport = [];
+  constructor(private service: DataAccessService) { }
+
+  ngOnInit(): void {
+    this.getInprocessDept();
+  }
+
+  getInprocessDept() {
+    this.service.get('changecontrol.php?type=getInprocessDept').subscribe(response => {
+      this.results = response;
+    });
+  }
+
+  view(index) {
+    this.selectedReport = this.results[index];
+    this.isView = true;
+  }
+
+  update(data) {
+    if (!data.valid) {
+      alertify.error('Please Enter the Comment');
+      return;
+    }
+    let temp = data.value;
+   // temp['ctrl_no'] = this.selectedReport['ctrl_no'];
+    temp['dept_id'] = this.selectedReport['dept_id'];
+    this.service.post('changecontrol.php?type=reviewChangeControl&ctrl_no=' + this.selectedReport['ctrl_no'], JSON.stringify(temp)).subscribe(response => {
+      if (response['status']) {
+        alertify.success('Change Control Updated Successfully');
+        this.isView = false;
+        this.getInprocessDept();
+      } else {
+        alertify.error('Failed: An error occured, please try again!');
+      }
+    });
+  }
+
+}

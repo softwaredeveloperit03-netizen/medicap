@@ -1,0 +1,228 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Receiving Of Packing Material</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/store/godown/packing/receiving">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table table-border">
+            <tr>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">PO No</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">PO Date</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Packaging Slip</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip Date</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr *ngFor="let user of results; let i = index">
+              <td style="text-align: left;">{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{user.po_no}}</td>
+              <td style="text-align: left;">{{user.po_date | date :'dd-MM-yyyy'}}</td>
+              <td style="text-align: left;">{{user.vendor_name}}</td>
+              <td style="text-align: left;">{{user.challan_no}}</td>
+              <td style="text-align: left;">{{user.challan_date | date :'dd-MM-yyyy'}}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="viewResult(i)">receive</button>
+              </td>
+            </tr>
+            <tr *ngIf="results?.length == 0">
+              <td colspan="9">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">Receiving of New packing Materials</div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left;"><b>Vendor Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['vendor_name'] }}</td>
+          <td style="text-align: left;"><b>Vendor Type:</b></td>
+          <td style="text-align: left;">{{ selectedPO['vendor_type'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Packaging Slip:</b></td>
+          <td style="text-align: left;">{{ selectedPO['challan_no'] }}</td>
+          <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+          <td style="text-align: left;">{{ selectedPO['challan_date'] | date :'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO No.:</b></td>
+          <td style="text-align: left;">{{ selectedPO['po_no'] }}</td>
+          <td style="text-align: left;"><b>PO Date:</b></td>
+          <td style="text-align: left;">{{ selectedPO['po_date'] | date :'dd-MM-yyyy' }}</td>
+        </tr>
+      </table>
+      <form #receivingForm="ngForm" style="margin-top:20px;">
+        <table class="table table-border">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">PO Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Received Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Short / Extra Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.unit' | translate}}</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">PO Status</th>
+          </tr>
+          <tr *ngFor="let material of selectedPO['materials']; let i = index">
+            <td style="text-align: left;">{{ material.material_name }}</td>
+            <td style="text-align: left;">{{ material.material_code }}</td>
+            <td>{{ material.qty }}</td>
+            <td style="padding: 0px;">
+              <input type="text" OnlyNumdigit="true" name="received_qty{{ i }}" [(ngModel)]="material.received_qty" required style="margin: 0px;">
+            </td>
+            <td>{{ (+material.qty - +material.received_qty) | number }}</td>
+            <td>{{ material.unit }}</td>
+            <td style="padding: 0px">
+              <select name="po_status" [(ngModel)]="material.po_status" required style="margin: 0px;">
+                <option>Ok</option>
+                <option>Keep Open</option>
+                <option>Accept</option>
+                <option>Raise Additional</option>
+                <option>Return Material</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+        <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-md-12">
+            <h5>Dedusting Applicable:</h5>
+              <select name="dedustingmaterial" ngModel="No" (change)="getdedusting($event.target.value)" required>
+                  <option></option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+              </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-md-12" *ngIf="receivingForm.value.dedustingmaterial == 'Yes'">
+            <h5> Cleaning Type</h5>
+            <select name="cleaning_type" ngModel (change)="getCleaner($event.target.value)">
+              <option value="Manual">Manual Cleaning</option>
+              <option value="Vaccume Cleaner">Vaccume Cleaner</option>
+            </select>
+          </div>
+        </div>
+        <div ngModelGroup="dedusting" *ngIf="receivingForm.value.dedustingmaterial == 'Yes' && receivingForm.value.dedustingmaterial.cleaning_type == 'Manual'">
+          <h3 *ngIf="isDedYes">Dedusting Material </h3>
+          <table class="table table-border" style="padding-top: 5px;"  *ngIf="isDedYes">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Area and Consignment Cleaned By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;" >
+                <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                  <option></option>
+                  <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                </select>
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'area_clean')">START</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_from" [(ngModel)]="area_cleaned_from">
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'area_clean')">STOP</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_to" [(ngModel)]="area_cleaned_to">
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div ngModelGroup="dedusting" *ngIf="receivingForm.value.dedustingmaterial == 'Yes' && receivingForm.value.dedustingmaterial.cleaning_type == 'Vaccume Cleaner'">
+          <h3>Dedusting Details:</h3>
+          <table class="table table-border" style="padding-top: 5px;">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Vacuum Cleaner</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Operated By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;">
+                <select name="equipment_code" ngModel required style="margin: 0px; height: 33px;">
+                  <option></option>
+                  <option *ngFor="let equipment of equipments" [value]="equipment.equipment_code">{{ equipment.equipment_code }} (capacity: {{ equipment.capacity }})</option>
+                </select>
+              </td>
+              <td style="padding: 0px;">
+                <select name="operator" ngModel style="margin: 0px; height: 33px;">
+                  <option></option>
+                  <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                </select>
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'usages')">START</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="from_time" [(ngModel)]="from_time">
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'usages')">STOP</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="to_time" [(ngModel)]="to_time">
+              </td>
+            </tr>
+          </table>
+          <table class="table table-border" style="padding-top: 5px;">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Area Cleaned By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;">
+                <select name="area_cleaned_by" ngModel  style="margin: 0px; height: 33px;">
+                  <option></option>
+                  <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                </select>
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'area_clean')">START</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_from" [(ngModel)]="area_cleaned_from">
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'area_clean')">STOP</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="area_cleaned_to" [(ngModel)]="area_cleaned_to">
+              </td>
+            </tr>
+          </table>
+
+          <table class="table table-border" style="padding-top: 5px;">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Equipment Cleaned By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;">
+                <select name="equip_cleaned_by" ngModel style="margin: 0px; height: 33px;">
+                  <option></option>
+                  <option *ngFor="let operator of labors" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                </select>
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'equip_clean')">START</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="equip_cleaned_from" [(ngModel)]="equip_cleaned_from">
+              </td>
+              <td style="padding: 0px;">
+                  <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'equip_clean')">STOP</button>
+                  <input type="time" style="margin: 0px;height: 33px;width: auto;" name="equip_cleaned_to" [(ngModel)]="equip_cleaned_to">
+              </td>
+            </tr>
+          </table>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="receiveMaterial(receivingForm)">{{'common.submit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

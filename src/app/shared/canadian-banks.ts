@@ -1,0 +1,30 @@
+/** Major Canadian banks and credit unions for HR / payroll forms */
+export const DEFAULT_CANADIAN_BANKS: readonly string[] = [
+  'Alterna Bank',
+  'ATB Financial',
+  'Bank of China (Canada)',
+  'Bank of Montreal (BMO)',
+  'Canadian Imperial Bank of Commerce (CIBC)',
+  'Canadian Western Bank',
+  'Coast Capital Savings',
+  'Desjardins',
+  'EQ Bank',
+  'First Nations Bank of Canada',
+  'HSBC Bank Canada',
+  'ICICI Bank Canada',
+  'Industrial and Commercial Bank of China (Canada)',
+  'Laurentian Bank of Canada',
+  'Manulife Bank of Canada',
+  'Motusbank',
+  'National Bank of Canada',
+  'President\'s Choice Financial',
+  'Royal Bank of Canada (RBC)',
+  'Servus Credit Union',
+  'Simplii Financial',
+  'Tangerine Bank',
+  'Toronto-Dominion Bank (TD Canada Trust)',
+  'Bank of Nova Scotia (Scotiabank)',
+  'Vancity',
+];
+
+export const CANADIAN_BANK_ADD_NEW = 'ADD NEW';

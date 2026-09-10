@@ -1,0 +1,144 @@
+<div class="indt indt-raw" *ngIf="!isView">
+  <div class="card indt-raw__card">
+    <div class="card-header indt-raw__header mef-panel-header">
+      <div class="indt-raw__header-row">
+        <h2 class="indt-raw__title mef-panel-header__title">Purchase Requisition / Requisition Correction Log</h2>
+        <button type="button" class="btn btn-sm indt-raw__btn indt-raw__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase Requisition' }">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+    <div class="card-block indt-raw__body">
+      <div class="card-text">
+        <div class="indt-raw__search-row">
+          <label class="indt-raw__search-label">Search</label>
+          <input type="text" class="indt-raw__search-input" placeholder="Search table..." [(ngModel)]="searchQuery" aria-label="Search table">
+        </div>
+        <div class="datagrid-wrapper">
+          <clr-datagrid class="indt-raw__datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+            <clr-dg-column [clrDgSortable]="false">Sr.</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">{{'common.date' | translate}}</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">Purchase Requisition No</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">Request No</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">Materials</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">Entered By</clr-dg-column>
+            <clr-dg-column [clrDgSortable]="false">{{'common.table.action' | translate}}</clr-dg-column>
+            <clr-dg-row *clrDgItems="let indend of results; let i = index" [clrDgItem]="indend">
+              <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+              <clr-dg-cell>{{ indend.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ indend.indend_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ indend.request_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell><ul class="indt__mat-list"><li *ngFor="let item of indend.materials; let j = index">{{ item.material_name }},</li></ul></clr-dg-cell>
+              <clr-dg-cell>{{ indend.entry_by }}</clr-dg-cell>
+              <clr-dg-cell><button type="button" class="btn btn-sm indt-raw__btn indt-raw__btn--view" (click)="view(indend)">{{'common.view' | translate}}</button></clr-dg-cell>
+            </clr-dg-row>
+          </clr-datagrid>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <button type="button" class="indt-raw__btn indt-raw__btn--primary" (click)="download()">{{'common.download' | translate}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="indt indt-raw" *ngIf="isView">
+  <div class="card indt-raw__card">
+    <div class="card-header indt-raw__header mef-panel-header">
+      <div class="indt-raw__header-row">
+        <h2 class="indt-raw__title mef-panel-header__title">Purchase Requisition / Requisition of Material Log</h2>
+        <button type="button" class="btn btn-sm indt-raw__btn indt-raw__btn--close mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+    <div class="card-block indt-raw__body">
+      <div class="card-text">
+        <div class="indt-raw__table-wrap indt-raw__table-wrap--meta">
+          <table class="indt-raw__table indt-raw__table--meta table table-border">
+            <thead>
+              <tr>
+                <th>Purchase Requisition No.</th>
+                <th>Request No.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ selectedResult['indend_no'] || '-' }}</td>
+                <td>{{ selectedResult['request_no'] || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 class="indt-raw__subtitle">Materials:</h3>
+        <div class="indt-raw__table-wrap">
+          <table class="indt-raw__table table table-border">
+            <thead>
+              <tr>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>{{'common.department' | translate}}</th>
+                <th>Purchase Requisition Qty</th>
+                <th>{{'common.unit' | translate}}</th>
+                <th>Order Qty</th>
+                <th>Quotation Amount</th>
+                <th>TAX %</th>
+                <th>Gross</th>
+                <th>TAX Amt</th>
+                <th>Net</th>
+                <th>{{'common.status' | translate}}</th>
+                <th>Requirement Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let material of selectedResult['materials']; let i = index">
+                <td>{{ material.material_code }}</td>
+                <td>{{ material?.material_name }} {{ material?.gm_material }}</td>
+                <td>{{ material.department }}</td>
+                <td><input type="text" name="req_qty{{ i }}" class="indt-raw__cell-input" [(ngModel)]="material.req_qty" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required></td>
+                <td>{{ material.unit }}</td>
+                <td>{{ material['order_qty'] || '0' }} {{ material.unit }}</td>
+                <td>{{ material['quotation_amt'] || '0' }} / {{ material['quotation_per'] || '0' }}</td>
+                <td>{{ material['gst'] || '0' }}</td>
+                <td>{{ material['gross_total'] || '0' }}</td>
+                <td>{{ material['gst_total'] || '0' }}</td>
+                <td>{{ material['net_total'] || '0' }}</td>
+                <td>{{ material['status'] | uppercase }}</td>
+                <td>{{ material['requirement'] | date: 'dd-MM-yyyy' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 class="indt-raw__subtitle">Digital Signature</h3>
+        <div class="indt-raw__table-wrap indt-raw__table-wrap--meta">
+          <table class="indt-raw__table indt-raw__table--meta table table-border">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Entry By</th>
+                <th>Approved By (Plant Head)</th>
+                <th>Approved By (Purchase)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="indt-raw__sign-label"><strong>Sign. / Date</strong></td>
+                <td>{{ selectedResult['entry_by'] || '-' }} / {{ selectedResult['entry_date'] || '-' }}</td>
+                <td>{{ selectedResult['approve_plantHead_by'] || '-' }} / {{ selectedResult['approve_plantHead_on'] || '-' }}</td>
+                <td>{{ selectedResult['approve_by'] || '-' }} / {{ selectedResult['approve_date'] || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer indt-raw__footer">
+      <button type="button" class="indt-raw__btn indt-raw__btn--primary" (click)="sendIndentForPoPreparation()">Send For PO Preparation</button>
+      <button type="button" class="indt-raw__btn indt-raw__btn--close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+ 

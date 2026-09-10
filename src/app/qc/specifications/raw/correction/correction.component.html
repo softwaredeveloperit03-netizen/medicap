@@ -1,0 +1,189 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">{{spec_type}} Specification Correction</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/master/specification/raw">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type :</label>
+            <select name="spec_type" [(ngModel)]="spec_type" (ngModelChange)="onSpecTypeChange($event)">
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Finish Product</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-5">
+            <label>Search</label>
+            <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading">
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Spec. No.</clr-dg-column>
+            <clr-dg-column>Spec. Type</clr-dg-column>
+            <clr-dg-column>Item Code</clr-dg-column>
+            <clr-dg-column>Item Name</clr-dg-column>
+            <clr-dg-column>Version No.</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>Remark</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+              <clr-dg-cell>{{ result.specification_no }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.spec_type }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.version_no }}</clr-dg-cell>
+              <clr-dg-cell style="color: red;"><strong>{{ result.status | uppercase }}</strong></clr-dg-cell>
+              <clr-dg-cell>{{ result.approvalRemark || result.checkingRemark || '—' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+                <button class="btn btn-sm btn-warning" (click)="edit(result)">Edit</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-placeholder>No rejected specifications for correction.</clr-dg-placeholder>
+          </clr-datagrid>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-danger" routerLink="/master/specification/raw">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView && selectedResult">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+          {{ isEdit ? 'Correct Specification' : 'Specification Details' }}
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="closeView()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="alert alert-warning" *ngIf="selectedResult.checkingRemark || selectedResult.approvalRemark" style="margin-bottom: 15px;">
+          <div *ngIf="selectedResult.checkingRemark"><strong>Checking Remark:</strong> {{ selectedResult.checkingRemark }}</div>
+          <div *ngIf="selectedResult.approvalRemark"><strong>Approval Remark:</strong> {{ selectedResult.approvalRemark }}</div>
+        </div>
+
+        <table class="table table-border" style="color: black; width:100%;">
+          <tr>
+            <td style="text-align: left; width: 25%"><b>Specification No:</b></td>
+            <td style="text-align: left; width: 25%">{{ selectedResult.specification_no }}</td>
+            <td style="text-align: left; width: 25%"><b>Specification Type:</b></td>
+            <td style="text-align: left; width: 25%">{{ selectedResult.spec_type }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Item Name:</b></td>
+            <td style="text-align: left;">{{ selectedResult.material_name }}</td>
+            <td style="text-align: left;"><b>Item Code:</b></td>
+            <td style="text-align: left;">{{ selectedResult.material_code }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Version No:</b></td>
+            <td style="text-align: left;">{{ selectedResult.version_no }}</td>
+            <td style="text-align: left;"><b>Supersede No:</b></td>
+            <td style="text-align: left;">{{ selectedResult.supersede_no }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Total Sample Qty:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.totalsample_qty }} {{ selectedResult.unit }}</span>
+              <ng-container *ngIf="isEdit">
+                <input type="text" [(ngModel)]="selectedResult.totalsample_qty" style="width: 60%;" />
+                {{ selectedResult.unit }}
+              </ng-container>
+            </td>
+            <td style="text-align: left;"><b>Review Date:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.review_date | date:'dd-MM-yyyy' }}</span>
+              <input *ngIf="isEdit" type="date" [(ngModel)]="selectedResult.review_date" />
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Retest Period:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.retest_period }}</span>
+              <input *ngIf="isEdit" type="text" [(ngModel)]="selectedResult.retest_period" />
+            </td>
+            <td style="text-align: left;"><b>Storage:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.storage_condition }}</span>
+              <textarea *ngIf="isEdit" rows="2" [(ngModel)]="selectedResult.storage_condition" style="width: 100%;"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Sampling:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.samplingDetails }}</span>
+              <textarea *ngIf="isEdit" rows="2" [(ngModel)]="selectedResult.samplingDetails" style="width: 100%;"></textarea>
+            </td>
+            <td style="text-align: left;"><b>Hazard &amp; Precautions:</b></td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ selectedResult.hazardAndPrecautions }}</span>
+              <textarea *ngIf="isEdit" rows="2" [(ngModel)]="selectedResult.hazardAndPrecautions" style="width: 100%;"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Note:</b></td>
+            <td style="text-align: left;" colspan="3">
+              <span *ngIf="!isEdit">{{ selectedResult.note }}</span>
+              <textarea *ngIf="isEdit" rows="2" [(ngModel)]="selectedResult.note" style="width: 100%;"></textarea>
+            </td>
+          </tr>
+        </table>
+
+        <h5 style="margin-top: 12px;">Specification Tests</h5>
+        <table class="table table-border">
+          <tr>
+            <th style="text-align: left;">Test Type</th>
+            <th style="text-align: left;">Test</th>
+            <th style="text-align: left;">Sub Test</th>
+            <th style="text-align: left;">Limit Type</th>
+            <th style="text-align: left;">Reference</th>
+            <th style="text-align: left;">Description/Limit</th>
+            <th style="text-align: left;" *ngIf="selectedResult.spec_type !== 'Finish Product'">Retest</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult.spectTests">
+            <td style="text-align: left;">{{ comp.test_type }}</td>
+            <td style="text-align: left;">{{ comp.test }}</td>
+            <td style="text-align: left;">{{ comp.subtest }}</td>
+            <td style="text-align: left;">{{ comp.limit_type }}</td>
+            <td style="text-align: left;">{{ comp.reference_type }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="!isEdit">{{ comp.limits }}</span>
+              <input *ngIf="isEdit" type="text" [(ngModel)]="comp.limits" style="width: 100%;" />
+            </td>
+            <td style="text-align: left;" *ngIf="selectedResult.spec_type !== 'Finish Product'">
+              <span *ngIf="!isEdit">{{ comp.retest }}</span>
+              <input *ngIf="isEdit" type="text" [(ngModel)]="comp.retest" />
+            </td>
+          </tr>
+          <tr *ngIf="!selectedResult.spectTests?.length">
+            <td [attr.colspan]="selectedResult.spec_type !== 'Finish Product' ? 7 : 6" style="text-align: center;">No tests found.</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-success" *ngIf="isEdit" (click)="saveCorrection()">Save &amp; Send for Review</button>
+      <button class="btn btn-danger" (click)="closeView()">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,271 @@
+<div class="cc-action-plan">
+    <!-- List View -->
+    <div class="cc-card" *ngIf="!isView">
+        <div class="cc-card-header">
+            <strong>REVIEW OF ACTION PLAN & APPROVAL BY QA</strong>
+            <button type="button" class="cc-btn cc-btn-close" routerLink="/hrfordepthead/cc">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+        </div>
+        <div class="cc-card-body">
+            <div class="cc-table-wrap">
+                <table class="cc-table">
+                    <thead>
+                        <tr>
+                            <th>CC No.</th>
+                            <th>Department</th>
+                            <th>Changed Requested For</th>
+                            <th>Initiate By / On</th>
+                            <th>Classification</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let result of results; let i = index">
+                            <td><strong>{{ result.ctrl_no }}</strong></td>
+                            <td>{{ result.department_name }}</td>
+                            <td>{{ result.changeReqFor }}</td>
+                            <td>{{ result.entryBy }} / {{ result.entryDate ? (result.entryDate | date:'dd/MM/yyyy') : 'NA' }}</td>
+                            <td>{{ result.classification || 'NA' }}</td>
+                            <td><span class="cc-badge">{{ result.status || 'NA' }}</span></td>
+                            <td><button type="button" class="cc-btn cc-btn-view" (click)="view(i)">View</button></td>
+                        </tr>
+                        <tr *ngIf="!results?.length"><td colspan="7" class="cc-empty">No Records Found</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form View: sequence from initiation + dept head + Review Action Plan -->
+    <div class="cc-card cc-view-form" *ngIf="isView">
+        <div class="cc-card-header">
+            <strong>REVIEW OF ACTION PLAN & APPROVAL BY QA</strong>
+            <button type="button" class="cc-btn cc-btn-close" (click)="close()">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+        </div>
+        <div class="cc-card-body">
+            <form #approvalForm="ngForm">
+                <section class="cc-section">
+                    <h3 class="cc-section-title">1. Initiation (from Change Control New)</h3>
+                    <div class="cc-grid-2">
+                        <div class="cc-field"><label>CC No.</label><div class="cc-value">{{ currentSelectedResult['ctrl_no'] || 'NA' }}</div></div>
+                        <div class="cc-field"><label>Department</label><div class="cc-value">{{ currentSelectedResult['department_name'] || 'NA' }}</div></div>
+                        <div class="cc-field"><label>Type of Change</label><div class="cc-value">{{ currentSelectedResult['changeReqFor'] || 'NA' }}</div></div>
+                        <div class="cc-field"><label>Initiated By / On</label><div class="cc-value">{{ currentSelectedResult['entryBy'] }} / {{ currentSelectedResult['entryDate'] | date:'dd/MM/yyyy' }}</div></div>
+                    </div>
+                    <div class="cc-field"><label>Reason & Justification</label><div class="cc-value cc-text">{{ currentSelectedResult['justification'] || 'NA' }}</div></div>
+                    <div class="cc-field"><label>Details of Proposed Change</label><div class="cc-value cc-text">{{ currentSelectedResult['proposed'] || 'NA' }}</div></div>
+                    <div class="cc-signature-block" *ngIf="currentSelectedResult['entryBy']">
+                        <div class="cc-sig-label">Initiator (Digital Signature)</div>
+                        <div class="cc-sig-content">
+                            <span class="cc-sig-tick">✓</span>
+                            <div class="cc-sig-details">
+                                <span class="cc-sig-name">{{ currentSelectedResult['initiatedBy'] || currentSelectedResult['entryBy'] }}</span>
+                                <span class="cc-sig-date">{{ currentSelectedResult['entryDate'] | date:'dd/MM/yyyy' }} {{ currentSelectedResult['entryDate'] | date:'shortTime' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="cc-section">
+                    <h3 class="cc-section-title">2. Department Head Comment</h3>
+                    <div class="cc-value cc-text">{{ currentSelectedResult['concernHodComment'] || 'NA' }}</div>
+                    <div class="cc-signature-block" *ngIf="currentSelectedResult['concernHodBy']">
+                        <div class="cc-sig-label">Dept Head (Digital Signature)</div>
+                        <div class="cc-sig-content">
+                            <span class="cc-sig-tick">✓</span>
+                            <div class="cc-sig-details">
+                                <span class="cc-sig-name">{{ currentSelectedResult['authBy'] || currentSelectedResult['concernHodBy'] }}</span>
+                                <span class="cc-sig-date">{{ currentSelectedResult['concernHodOn'] | date:'dd/MM/yyyy' }} {{ currentSelectedResult['concernHodOn'] | date:'shortTime' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="cc-section">
+                    <h3 class="cc-section-title">3. REVIEW OF ACTION PLAN &amp; APPROVAL BY QA <span class="cc-required">*</span></h3>
+                    <p class="cc-section-subtitle">(To be filled in QA Head Review tab – displayed here as read-only)</p>
+                    <div class="cc-field">
+                        <label>REVIEW OF ACTION PLAN &amp; APPROVAL BY QA (QA HEAD)</label>
+                        <div class="cc-value cc-text cc-readonly-block" [class.cc-empty-text]="!currentSelectedResult['APPROVAL_QA']">
+                            {{ currentSelectedResult['APPROVAL_QA'] || '— Not yet filled (please complete in QA Head Review tab first).' }}
+                        </div>
+                    </div>
+                </section>
+                <!-- D: Impact assessment of Proposed Change (stage data) -->
+                <section class="cc-section">
+                    <h3 class="cc-section-title">D. Impact assessment of Proposed Change</h3>
+                    <p class="cc-section-subtitle">(To be filled up by all dept.)</p>
+                    <div class="cc-table-wrap">
+                        <table class="cc-impact-table">
+                            <thead>
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Status</th>
+                                    <th>Responsible Dept</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Product Quality</td><td class="cc-cell-value">{{ currentSelectedResult.productQualityCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptproductQualityCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.productQualityRemarks || 'NA' }}</td></tr>
+                                <tr><td>Standard Operating Procedure (SOP)</td><td class="cc-cell-value">{{ currentSelectedResult.sopCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptsopCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.sopRemarks || 'NA' }}</td></tr>
+                                <tr><td>Specification</td><td class="cc-cell-value">{{ currentSelectedResult.specificationCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptspecificationCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.specificationRemarks || 'NA' }}</td></tr>
+                                <tr><td>Standard Test Procedure (STP)</td><td class="cc-cell-value">{{ currentSelectedResult.stpCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptstpCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.stpRemarks || 'NA' }}</td></tr>
+                                <tr><td>Safety Data Sheet (SDS)</td><td class="cc-cell-value">{{ currentSelectedResult.sdsCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptsdsCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.sdsRemarks || 'NA' }}</td></tr>
+                                <tr><td>Method of Analysis & Awareness (MOA)</td><td class="cc-cell-value">{{ currentSelectedResult.moaAwrCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptmoaAwrCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.moaAwrRemarks || 'NA' }}</td></tr>
+                                <tr><td>Batch Manufacturing Record (BMR) / MFR</td><td class="cc-cell-value">{{ currentSelectedResult.bmrMfrCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptbmrMfrCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.bmrMfrRemarks || 'NA' }}</td></tr>
+                                <tr><td>Equipment</td><td class="cc-cell-value">{{ currentSelectedResult.equipmentCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptequipmentCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.equipmentRemarks || 'NA' }}</td></tr>
+                                <tr><td>Measurements</td><td class="cc-cell-value">{{ currentSelectedResult.measurementsCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptmeasurementsCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.measurementsRemarks || 'NA' }}</td></tr>
+                                <tr><td>Raw Materials</td><td class="cc-cell-value">{{ currentSelectedResult.materialCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptmaterialCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.materialRemarks || 'NA' }}</td></tr>
+                                <tr><td>Validation</td><td class="cc-cell-value">{{ currentSelectedResult.validationCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptvalidationCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.validationRemarks || 'NA' }}</td></tr>
+                                <tr><td>Stability Studies</td><td class="cc-cell-value">{{ currentSelectedResult.stabilityStudiesCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptstabilityStudiesCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.stabilityStudiesRemarks || 'NA' }}</td></tr>
+                                <tr><td>Process Validation (PV)</td><td class="cc-cell-value">{{ currentSelectedResult.pvCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptpvCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.pvRemarks || 'NA' }}</td></tr>
+                                <tr><td>Analytical Method Validation (AMV)</td><td class="cc-cell-value">{{ currentSelectedResult.amvCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptamvCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.amvRemarks || 'NA' }}</td></tr>
+                                <tr><td>Statutory Compliance</td><td class="cc-cell-value">{{ currentSelectedResult.statutoryCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptstatutoryCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.statutoryRemarks || 'NA' }}</td></tr>
+                                <tr><td>FDA License</td><td class="cc-cell-value">{{ currentSelectedResult.fdaLicenseCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptfdaLicenseCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.fdaLicenseRemarks || 'NA' }}</td></tr>
+                                <tr><td>WHO License</td><td class="cc-cell-value">{{ currentSelectedResult.whoLicenseCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptwhoLicenseCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.whoLicenseRemarks || 'NA' }}</td></tr>
+                                <tr><td>Environmental Compliance</td><td class="cc-cell-value">{{ currentSelectedResult.environmentCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptenvironmentCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.environmentRemarks || 'NA' }}</td></tr>
+                                <tr><td>Machine Maintenance</td><td class="cc-cell-value">{{ currentSelectedResult.machineCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptmachineCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.machineRemarks || 'NA' }}</td></tr>
+                                <tr><td>Workforce Skills & Training</td><td class="cc-cell-value">{{ currentSelectedResult.skillsCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptskillsCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.skillsRemarks || 'NA' }}</td></tr>
+                                <tr><td>Workplace Safety</td><td class="cc-cell-value">{{ currentSelectedResult.safetyCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptsafetyCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.safetyRemarks || 'NA' }}</td></tr>
+                                <tr><td>Vendor Compliance</td><td class="cc-cell-value">{{ currentSelectedResult.vendorCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DeptvendorCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.vendorRemarks || 'NA' }}</td></tr>
+                                <tr><td>Training</td><td class="cc-cell-value">{{ currentSelectedResult.trainingCheck == 1 ? 'Checked' : 'Not Checked' }}</td><td class="cc-cell-value">{{ currentSelectedResult.DepttrainingCheck || 'NA' }}</td><td class="cc-cell-value">{{ currentSelectedResult.trainingRemarks || 'NA' }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h4 class="cc-section-subtitle cc-section-subtitle-spaced">CC Consent & Review By Dept.</h4>
+                    <div class="cc-table-wrap">
+                        <table class="cc-consent-table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Impact assessment and action plan</th>
+                                    <th>Responsibility/TCD</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of (currentSelectedResult['deptReview'] || [])">
+                                    <td class="cc-cell-value">{{ item.department }}</td>
+                                    <td class="cc-cell-value">{{ item.ImpactDept || 'NA' }}</td>
+                                    <td class="cc-cell-value">{{ item.Responsibility || 'NA' }}</td>
+                                </tr>
+                                <tr *ngIf="!(currentSelectedResult['deptReview'] || []).length"><td colspan="3" class="cc-empty">No data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h4 class="cc-section-subtitle cc-section-subtitle-spaced">D.1. Document to be revised / updated</h4>
+                    <div class="cc-table-wrap">
+                        <table class="cc-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Sr.</th>
+                                    <th>Department Name</th>
+                                    <th>Name of the Document</th>
+                                    <th>Receiving no</th>
+                                    <th>Existing Ref. No.</th>
+                                    <th>Revised Ref. No.</th>
+                                    <th>TCD</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let dep of (currentSelectedResult['departmentChangeData'] || []); let i = index">
+                                    <td class="cc-cell-value">{{ i + 1 }}</td>
+                                    <td class="cc-cell-value">{{ dep.departmentName }}</td>
+                                    <td class="cc-cell-value">{{ dep.documentName }}</td>
+                                    <td class="cc-cell-value">{{ dep.documentNo }}</td>
+                                    <td class="cc-cell-value">{{ dep.existingRefNo }}</td>
+                                    <td class="cc-cell-value">{{ dep.revisedRefNo }}</td>
+                                    <td class="cc-cell-value">{{ dep.tcDate }}</td>
+                                    <td class="cc-cell-value">{{ dep.remarks }}</td>
+                                </tr>
+                                <tr *ngIf="!(currentSelectedResult['departmentChangeData'] || []).length"><td colspan="8" class="cc-empty">No data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h4 class="cc-section-subtitle cc-section-subtitle-spaced">D.2. Document to be revised / updated</h4>
+                    <div class="cc-table-wrap">
+                        <table class="cc-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Sr.</th>
+                                    <th>Name of the Document</th>
+                                    <th>Receiving no</th>
+                                    <th>Updated by</th>
+                                    <th>Department</th>
+                                    <th>Verified by</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let doc of (currentSelectedResult['documentChangeData'] || []); let i = index">
+                                    <td class="cc-cell-value">{{ i + 1 }}</td>
+                                    <td class="cc-cell-value">{{ doc.documentName }}</td>
+                                    <td class="cc-cell-value">{{ doc.documentNo }}</td>
+                                    <td class="cc-cell-value">{{ doc.updatedBy }}</td>
+                                    <td class="cc-cell-value">{{ doc.department }}</td>
+                                    <td class="cc-cell-value">{{ doc.verifiedBy }}</td>
+                                    <td class="cc-cell-value">{{ doc.remarks || 'NA' }}</td>
+                                </tr>
+                                <tr *ngIf="!(currentSelectedResult['documentChangeData'] || []).length"><td colspan="7" class="cc-empty">No data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h4 class="cc-section-subtitle cc-section-subtitle-spaced">D.3. Equipment to be revised / updated</h4>
+                    <div class="cc-table-wrap">
+                        <table class="cc-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Sr.</th>
+                                    <th>Department Name</th>
+                                    <th>Equipment</th>
+                                    <th>Equipment Code</th>
+                                    <th>New Equipment Code</th>
+                                    <th>TCD Sign &amp; Date</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let equip of (currentSelectedResult['equipmentChangeData'] || []); let i = index">
+                                    <td class="cc-cell-value">{{ i + 1 }}</td>
+                                    <td class="cc-cell-value">{{ equip.departmentName }}</td>
+                                    <td class="cc-cell-value">{{ equip.equipmentName }}</td>
+                                    <td class="cc-cell-value">{{ equip.equipmentCode }}</td>
+                                    <td class="cc-cell-value">{{ equip.newEquipmentCode }}</td>
+                                    <td class="cc-cell-value">{{ equip.tcdSignDate }}</td>
+                                    <td class="cc-cell-value">{{ equip.remarks }}</td>
+                                </tr>
+                                <tr *ngIf="!(currentSelectedResult['equipmentChangeData'] || []).length"><td colspan="7" class="cc-empty">No data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="cc-section">
+                    <h3 class="cc-section-title">4. QA Head Decision <span class="cc-required">*</span></h3>
+                    <div class="cc-field">
+                        <label>Approved / Not Approved <span class="cc-required">*</span></label>
+                        <select name="action_plan_approval_status" [(ngModel)]="actionPlanApprovalStatus" required class="cc-select" title="Approved or Not Approved">
+                            <option *ngFor="let opt of approvalStatusOptions" [value]="opt.value">{{ opt.label }}</option>
+                        </select>
+                    </div>
+                    <div class="cc-field">
+                        <label>Action plan assigned to: <span class="cc-required">*</span></label>
+                        <input type="text" name="action_plan_assigned_to" [(ngModel)]="actionPlanAssignedTo" required class="cc-input"
+                            placeholder="Enter person/department" title="Action plan assigned to">
+                    </div>
+                    <div class="cc-field">
+                        <label>Target completion date: <span class="cc-required">*</span></label>
+                        <input type="date" name="target_completion_date" [(ngModel)]="targetCompletionDate" required class="cc-input"
+                            title="Target completion date">
+                    </div>
+                </section>
+            </form>
+        </div>
+        <div class="cc-card-footer">
+            <button type="button" class="cc-btn cc-btn-primary" (click)="saveApproval(approvalForm)">SUBMIT</button>
+            <button type="button" class="cc-btn cc-btn-danger" (click)="close()">CLOSE</button>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,1331 @@
+<div class="eb-page" *ngIf="loading">
+  <div class="eb-empty"><i class="fas fa-spinner fa-spin"></i> Loading profile…</div>
+</div>
+
+<div class="eb-builder" *ngIf="profile && !loading">
+  <!-- top bar -->
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-file-medical"></i>
+      {{ profile.record_type }} Builder
+      <span class="eb-sub">{{ profile.profile_code }} · {{ profile.profile_name }} · {{ profile.dosage_form }}</span>
+    </h1>
+    <div class="eb-header-actions">
+      <span class="eb-badge" [ngClass]="profile.status==='Approved' ? 'eb-badge-ok' : 'eb-badge-warn'">{{ profile.status }}</span>
+      <button class="eb-btn eb-btn-ghost" (click)="openBind()" [disabled]="panelReadOnly"><i class="fas fa-link"></i> Bind Products ({{ products.length }})</button>
+      <button class="eb-btn eb-btn-primary" (click)="save()" [disabled]="saving || panelReadOnly">
+        <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i> Save
+      </button>
+      <button class="eb-btn eb-btn-solid" *ngIf="!profile.config_id" (click)="markApproved()" [disabled]="saving || panelReadOnly"><i class="fas fa-check"></i> Approve</button>
+      <span class="eb-badge eb-badge-type" *ngIf="profile.config_id" title="Approval is handled in BMR Master Preparation per the configuration matrix"><i class="fas fa-diagram-project"></i> Config-driven · approve in BMR Preparation</span>
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-times"></i> Close</button>
+    </div>
+  </div>
+
+  <!-- BMR Draft header — product profile summary -->
+  <div class="eb-bmr-draft-head">
+    <div class="eb-bmr-draft-title">
+      <i class="fas fa-file-medical"></i> BMR Draft
+      <span class="eb-badge" [ngClass]="profile.header.bmr_for === 'Product' ? 'eb-badge-type' : 'eb-badge-muted'">
+        {{ bmrForLabel(profile.header.bmr_for) }}
+      </span>
+      <span class="eb-hint" *ngIf="profile.header.bmr_for !== 'Product'">
+        {{ genericBmrBannerHint(profile.dosage_form, profile.header.process_type) }}
+      </span>
+    </div>
+    <div class="eb-bmr-draft-grid">
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">Product Code</span>
+        <span class="eb-bmr-draft-val">{{ profile.header.product_code || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">Product Name</span>
+        <span class="eb-bmr-draft-val">{{ profile.header.product_name || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">Product For</span>
+        <span class="eb-bmr-draft-val">{{ profile.header.product_for || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">Generic Name <span class="eb-hint">(INN)</span></span>
+        <span class="eb-bmr-draft-val">{{ profile.header.generic_name || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">Product Strength</span>
+        <span class="eb-bmr-draft-val">{{ profile.header.product_strength || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">BMR No.</span>
+        <span class="eb-bmr-draft-val eb-strong">{{ profile.header.bmr_no || '—' }}</span>
+      </div>
+      <div class="eb-bmr-draft-field">
+        <span class="eb-bmr-draft-label">MFR No.</span>
+        <span class="eb-bmr-draft-val">{{ profile.header.mfr_no || '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="eb-builder-tabs">
+    <button type="button" class="eb-tab" [class.active]="builderTab==='build'" (click)="setBuilderTab('build')">
+      <i class="fas fa-drafting-compass"></i> Build
+    </button>
+    <button type="button" class="eb-tab" [class.active]="builderTab==='checking'" (click)="setBuilderTab('checking')">
+      <i class="fas fa-user-check"></i> Checking
+      <span class="eb-badge eb-badge-warn" *ngIf="checkingQueue.length">{{ checkingQueue.length }}</span>
+    </button>
+    <button type="button" class="eb-tab" [class.active]="builderTab==='review'" (click)="setBuilderTab('review')">
+      <i class="fas fa-clipboard-check"></i> Review
+      <span class="eb-badge eb-badge-warn" *ngIf="reviewQueue.length">{{ reviewQueue.length }}</span>
+    </button>
+    <button type="button" class="eb-tab" [class.active]="builderTab==='final'" (click)="setBuilderTab('final')">
+      <i class="fas fa-book"></i> Final eBMR
+    </button>
+    <button type="button" class="eb-tab" [class.active]="builderTab==='final_html_bmr'" (click)="setBuilderTab('final_html_bmr')">
+      <i class="fas fa-industry"></i> Batch Manufacturing Record
+    </button>
+    <button type="button" class="eb-tab" [class.active]="builderTab==='final_html_bpr'" (click)="setBuilderTab('final_html_bpr')">
+      <i class="fas fa-box"></i> Batch Packing Record
+    </button>
+  </div>
+
+  <div class="eb-final-html-panel" *ngIf="builderTab==='final_html_bmr'">
+    <app-master-final-html-bmr [profile]="profile" recordKind="eBMR"></app-master-final-html-bmr>
+  </div>
+  <div class="eb-final-html-panel" *ngIf="builderTab==='final_html_bpr'">
+    <app-master-final-html-bmr [profile]="profile" recordKind="eBPR"></app-master-final-html-bmr>
+  </div>
+
+  <div class="eb-bcols" *ngIf="builderTab==='build' || builderTab==='checking' || builderTab==='review' || builderTab==='final'">
+    <!-- ===================== LEFT RAIL ===================== -->
+    <aside class="eb-left">
+      <div class="eb-rail-section">
+        <div class="eb-rail-head">Header</div>
+        <button class="eb-rail-item" [class.active]="selected.kind==='header'" (click)="selectHeader()">
+          <i class="fas fa-id-card"></i> Product Profile (Header)
+        </button>
+      </div>
+
+      <div class="eb-rail-section">
+        <div class="eb-rail-head">Static Pages</div>
+        <button
+          *ngFor="let p of staticPages"
+          class="eb-rail-item"
+          [class.active]="selected.kind==='static' && selected.staticKey===p.key"
+          (click)="selectStatic(p.key)"
+        >
+          <i [class]="p.icon"></i> {{ p.label }}
+        </button>
+      </div>
+
+      <div class="eb-rail-section">
+        <div class="eb-rail-head">
+          Stages &amp; Steps
+          <button class="eb-mini-btn" *ngIf="isBuildTab" (click)="addStage()" title="Add stage"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="eb-add-from" *ngIf="isBuildTab">
+          <select class="eb-select eb-mini-select" #stageSel (change)="addStageFromMaster(stageSel.value); stageSel.value=''">
+            <option value="">+ Add stage from master…</option>
+            <option *ngFor="let s of stageMaster" [value]="s.id">{{ s.stage_name }}</option>
+          </select>
+        </div>
+
+        <div *ngIf="!profile.stages.length" class="eb-rail-empty">No stages yet.</div>
+
+        <div class="eb-stage-block" *ngFor="let stage of profile.stages; let si = index">
+          <div class="eb-stage-row" [class.active]="selected.kind==='stage' && selected.stageIndex===si" (click)="selectStage(si)">
+            <span class="eb-seq">{{ si + 1 }}</span>
+            <span class="eb-stage-name">{{ stage.stage_name }}</span>
+            <span class="eb-stage-tools" *ngIf="isBuildTab">
+              <i class="fas fa-arrow-up" (click)="$event.stopPropagation(); moveStage(si,-1)"></i>
+              <i class="fas fa-arrow-down" (click)="$event.stopPropagation(); moveStage(si,1)"></i>
+              <i class="fas fa-plus" title="Add step" (click)="$event.stopPropagation(); addStep(si)"></i>
+              <i class="fas fa-trash danger" (click)="$event.stopPropagation(); removeStage(si)"></i>
+            </span>
+          </div>
+          <div class="eb-step-list">
+            <div
+              class="eb-step-row"
+              *ngFor="let step of stage.steps; let ti = index"
+              [class.active]="selected.kind==='step' && selected.stageIndex===si && selected.stepIndex===ti"
+              (click)="selectStep(si, ti)"
+            >
+              <i class="fas fa-circle eb-dot"></i>
+              <span class="eb-step-name">{{ step.step_name }}</span>
+              <span class="eb-step-tools" *ngIf="isBuildTab">
+                <i class="fas fa-arrow-up" (click)="$event.stopPropagation(); moveStep(si,ti,-1)"></i>
+                <i class="fas fa-arrow-down" (click)="$event.stopPropagation(); moveStep(si,ti,1)"></i>
+                <i class="fas fa-trash danger" (click)="$event.stopPropagation(); removeStep(si,ti)"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===================== CENTER ===================== -->
+    <main class="eb-center" [class.eb-center-fill]="selected.kind==='static' && (selected.staticKey==='safety' || selected.staticKey==='general_instructions')" [class.eb-readonly-panel]="panelReadOnly">
+      <div class="eb-mode-banner" *ngIf="isCheckingTab">
+        <i class="fas fa-user-check"></i> Checking — same layout as Build. Use <b>Check</b> / <b>Send back</b> on Pending Check steps.
+        <span class="eb-badge eb-badge-warn" *ngIf="checkingQueue.length">{{ checkingQueue.length }} pending</span>
+      </div>
+      <div class="eb-mode-banner" *ngIf="isReviewTab">
+        <i class="fas fa-clipboard-check"></i> Review — same layout as Build. Use <b>Review</b> / <b>Send back</b> on Pending Review steps.
+        <span class="eb-badge eb-badge-warn" *ngIf="reviewQueue.length">{{ reviewQueue.length }} pending</span>
+      </div>
+      <div class="eb-mode-banner eb-mode-banner-final" *ngIf="isFinalTab">
+        <i class="fas fa-book"></i> Final eBMR — read-only view of the complete master record.
+      </div>
+      <!-- travel / progress bar across stages -->
+      <div class="eb-progress" *ngIf="profile.stages.length">
+        <div class="eb-progress-track">
+          <div
+            class="eb-progress-node"
+            *ngFor="let stg of profile.stages; let i = index"
+            [class.active]="activeStageIndex === i"
+            [class.done]="activeStageIndex > -1 && i < activeStageIndex"
+            (click)="goStage(i)"
+            [title]="stg.stage_name"
+          >
+            <span class="eb-progress-dot">
+              <i class="fas fa-check" *ngIf="activeStageIndex > -1 && i < activeStageIndex"></i>
+              <span *ngIf="!(activeStageIndex > -1 && i < activeStageIndex)">{{ i + 1 }}</span>
+            </span>
+            <span class="eb-progress-label">{{ stg.stage_name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- per-stage instructions banner (shown on stage & step views) -->
+      <div class="eb-instr-banner" *ngIf="(selected.kind==='stage' || selected.kind==='step') && stageInstructions">
+        <i class="fas fa-circle-info"></i>
+        <div>
+          <div class="eb-instr-title">Stage instructions</div>
+          <div class="eb-instr-text">{{ stageInstructions }}</div>
+        </div>
+      </div>
+
+      <ng-container [ngSwitch]="selected.kind">
+        <!-- HEADER -->
+        <div *ngSwitchCase="'header'" class="eb-header-panel">
+          <div class="eb-header-panel-top">
+            <div>
+              <div class="eb-center-title"><i class="fas fa-id-card"></i> Product Profile (Header)</div>
+              <p class="eb-hint eb-header-panel-sub" *ngIf="isProductSpecific">
+                Product-specific BMR — core fields are loaded from Product Master and locked.
+              </p>
+              <p class="eb-hint eb-header-panel-sub" *ngIf="!isProductSpecific">
+                {{ genericBmrShort }}. Use <b>Bind Products</b> to map this draft to one or more products after approval.
+              </p>
+            </div>
+            <div class="eb-header-panel-actions">
+              <span class="eb-badge" [ngClass]="isProductSpecific ? 'eb-badge-type' : 'eb-badge-muted'">
+                {{ bmrForLabel(profile.header.bmr_for) }}
+              </span>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button"
+                      *ngIf="isProductSpecific"
+                      (click)="syncProductHeaderFromMaster(true)"
+                      [disabled]="headerLoading">
+                <i class="fas" [ngClass]="headerLoading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+                Refresh from Master
+              </button>
+            </div>
+          </div>
+
+          <div class="eb-header-section">
+            <div class="eb-header-section-title"><i class="fas fa-barcode"></i> BMR &amp; Product Identity</div>
+            <div class="eb-header-grid">
+              <div class="eb-header-field" [class.locked]="headerFieldLocked">
+                <label>Product Code</label>
+                <input class="eb-input" [(ngModel)]="profile.header.product_code" [readonly]="headerFieldLocked" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked">
+                <label>Product Name</label>
+                <input class="eb-input" [(ngModel)]="profile.header.product_name" [readonly]="headerFieldLocked" />
+              </div>
+              <div class="eb-header-field locked">
+                <label>Product For</label>
+                <input class="eb-input" [(ngModel)]="profile.header.product_for" readonly />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked">
+                <label>Generic Name <span class="eb-hint">(INN / drug name)</span></label>
+                <input class="eb-input" [(ngModel)]="profile.header.generic_name" [readonly]="headerFieldLocked" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked">
+                <label>Product Strength</label>
+                <input class="eb-input" [(ngModel)]="profile.header.product_strength" [readonly]="headerFieldLocked" />
+              </div>
+              <div class="eb-header-field locked">
+                <label>BMR No.</label>
+                <input class="eb-input eb-input-strong" [(ngModel)]="profile.header.bmr_no" readonly />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked">
+                <label>MFR No.</label>
+                <input class="eb-input" [(ngModel)]="profile.header.mfr_no" [readonly]="headerFieldLocked" />
+              </div>
+              <div class="eb-header-field locked" *ngIf="profile.header.client_name">
+                <label>Client Name</label>
+                <input class="eb-input" [(ngModel)]="profile.header.client_name" readonly />
+              </div>
+            </div>
+          </div>
+
+          <div class="eb-header-section">
+            <div class="eb-header-section-title"><i class="fas fa-flask"></i> Composition &amp; Batch</div>
+            <div class="eb-header-grid">
+              <div class="eb-header-field span-2">
+                <label>Label Claim / Composition</label>
+                <input class="eb-input" [(ngModel)]="profile.header.label_claim" [readonly]="headerFieldLocked && profile.header.label_claim" />
+              </div>
+              <div class="eb-header-field">
+                <label>Batch Size</label>
+                <input class="eb-input" [(ngModel)]="profile.header.batch_size" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.batch_size_uom">
+                <label>Batch Size UOM</label>
+                <input class="eb-input" [(ngModel)]="profile.header.batch_size_uom" [readonly]="headerFieldLocked && !!profile.header.batch_size_uom" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.pack_size">
+                <label>Pack Size</label>
+                <input class="eb-input" [(ngModel)]="profile.header.pack_size" [readonly]="headerFieldLocked && !!profile.header.pack_size" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.shelf_life">
+                <label>Shelf Life</label>
+                <input class="eb-input" [(ngModel)]="profile.header.shelf_life" [readonly]="headerFieldLocked && !!profile.header.shelf_life" />
+              </div>
+            </div>
+          </div>
+
+          <div class="eb-header-section">
+            <div class="eb-header-section-title"><i class="fas fa-clipboard-list"></i> Regulatory &amp; Storage</div>
+            <div class="eb-header-grid">
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.storage_condition">
+                <label>Storage Condition</label>
+                <input class="eb-input" [(ngModel)]="profile.header.storage_condition" [readonly]="headerFieldLocked && !!profile.header.storage_condition" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.therapeutic_category">
+                <label>Therapeutic Category</label>
+                <input class="eb-input" [(ngModel)]="profile.header.therapeutic_category" [readonly]="headerFieldLocked && !!profile.header.therapeutic_category" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.market">
+                <label>Market</label>
+                <input class="eb-input" [(ngModel)]="profile.header.market" [readonly]="headerFieldLocked && !!profile.header.market" />
+              </div>
+              <div class="eb-header-field" [class.locked]="headerFieldLocked && profile.header.mfg_license">
+                <label>Mfg. License No.</label>
+                <input class="eb-input" [(ngModel)]="profile.header.mfg_license" [readonly]="headerFieldLocked && !!profile.header.mfg_license" />
+              </div>
+              <div class="eb-header-field">
+                <label>Mfg. Site</label>
+                <input class="eb-input" [(ngModel)]="profile.header.mfg_site" />
+              </div>
+              <div class="eb-header-field">
+                <label>Specification Ref.</label>
+                <input class="eb-input" [(ngModel)]="profile.header.specification_ref" />
+              </div>
+            </div>
+          </div>
+
+          <div class="eb-header-foot" *ngIf="headerSyncedAt && isProductSpecific">
+            <i class="fas fa-circle-check"></i> Last synced from Product Master: {{ headerSyncedAt }}
+          </div>
+        </div>
+
+        <!-- STATIC PAGES -->
+        <div *ngSwitchCase="'static'" [class.eb-static-fill]="selected.staticKey==='safety' || selected.staticKey==='general_instructions'">
+          <div class="eb-center-title"><i class="fas fa-file-lines"></i> {{ staticLabel(selected.staticKey) }}</div>
+
+          <!-- Product Approval Page — structured BMR layout -->
+          <ng-container *ngIf="selected.staticKey==='product_approval'">
+            <div class="pap-toolbar">
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="syncProductApprovalFromMaster(true)">
+                <i class="fas fa-rotate"></i> Refresh from Product Master
+              </button>
+              <span class="eb-hint"><b>Label claim</b> &amp; <b>shelf life</b> load from Product Master. All other fields are filled during <b>batch execution</b>.</span>
+            </div>
+            <app-product-approval-page
+              [page]="profile.static.product_approval"
+              mode="master">
+            </app-product-approval-page>
+          </ng-container>
+
+          <!-- General Instructions — hierarchical points (1.0 / 1.1.0 / 1.1.1.0) -->
+          <ng-container *ngIf="selected.staticKey==='general_instructions'">
+            <div class="eb-equip-toolbar">
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="loadGeneralInstructionsFromMaster(true)" [disabled]="generalInstructionsMasterLoading">
+                <i class="fas" [ngClass]="generalInstructionsMasterLoading ? 'fa-spinner fa-spin' : 'fa-download'"></i> Load from checklist master
+              </button>
+              <span class="eb-hint">Master → Checklist (BMR) · heading <b>General Instructions</b> — or add points manually below</span>
+            </div>
+            <app-general-instructions-page
+              class="eb-safety-fill"
+              [content]="profile.static.general_instructions"
+              [editable]="true"
+              [expanded]="true"
+              [showSave]="true"
+              [saving]="saving"
+              (save)="saveGeneralInstructions()">
+            </app-general-instructions-page>
+          </ng-container>
+
+          <!-- Safety & Precautions — numbered points -->
+          <ng-container *ngIf="selected.staticKey==='safety'">
+            <app-safety-precautions
+              class="eb-safety-fill"
+              [content]="profile.static.safety"
+              [editable]="true"
+              [expanded]="true"
+              [showSave]="true"
+              [saving]="saving"
+              (save)="saveSafetyPrecautions()">
+            </app-safety-precautions>
+          </ng-container>
+
+          <!-- dispensing — read-only from Store / Checklist Master (warehouse dispensing) -->
+          <ng-container *ngIf="selected.staticKey==='dispensing'">
+            <p class="eb-hint eb-uf-lock-note" *ngIf="!unitFormulaProductCode()">
+              <i class="fas fa-lock"></i>
+              <span *ngIf="isProductSpecific">Set the product on this BMR header before loading dispensing checklist.</span>
+              <span *ngIf="!isProductSpecific">Bind a product to this BMR first (<b>Bind Products</b>), then load dispensing from stores.</span>
+            </p>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaRequiresProductPick">
+              <label class="eb-hint">Bound product</label>
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="unitFormulaBoundProductPick" (ngModelChange)="onUnitFormulaBoundProductChange()">
+                <option *ngFor="let p of unitFormulaBoundProducts" [ngValue]="p.product_code">
+                  {{ p.product_code }} · {{ p.product_name || 'Product' }}
+                </option>
+              </select>
+            </div>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaProductCode()">
+              <span class="eb-badge eb-badge-type">
+                <i class="fas fa-link"></i> {{ unitFormulaProductCode() }}
+              </span>
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="loadStoreDispensingFromMaster(true)" [disabled]="storeDispensingLoading">
+                <i class="fas" [ngClass]="storeDispensingLoading ? 'fa-spinner fa-spin' : 'fa-download'"></i> Load from stores
+              </button>
+            </div>
+
+            <p class="eb-hint eb-uf-lock-note" *ngIf="dispensingPage.sections?.length">
+              <i class="fas fa-lock"></i> Loaded from Store Dispensing / Checklist Master ({{ profile.static.dispensing_meta?.product_code || unitFormulaProductCode() }}). Read-only — reload to replace.
+            </p>
+
+            <div *ngIf="dispensingMaterials.length" class="eb-disp-materials-block">
+              <h4 class="eb-disp-section-title">Materials — Dispensing in Production</h4>
+              <p class="eb-hint">From unit formula MFR {{ profile.static.dispensing_meta?.mfr_no || profile.static.unit_formula_meta?.mfr_no || '—' }} (stage: Dispensing in Production)</p>
+              <table class="eb-table eb-mini-table eb-uf-readonly">
+                <thead><tr><th>Sr.</th><th>Material</th><th>Code</th><th>Std Qty</th><th>UOM</th><th>Stage</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let row of dispensingMaterials; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td><span class="eb-equip-read">{{ row.material || '—' }}</span></td>
+                    <td><span class="eb-equip-read">{{ row.material_code || '—' }}</span></td>
+                    <td><span class="eb-equip-read">{{ row.qty || '—' }}</span></td>
+                    <td><span class="eb-equip-read">{{ row.uom || '—' }}</span></td>
+                    <td><span class="eb-equip-read">{{ row.stage || 'Dispensing in Production' }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <ng-container *ngFor="let section of dispensingPage.sections">
+              <h4 class="eb-disp-section-title">{{ section.heading }}</h4>
+              <table class="eb-table eb-mini-table eb-uf-readonly eb-disp-table">
+                <thead>
+                  <tr>
+                    <th style="width:3rem">Sr.</th>
+                    <th>{{ isGeneralInstructionSection(section) ? 'Instruction' : 'Checkpoint' }}</th>
+                    <th *ngIf="!isGeneralInstructionSection(section)">Description</th>
+                    <th *ngIf="!isGeneralInstructionSection(section)">Evaluation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of section.rows; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td><span class="eb-equip-read">{{ row.check_point || '—' }}</span></td>
+                    <td *ngIf="!isGeneralInstructionSection(section)"><span class="eb-equip-read">{{ row.description || '—' }}</span></td>
+                    <td *ngIf="!isGeneralInstructionSection(section)"><span class="eb-equip-read">{{ dispensingEvalLabel(row.evaluation_parameter) }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </ng-container>
+
+            <p class="eb-empty" *ngIf="!dispensingPage.sections?.length && !dispensingMaterials.length">
+              Load <b>Unit Formula</b> (materials tagged Dispensing in Production) and/or <b>Load from stores</b> for warehouse dispensing checklists.
+            </p>
+          </ng-container>
+
+          <!-- equipment selection table -->
+          <ng-container *ngIf="selected.staticKey==='equipment_selection'">
+            <div class="eb-equip-toolbar">
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="equipmentPickCode" [disabled]="equipmentMasterLoading" title="IT / ID Selection">
+                <option value="">— IT / ID Selection (Process / Production) —</option>
+                <option *ngFor="let eq of availableEquipmentForPick()" [ngValue]="eq.equipment_code">
+                  {{ equipmentLabel(eq) }}
+                </option>
+              </select>
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="addEquipmentFromPick()" [disabled]="!equipmentPickCode || equipmentMasterLoading">
+                <i class="fas fa-plus"></i> Add to table
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="loadEquipmentMaster(true)" [disabled]="equipmentMasterLoading">
+                <i class="fas" [ngClass]="equipmentMasterLoading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i> Refresh
+              </button>
+              <span class="eb-hint">{{ equipmentMaster.length }} Process / Production · {{ profile.static.equipment_selection?.length || 0 }} in table</span>
+            </div>
+            <p class="eb-hint" *ngIf="!equipmentMaster.length && !equipmentMasterLoading">
+              No Process / Production equipment found. Check <b>Master → Equipment</b> department or type, then refresh.
+            </p>
+
+            <table class="eb-table eb-mini-table eb-equip-table">
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>IT / ID</th>
+                  <th>Capacity</th>
+                  <th>UOM</th>
+                  <th>Calibration Applicable</th>
+                  <th>Purpose</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of profile.static.equipment_selection; let i = index">
+                  <td><span class="eb-equip-read">{{ row.name || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.id_no || row.equipment_code || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.capacity || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.uom || '—' }}</span></td>
+                  <td>
+                    <span class="eb-badge" [ngClass]="row.calibration_applicable === 'Applicable' ? 'eb-badge-ok' : 'eb-badge-muted'">
+                      {{ row.calibration_applicable || 'Not Applicable' }}
+                    </span>
+                  </td>
+                  <td><input class="eb-input" [(ngModel)]="row.purpose" placeholder="Purpose / use" /></td>
+                  <td><button class="eb-icon-btn danger" type="button" (click)="removeStaticRow('equipment_selection', i)"><i class="fas fa-times"></i></button></td>
+                </tr>
+                <tr *ngIf="!profile.static.equipment_selection?.length">
+                  <td colspan="7" class="eb-empty">Select equipment by IT / ID from dropdown and click <b>Add to table</b>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </ng-container>
+
+          <!-- unit formula table — read-only from Unit Formula Master for bound product -->
+          <ng-container *ngIf="selected.staticKey==='unit_formula'">
+            <p class="eb-hint eb-uf-lock-note" *ngIf="!unitFormulaProductCode()">
+              <i class="fas fa-lock"></i>
+              <span *ngIf="isProductSpecific">Set the product on this BMR header before loading unit formula.</span>
+              <span *ngIf="!isProductSpecific">Bind a product to this BMR first (<b>Bind Products</b>), then load unit formula for that product only.</span>
+            </p>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaRequiresProductPick">
+              <label class="eb-hint">Bound product</label>
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="unitFormulaBoundProductPick" (ngModelChange)="onUnitFormulaBoundProductChange()">
+                <option *ngFor="let p of unitFormulaBoundProducts" [ngValue]="p.product_code">
+                  {{ p.product_code }} · {{ p.product_name || 'Product' }}
+                </option>
+              </select>
+            </div>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaProductCode()">
+              <span class="eb-badge eb-badge-type" *ngIf="unitFormulaProductCode()">
+                <i class="fas fa-link"></i> {{ unitFormulaProductCode() }}
+              </span>
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="unitFormulaPickId" (ngModelChange)="onUnitFormulaPickChange()" [disabled]="unitFormulaMasterLoading">
+                <option [ngValue]="null">— Select Unit Formula (Master) —</option>
+                <option *ngFor="let f of unitFormulaMasterList" [ngValue]="f.id">{{ unitFormulaLabel(f) }}</option>
+              </select>
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="loadUnitFormulaFromMaster()" [disabled]="!unitFormulaPickId || unitFormulaRowsLoading">
+                <i class="fas fa-download"></i> Load from master
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="loadUnitFormulaMasterList(true)" [disabled]="unitFormulaMasterLoading">
+                <i class="fas" [ngClass]="unitFormulaMasterLoading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i> Refresh
+              </button>
+            </div>
+
+            <p class="eb-hint" *ngIf="unitFormulaProductCode() && !unitFormulaMasterList.length && !unitFormulaMasterLoading">
+              No approved unit formula for product <b>{{ unitFormulaProductCode() }}</b>. Create and approve in <b>Production → Unit Formula</b>.
+            </p>
+            <p class="eb-hint eb-uf-lock-note" *ngIf="profile.static.unit_formula?.length">
+              <i class="fas fa-lock"></i> Loaded from Unit Formula Master (MFR {{ profile.static.unit_formula_meta?.mfr_no || '—' }} · {{ profile.static.unit_formula_meta?.product_code || unitFormulaProductCode() }}). Lines are read-only — reload from master to replace.
+            </p>
+
+            <table class="eb-table eb-mini-table eb-equip-table eb-uf-readonly">
+              <thead><tr><th>Material</th><th>Code</th><th>Qty / unit</th><th>UOM</th><th>Stage</th><th>Function</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let row of profile.static.unit_formula" [class.eb-uf-disp-row]="isDispensingMaterialRow(row)">
+                  <td><span class="eb-equip-read">{{ row.material || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.material_code || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.qty || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.uom || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.stage || '—' }}</span></td>
+                  <td>
+                    <span class="eb-equip-read">{{ row.function || '—' }}</span>
+                    <span class="eb-badge eb-badge-type eb-uf-disp-badge" *ngIf="isDispensingMaterialRow(row)">Dispensing</span>
+                  </td>
+                </tr>
+                <tr *ngIf="!profile.static.unit_formula?.length">
+                  <td colspan="6" class="eb-empty">Select unit formula and click <b>Load from master</b>. Lines cannot be edited or deleted.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="eb-hint" *ngIf="profile.static.unit_formula?.length">
+              Materials with stage <b>Dispensing in Production</b> are copied to <b>Dispensing in Production</b> for batch execution.
+            </p>
+          </ng-container>
+
+          <!-- product specification — read-only from Specification Master for bound product -->
+          <ng-container *ngIf="selected.staticKey==='product_spec'">
+            <p class="eb-hint eb-uf-lock-note" *ngIf="!unitFormulaProductCode()">
+              <i class="fas fa-lock"></i>
+              <span *ngIf="isProductSpecific">Set the product on this BMR header before loading specification.</span>
+              <span *ngIf="!isProductSpecific">Bind a product to this BMR first (<b>Bind Products</b>), then load specification for that product only.</span>
+            </p>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaRequiresProductPick">
+              <label class="eb-hint">Bound product</label>
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="unitFormulaBoundProductPick" (ngModelChange)="onUnitFormulaBoundProductChange()">
+                <option *ngFor="let p of unitFormulaBoundProducts" [ngValue]="p.product_code">
+                  {{ p.product_code }} · {{ p.product_name || 'Product' }}
+                </option>
+              </select>
+            </div>
+
+            <div class="eb-equip-toolbar" *ngIf="unitFormulaProductCode()">
+              <span class="eb-badge eb-badge-type">
+                <i class="fas fa-link"></i> {{ unitFormulaProductCode() }}
+              </span>
+              <select class="eb-select eb-equip-dropdown" [(ngModel)]="productSpecPickId" (ngModelChange)="onProductSpecPickChange()" [disabled]="productSpecMasterLoading">
+                <option [ngValue]="null">— Select Product Specification (Master) —</option>
+                <option *ngFor="let s of productSpecMasterList" [ngValue]="s.id">{{ productSpecLabel(s) }}</option>
+              </select>
+              <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="loadProductSpecFromMaster()" [disabled]="!productSpecPickId || productSpecRowsLoading">
+                <i class="fas fa-download"></i> Load from master
+              </button>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="loadProductSpecMasterList(true)" [disabled]="productSpecMasterLoading">
+                <i class="fas" [ngClass]="productSpecMasterLoading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i> Refresh
+              </button>
+            </div>
+
+            <p class="eb-hint" *ngIf="unitFormulaProductCode() && !productSpecMasterList.length && !productSpecMasterLoading">
+              No approved finished-product specification for <b>{{ unitFormulaProductCode() }}</b>. Create and approve in <b>QC → Specifications → Finish Product</b>.
+            </p>
+            <p class="eb-hint eb-uf-lock-note" *ngIf="profile.static.product_spec?.length">
+              <i class="fas fa-lock"></i> Loaded from Specification Master ({{ profile.static.product_spec_meta?.specification_no || '—' }} · {{ profile.static.product_spec_meta?.product_code || unitFormulaProductCode() }}). Lines are read-only — reload from master to replace.
+            </p>
+
+            <table class="eb-table eb-mini-table eb-equip-table eb-uf-readonly">
+              <thead><tr><th>Parameter</th><th>Specification</th><th>Method</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let row of profile.static.product_spec">
+                  <td><span class="eb-equip-read">{{ row.parameter || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.specification || '—' }}</span></td>
+                  <td><span class="eb-equip-read">{{ row.method || '—' }}</span></td>
+                </tr>
+                <tr *ngIf="!profile.static.product_spec?.length">
+                  <td colspan="3" class="eb-empty">Select specification and click <b>Load from master</b>. Lines cannot be edited or deleted.</td>
+                </tr>
+              </tbody>
+            </table>
+          </ng-container>
+        </div>
+
+        <!-- STAGE -->
+        <div *ngSwitchCase="'stage'">
+          <div class="eb-center-title">
+            <i class="fas fa-layer-group"></i> Stage configuration
+            <span class="eb-badge eb-badge-ok" *ngIf="currentStage.frozen">Frozen</span>
+          </div>
+          <div class="eb-grid">
+            <div class="eb-field eb-col-full"><span class="eb-field-label">Stage name</span><input class="eb-input" [(ngModel)]="currentStage.stage_name" [disabled]="panelReadOnly || !!currentStage.frozen" /></div>
+            <div class="eb-field"><span class="eb-field-label">Sequence</span><input class="eb-input" type="number" [(ngModel)]="currentStage.seq_no" [disabled]="panelReadOnly || !!currentStage.frozen" /></div>
+          </div>
+
+          <div class="eb-section-title">Stage Instructions <span class="eb-hint">(shown on top of this stage &amp; all its steps)</span></div>
+          <textarea class="eb-textarea" [(ngModel)]="currentStage.config.instructions" [disabled]="panelReadOnly || !!currentStage.frozen"
+            placeholder="General instructions / cautions that apply across this stage (gowning, environment, sequence to follow)…"></textarea>
+
+          <div class="eb-section-title">Stage Electronic Signature &amp; Workflow</div>
+          <div class="mf-toggle-grid">
+            <label class="mf-toggle on"><input type="checkbox" [(ngModel)]="currentStage.config.esign.checking_required" disabled /> Checking (default)</label>
+            <label class="mf-toggle" [class.on]="currentStage.config.esign.approval_required"><input type="checkbox" [(ngModel)]="currentStage.config.esign.approval_required" [disabled]="panelReadOnly || !!currentStage.frozen" /> Production Approval</label>
+            <label class="mf-toggle" [class.on]="currentStage.config.esign.qa_check_required"><input type="checkbox" [(ngModel)]="currentStage.config.esign.qa_check_required" [disabled]="panelReadOnly || !!currentStage.frozen" /> QA Checking</label>
+            <label class="mf-toggle" [class.on]="currentStage.config.esign.qa_approval_required"><input type="checkbox" [(ngModel)]="currentStage.config.esign.qa_approval_required" [disabled]="panelReadOnly || !!currentStage.frozen" /> QA Approval</label>
+            <label class="mf-toggle" [class.on]="currentStage.config.esign.line_clearance_ipqa"><input type="checkbox" [(ngModel)]="currentStage.config.esign.line_clearance_ipqa" [disabled]="panelReadOnly || !!currentStage.frozen" /> Line Clearance → IPQA (QA Dept.)</label>
+          </div>
+
+          <div class="eb-section-title" style="margin-top:1rem">
+            Steps in this stage
+            <button class="eb-mini-btn" type="button" *ngIf="isBuildTab && !currentStage.frozen" (click)="addStep(selected.stageIndex!)" title="Add step">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <app-stage-step-index-table
+            [rows]="stageStepRows(selected.stageIndex!)"
+            [mode]="stageTableMode"
+            [highlightStepIndex]="null"
+            (configure)="onStageStepConfigure($event)"
+            (view)="onStageStepView($event)"
+            (edit)="onStageStepEdit($event)"
+            (check)="onStageStepCheck($event)"
+            (review)="onStageStepReview($event)"
+            (sendBack)="onStageStepSendBack($event)"
+          ></app-stage-step-index-table>
+
+          <div class="eb-stage-freeze-bar" *ngIf="isBuildTab">
+            <button
+              type="button"
+              class="eb-btn eb-btn-solid"
+              (click)="freezeCurrentStage()"
+              [disabled]="saving || !!currentStage.frozen || !canFreezeCurrentStage()"
+            >
+              <i class="fas fa-lock"></i>
+              {{ currentStage.frozen ? 'Stage Frozen' : 'Save &amp; Freeze Stage' }}
+            </button>
+            <span class="eb-hint" *ngIf="!currentStage.frozen && !canFreezeCurrentStage()">
+              All steps must be Approved before freezing.
+            </span>
+          </div>
+
+          <div *ngIf="signatureFocusStep">
+            <div class="eb-section-title">Digital signatures</div>
+            <app-cfr-signature-block
+              title="Step electronic signatures"
+              [documentRef]="(currentStage.stage_name || '') + ' / ' + (signatureFocusStep.step_name || '')"
+              [signers]="currentStepSigners()"
+            ></app-cfr-signature-block>
+          </div>
+        </div>
+
+        <!-- STEP -->
+        <div *ngSwitchCase="'step'">
+          <div class="eb-center-title">
+            <i class="fas fa-list-check"></i> Step configuration
+            <span class="eb-badge" [ngClass]="currentStep.workflow_status==='Approved' || currentStep.workflow_status==='Frozen' ? 'eb-badge-ok' : (currentStep.workflow_status==='Correction Required' ? 'eb-badge-crit' : 'eb-badge-warn')">
+              {{ currentStep.workflow_status || 'Draft' }}
+            </span>
+            <span class="eb-badge eb-badge-muted" *ngIf="stepViewOnly">View only</span>
+          </div>
+          <p class="eb-hint" *ngIf="currentStep.correction_remark">
+            <i class="fas fa-undo"></i> Correction: {{ currentStep.correction_remark }}
+            <span *ngIf="currentStep.sent_back_from_role"> ({{ currentStep.sent_back_from_role }})</span>
+          </p>
+          <div class="eb-grid">
+            <div class="eb-field eb-col-full">
+              <span class="eb-field-label">Step name</span>
+              <input class="eb-input" [(ngModel)]="currentStep.step_name" [disabled]="stepLockedForEdit()" />
+            </div>
+          </div>
+
+          <fieldset [disabled]="stepLockedForEdit()" style="border:0;padding:0;margin:0">
+
+          <div class="eb-section-title">Master forms <span class="eb-hint">— tick to enable &amp; bind from Form Masters</span></div>
+          <div class="mf-toggle-grid">
+            <label class="mf-toggle" *ngFor="let def of masterFormDefs" [class.on]="masterFormEnabled(def.key)">
+              <input type="checkbox" [checked]="masterFormEnabled(def.key)" (change)="toggleMasterForm(def.key, $any($event.target).checked)" />
+              <i [class]="def.icon"></i>
+              <span>{{ def.label }}</span>
+            </label>
+          </div>
+
+          <ng-container *ngFor="let def of enabledMasterFormDefs()">
+            <div class="mf-panel">
+              <div class="mf-panel-head">
+                <i [class]="def.icon"></i>
+                <span>{{ def.label }}</span>
+                <span class="eb-hint">{{ def.hint }}</span>
+              </div>
+
+              <!-- Procedure -->
+              <ng-container *ngIf="def.key === 'procedure'">
+                <div class="eb-grid" style="margin-bottom:10px">
+                  <div class="eb-field eb-col-2">
+                    <span class="eb-field-label">Load from Procedure master</span>
+                    <select class="eb-select" [(ngModel)]="currentStep.config.procedure_master_id" (ngModelChange)="loadProcedureFromMaster()">
+                      <option [ngValue]="0">— Custom (edit below) —</option>
+                      <option *ngFor="let p of procedureMaster" [ngValue]="p.id">{{ p.procedure_code }} — {{ p.title }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="proc-editor-head">
+                  <span class="eb-hint">Customise paragraphs for this step</span>
+                  <div class="proc-add-btns">
+                    <button class="eb-mini-btn" type="button" (click)="addStepProcedureParagraph(1)"><i class="fas fa-plus"></i> 1.0</button>
+                    <button class="eb-mini-btn" type="button" (click)="addStepProcedureParagraph(2)"><i class="fas fa-plus"></i> 1.1.0</button>
+                    <button class="eb-mini-btn" type="button" (click)="addStepProcedureParagraph(3)"><i class="fas fa-plus"></i> 1.1.1.0</button>
+                  </div>
+                </div>
+                <div class="proc-rows proc-rows-rich">
+                  <div class="proc-row proc-row-rich" *ngFor="let p of currentStep.config.procedure_paragraphs; let i = index" [class]="'proc-lv-' + p.level">
+                    <span class="proc-num">{{ numberedStepProcedure[i]?.number }}</span>
+                    <select class="eb-select proc-lv" [(ngModel)]="p.level" (ngModelChange)="syncStepProcedureText()">
+                      <option *ngFor="let o of procedureLevelOptions" [ngValue]="o.value">{{ o.label }}</option>
+                    </select>
+                    <div class="proc-editor-cell">
+                      <app-procedure-draft-editor [(ngModel)]="p.text" (ngModelChange)="syncStepProcedureText()" [minHeight]="'130px'"></app-procedure-draft-editor>
+                    </div>
+                    <div class="proc-row-actions">
+                      <button class="eb-icon-btn" type="button" (click)="moveStepProcedureParagraph(i, -1)" [disabled]="i===0"><i class="fas fa-arrow-up"></i></button>
+                      <button class="eb-icon-btn" type="button" (click)="moveStepProcedureParagraph(i, 1)" [disabled]="i===currentStep.config.procedure_paragraphs.length-1"><i class="fas fa-arrow-down"></i></button>
+                      <button class="eb-icon-btn danger" type="button" (click)="removeStepProcedureParagraph(i)"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                </div>
+                <pre class="proc-preview-text" *ngIf="currentStep.config.procedure">{{ currentStep.config.procedure }}</pre>
+              </ng-container>
+
+              <!-- Dynamic table (yield / weighing) -->
+              <ng-container *ngIf="isDynamicTableForm(def.key)">
+                <div class="eb-grid" style="margin-bottom:10px">
+                  <div class="eb-field eb-col-2">
+                    <span class="eb-field-label">Load from master</span>
+                    <select class="eb-select" [ngModel]="stepFormTableMasterId(def.key)" (ngModelChange)="setStepFormTableMasterId(def.key, $event)">
+                      <option [ngValue]="0">— Custom (edit below) —</option>
+                      <option *ngFor="let t of stepFormTableMasterList(def.key)" [ngValue]="t.id">{{ t.table_code }} — {{ t.title }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="dtm-editor-toolbar">
+                  <span class="eb-hint">Customise table for this step</span>
+                  <div class="dtm-toolbar-btns">
+                    <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="addStepFormTableColumn(def.key)"><i class="fas fa-columns"></i> Add Column</button>
+                    <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="addStepFormTableRow(def.key)"><i class="fas fa-plus"></i> Add Row</button>
+                  </div>
+                </div>
+                <div class="dtm-scroll">
+                  <table class="eb-table eb-mini-table dtm-grid">
+                    <thead>
+                      <tr>
+                        <th class="dtm-row-num">#</th>
+                        <th *ngFor="let col of stepFormTable(def.key).columns" class="dtm-col-head">
+                          <div class="dtm-col-head-inner">
+                            <input class="eb-input dtm-col-label" [(ngModel)]="col.label" placeholder="Column label" />
+                            <select class="eb-select dtm-col-type" [(ngModel)]="col.col_type">
+                              <option *ngFor="let t of tableColTypes" [value]="t.value">{{ t.label }}</option>
+                            </select>
+                            <button class="eb-icon-btn danger" type="button" (click)="removeStepFormTableColumn(def.key, col.key)"><i class="fas fa-times"></i></button>
+                          </div>
+                        </th>
+                        <th class="dtm-row-act"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of stepFormTable(def.key).rows; let ri = index">
+                        <td class="dtm-row-num">{{ ri + 1 }}</td>
+                        <td *ngFor="let col of stepFormTable(def.key).columns">
+                          <input class="eb-input" [(ngModel)]="row[col.key]" [type]="col.col_type === 'number' ? 'number' : 'text'" />
+                        </td>
+                        <td class="dtm-row-act">
+                          <button class="eb-icon-btn danger" type="button" (click)="removeStepFormTableRow(def.key, ri)"><i class="fas fa-trash"></i></button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </ng-container>
+
+              <!-- Equipment (from saved Equipment Selection page) -->
+              <ng-container *ngIf="def.key === 'equipment'">
+                <p class="eb-hint" *ngIf="!savedEquipmentSelectionPool().length">
+                  No equipment saved yet. Open <b>Equipment Selection</b> in the left rail, add equipment from master, save the profile, then return here.
+                </p>
+                <div class="eb-equip-toolbar" *ngIf="savedEquipmentSelectionPool().length">
+                  <select class="eb-select eb-equip-dropdown" [(ngModel)]="stepEquipmentPickCode" title="IT / ID Selection">
+                    <option value="">— IT / ID Selection (from saved equipment) —</option>
+                    <option *ngFor="let eq of availableStepEquipmentForPick()" [ngValue]="eq.equipment_code || eq.id_no">
+                      {{ equipmentSelectionRowLabel(eq) }}
+                    </option>
+                  </select>
+                  <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="addStepEquipmentFromPick()" [disabled]="!stepEquipmentPickCode">
+                    <i class="fas fa-plus"></i> Add to step
+                  </button>
+                  <span class="eb-hint">{{ savedEquipmentSelectionPool().length }} saved · {{ currentStep.config.equipment?.length || 0 }} on this step</span>
+                </div>
+                <table class="eb-table eb-mini-table" *ngIf="currentStep.config.equipment.length">
+                  <thead>
+                    <tr>
+                      <th>Equipment</th>
+                      <th>IT / ID</th>
+                      <th>Capacity</th>
+                      <th>UOM</th>
+                      <th>Calibration Applicable</th>
+                      <th>Make</th>
+                      <th style="width:40px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let e of currentStep.config.equipment; let i = index">
+                      <td><span class="eb-equip-read">{{ e.name || '—' }}</span></td>
+                      <td><span class="eb-equip-read">{{ e.id_no || e.equipment_code || '—' }}</span></td>
+                      <td><span class="eb-equip-read">{{ e.capacity || '—' }}</span></td>
+                      <td><span class="eb-equip-read">{{ e.uom || '—' }}</span></td>
+                      <td>
+                        <span class="eb-badge" [ngClass]="(e.calibration_applicable || e.calibration_required) === 'Applicable' ? 'eb-badge-ok' : 'eb-badge-muted'">
+                          {{ e.calibration_applicable || e.calibration_required || 'Not Applicable' }}
+                        </span>
+                      </td>
+                      <td><span class="eb-equip-read">{{ e.make || '—' }}</span></td>
+                      <td><button class="eb-icon-btn danger" type="button" (click)="removeEquipment(i)"><i class="fas fa-times"></i></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="eb-hint" *ngIf="savedEquipmentSelectionPool().length && !currentStep.config.equipment.length">
+                  Select equipment and IT / ID applicable to this step and click <b>Add to step</b>.
+                </p>
+              </ng-container>
+
+              <!-- Checkpoint / IPC / IPQC lists -->
+              <div class="eb-chiplist" *ngIf="def.key !== 'procedure' && def.key !== 'equipment' && !isDynamicTableForm(def.key)">
+                <label class="eb-chip" *ngFor="let c of masterListFor(def)" [class.on]="isSelected(currentStep.config[def.bindKey], c.id)">
+                  <input type="checkbox" [checked]="isSelected(currentStep.config[def.bindKey], c.id)" (change)="toggleSelection(currentStep.config[def.bindKey], c.id)" />
+                  {{ c[def.labelField] }}
+                  <span class="eb-hint" *ngIf="def.key === 'ipqc'">({{ c.spec_name }})</span>
+                  <span class="eb-hint" *ngIf="def.key === 'inprocess_checks' && c.frequency"> · {{ c.frequency }}</span>
+                </label>
+                <span *ngIf="!masterListFor(def).length" class="eb-hint">No items in master for this dosage form. Add them in <b>Form Masters</b>.</span>
+              </div>
+
+              <!-- In-process check form: specification + role + frequency for each selected check -->
+              <div class="eb-ipc-setup" *ngIf="def.key === 'inprocess_checks' && selectedInprocessChecks().length">
+                <div class="eb-section-title" style="margin-top:0.55rem;font-size:0.82rem">
+                  Configured in-process check forms
+                  <span class="eb-hint">— set role (Production / QA) and frequency for execution</span>
+                </div>
+                <div class="eb-ipc-card" *ngFor="let c of selectedInprocessChecks()">
+                  <div class="eb-ipc-card-head">
+                    <div>
+                      <span class="eb-strong">{{ c.check_name }}</span>
+                      <span class="eb-badge eb-badge-muted">{{ c.check_code }}</span>
+                      <span class="eb-badge eb-badge-type">{{ ipcTypeLabel(c.check_type) }}</span>
+                      <span class="eb-badge eb-badge-crit" *ngIf="c.is_critical === 'Yes'">CPP</span>
+                    </div>
+                  </div>
+                  <table class="eb-table eb-mini-table eb-ipc-spec-table">
+                    <thead>
+                      <tr>
+                        <th>Specification / Limit</th>
+                        <th>UOM</th>
+                        <th>Instrument</th>
+                        <th>Sampling plan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{{ ipcLimitSummary(c) }}</td>
+                        <td>{{ c.uom || '—' }}</td>
+                        <td>{{ c.instrument || '—' }}</td>
+                        <td>{{ c.sampling_plan || '—' }}</td>
+                      </tr>
+                      <tr *ngIf="c.acceptance_criteria">
+                        <td colspan="4"><span class="eb-hint">Acceptance:</span> {{ c.acceptance_criteria }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="eb-ipc-setup-grid">
+                    <div class="eb-field">
+                      <span class="eb-field-label">Performed by (role)</span>
+                      <select class="eb-select" [(ngModel)]="inprocessSetup(c.id).responsibility">
+                        <option value="Production">Production</option>
+                        <option value="QA">QA</option>
+                        <option value="QA/Production Alternate">QA / Production Alternate</option>
+                        <option value="Both">Both (Production &amp; QA)</option>
+                      </select>
+                    </div>
+                    <div class="eb-field">
+                      <span class="eb-field-label">Frequency setup</span>
+                      <input
+                        class="eb-input"
+                        list="eb-ipc-freq-list"
+                        [(ngModel)]="inprocessSetup(c.id).frequency"
+                        placeholder="e.g. Every 30 min / Start &amp; End" />
+                    </div>
+                  </div>
+                </div>
+                <datalist id="eb-ipc-freq-list">
+                  <option value="At start of operation"></option>
+                  <option value="At start &amp; end of operation"></option>
+                  <option value="Every 15 minutes"></option>
+                  <option value="Every 30 minutes"></option>
+                  <option value="Hourly"></option>
+                  <option value="Every 2 hours"></option>
+                  <option value="Once per shift"></option>
+                  <option value="Every batch"></option>
+                  <option value="Beginning, middle &amp; end"></option>
+                  <option value="Continuous / 100%"></option>
+                </datalist>
+              </div>
+            </div>
+          </ng-container>
+
+          <div class="eb-section-title">Next-Stage Holding</div>
+          <table class="eb-table eb-mini-table eb-form-row-table">
+            <thead>
+              <tr>
+                <th style="width:22%">Holding required?</th>
+                <th>Condition</th>
+                <th style="width:28%">Max duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <select class="eb-select" [(ngModel)]="currentStep.config.holding.required" (ngModelChange)="onCheckpointSelectionChanged()">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td><input class="eb-input" [(ngModel)]="currentStep.config.holding.condition" placeholder="e.g. 2–8 °C" /></td>
+                <td><input class="eb-input" [(ngModel)]="currentStep.config.holding.max_duration" placeholder="e.g. 24 h" /></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="eb-section-title">Step Time Stamp</div>
+          <table class="eb-table eb-mini-table eb-form-row-table">
+            <thead>
+              <tr>
+                <th style="width:28%">Time stamp checkpoint</th>
+                <th>Date</th>
+                <th>Start Time</th>
+                <th>End / Stop Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <label class="eb-switch eb-ts-enable">
+                    <input type="checkbox" [(ngModel)]="currentStep.config.step_timestamp.enabled" (ngModelChange)="onCheckpointSelectionChanged()" />
+                    Enable for this step
+                  </label>
+                </td>
+                <td class="eb-ts-field-cell">
+                  <span class="eb-ts-field-pill" [class.on]="currentStep.config.step_timestamp.enabled">
+                    <i class="fas fa-calendar-day"></i> Date
+                  </span>
+                </td>
+                <td class="eb-ts-field-cell">
+                  <span class="eb-ts-field-pill" [class.on]="currentStep.config.step_timestamp.enabled">
+                    <i class="fas fa-play"></i> Start Time
+                  </span>
+                </td>
+                <td class="eb-ts-field-cell">
+                  <span class="eb-ts-field-pill" [class.on]="currentStep.config.step_timestamp.enabled">
+                    <i class="fas fa-stop"></i> End Time
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="eb-hint eb-ts-hint" *ngIf="currentStep.config.step_timestamp.enabled">
+            Process time will be captured in execution with <b>Start</b> and <b>End</b> buttons
+            (auto-fills <b>Date</b>, <b>Start Time</b> and <b>End Time</b>) for this step and each sub-step below.
+          </p>
+          <div class="eb-ts-substeps" *ngIf="currentStep.config.step_timestamp.enabled">
+            <div class="eb-section-title" style="margin-top:0.45rem">
+              Sub-steps (process time)
+              <button class="eb-mini-btn" type="button" (click)="addTimestampSubstep()" title="Add sub-step">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+            <p class="eb-hint eb-ts-hint" *ngIf="!(currentStep.config.step_timestamp.substeps || []).length">
+              Optional — add named sub-steps if process time must be captured separately under this step.
+            </p>
+            <table class="eb-table eb-mini-table eb-form-row-table" *ngIf="(currentStep.config.step_timestamp.substeps || []).length">
+              <thead>
+                <tr>
+                  <th style="width:48px">#</th>
+                  <th>Sub-step name</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ss of currentStep.config.step_timestamp.substeps; let i = index">
+                  <td class="eb-seq-num">{{ i + 1 }}</td>
+                  <td><input class="eb-input" [(ngModel)]="ss.name" placeholder="e.g. Mixing / Homogenization" /></td>
+                  <td>
+                    <button class="eb-icon-btn danger" type="button" (click)="removeTimestampSubstep(i)" title="Remove">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="eb-section-title">Custom Check Points / Blocks <button class="eb-mini-btn" type="button" (click)="addCustomBlock()"><i class="fas fa-plus"></i></button></div>
+          <table class="eb-table eb-mini-table eb-form-row-table" *ngIf="currentStep.config.custom_blocks?.length">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th style="width:26%">Type</th>
+                <th>Default / note</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let b of currentStep.config.custom_blocks; let i = index">
+                <td><input class="eb-input" [(ngModel)]="b.title" placeholder="Check point title" /></td>
+                <td>
+                  <select class="eb-select" [(ngModel)]="b.type">
+                    <option value="text">Text entry</option>
+                    <option value="numeric">Numeric</option>
+                    <option value="boolean">Pass / Fail</option>
+                    <option value="note">Static note</option>
+                  </select>
+                </td>
+                <td><input class="eb-input" [(ngModel)]="b.value" placeholder="Default value or note" /></td>
+                <td><button class="eb-icon-btn danger" type="button" (click)="removeCustomBlock(i)"><i class="fas fa-times"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="eb-hint" *ngIf="!currentStep.config.custom_blocks?.length">Click <b>+</b> to add a custom check point row.</p>
+
+          <ng-container *ngIf="enabledCheckpointSequence().length">
+            <div class="eb-section-title">BMR checkpoint sequence <span class="eb-hint">— arrange order of selected checkpoints for batch record</span></div>
+            <table class="eb-table eb-mini-table eb-form-row-table eb-seq-table">
+              <thead>
+                <tr>
+                  <th style="width:36px">#</th>
+                  <th>Selected checkpoint</th>
+                  <th style="width:80px">Move</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let key of enabledCheckpointSequence(); let i = index">
+                  <td class="eb-seq-num">{{ i + 1 }}</td>
+                  <td>{{ checkpointSequenceLabel(key) }}</td>
+                  <td class="eb-seq-move">
+                    <button class="eb-icon-btn" type="button" (click)="moveCheckpointSequence(i, -1)" [disabled]="i === 0" title="Move up"><i class="fas fa-arrow-up"></i></button>
+                    <button class="eb-icon-btn" type="button" (click)="moveCheckpointSequence(i, 1)" [disabled]="i === enabledCheckpointSequence().length - 1" title="Move down"><i class="fas fa-arrow-down"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </ng-container>
+          <p class="eb-hint" *ngIf="!enabledCheckpointSequence().length">Tick master forms above or enable holding / time stamp / custom checkpoints, then set their sequence here.</p>
+
+          </fieldset>
+
+          <div class="eb-step-save-bar">
+            <button
+              type="button"
+              class="eb-btn eb-btn-solid"
+              *ngIf="isBuildTab"
+              (click)="saveCurrentStepWithPreparedBy()"
+              [disabled]="saving || stepLockedForEdit()"
+            >
+              <i class="fas fa-signature"></i> Save Step (Prepared By)
+            </button>
+            <button
+              type="button"
+              class="eb-btn eb-btn-solid"
+              *ngIf="canCheckCurrentStep()"
+              (click)="actOnCurrentStep('check')"
+            >
+              <i class="fas fa-signature"></i> Check
+            </button>
+            <button
+              type="button"
+              class="eb-btn eb-btn-solid"
+              *ngIf="canReviewCurrentStep()"
+              (click)="actOnCurrentStep('review')"
+            >
+              <i class="fas fa-signature"></i> Review
+            </button>
+            <button
+              type="button"
+              class="eb-btn eb-btn-ghost"
+              *ngIf="canCheckCurrentStep() || canReviewCurrentStep()"
+              (click)="actOnCurrentStep('send_back')"
+            >
+              <i class="fas fa-undo"></i> Send back
+            </button>
+            <button type="button" class="eb-btn eb-btn-outline" (click)="selectStage(selected.stageIndex!)">
+              <i class="fas fa-arrow-left"></i> Back to stage table
+            </button>
+          </div>
+
+          <div class="eb-section-title">Digital signatures</div>
+          <app-cfr-signature-block
+            title="Step electronic signatures — Prepared / Checked / Reviewed / Approved"
+            [documentRef]="(currentStage?.stage_name || '') + ' / ' + (currentStep.step_name || '')"
+            [signers]="currentStepSigners()"
+          ></app-cfr-signature-block>
+        </div>
+      </ng-container>
+    </main>
+
+    <!-- ===================== RIGHT ===================== -->
+    <aside class="eb-right">
+      <div class="eb-right-head">Execution Tabs</div>
+      <div class="eb-right-tabs">
+        <button
+          *ngFor="let t of rightTabs"
+          type="button"
+          class="eb-right-tab"
+          [class.active]="rightTab===t.key"
+          (click)="openRightTabModal(t.key)"
+          [title]="'Open ' + t.label"
+        >
+          <i [class]="t.icon"></i>
+          <span class="eb-right-tab-label">{{ t.label }}</span>
+          <i class="fas fa-external-link-alt eb-right-tab-pop"></i>
+        </button>
+      </div>
+      <p class="eb-right-hint" *ngIf="isBuildTab">Click a tab to configure it in a popup.</p>
+      <p class="eb-right-hint" *ngIf="!isBuildTab">Execution tabs (view{{ isFinalTab ? ' only' : '' }}).</p>
+    </aside>
+  </div>
+
+  <!-- Execution Tabs popup -->
+  <div class="eb-modal-backdrop" *ngIf="rightTab" (click)="closeRightTabModal()">
+    <div class="eb-modal lg" (click)="$event.stopPropagation()">
+      <div class="eb-modal-head">
+        <h3>{{ rightTabTitle() }}</h3>
+        <button type="button" class="eb-modal-close" (click)="closeRightTabModal()">&times;</button>
+      </div>
+      <div class="eb-modal-body">
+        <fieldset [disabled]="panelReadOnly" style="border:0;padding:0;margin:0">
+        <ng-container [ngSwitch]="rightTab">
+          <div *ngSwitchCase="'ipqc_results'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.ipqc_results.enabled" /> Enable IPQC results capture</label>
+            <p class="eb-hint">Results are recorded against the IPQC specs selected in each step during batch execution.</p>
+            <textarea class="eb-textarea" [(ngModel)]="profile.right_tabs.ipqc_results.note" placeholder="Instructions / note for IPQC results tab"></textarea>
+          </div>
+
+          <div *ngSwitchCase="'critical_params'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.critical_params.enabled" /> Enable</label>
+            <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="addCriticalParam()"><i class="fas fa-plus"></i> Add CPP</button>
+            <table class="eb-table eb-mini-table">
+              <thead><tr><th>Parameter</th><th>Target</th><th>Limit</th><th>UOM</th><th></th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of profile.right_tabs.critical_params.rows; let i = index">
+                  <td><input class="eb-input" [(ngModel)]="r.parameter" /></td>
+                  <td><input class="eb-input" [(ngModel)]="r.target" /></td>
+                  <td><input class="eb-input" [(ngModel)]="r.limit" /></td>
+                  <td><input class="eb-input" [(ngModel)]="r.uom" /></td>
+                  <td><button type="button" class="eb-icon-btn danger" (click)="removeCriticalParam(i)"><i class="fas fa-times"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngSwitchCase="'deviations'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.deviations.enabled" /> Enable deviation logging</label>
+            <p class="eb-hint">In execution, this tab opens the QMS <b>Part-I Initiation of Deviation</b> form (same as QA → QMS → Deviation → New).</p>
+            <textarea class="eb-textarea" [(ngModel)]="profile.right_tabs.deviations.note" placeholder="Deviation handling instructions / default fields"></textarea>
+          </div>
+
+          <div *ngSwitchCase="'manpower'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.manpower.enabled" /> Enable</label>
+            <div class="eb-right-actions">
+              <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="addManpowerRow()"><i class="fas fa-plus"></i> Row</button>
+              <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="prefillManpowerFromMaster()"><i class="fas fa-download"></i> From master</button>
+            </div>
+            <table class="eb-table eb-mini-table">
+              <thead><tr><th>Stage</th><th>Activity</th><th>Designation</th><th>Count</th><th></th></tr></thead>
+              <tbody>
+                <tr *ngFor="let r of profile.right_tabs.manpower.rows; let i = index">
+                  <td><input class="eb-input" [(ngModel)]="r.stage" /></td>
+                  <td><input class="eb-input" [(ngModel)]="r.activity" /></td>
+                  <td><input class="eb-input" [(ngModel)]="r.designation" /></td>
+                  <td><input class="eb-input" type="number" [(ngModel)]="r.count" /></td>
+                  <td><button type="button" class="eb-icon-btn danger" (click)="removeManpowerRow(i)"><i class="fas fa-times"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngSwitchCase="'logbook'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.logbook.enabled" /> Enable machine log book</label>
+            <p class="eb-hint">During execution, rows are filled from stage/step <b>equipment</b> and <b>step time stamp</b> (Date, Start, End). Stage and Step stay blank here in master.</p>
+            <textarea class="eb-textarea" [(ngModel)]="profile.right_tabs.logbook.note" placeholder="Instructions for machine log book during execution"></textarea>
+            <div class="eb-section-title" style="margin-top:.65rem;font-size:.82rem">Preview (blank in master)</div>
+            <table class="eb-table eb-mini-table">
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>ID No.</th>
+                  <th>Stage</th>
+                  <th>Step</th>
+                  <th>Date</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="eb-hint">—</td>
+                  <td class="eb-hint">—</td>
+                  <td class="eb-hint">(blank)</td>
+                  <td class="eb-hint">(blank)</td>
+                  <td class="eb-hint">—</td>
+                  <td class="eb-hint">—</td>
+                  <td class="eb-hint">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngSwitchCase="'breakdown'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.breakdown.enabled" /> Enable breakdown maintenance log</label>
+            <p class="eb-hint">In execution, this tab opens the Engineering <b>Breakdown Intimation</b> form.</p>
+            <textarea class="eb-textarea" [(ngModel)]="profile.right_tabs.breakdown.note" placeholder="Breakdown / maintenance capture instructions"></textarea>
+          </div>
+
+          <div *ngSwitchCase="'incident'">
+            <label class="eb-switch"><input type="checkbox" [(ngModel)]="profile.right_tabs.incident.enabled" /> Enable incident reporting</label>
+            <p class="eb-hint">In execution, this tab opens the QMS <b>Incident Notification Report (INR)</b> form (same as QA → QMS → Incident → New) and links the record to the batch.</p>
+            <textarea class="eb-textarea" [(ngModel)]="profile.right_tabs.incident.note" placeholder="Incident report fields / instructions"></textarea>
+          </div>
+        </ng-container>
+        </fieldset>
+      </div>
+      <div class="eb-modal-foot">
+        <button type="button" class="eb-btn eb-btn-outline" (click)="closeRightTabModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- bind products modal -->
+<div class="eb-modal-backdrop" *ngIf="bindModalOpen" (click)="bindModalOpen=false">
+  <div class="eb-modal lg" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>Bind Products to this Profile</h3>
+      <button class="eb-modal-close" (click)="bindModalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-section-title">Currently bound ({{ products.length }})</div>
+      <div class="eb-bound-list">
+        <span class="eb-bound-chip" *ngFor="let p of products">
+          {{ p.product_name || p.product_code }}
+          <i class="fas fa-id-card" title="Use as header" (click)="useProductAsHeader(p)"></i>
+          <i class="fas fa-times" title="Unbind" (click)="unbind(p)"></i>
+        </span>
+        <span *ngIf="!products.length" class="eb-hint">No products bound yet.</span>
+      </div>
+
+      <div class="eb-section-title">Add product</div>
+      <div class="eb-toolbar" style="margin-bottom:0.4rem">
+        <input class="eb-input" style="flex:1" [(ngModel)]="productSearch" (ngModelChange)="searchProducts()" placeholder="Search product code / name…" />
+      </div>
+      <div class="eb-table-wrap" style="max-height:40vh">
+        <table class="eb-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Dosage form</th><th style="width:80px"></th></tr></thead>
+          <tbody>
+            <tr *ngIf="!productResults.length"><td colspan="4" class="eb-empty">No products found.</td></tr>
+            <tr *ngFor="let p of productResults">
+              <td>{{ p.product_code }}</td>
+              <td>{{ p.product_name }}</td>
+              <td>{{ p.dosage_form || '—' }}</td>
+              <td><button class="eb-btn eb-btn-sm eb-btn-solid" (click)="bindProduct(p)"><i class="fas fa-link"></i> Bind</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="bindModalOpen=false">Done</button>
+    </div>
+  </div>
+</div>

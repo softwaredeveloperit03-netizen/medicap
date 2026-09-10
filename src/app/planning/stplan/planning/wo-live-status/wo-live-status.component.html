@@ -1,0 +1,159 @@
+<div class="card live-wo-page">
+  <div class="card-header live-wo-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-7" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Live Status Update for WO
+      </div>
+      <div class="clr-col-lg-5" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-success" (click)="promoteAllReady()" [disabled]="promoting || loading">
+          Promote All Ready
+        </button>
+        <button class="btn btn-sm btn-warning" (click)="loadWorkOrders()" [disabled]="loading">Refresh</button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row live-wo-summary">
+      <div class="clr-col-lg-3">
+        <div class="summary-box summary-total">
+          <span>Total Cannot Plan WO</span>
+          <strong>{{ summary.total || 0 }}</strong>
+        </div>
+      </div>
+      <div class="clr-col-lg-3">
+        <div class="summary-box summary-ready">
+          <span>Ready — Can Plan (Live)</span>
+          <strong>{{ summary.live_can_plan || 0 }}</strong>
+        </div>
+      </div>
+      <div class="clr-col-lg-3">
+        <div class="summary-box summary-pending">
+          <span>Still Cannot Plan</span>
+          <strong>{{ summary.live_cannot_plan || 0 }}</strong>
+        </div>
+      </div>
+      <div class="clr-col-lg-3">
+        <div class="summary-box summary-info">
+          <span>Last Live Check</span>
+          <strong>{{ lastRefreshed ? (lastRefreshed | date:'dd/MM/yyyy HH:mm') : '—' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <p class="live-wo-note">
+      Status refreshes when indent converts to PO, material is GRN-received, and stock is updated in store.
+      Auto-refresh every 15 seconds.
+      <label class="live-wo-auto"><input type="checkbox" [(ngModel)]="autoRefresh"> Auto refresh</label>
+    </p>
+    <p class="live-wo-error" *ngIf="loadError">{{ loadError }}</p>
+
+    <div class="search-container">
+      <label for="liveWoSearch">Search:</label>
+      <input type="text" id="liveWoSearch" placeholder="WO / Forecast / Product..."
+        [(ngModel)]="searchText" (ngModelChange)="applyFilter()">
+    </div>
+
+    <div class="live-wo-table-wrap" *ngIf="!loading">
+      <table class="table table-bordered table-compact live-wo-table">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Plan Month</th>
+            <th>Forecast No</th>
+            <th>Work Order No</th>
+            <th>Product</th>
+            <th class="num">Plan Qty</th>
+            <th class="num">Live Shortage</th>
+            <th>Stored Status</th>
+            <th>Live Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let wo of workOrders; let i = index; trackBy: trackByIndex" [style.backgroundColor]="wo.bg_color">
+            <td>{{ i + 1 }}</td>
+            <td>{{ formatPlanMonth(wo.planMonth) }}</td>
+            <td>{{ wo.order_no || '—' }}</td>
+            <td>{{ wo.workorder_no || '—' }}</td>
+            <td [title]="wo.product_name">{{ wo.product_code }} — {{ wo.product_name || '—' }}</td>
+            <td class="num">{{ wo.batch_size ?? '0' }} {{ wo.planUnit || '' }}</td>
+            <td class="num" [class.shortage-yes]="(wo.total_shortage || 0) > 0">{{ wo.total_shortage || 0 }}</td>
+            <td><span class="badge badge-danger">{{ formatStoredStatus(wo) }}</span></td>
+            <td>
+              <span class="badge badge-success" *ngIf="isLiveCanPlan(wo)">Can Plan</span>
+              <span class="badge badge-danger" *ngIf="!isLiveCanPlan(wo)">Cannot Plan</span>
+            </td>
+            <td class="live-wo-actions">
+              <button type="button" class="btn btn-primary btn-sm" (click)="viewDetails(wo)">View</button>
+              <button type="button" class="btn btn-sm btn-live-cannot" *ngIf="!canPromote(wo)" disabled>
+                Cannot Plan
+              </button>
+              <button type="button" class="btn btn-sm btn-live-can" *ngIf="canPromote(wo)"
+                (click)="promoteToCanPlan(wo)" [disabled]="promoting">
+                Can Plan
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="workOrders.length === 0">
+            <td colspan="10" class="live-wo-empty">
+              No Cannot Plan work orders found. All shortage / Cannot Plan batches from Generated Workorder,
+              Shortage Analysis, and RM/PM indent flow appear here once work orders are sent for planning analysis.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-muted" *ngIf="loading">Loading live status…</p>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl">
+  <h3 class="modal-title">Live Status — {{ selectedWo?.workorder_no || '—' }}</h3>
+  <div class="modal-body" *ngIf="selectedWo">
+    <div class="live-wo-modal-summary">
+      <span><strong>Forecast:</strong> {{ selectedWo.order_no || '—' }}</span>
+      <span><strong>Product:</strong> {{ selectedWo.product_code }} — {{ selectedWo.product_name || '—' }}</span>
+      <span><strong>Live Shortage:</strong> {{ selectedWo.total_shortage || 0 }}</span>
+      <span><strong>Live Status:</strong> {{ getLiveStatusLabel(selectedWo) }}</span>
+    </div>
+    <div class="live-wo-modal-table-wrap">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Type</th>
+            <th class="num">Required</th>
+            <th class="num">RM Net</th>
+            <th class="num">MC Net</th>
+            <th class="num">Pipeline</th>
+            <th>Indent</th>
+            <th class="num">Shortage</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mat of (selectedWo.Deductions || [])" [class.shortage-row]="(mat.shortage || 0) > 0">
+            <td>{{ mat.material_code }} — {{ mat.material_name || '' }}</td>
+            <td>{{ mat.mat_type || '—' }}</td>
+            <td class="num">{{ mat.requiredQty ?? mat.plan_qty ?? 0 }}</td>
+            <td class="num">{{ mat.rm_net_available ?? 0 }}</td>
+            <td class="num">{{ mat.mc_net_available ?? 0 }}</td>
+            <td class="num">{{ mat.pipeline_supply_qty ?? 0 }}</td>
+            <td>{{ mat.indent_no || mat.indent_status || '—' }}</td>
+            <td class="num shortage-yes">{{ mat.shortage || 0 }}</td>
+            <td>{{ mat.status || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="isView = false">Close</button>
+    <button type="button" class="btn btn-success btn-sm" *ngIf="canPromote(selectedWo)"
+      (click)="promoteToCanPlan(selectedWo); isView = false" [disabled]="promoting">
+      Send to Can Plan
+    </button>
+  </div>
+</clr-modal>

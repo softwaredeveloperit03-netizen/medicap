@@ -1,0 +1,376 @@
+<div class="container-fluid">
+    <div class="card" *ngIf="!isView">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Revised PO Log</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/purchase/order/raw/ammendment" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+      
+              <div class="clr-col-lg-4" style="text-align: left;">
+                <input type="text" [(ngModel)]="searchQuery" placeholder="Search ....">
+              </div>
+          </div>
+          <div class="datagrid-wrapper">
+  
+            <clr-datagrid [clrDgLoading]="loading"  [clrDgFilter]="searchQuery">
+              <clr-dg-column>Sr. No.</clr-dg-column>
+              <clr-dg-column>Po Type</clr-dg-column>
+              <clr-dg-column>Approval Date</clr-dg-column>
+              <clr-dg-column>P.O Date</clr-dg-column>
+              <clr-dg-column>Last Updated Date</clr-dg-column>
+              <clr-dg-column>Po No</clr-dg-column>
+              <clr-dg-column>Purchase Requisition No</clr-dg-column>
+              <clr-dg-column>Vendor Name</clr-dg-column>
+              <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+              <clr-dg-column class="clr-header-center">View</clr-dg-column>
+   
+              <clr-dg-row *clrDgItems="let user of filteredMaterials; let i = index" [clrDgItem]="user" [clrDgItem]="result">
+                <clr-dg-cell>{{ calculateStartSrNo() + i+1}}</clr-dg-cell>
+                <clr-dg-cell>{{user.po_type ?user.po_type:'-'}}</clr-dg-cell>
+                 <clr-dg-cell>{{ user.approve_date ? (user.approve_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+  
+                <clr-dg-cell>{{user.entry_date | date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>{{user.cancel_hold_date || 'NA'}}</clr-dg-cell>
+  
+                <clr-dg-cell>{{user.po_no?user.po_no:'-'}}</clr-dg-cell>
+                <clr-dg-cell *ngIf="user?.indent_no?.length>0">{{user.indent_no ? user.indent_no :'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{user.vendor_name ? user.vendor_name:''}}</clr-dg-cell>
+                <clr-dg-cell *ngIf=" user.status == 'Approved'" style="color:green">{{ user.status }} </clr-dg-cell>
+                <clr-dg-cell *ngIf=" user.status != 'Approved'" style="color:RED">{{ user.status }}
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <button class="btn btn-sm btn-info" (click)="viewOrder(user.id)">{{'common.view' | translate}}</button>
+                </clr-dg-cell>
+         
+              </clr-dg-row>
+           
+            </clr-datagrid>
+          </div>
+  
+        </div>
+        <div>
+          <!-- <button class="btn btn-primary" (click)="exportToExcel()">Export to Excel</button> -->
+        </div>
+      </div>
+    </div>
+  
+  
+    <div class="container-fluid" *ngIf="isView">
+      <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Revised PO Log</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" (click)="viewf()" style="background-color: red;color: white;">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+  
+  
+  
+  
+            <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+              <tr>
+                <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Supplier Details
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align:left;color: rgb(14, 67, 112);">Vendor Name</td>
+                <td style="text-align: left;width: 40%;">{{ selectedOrder['vendor_name'] }}</td>
+                <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Manufacturer Name:</td>
+                <td style="text-align: left; " *ngIf="selectedOrder['manufacturar']">{{ selectedOrder['manufacturar'] }}
+                </td>
+                <td style="text-align: left; " *ngIf="!selectedOrder['manufacturar']">NA</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;color: rgb(14, 67, 112); width: 20%;">Address:</td>
+                <td style="text-align: left;width: 40%;">{{ selectedOrder['address'] }}</td>
+                <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">GSTIN:</td>
+                <td style="text-align: left;">{{ selectedOrder['gst_no'] || 'NA'}}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                <td style="text-align: left;" colspan="3">{{ selectedOrder['state_name'] }}</td>
+              </tr>
+            </table>
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                  <tr>
+                    <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill To</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                    </td>
+                   
+                    <td style="text-align: left;">{{ selectedBill?.company_name }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                    <td style="text-align: left;">{{ selectedBill?.address }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                    <td style="text-align: left;">{{ selectedBill?.gst_no }}</td>
+                  </tr>
+                 
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                    <td style="text-align: left;">{{ selectedBill?.area }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                    <td style="text-align: left;">{{ selectedBill?.present_state }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                    <td style="text-align: left;">{{ selectedBill?.pin }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                  <tr>
+                    <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Ship To</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:<span style="color: red">*</span>
+                    </td>
+                    <td style="text-align: left;"> {{ selectedShip['company_name'] }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                    <td style="text-align: left;">{{ selectedShip['address'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                    <td style="text-align: left;">{{ selectedShip['gst_no'] }}</td>
+                  </tr>
+            
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                    <td style="text-align: left;">{{ selectedShip['area'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                    <td style="text-align: left;">{{ selectedShip['present_state'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                    <td style="text-align: left;">{{ selectedShip['pin'] }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div><br>
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left;width: 15%;">PO No.:</td>
+                <td style="text-align: left;">{{ selectedOrder['po_no'] }}</td>
+                <td style="text-align: left;width: 15%;">PO Date:</td>
+                <td style="text-align: left;">{{ selectedOrder['entry_date'] |date:'dd-MM-yyyy'}}</td>
+                <td style="text-align: left;width: 15%;">Transport:</td>
+                <td style="text-align: left;" *ngIf="selectedOrder['transport'].length>0">{{ selectedOrder['transport'] }}
+                </td>
+                <td style="text-align: left;" *ngIf="selectedOrder['transport'].length==0">N/A</td>
+              </tr>
+  
+            </table>
+          </div>
+  
+          <div>
+            <table class="table table-border">
+              <tr>
+                <th>Sr.</th>
+                <th>Material Type</th>
+                <th>Material Name</th>
+                <th>Material Code</th>
+                <th>Qty</th>
+                <th>Quotation Amt.</th>
+                <th>Gross Total</th>
+                <th>Discount %</th>
+                <th>Discount</th>
+                <th>Tax Total</th>
+                <th>Net Total</th>
+                <th *ngIf="selectedOrder['split_dispatch'] != 'Yes'">Scheduled Dil.Dt</th>
+              </tr>
+              <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td>{{user.material_subtype}}</td>
+                <td>{{user.material_name}} - {{user.gradeName}}</td>
+                <td>{{user.material_code}}</td>
+                <td>{{user.qty}} {{user.unit}}</td>
+                <td>{{user.quotation_amt}} </td>
+                <td>{{user.gross_total}}</td>
+                <td>{{user.disc_per}}</td>
+                <td style="text-align: right;">{{user.disc_amt}}</td>
+                <td>{{user.tax_total}}</td>
+                <td>{{user.net_total}}</td>
+                <td *ngIf="user.delivery_schedule_date!='0000-00-00' && selectedOrder['split_dispatch'] != 'Yes'">
+                  {{user.delivery_schedule_date |date:'dd-MM-yyyy'}}</td>
+                <td *ngIf="user.delivery_schedule_date=='0000-00-00' && selectedOrder['split_dispatch'] != 'Yes'">N/A</td>
+              </tr>
+              <tr *ngIf="selectedOrder['materials']?.length==0">
+                <td colspan="9">No Record Found!</td>
+              </tr>
+            </table>
+  
+            <table class="table table-border">
+              <tr>
+                <th style="text-align:left">Gross Total</th>
+                <th style="text-align:left">Discount </th>
+                <th style="text-align:left">Tax Total</th>
+                <th style="text-align:left">Other Charges</th>
+                <th style="text-align:left">Shipping & Handling</th>
+                <th style="text-align:left">{{'common.total' | translate}}</th>
+              </tr>
+              <tr>
+                <td style="padding:0px"><input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']"
+                    style="margin:0px" readonly></td>
+                <td style="padding:0px"><input type="text" name="discount" [(ngModel)]="selectedOrder['disc_amt']"
+                    required style="margin:0px" readonly>
+                </td>
+                <td style="padding:0px"><input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']"
+                    required style="margin:0px" readonly></td>
+                <td >{{selectedOrder['other_charges'] || '0'}}
+                   </td>
+                <td  >{{selectedOrder['shipping_handling'] || '0'}}
+                  
+                   </td>
+                <td style="padding:0px"><input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']"
+                    required style="margin:0px" readonly></td>
+              </tr>
+            </table>
+          </div>
+  
+  
+  
+          <h3 *ngIf="selectedOrder['split_dispatch'] == 'Yes'">Dispatch Schedule:</h3>
+          <table *ngIf="selectedOrder['split_dispatch'] == 'Yes'" class="table table-border">
+            <tr>
+              <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">Sr. No</th>
+              <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+              <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+              <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">Qty. </th>
+              <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">Schedule Dil.Dt.</th>
+            </tr>
+  
+            <tr *ngFor="let item of selectedOrder['schedule_data']; let i = index">
+              <td style="height: 30px;text-align:left;">{{i +1}}</td>
+              <td style="height: 30px;text-align:left;">{{item.material_name}}</td>
+              <td style="height: 30px;text-align:left;">{{item.material_code}}</td>
+              <td style="height: 30px;text-align:left;">{{item.qty}} {{item.unit}}</td>
+              <td style="height: 30px;text-align:left;">{{item.delivery_schedule_date | date: 'dd-MM-yyyy'}}</td>
+            </tr>
+          </table>
+  
+  
+  
+  
+  
+          <h3>Tax Splitup:</h3>
+          <table class="table table-border">
+            <tr>
+              <th style="text-align:center;background-color: rgb(14, 67, 112); color: white;">Percentage</th>
+              <th style="text-align:center;background-color: rgb(14, 67, 112); color: white;">IGST</th>
+              <th style="text-align:center;background-color: rgb(14, 67, 112); color: white;">SGST</th>
+              <th style="text-align:center;background-color: rgb(14, 67, 112); color: white;">CGST</th>
+              <th style="text-align:center;background-color: rgb(14, 67, 112); color: white;">TOTAL GST</th>
+            </tr>
+            <tr *ngFor="let item of selectedOrder.gstData; let i = index">
+              <td style="height: 30px;">{{item.percentage}}%</td>
+              <td style="height: 30px;">{{item.igst}}</td>
+              <td style="height: 30px;">{{item.sgst}}</td>
+              <td style="height: 30px;">{{item.cgst}}</td>
+              <td style="height: 30px;">{{item.totalGST}}</td>
+  
+            </tr>
+            <tr *ngIf="selectedOrder.gstData?.length == 0">
+              <td colspan="5">No data Found</td>
+            </tr>
+          </table>
+          <br>
+  
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Terms & Conditions:</label>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: left;">Sr</th>
+                  <th style="text-align: left;">Term Heading</th>
+                  <th style="text-align: left;">Terms</th>
+                </tr>
+                <tr *ngFor="let term of terms_condition;let i=index">
+                  <td style="text-align: left;">{{i+1}}</td>
+                  <td style="text-align: left;">{{term.term_heading }}</td>
+                  <td style="text-align: left;">{{term.term }}</td>
+                </tr>
+                <tr *ngIf="terms_condition?.length == 0">
+                  <td colspan="3">No data Found</td>
+                </tr>
+              </table>
+  
+  
+              <br>
+            </div>
+          </div>
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Additional Terms & Conditions:</label>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: left;">Sr</th>
+                  <th style="text-align: left;">Term Heading</th>
+                 </tr>
+                <tr *ngFor="let term of additional_terms;let i=index">
+                  <td style="text-align: left;">{{i+1}}</td>
+                  <td style="text-align: left;">{{term.additional_term }}</td>
+                 </tr>
+                <tr *ngIf="additional_terms?.length == 0">
+                  <td colspan="2">No data Found</td>
+                </tr>
+              </table>
+   
+              <br>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Shipping & Handling Charges::<span style="color: red">*</span></label>
+           
+          </div>
+          <table class="table table-border">
+            <tr>
+               <th style="text-align: left;">GST %</th>
+           
+              <th style="text-align:left;">Total Amount</th>
+  
+            </tr>
+            <tr>
+              <td style="text-align: left;">{{selectedOrder.shipping_gst || '0'}} </td>
+              <td style="text-align: left;"> {{selectedOrder['shipping_handling'] || '0'}}</td>
+          
+            </tr>
+          </table>
+  
+       
+   
+        </div>
+        <div class="card-footer"  >
+          <button class="btn btn-danger"  (click)="isView = false" >{{'common.close' | translate}}</button>
+       
+      
+         </div>
+      </div>
+    </div>

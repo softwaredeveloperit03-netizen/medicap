@@ -1,0 +1,886 @@
+<!-- <div class="card recv-page" *ngIf="!isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Weigh Bridge Of Process</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw">CLOSE</button>
+  </header>
+    <div class="card-block">
+      <div class="card-text">
+        <table class="table table-border recv-kv-table">
+          <tr>
+            <th>Sr.</th>
+           <th> Date</th>
+          
+            <th>Material Type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Grade</th>
+         
+            <th>view</th>
+          </tr>
+          <tr *ngFor="let result of results; let i = index">
+            <td>{{ i+1 }}</td>
+            <td style="text-align: left;">{{ result.inward_date | date:'dd-MM-yyyy' }}</td>
+        
+            <td style="text-align: left;">{{ result.material_type }}</td>
+            <td style="text-align: left;">{{ result.material_code }}</td>
+            <td style="text-align: left;">{{ result.material_name }}</td>
+            <td>{{ result.grade }}</td>
+       
+            <td>
+              <button class="btn btn-sm btn-info" (click)="viewResult(i)">{{'common.view' | translate}}</button>
+            </td>
+          </tr>
+          <tr *ngIf="results?.length == 0">
+            <td colspan="9">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Weighing Bridge Process</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+    <div class="card-block">
+      <div class="card-text">
+        <h3>Payment Slip Details:</h3>
+        <table class="table table-border recv-kv-table">
+          <tr>
+            <td style="text-align: left;"><b>Material Name:</b></td>
+            <td colspan="3" style="text-align: left;">{{ selectedResult['material_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Vendor Name:</b></td>
+            <td colspan="3" style="text-align: left;">{{ selectedResult['vendor_name'] }}</td>
+          </tr>
+         
+          <tr>
+            <td style="text-align: left;"><b>Payment Slip:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_no'] }}</td>
+            <td style="text-align: left;"><b>Payment Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_date'] | date:'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_subtype'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedResult['grade'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO Qty:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedResult['qty'] }} {{
+              selectedResult['unit'] }}</td>
+          </tr>
+        </table>
+        <br>
+        <h3>Weighing Bridge:</h3>
+        <form #bridge="ngForm">
+          <table class="table table-border recv-kv-table">
+            <tr>
+              <th>Vechicle No</th>
+              <th>Total Weight(kg)</th>
+              <th>Tare wt Printed on Single Container</th>
+              <th>Total No Of Container (As Per Payment Slip)</th>
+              <th>Total Tare wt Of Container</th>
+              <th>Vechile Gross wt</th>
+              <th>Vechile Tare wt</th>
+              <th>Net wt</th>
+             
+              <th>{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;"><input type="text" name="vechile_no" ngModel style="margin: 0px;" #vechile_no="ngModel"><span style="color: red;" *ngIf="vechile_no.invalid && vechile_no.touched">Please Enter Positive  Number(3 Digits)!</span></td>
+              <td style="padding: 0px;"><input type="number" name="total_weight" [(ngModel)]="total_weight" style="margin: 0px;"(keyup)="calculation()"></td>
+              <td style="padding: 0px;"><input type="number" name="container_tarewt" [(ngModel)]="container_tarewt" style="margin: 0px;"(keyup)="calculation()"></td>
+              <td style="padding: 0px;"><input type="number" name="container_no" ngModel style="margin: 0px;"></td>
+              <td style="padding: 0px;"><input type="number" name="totaltare_wt" [(ngModel)]="totaltare_wt" style="margin: 0px;"></td>
+              <td style="padding: 0px;"><input type="number" name="v_grosswt" [(ngModel)]="v_grosswt" style="margin: 0px;"(keyup)="calculation()"></td>
+              <td style="padding: 0px;"><input type="number" name="v_tarewt" [(ngModel)]="v_tarewt" style="margin: 0px;"(keyup)="calculation()"></td>
+              <td style="padding: 0px;"><input type="number" name="net_wt" [(ngModel)]="net_wt" style="margin: 0px;"></td>
+           
+              <td style="padding: 0px;"><button class="btn btn-sm" (click)="addWeighBridge(bridge)">{{'common.add' | translate}}</button></td>
+              <td style="padding: 0px;"></td>
+            </tr>
+
+            <tr *ngFor="let user of bridges; let i = index">
+              <td>{{user.vechile_no}}</td>
+              <td>{{user.total_weight }}</td>
+              <td>{{user.container_tarewt }}</td>
+              <td>{{user.container_no}}</td>
+              <td>{{user.container_no}}</td>
+              <td>{{user.v_grosswt}}</td>
+              <td>{{user.v_tarewt}}</td>
+              <td>{{user.net_wt}}</td>
+           
+              <td>
+                  <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+              </td>
+          </tr>
+
+
+          </table>
+        </form>
+        <br>
+       
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="saveWeighings(weighingForm)">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+  
+  
+  
+  
+  
+  <clr-modal [(clrModalOpen)]="isProceed" [clrModalSize]="'xl'">
+    <h3 class="modal-title">Weighing Details</h3>
+    <div class="modal-body">
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>Medicap Lot No</label>
+          <input type="text" name="batch_no" [ngModel]="selectedBatch['batch_no']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Total container</label>
+          <input type="text" name="total_containers" [ngModel]="selectedBatch['total_containers']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Pack Size</label>
+          <input type="text" name="pack_size" [ngModel]="selectedBatch['pack_size']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Qty </label>
+          <input type="text" name="qty_received" [ngModel]="selectedBatch['qty_received']" readonly tabindex="-1">
+        </div>
+      </div>
+      <div *ngIf="isRoot">
+        <h3>Total No. of containers For Weighing(√n +1) : {{ total_cont }}</h3>
+        <form #containerData="ngForm">
+          <table class="table table-border recv-kv-table">
+            <tr>
+              <th rowspan="2">Container No</th>
+              <th colspan="3">Labeling Details Printed on Label
+                (Unit)</th>
+              <th colspan="3">Actual Weight verification
+                Observed Weights(Unit)</th>
+              <th rowspan="2">Difference</th>
+              <th rowspan="2">
+                Tolerence({{selectedResult['tolerance']}})%</th>
+              <th rowspan="2">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+            </tr>
+            <tr *ngFor="let number of numbers;let i=index">
+              <input type="number" name="container_no" [(ngModel)]="number.container_no" required style="margin: 0px;">
+              <td style="padding: 0px;">
+                <input type="number" name="lbgross_weight" [(ngModel)]="number.lbgross_weight" required
+                  style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="lbtare_weight{{i}}" [(ngModel)]="number.lbtare_weight" required
+                  style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="lbnet_weight" [(ngModel)]="number.lbnet_weight" required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="acgross_weight" [(ngModel)]="number.acgross_weight" required
+                  style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="actare_weight{{i}}" [(ngModel)]="number.lbtare_weight" required
+                  style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                {{ number.acgross_weight - number.lbtare_weight }}
+              </td>
+              <td>
+                {{ (number.acgross_weight - number.lbtare_weight)-number.lbnet_weight}}
+              </td>
+              <td style="padding: 0px;">
+                {{ ((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight)}}
+              </td>
+              <td style="padding: 0px;">
+                <select name="action{{i}}" [(ngModel)]="number.action" required style="margin: 0px;">
+                  <option *ngIf="((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight) > 1">Reject</option>
+                  <option *ngIf="((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight) < 1">Accept</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-12" *ngIf="Action=='Not Accepteble'">
+              <label>Conclusion:</label>
+              <input type="text" name="concludion" value="Verify All Other Container" readonly>
+            </div>
+          </div>
+        </form>
+      </div>
+  
+      <div *ngIf="isTen">
+        <h3>Total No. of containers For Weighing(10%) : {{ total_cont }}</h3>
+        <form #containerData="ngForm">
+          <table class="table table-border recv-kv-table">
+            <tr>
+              <th rowspan="2">Container No</th>
+              <th colspan="3">Labeling Details Printed on Label (Unit)</th>
+              <th colspan="3">Actual Weight verification Observed Weights(Unit)</th>
+              <th rowspan="2">Difference</th>
+              <th rowspan="2">Tolerence({{selectedResult['tolerance']}})%</th>
+              <th rowspan="2">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+            </tr>
+            <tr *ngFor="let number of numbers2;let i=index">
+              <input type="number" name="container_no" [(ngModel)]="number.container_no" required style="margin: 0px;">
+              <td style="padding: 0px;">
+                <input type="number" name="lbgross_weight" [(ngModel)]="number.lbgross_weight" required style="margin: 0px;" >
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="lbtare_weight{{i}}" [(ngModel)]="number.lbtare_weight" required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="lbnet_weight"[(ngModel)]="number.lbnet_weight" required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="acgross_weight" [(ngModel)]="number.acgross_weight" required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="actare_weight{{i}}" [(ngModel)]="number.lbtare_weight" required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                {{ number.acgross_weight - number.lbtare_weight }}
+              </td>
+              <td>
+                {{ (number.acgross_weight - number.lbtare_weight)-number.lbnet_weight}}
+              </td>
+              <td style="padding: 0px;">
+                {{ ((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight) | number:'1.0-2'}}
+              </td>
+              <td style="padding: 0px;">
+                <select name="action{{i}}" [(ngModel)]="number.action" required style="margin: 0px;">
+                  <option *ngIf="((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight) > 1">Reject</option>
+                  <option *ngIf="((number.acgross_weight - number.lbtare_weight)-(number.lbnet_weight))*no / (number.lbnet_weight) < 1">Accept</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-12" *ngIf="Action=='Not Accepteble'">
+              <label>Conclusion:</label>
+              <input type="text" name="concludion" value="Verify All Other Container" readonly>
+            </div>
+    
+          </div>
+        </form>
+      </div>
+  
+      <div *ngIf="isHundred">
+        <h3>Total No. of containers For Weighing(100%) : {{ total_cont }}</h3>
+        <form #containerData="ngForm">
+          <table class="table table-border recv-kv-table">
+            <tr>
+              <th rowspan="2">Container No</th>
+              <th colspan="3">Labeling Details Printed on Label
+                (Unit)</th>
+              <th colspan="3">Actual Weight verification
+                Observed Weights(Unit)</th>
+              <th rowspan="2">Difference</th>
+              <th rowspan="2">Tolerence(1%)</th>
+              <th rowspan="2">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+              <th>Gross Weight</th>
+              <th>Tare Weight</th>
+              <th>Net Weight</th>
+            </tr>
+            <tr *ngFor="let number of numbers1;let i=index">
+              <input type="text" name="container_no" ngModel required style="margin: 0px;">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td style="padding: 0px;">
+                <input type="text" name="gross_weight" ngModel required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="tare_weight" ngModel required style="margin: 0px;">
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="net_weight" ngModel required style="margin: 0px;">
+              </td>
+              <td>
+  
+              </td>
+              <td style="padding: 0px;">
+                <input type="number" name="tolerance" [(ngModel)]="tolerance" required style="margin: 0px;">
+              </td>
+              <td></td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-12" *ngIf="Action=='Not Accepteble'">
+              <label>Conclusion:</label>
+              <input type="text" name="concludion" value="Verify All Other Container" readonly>
+            </div>
+  
+          </div>
+        </form>
+      </div>
+  
+    </div>
+    <form #tankerForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-12">
+          <label>Weighing Verification</label>
+          <div class="clr-control-container clr-control-inline">
+            <div class="clr-checkbox-wrapper" *ngFor="let res of weighings ; let i = index">
+              <input class="clr-checkbox" id="{{res.particular}}" [(ngModel)]="res.value"
+                (change)="updateMarket($event.target.checked, i)" type="checkbox" name="res.particular">
+              <label for="{{res.particular}}" class="clr-control-label">{{res.particular}}</label>
+            </div>
+          </div>
+        </div>
+        <table class="table table-border recv-kv-table">
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+  
+          </tr>
+        </table>
+      </div>
+    </form>
+  
+  
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" (click)="saveWeighingsList(containerData)">{{'common.save' | translate}}</button>
+      <button type="button" class="btn btn-outline" (click)="isProceed=false">{{'common.cancel' | translate}}</button>
+    </div>
+  </clr-modal> -->
+
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Weigh Bridge Details</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw/">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>From Date</label>
+          <input type="date" name="from_date" [max]="today" [(ngModel)]="from_date" required>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label>To Date</label>
+          <input type="date" name="to_date" [min]="from_date" [(ngModel)]="to_date" required>
+        </div>
+        <div class="clr-col-lg-1 clr-col-md-1 clr-col-sm-12 clr-col-xs-12">
+          <button class="btn btn-danger" (click)="getPendingInwords()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+        </div>
+        <div class="clr-col-lg-1">
+          <button class="btn btn-danger" (click)="AllRecord()" style="margin-top: 30px;">Clear Filter</button>
+        </div>
+      </div>
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th>Receiving No.</th>
+          <th>PO No</th>
+          <th>Payment Slip</th>
+          <th>Payment Slip Date</th>
+
+          <!-- <th>Rate</th> -->
+          <th>Transport Name</th>
+          <!-- <th>Transport Freight</th> -->
+          <!-- <th>Inward No.</th> -->
+          <!-- <th>Inward Date</th> -->
+          <th>Material Type</th>
+          <th>Material Code</th>
+          <th>Material Name</th>
+
+          <!-- <th>PO Date</th> -->
+          <!-- <th>Vendor Name</th> -->
+
+          <th>{{'common.table.action' | translate}}</th>
+        </tr>
+        <tr *ngFor="let user of results; let i = index">
+          <td style="text-align: left;">{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{user.document_no}}</td>
+          <td style="text-align: left;">{{user.po_no}}</td>
+          <td style="text-align: right;">{{user.challan_no}}</td>
+          <td style="text-align: left;">{{user.challan_date | date: 'dd-MM-yyyy' }}</td>
+          <td style="text-align: left;">{{user.transport_company}}</td>
+          <!--<td style="text-align: left;">{{user.transport_frieght}}</td> -->
+          <!-- <td style="text-align: left;">{{user.inward_no}}</td> -->
+          <!-- <td style="text-align: left;">{{user.inward_date | date: 'dd-MM-yyyy'}}</td> -->
+          <td style="text-align: left;">{{user.material_subtype}}</td>
+          <td style="text-align: left;">{{user.material_code}}</td>
+          <td style="text-align: left;">{{user.material_name}}</td>
+
+          <!-- <td style="text-align: left;">{{user.po_date | date: 'dd-MM-yyyy' }}</td> -->
+          <!-- <td style="text-align: left;">{{user.vendor_name}}</td> -->
+
+          <td>
+            <button class="btn btn-sm btn-info" (click)="viewResult(i)">receive</button>
+          </td>
+        </tr>
+        <tr *ngIf="results?.length == 0">
+          <td colspan="9">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Weigh Bridge Details</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border recv-kv-table" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;"><b>Material Name:</b></td>
+          <td style="text-align: left;">{{ selectedResult['material_name'] }}</td>
+          <td style="text-align: left;"><b>Vendor Type:</b></td>
+          <td style="text-align: left;">{{ selectedResult['vendor_type'] }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['vendor_type']=='Manufacturer'">
+          <td style="text-align: left;"><b>Manufacturer Name:</b></td>
+          <td style="text-align: left;">{{ selectedResult['manufacturer_name'] }}</td>
+          <td style="text-align: left;"><b>Supplier Name:</b></td>
+          <td style="text-align: left;">{{ selectedResult['manufacturer_name'] }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['vendor_type']=='Supplier'">
+          <td style="text-align: left;"><b>Manufacturer Name:</b></td>
+          <td style="text-align: left;">{{ selectedResult['manufacturer_name'] }}</td>
+          <td style="text-align: left;"><b>Supplier Name:</b></td>
+          <td style="text-align: left;">{{ selectedResult['vendor_name'] }}</td>
+        </tr>
+
+        <tr>
+          <td style="text-align: left;"><b>Payment Slip:</b></td>
+          <td style="text-align: left;">{{ selectedResult['challan_no'] }}</td>
+          <td style="text-align: left;"><b>Payment Slip Date:</b></td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO No.:</b></td>
+          <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+          <td style="text-align: left;"><b>PO Date:</b></td>
+          <td style="text-align: left;">{{ selectedResult['po_date'] |date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Type:</b></td>
+          <td style="text-align: left;">{{ selectedResult['material_type'] }}</td>
+          <td style="text-align: left;"><b>Material Subtype:</b></td>
+          <td style="text-align: left;">{{ selectedResult['material_subtype'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_code'] }}</td>
+          <td style="text-align: left;"><b>Material Grade:</b></td>
+          <td style="text-align: left;">{{ selectedResult['grade'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO Qty:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedResult['qty'] }} {{
+            selectedResult['unit'] }}</td>
+        </tr>
+      </table>
+      <br>
+      <!-- <form #basicForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12">
+              <label>Container type:</label>
+              <select name="container_type" [(ngModel)]="container_type" required (change)="addContainer()">
+                <option>Drum</option>
+                <option>Bag</option>
+                <option>Boxes</option>
+                <option>Tanker</option>
+                <option style="color:red">Add New</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type == 'Drum'">
+              <label>Drum:</label>
+              <select name="container_subtype" ngModel required>
+                <option>Plastic</option>
+                <option>HDPE Drum</option>
+                <option>Fiber Board Drum</option>
+                <option>Aluminium Container</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type == 'Bag'">
+              <label>Bag:</label>
+              <select name="container_subtype" ngModel required>
+                <option>Polyethylene Bag</option>
+                <option>Pollinated Bag</option>
+                <option>Gunny Bag</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type == 'Boxes'">
+              <label>Boxes:</label>
+              <select name="container_subtype" ngModel required>
+                <option>Corrugated Boxes</option>
+                <option>Cartons</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty. As Per Payment Slip: {{ selectedResult['unit'] }}</label>
+              <input type="text" OnlyNumdigit="true" name="challan_qty" (keypress)="number($event.target.value)"
+                [(ngModel)]="challan_qty" required>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="material_subtype=='Liquid' && 'Solvents' && 'Solvent'">
+              <label>Conversion (Kg to Litre)</label>
+              <select name="conversion" ngModel required>
+                <option></option>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+          </div>
+        </form> -->
+      <h3>Weigh Bridge Process:</h3>
+      <form #bridge="ngForm">
+        <table class="table table-border recv-kv-table">
+          <tr>
+            <th>Vechicle No</th>
+            <th>Invoivce Qty</th>
+            <th
+              *ngIf="selectedResult['container_type']!='Tanker'">Tare wt Printed on Single Container</th>
+            <th
+              *ngIf="selectedResult['container_type']!='Tanker'">Total No Of Container (As Per Payment Slip)</th>
+            <th
+              *ngIf="selectedResult['container_type']!='Tanker'">Total Tare wt </th>
+            <th
+              *ngIf="selectedResult['container_type']!='Tanker'">total Gross wt As per Invoice Qty</th>
+            <th>Vechile Gross wt</th>
+            <th>Vechile Tare wt</th>
+            <th>Net wt Of Vechile</th>
+            <th>Short Extar Qty</th>
+            <th>{{'common.table.action' | translate}}</th>
+          </tr>
+          <tr>
+            <td style="padding: 0px;"><input required type="text" min="5" name="vechile_no" ngModel style="margin: 0px;"
+                #vechile_no="ngModel"><span style="color: red;"  *ngIf="vechile_no.invalid && vechile_no.touched">Please
+                Enter Positive Number(3 Digits)!</span></td>
+            <td style="padding: 0px;"><input required type="number" min="1" name="invoice_qty" [(ngModel)]="invoice_qty"
+                style="margin: 0px;" #vechile_no="ngModel" (keyup)="calculation()"><span style="color: red;"
+                *ngIf="vechile_no.invalid && vechile_no.touched">Please Enter Positive Number(3 Digits)!</span></td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" min="1" style="padding: 0px;"><input required type="number"
+                name="container_tarewt" [(ngModel)]="container_tarewt" style="margin: 0px;" (keyup)="calculation()">
+            </td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" min="1" style="padding: 0px;"><input required type="number"
+                name="container_no" [(ngModel)]="container_no" style="margin: 0px;" (keyup)="calculation()"></td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" min="1" style="padding: 0px;"><input required type="number"
+                name="totaltare_wt" [(ngModel)]="totaltare_wt" style="margin: 0px;" readonly></td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" min="1" style="padding: 0px;"><input required type="number"
+                name="total_gross" [(ngModel)]="total_gross" readonly style="margin: 0px;" (keyup)="calculation()"></td>
+
+            <td style="padding: 0px;"><input required type="number" min="1" name="v_grosswt" [(ngModel)]="v_grosswt" style="margin: 0px;"
+                (keyup)="calculation()"></td>
+            <td style="padding: 0px;"><input  required type="number" min="1" name="v_tarewt" [(ngModel)]="v_tarewt" style="margin: 0px;"
+                (keyup)="calculation()"></td>
+            <td style="padding: 0px;"><input  required type="number" name="net_wt" [(ngModel)]="net_wt" style="margin: 0px;"
+                readonly></td>
+            <td style="padding: 0px;"><input required type="number" min="1" name="short_extra" [(ngModel)]="short_extra"
+                style="margin: 0px;" readonly></td>
+            <td style="padding: 0px;"><button class="btn btn-sm" (click)="addWeighBridge(bridge)">{{'common.add' | translate}}</button></td>
+            <td style="padding: 0px;"></td>
+          </tr>
+
+          <tr *ngFor="let user of bridges; let i = index">
+            <td>{{user.vechile_no}}</td>
+            <td>{{user.invoice_qty }}</td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" style="padding: 0px;">{{user.container_tarewt}}</td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" style="padding: 0px;">{{user.container_no }}</td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" style="padding: 0px;">{{user.totaltare_wt}}</td>
+            <td *ngIf="selectedResult['container_type']!='Tanker'" style="padding: 0px;">{{user.total_gross}}</td>
+            <td>{{user.v_grosswt}}</td>
+            <td>{{user.v_tarewt}}</td>
+            <td>{{user.net_wt}}</td>
+            <td>{{user.short_extra}}</td>
+            <td>
+              <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+            </td>
+          </tr>
+        </table>
+      </form>
+
+
+      <!-- <form #receivingForm="ngForm" style="margin-top:20px;">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Actual Received Qty: {{ selectedResult['unit'] }}</label>
+              <input type="text" OnlyNumdigit="true" name="received_qty" [(ngModel)]="qtyReceived" required readonly
+                tabindex="-1">
+            </div>
+          
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Short / Extra Quantity</label>
+              <input type="text" OnlyNumdigit="true" name="qty_status" [(ngModel)]="result" required readonly
+                tabindex="-1">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>PO Status</label>
+              <select name="po_status" [(ngModel)]="po_status" required>
+                <option>Accept</option>
+                <option>Keep Open</option>
+                <option>Raise Additional</option>
+                <option>Return Material</option>
+              </select>
+            </div>
+          </div>
+          <h3 *ngIf="container_type=='Tanker'">Tanker Detalis:</h3>
+          <h3 *ngIf="container_type!=='Tanker'">Container Details:</h3>
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label *ngIf="container_type!=='Tanker'">Condition / Cleanliness of Containers:</label>
+              <label *ngIf="container_type=='Tanker'">Condition / Cleanliness of Tanker:</label>
+              <select name="container_condition" ngModel="Satisfactory" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12"
+              *ngIf="receivingForm.value.container_condition == 'Not Satisfactory'">
+              <label>If Not, Remark:</label>
+              <input type="text" name="container_condition_remark" ngModel required style="border: 1px solid red;">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label *ngIf="container_type=='Tanker'">Integrity of Tankers Seal:</label>
+              <label *ngIf="container_type!=='Tanker'">Integrity of Containers Seal:</label>
+              <select name="container_seal" ngModel="Satisfactory" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12"
+              *ngIf="receivingForm.value.container_seal == 'Not Satisfactory'">
+              <label>If Not, Remark:</label>
+              <input type="text" name="container_seal_remark" ngModel required style="border: 1px solid red;">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Status of Document Received:</label>
+              <select name="document_status" ngModel="Satisfactory" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12"
+              *ngIf="receivingForm.value.document_status == 'Not Satisfactory'">
+              <label>If Not, Remark:</label>
+              <input type="text" name="document_status_remark" ngModel required style="border: 1px solid red;">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type!=='Tanker'">
+              <label>Packing Intactness / Condition:</label>
+              <select name="packing_condition" ngModel required>
+                <option>OK</option>
+                <option>NOT OK</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="container_type!=='Tanker'">
+              <label>Outer Packing:</label>
+              <select id="outer_packing" name="outer_packing" ngModel required>
+                <option>Sealed</option>
+                <option>Unsealed</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12">
+              <label>Specific storage condition:</label>
+              <select name="storage_condition" ngModel="NO" required>
+                <option>YES</option>
+                <option>NO</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label *ngIf="container_type!=='Tanker'">Damage Container Observed:</label>
+              <label *ngIf="container_type=='Tanker'">Any Leakge Or Damage Observed:</label>
+              <select name="isdamagecontainer" [(ngModel)]="isdamagecontainer"
+                (change)="checkdamage($event.target.value)">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <h4 style="color: red;" *ngIf="isdamagecontainer=='Yes'">(On Submitting This Form Report Will be Sent for
+              damage inspection)</h4>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="container_type!=='Tanker' && isdamagecontainer=='Yes'">
+              <label>Outer Damage Containers:</label>
+              <input type="text" OnlyNumber="true" name="outer_damage"  [(ngModel)]="outer_damage" (keypress)="number($event.target.value)">
+            </div>
+  
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="container_type!=='Tanker' && isdamagecontainer=='Yes'">
+              <label>Inner Damage Containers:</label>
+              <input type="text" OnlyNumber="true" name="inner_damage" [(ngModel)]="inner_damage" (keypress)="number($event.target.value)">
+            </div>
+  
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12" *ngIf="isDamage">
+              <label>Remark (if Any):</label>
+              <textarea rows="2" name="remark" ngModel required></textarea>
+            </div>
+          </div>
+  
+          <table class="table" *ngIf="container_type=='Tanker'">
+            <tr>
+              <td style="text-align: left;"><button class="btn btn-sm btn-primary" (click)="isChecklist='true'">Fill
+                  Tanker Inspection Checklits</button></td>
+              <td><button class="btn btn-sm btn-danger" (click)="isViewCheck=true">View Checklits</button></td>
+            </tr>
+          </table>
+  
+          <h3>Others Details:</h3>
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="container_type!=='Tanker'">
+              <label>Vehicle Condition:</label>
+              <select name="vehicle_condition" ngModel="OPEN" required>
+                <option>OPEN</option>
+                <option>COVERED</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="container_type!=='Tanker'">
+              <label>Cleanliness of Vehicle:</label>
+              <select name="vehicle_cleanliness" ngModel="Satisfactory" required>
+                <option>Satisfactory</option>
+                <option>Not Satisfactory</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12"
+              *ngIf="receivingForm.value.vehicle_cleanliness == 'Not Satisfactory'">
+              <label>If Not, Remark:</label>
+              <input type="text" name="vehicle_cleanliness_remark" ngModel required style="border: 1px solid red;">
+            </div>
+  
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>COA Received:</label>
+              <select name="coa_received" [(ngModel)]="coa_received" required>
+                <option>Yes</option>
+                <option>No</option>
+                <option>Hold</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="coa_received == 'Yes'">
+              <label>Upload COA:</label>
+              <input type="file" name="upload_coa" (change)="onFileChanged($event)" accept="application/pdf">
+            </div>
+         
+  
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>Dedusting Applicable:</label>
+              <select name="dedusting_applicable" ngModel="No" required>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+  
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>Select Approver:</label>
+              <select name="approver" ngModel>
+                <option>NA</option>
+                <option></option>
+              </select>
+            </div>
+          </div>
+          <div *ngIf="coa_received == 'No'">
+            <div class="card recv-page" style="border-color: lightcoral;">
+              <div class="card-header" style="background-color: lightcoral; text-align: left; padding: 5px;">Deviation
+                Details:</div>
+              <div class="card-block">
+                <div class="card-text">
+                  <div class="clr-row" ngModelGroup="deviation">
+                    <div class="clr-col-lg-3">
+                      <label>Deviation Related To:</label>
+                      <input type="text" name="related_to" ngModel="Material" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3">
+                      <label>Deviation Category:</label>
+                      <input type="text" name="deviation_category" ngModel="Unplanned Deviation" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3">
+                      <label>Type Of Deviation:</label>
+                      <select name="type" ngModel="Minor" required>
+                        <option value="Minor">Minor</option>
+                        <option value="Major">Major</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </div>
+                    <div class="clr-col-lg-3">
+                      <label>Impact on Quality:</label>
+                      <select name="isImapactQuality" [(ngModel)]="isImapactQuality" required>
+                        <option>YES</option>
+                        <option>NO</option>
+                      </select>
+                    </div>
+                    <div class="clr-col-lg-4">
+                      <label>Justification for type:</label>
+                      <textarea name="justification" ngModel required></textarea>
+                    </div>
+                    <div class="clr-col-lg-4">
+                      <label>Description of Deviation/Root Cause:</label>
+                      <textarea name="cause" ngModel required></textarea>
+                    </div>
+                    <div class="clr-col-lg-4" *ngIf="isImapactQuality == 'YES'">
+                      <label>Impact on Quality:</label>
+                      <textarea name="quality_impact" ngModel required></textarea>
+                    </div>
+                    <div class="clr-col-12">
+                      <fieldset style="border: solid 1px #a8a8a8;">
+                        <legend
+                          style="width:auto; margin-bottom: 0px; font-size: 12px; font-weight: bold; color: #1f497d;">
+                          Cross Functional Departments Remark</legend>
+                        <div class="clr-row" style="padding-left: 15px;">
+                          <div class="clr-control-container clr-control-inline">
+                            <div class="clr-checkbox-wrapper" *ngFor="let order of departments; let i = index">
+                              <input class="clr-checkbox" id="{{order.name}}" type="checkbox" name="{{order.name}}"
+                                [(ngModel)]="order.value">
+                              <label for="{{order.name}}" class="clr-control-label">{{order.name}}</label>
+                            </div>
+                          </div>
+                        </div>
+                      </fieldset>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form> -->
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="saveWeighings(weighingForm)">{{'common.save' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

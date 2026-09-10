@@ -1,0 +1,231 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+    <style>
+        #table td{
+            border-bottom:solid 1px rgb(228, 228, 228);
+        }
+    </style>
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Incident Log</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/rnd/qa/incident" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #logForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-3">
+                          <label>{{'common.department' | translate}}</label>
+                          <select name="department_name" [(ngModel)]="department_name" required>
+                            <option></option>
+                            <option *ngFor="let list of departments" value="{{ list.department_name }}">{{ list.department_name }}</option>
+                          </select>
+                        </div>
+                        <div class="clr-col-lg-3 ">
+                          <label><strong>{{'common.category' | translate}}</strong></label>
+                          <select name="category" [(ngModel)]="category" required>
+                            <option></option>
+                            <option value="Planned Incident">Planned Incident</option>
+                            <option value="Unplanned Incident">Unplanned Incident</option>
+                          </select>
+                        </div>
+                        <div class="clr-col-lg-2">
+                            <label>From Date</label>
+                            <input type="date" name="fromdate" [(ngModel)]="fromdate">
+                        </div>
+                        <div class="clr-col-lg-2">
+                            <label>To Date</label>
+                            <input type="date" name="todate" [(ngModel)]="todate">
+                        </div>
+                        <div class="clr-col-lg-2" style="padding-right:0px;padding-left:0px;">
+                          <button style="margin-top:30px;" class="btn btn-primary" (click)="getIncidentsLog()">{{'common.search' | translate}}</button>
+                        </div>
+                    </div>
+                </form>
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Incident No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.department' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.category' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.type' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Related To</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Close Date</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">View</th>
+                    </tr>
+                    <tr *ngFor="let result of results; let i = index">
+                        <td style="text-align: left;">{{ i+1 }}.</td>
+                        <td style="text-align: left;">{{ result.entry_date | date: 'dd-MM-YYYY'}}</td>
+                        <td style="text-align: left;">{{ result.incident_no }}</td>
+                        <td style="text-align: left;">{{ result.department }}</td>
+                        <td style="text-align: left;">{{ result.category }}</td>
+                        <td style="text-align: left;">{{ result.type }}</td>
+                        <td style="text-align: left;">{{ result.related_to }}</td>
+                        <td style="text-align: left;">{{ result.close_date }}</td>
+                        <td style="text-align: left;">{{ result.status }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="results?.length == 0">
+                        <td colspan="10">{{'common.noRecords' | translate}}</td>
+                     </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Incident Log</div>
+        <div class="card-block">
+            <div class="card-text">
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Incident Related To:</label>
+                        <input type="text" ngModel name="related_to" ngModel="{{selectedReport['related_to']}}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Incident Category:</label>
+                        <input type="text" ngModel name="category" ngModel="{{selectedReport['category']}}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Type Of Incident:</label>
+                        <input type="text" ngModel name="type" ngModel="{{selectedReport['type']}}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Date Of Incident:</label>
+                        <input type="text" ngModel name="deviation_date" ngModel="{{selectedReport['entry_date'] | date: 'yyyy-MM-dd'}}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Affecting on Product / Material:</label>
+                        <input type="text" name="affecting_product" ngModel="{{selectedReport['affecting_product']}}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Affecting on Equipment:</label>
+                        <input type="text" name="affecting_equipment" ngModel="{{selectedReport['affecting_equipment']}}" readonly tabindex="-1">
+                    </div>
+                </div>
+                <div class="clr-row" *ngIf="selectedReport['affecting_product'] == 'yes'">
+                    <div class="clr-col-md-3 clr-col-12">
+                        <label>Product Code:</label>
+                        <input type="text" name="product_name" ngModel="{{ selectedReport['product_details'].product_code }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-md-3 clr-col-12">
+                        <label>Medicap Lot No:</label>
+                        <input type="text" name="batch_no" ngModel="{{ selectedReport['product_details'].batch_no }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Mfg. Date:</label>
+                        <input type="text" name="mfg_date" ngModel="{{ selectedReport['product_details'].mfg_date }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Exp. Date:</label>
+                        <input type="text" name="exp_date" ngModel="{{ selectedReport['product_details'].exp_date }}" readonly tabindex="-1">
+                    </div>
+                    </div>
+                    <div class="clr-row">
+                    <div class="clr-col-12" *ngIf="selectedReport['affecting_equipment'] == 'yes'">
+                        <label>Name of Equipment:</label>
+                        <input ngModel type="text" name="equipment_name" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Justification for type:</label>
+                        <textarea ngModel name="justification" ngModel="{{selectedReport['justification']}}" readonly tabindex="-1"></textarea>
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Cause of Incident:</label>
+                        <textarea ngModel name="cause" ngModel="{{selectedReport['cause']}}" readonly tabindex="-1"></textarea>
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Description of Incident:</label>
+                        <textarea ngModel name="description" ngModel="{{selectedReport['description']}}" readonly tabindex="-1"></textarea>
+                    </div>
+                </div>
+                <h3>Department Head Comment:</h3>
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label>Remark:</label>
+                        <textarea rows="2" name="remark" [ngModel]="selectedReport['check_remark']" readonly tabindex="-1"></textarea>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Department Head user ID:</label>
+                        <input type="text" name="check_by" [ngModel]="selectedReport['check_by']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Date:</label>
+                        <input type="text" name="check_date" [ngModel]="selectedReport['check_date']" readonly tabindex="-1">
+                    </div>
+                </div>
+                <h3>QA Head Comment:</h3>
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label>Remark:</label>
+                        <textarea rows="2" name="remark" [ngModel]="selectedReport['verify_remark']" readonly tabindex="-1"></textarea>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Department Head user ID:</label>
+                        <input type="text" name="verify_by" [ngModel]="selectedReport['verify_by']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Date:</label>
+                        <input type="text" name="verify_date" [ngModel]="selectedReport['verify_date']" readonly tabindex="-1">
+                    </div>
+                </div>
+                <h3>Cross Functional Departments comment:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th>{{'common.department' | translate}}</th>
+                        <th>Comment</th>
+                        <th>{{'common.status' | translate}}</th>
+                        <th>Comment By</th>
+                        <th>{{'common.date' | translate}}</th>
+                    </tr>
+                    <tr *ngFor="let department of selectedReport['departments']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ department.department }}</td>
+                        <td>{{ department.comment }}</td>
+                        <td>{{ department.status }}</td>
+                        <td>{{ department.entry_by }}</td>
+                        <td>{{ department.entry_date }}</td>
+                    </tr>
+                </table>
+                <h3>Final QA Head Comment:</h3>
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label>Remark:</label>
+                        <textarea rows="2" name="remark" [ngModel]="selectedReport['approve_remark']" readonly tabindex="-1"></textarea>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Department Head user ID:</label>
+                        <input type="text" name="approve_by" [ngModel]="selectedReport['approve_by']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Date:</label>
+                        <input type="text" name="approve_date" [ngModel]="selectedReport['approve_date']" readonly tabindex="-1">
+                    </div>
+                </div>
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Incident Recommend for CAPA:</label>
+                        <input type="text" name="capa" [ngModel]="selectedReport['capa']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>CAPA No.:</label>
+                        <input type="text" name="capa_no" [ngModel]="selectedReport['capa_no']" readonly tabindex="-1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

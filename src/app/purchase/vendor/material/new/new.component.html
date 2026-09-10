@@ -1,0 +1,117 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Material Map</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/purchase/vendor/material/map" style="background-color: red;color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Vendor Name:<span style="color: red">*</span></label>
+              <select name="vendor_no" [(ngModel)]="vendor_no" required (change)="getmappedmaterial($event.target.selectedIndex)">
+                <option></option>
+                <option *ngFor="let ven of vendors" [value]="ven.vendor_no"> {{ ven.vendor_name }} - ( {{ ven.vendor_type }} ) - ( {{ ven.material_type }} )</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="clr-row">
+            <h3>Client Material :- </h3>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <div class="datagrid-wrapper">
+                  <clr-datagrid [clrDgStickyHeader]="true" [clrDgLoading]="materialsLoading">
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Material/Item Type</clr-dg-column>
+                    <clr-dg-column>Material/Item Subtype</clr-dg-column>
+                    <clr-dg-column>Material/Item Code</clr-dg-column>
+                    <clr-dg-column>Material/Item Name</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let mapMat of mapped_materials; let i = index" [clrDgItem]="mapMat">
+                      <clr-dg-cell style="text-align: left;">{{ i+1}}</clr-dg-cell>
+                      <clr-dg-cell style="text-align: left;">{{mapMat.material_type || 'NA'}}</clr-dg-cell>
+                      <clr-dg-cell style="text-align: left;">{{mapMat.material_subtype || 'NA'}}</clr-dg-cell>
+                      <clr-dg-cell style="text-align: left;">{{mapMat.material_code}}</clr-dg-cell>
+                      <clr-dg-cell style="text-align: left;">{{mapMat.material_name || 'NA' }}</clr-dg-cell>
+                    </clr-dg-row>
+                  </clr-datagrid>
+                </div>
+            </div>
+
+          </div>
+          <div class="clr-row">
+
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <form #materialMapping="ngForm">
+                <table class="table table-border">
+                  <tr>
+                    <td style="text-align: center; background-color: aqua; color: black;"><strong>Material Name</strong></td>
+                    <td style="text-align: center; background-color: aqua; color: black;"><strong>Material/Item Type</strong></td>
+                    <td style="text-align: center; background-color: aqua; color: black;"><strong>Material/Item Subtype</strong></td>
+                    <td style="text-align: center; background-color: aqua; color: black;"><strong>Delivery Lead Time (Max.)</strong></td>
+                    <td style="text-align: center; background-color: aqua; color: black;"><strong>{{'common.table.action' | translate}}</strong></td>
+                  </tr>
+                  <tr>
+                    <td style="margin: 0;padding: 0;">
+                      <input
+                        type="text"
+                        placeholder="Search material"
+                        [(ngModel)]="searchTerm"
+                        [ngModelOptions]="{standalone: true}"
+                        style="margin:0 0 4px 0"
+                      >
+                      <select
+                        name="selected_material_code"
+                        [(ngModel)]="selectedMaterialCode"
+                        (ngModelChange)="onMaterialCodeChange($event)"
+                        required
+                        style="margin:0"
+                      >
+                        <option value="">Select Material</option>
+                        <option *ngFor="let item of filteredItems" [value]="item.material_code">
+                          {{ item.material_name }} - ( {{ item.material_code }} ) - ( {{ item.material_type }} ) - ( {{ item.material_subtype }} )
+                        </option>
+                      </select>
+                    </td>
+                    <td style="margin: 0;padding: 0;">
+                        <input type="text" name="material_type" [(ngModel)]="selectedMaterial['material_type']" required readonly style="margin:0">
+                    </td>
+                    <td style="margin: 0;padding: 0;">
+                        <input type="text" name="material_subtype" [(ngModel)]="selectedMaterial['material_subtype']" readonly style="margin:0">
+                    </td>
+                    <td style="margin: 0;padding: 0;">
+                        <input type="text" name="lead_time" [(ngModel)]="lead_time" required style="margin:0">
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" type="button" (click)="addMaterial(materialMapping)">{{'common.add' | translate}}</button>
+                    </td>
+                  </tr>
+                  <tr *ngFor="let item of materialList ; let i = index;">
+                    <td>{{item.material_name}} - ( {{item.material_code}} )</td>
+                    <td>{{ item.material_type || 'NA' }}</td>
+                    <td>{{ item.material_subtype || 'NA' }}</td>
+                    <td>{{item.lead_time}}</td>
+                    <td>
+                      <clr-icon shape="trash" class="is-error" (click)="deletmapping(i)"></clr-icon>
+                    </td>
+                  </tr>
+                </table>
+              </form>
+            </div>
+          </div>
+
+      </div>
+    </div>
+    <div class="card-footer" style="text-align: left;">
+      <button class="btn btn-primary" [disabled]="materialList.length === 0" (click)="saveMaterial()">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" routerLink="/purchase/vendor/material/map">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

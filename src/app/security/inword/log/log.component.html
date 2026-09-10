@@ -1,0 +1,157 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Inward Log</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/security/inword" style="background-color: red; color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block no-print">
+      <div class="clr-row">
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+          <label>Search (challan / PO / vendor / code / invoice)</label>
+          <input
+            type="text"
+            class="clr-input"
+            placeholder="Server search…"
+            [(ngModel)]="serverSearch"
+            (keyup.enter)="getChallansLog()"
+          />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" style="margin-top: 1.4rem;">
+          <button type="button" class="btn btn-sm btn-primary" (click)="getChallansLog()">Search</button>
+        </div>
+        <div class="clr-col-lg-5 clr-col-md-5 clr-col-sm-12">
+          <label>Quick filter (loaded rows)</label>
+          <input type="text" class="clr-input" placeholder="Filter list…" [(ngModel)]="clientFilter" (ngModelChange)="onClientFilterChange()" />
+        </div>
+      </div>
+
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column style="width: 3.5rem;">{{ 'common.table.srNo' | translate }}</clr-dg-column>
+          <clr-dg-column>Material type</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Packaging Slip</clr-dg-column>
+          <clr-dg-column>Ch. ref</clr-dg-column>
+          <clr-dg-column>PO no.</clr-dg-column>
+          <clr-dg-column>PO dt.</clr-dg-column>
+          <clr-dg-column>Vendor</clr-dg-column>
+          <clr-dg-column>Inward date</clr-dg-column>
+          <clr-dg-column>Transport</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let g of listRows; let i = index" [clrDgItem]="g">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.material_type || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ singleMaterialName(g) }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.challan_no || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.ch_no || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.po_no || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.po_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.vendor_name || '—' }} <span *ngIf="g.vendor_no">({{ g.vendor_no }})</span></clr-dg-cell>
+            <clr-dg-cell>{{ g.inward_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ g.transport || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ (g.status || '') | uppercase }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(g, $event)">Details</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+
+    <div class="card-footer no-print">
+      <button type="button" class="btn btn-primary" (click)="download()">Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail + print (aligned with security/inword/po) -->
+<div class="container-fluid" *ngIf="isView && selectedChallan">
+  <div id="inward-print-area">
+    <div class="card">
+      <div class="card-header print-header">
+        <span> MATERIAL INWARD  — {{ selectedChallan.challan_no || selectedChallan.ch_no || 'NA' }}</span>
+        <span class="print-only-meta" *ngIf="selectedChallan.po_no">PO: {{ selectedChallan.po_no }}</span>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-12">
+              <table class="table table-compact table-border detail-table">
+                <tr>
+                  <td class="detail-label"><strong>Vendor name</strong></td>
+                  <td class="detail-value" colspan="3">{{ selectedChallan.vendor_name || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>Material type</strong></td>
+                  <td class="detail-value">{{ selectedChallan.material_type || 'NA' }}</td>
+                  <td class="detail-label"><strong>Material Name</strong></td>
+                  <td class="detail-value">{{ singleMaterialName(selectedChallan) }}</td>
+                </tr>
+                <tr *ngIf="usableMaterials(selectedChallan).length > 1">
+                  <td class="detail-label"><strong>All materials</strong></td>
+                  <td class="detail-value" colspan="3">
+                    <span *ngFor="let m of usableMaterials(selectedChallan); let last = last">
+                      {{ lineMaterialName(m) }}<span *ngIf="!last">; </span>
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>PO no.</strong></td>
+                  <td class="detail-value">{{ selectedChallan.po_no || 'NA' }}</td>
+                  <td class="detail-label"><strong>PO date</strong></td>
+                  <td class="detail-value">{{ selectedChallan.po_date | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>Packaging Slip No.</strong></td>
+                  <td class="detail-value">{{ selectedChallan.challan_no || 'NA' }}</td>
+                  <td class="detail-label"><strong>Packaging Slip date</strong></td>
+                  <td class="detail-value">{{ selectedChallan.challan_date | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>Inward date</strong></td>
+                  <td class="detail-value">{{ selectedChallan.inward_date | date: 'dd-MM-yyyy' }}</td>
+                  <td class="detail-label"><strong>COA received</strong></td>
+                  <td class="detail-value">{{ selectedChallan.coaReceived || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>Transport</strong></td>
+                  <td class="detail-value">{{ selectedChallan.transport || 'NA' }}</td>
+                  <td class="detail-label"><strong>Entry by</strong></td>
+                  <td class="detail-value">{{ selectedChallan.entry_by || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="detail-label"><strong>Status</strong></td>
+                  <td class="detail-value">{{ (selectedChallan.status || '') | uppercase }}</td>
+                  <td class="detail-label" *ngIf="selectedChallan.lrNo || selectedChallan.lrDate"><strong>L.R. no.</strong></td>
+                  <td class="detail-value" *ngIf="selectedChallan.lrNo || selectedChallan.lrDate">{{ selectedChallan.lrNo || 'NA' }}</td>
+                  <td class="detail-label" *ngIf="!(selectedChallan.lrNo || selectedChallan.lrDate)"></td>
+                  <td class="detail-value" *ngIf="!(selectedChallan.lrNo || selectedChallan.lrDate)"></td>
+                </tr>
+                <tr *ngIf="selectedChallan.lrNo || selectedChallan.lrDate">
+                  <td class="detail-label"><strong>L.R. date</strong></td>
+                  <td class="detail-value">{{ selectedChallan.lrDate || 'NA' }}</td>
+                  <td class="detail-label"></td>
+                  <td class="detail-value"></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-footer no-print detail-actions">
+    <button type="button" class="btn btn-primary" (click)="downloadPdf()">Download PDF</button>
+    <button type="button" class="btn btn-secondary" (click)="closeView()">{{ 'common.close' | translate }}</button>
+  </div>
+</div>

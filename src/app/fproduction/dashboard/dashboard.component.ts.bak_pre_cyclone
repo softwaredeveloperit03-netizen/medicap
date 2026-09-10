@@ -1,0 +1,204 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface ProdCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'ischecker';
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  cards: ProdCard[] = [
+    { id: 'batch-planning', title: 'Batch Planning', description: 'Batch planning', route: '/production/batch-planning', icon: 'fa-tasks', category: 'Production', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'qa-approved', title: 'QA Approved Batches', description: 'QA approved batches', route: '/production/batch/qa', icon: 'fa-check-square', category: 'Production', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', showWhen: 'ischecker' },
+    { id: 'dispensing', title: 'Dispensing', description: 'Dispensing', route: '/production/batch/dispensing', icon: 'fa-prescription', category: 'Production', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'webmr', title: 'Non eBMR', description: 'Non eBMR', route: 'webmr', icon: 'fa-file-alt', category: 'Production', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'ebmr', title: 'eBMR', description: 'eBMR', route: 'ebmr', icon: 'fa-file-alt', category: 'Production', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'bmr-module', title: 'BMR Module', description: 'BMR dashboard module', route: 'bmr', icon: 'fa-notes-medical', category: 'Production', gradient: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)' },
+    { id: 'wobmr-module', title: 'WO BMR Module', description: 'WO BMR dashboard module', route: 'wobmr', icon: 'fa-clipboard-check', category: 'Production', gradient: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' },
+    { id: 'inpro-checking', title: 'Completed Batches For Checking', description: 'Batches for checking', route: '/production/batch/inproChecking', icon: 'fa-play', category: 'Production', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'batch-log', title: 'Completed Batches Log', description: 'Completed batches log', route: '/production/batch/log', icon: 'fa-play', category: 'Production', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'packing', title: 'Transfrd for Packing', description: 'Transferred for packing', route: '/prod-f-ebmr/batch/packing', icon: 'fa-box', category: 'Production', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'yield', title: 'Yield Reconciliation', description: 'Yield reconciliation', route: '/prod-f-ebmr/batch/yield', icon: 'fa-chart-line', category: 'Production', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'completed', title: 'Production Report', description: 'Production report', route: '/prod-f-ebmr/batch/completed', icon: 'fa-clipboard', category: 'Production', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    { id: 'technical-info', title: 'Technical Info. Sheet', description: 'Technical info sheet', route: '/prod-f-ebmr/technical-info', icon: 'fa-file-alt', category: 'Production', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'rejection', title: 'Rejection', description: 'Rejection', route: '/prod-f-ebmr/rejection', icon: 'fa-times-circle', category: 'Production', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' },
+    { id: 'logbooks', title: 'Log Books', description: 'Log books', route: '/prod-f-ebmr/logbooks', icon: 'fa-book', category: 'Production', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'shortages', title: 'Shortages Calculation', description: 'Shortages calculation', route: '/prod-f-ebmr/check-shortages', icon: 'fa-exclamation-circle', category: 'Production', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+    { id: 'sampling', title: 'FG Sampling', description: 'Finished goods sampling', route: 'sampling', icon: 'fa-vial', category: 'Production', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'mfglines', title: 'Mfg. Lines', description: 'Manufacturing lines overview', route: '/fproduction/mfglines', icon: 'fa-industry', category: 'Production', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+  ];
+
+  constructor(private service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (c.showWhen === 'ischecker' && this.ischecker !== 'Yes') {
+        return false;
+      }
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    const savedPalette = localStorage.getItem('fproduction_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.cards.map(c => c.category))));
+  }
+
+  getFilteredCards(): ProdCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      if (c.showWhen === 'ischecker' && this.ischecker !== 'Yes') return false;
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_i: number, card: ProdCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('fproduction_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  goToDeptHomePage1() {
+    const loggedInDept = localStorage.getItem('department');
+    this.service.navigateToSpecificDeptHome(loggedInDept);
+  }
+
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights: any;
+  loggedInDept: string | null = null;
+  trainig_cordinator = 'No';
+
+  get_rights() {
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          localStorage.getItem('emp_id') +
+          '&dep_name=' +
+          (localStorage.getItem('department') || '')
+      )
+      .subscribe((response: any) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+        this.ischecker = this.rights[0].ischecker;
+        this.isapprover = this.rights[0].isapprover;
+        this.qms_approver = this.rights[0].qms_approver;
+        this.dept_head = this.rights[0].dept_head;
+        this.isauditor = this.rights[0].isauditor;
+        this.plant_head = this.rights[0].plant_head;
+        this.shift_allocator = this.rights[0].shift_allocator;
+        this.trainig_cordinator = this.rights[0].trainig_cordinator || 'No';
+      });
+  }
+}

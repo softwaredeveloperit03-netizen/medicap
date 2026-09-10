@@ -1,0 +1,320 @@
+<?php
+    require '../db.php';
+    require '../token.php';
+    header('Access-Control-Allow-Origin: *');
+    date_default_timezone_set("Asia/Kolkata");
+    $token = $_GET["token"];
+    $timestamp = time();
+    $entry_date = date("Y-m-d h:i:s", $timestamp);
+    $input = json_decode(file_get_contents('php://input'),true);
+
+    $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+    $result = $conn->query($sql);
+    $_GET["emp_id"] = "";
+    $_GET["department"] = "";
+    if($result->num_rows > 0){
+    while($row = $result->fetch_assoc()){
+	    $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+	    $string = explode("$",$string);
+	    $_GET["emp_id"] = $string[0];
+	    $_GET["department"] = $string[1];
+	    break;
+    }
+
+    $sql = "INSERT INTO log (process,token,action,actiontime,department,emp_id,method,REMOTE_ADDR) VALUES ('FRONTEND','".$token."','".$_GET["type"]."','".$entry_date."','".$_GET["department"]."','".$_GET["emp_id"]."','".$_SERVER['REQUEST_METHOD']."','".$_SERVER['REMOTE_ADDR']."')";
+    $conn->query($sql);
+      if ($_GET["type"] == "save_stage") {
+        $sql = "asdsadds";
+        echo $sql;
+    
+    
+    }
+    else if ($_GET["type"] == "saveStage") {
+        if ($input["equipments"] == true) {
+            $input["equipments"] = "true";
+        } else {
+            $input["equipments"] = "false";
+        }
+        
+        if ($input["clearance"] == true) {
+            $input["clearance"] = "true";
+        } else {
+            $input["clearance"] = "false";
+        }
+        
+        if ($input["enviornmental"] == true) {
+            $input["enviornmental"] = "true";
+        } else {
+            $input["enviornmental"] = "false";
+        }
+        
+        if ($input["inprocess"] == true) {
+            $input["inprocess"] = "true";
+        } else {
+            $input["inprocess"] = "false";
+        }
+        
+        $istest = "false";
+        if ($_GET["inprocess_testing"] == true) {
+            $istest = "true";
+        } else {
+            $istest = "false";
+        }
+        
+        $isweighing = "false";
+        if ($_GET["weighing_material"] == true) {
+            $isweighing = "true";
+        } else {
+            $isweighing = "false";
+        }
+        
+        $sql = "INSERT INTO stages (user_no, product_code, stage, instructions, procedures, isequipment, isclerance, isenviornmental, isinprocess, equipments, clearances, stage_allocation, istest, isweighing, entry_by, entry_date) VALUES ('".$_GET["user_no"]."','".$input["product_code"]."', '".$input["stage"]."', '".json_encode($input["instructionList"])."', '".json_encode($input["procedureList"])."', '".$input["equipments"]."', '".$input["clearance"]."', '".$input["enviornmental"]."', '".$input["inprocess"]."', '".json_encode($input["equipmentsList"])."', '".json_encode($input["clearanceList"])."', '".$input["stage_allocation"]."', '$istest', '$isweighing', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getStageDetails") {
+        $sql = "SELECT b.*, b1.product_code, b1.batch_no, b1.batch_size, b1.mfr_no, b1.bmr_no as std_bmr_no, p.product_name, p.grade, p.generic_name, p.dosage_form, p.shelf_life, p.label_claim FROM bmr_stages b LEFT JOIN bmr b1 ON b.bmr_no=b1.id LEFT JOIN product p ON b1.product_code=p.product_code WHERE b.id='".$_GET["id"]."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                
+                $output1 = Array();
+                $sql1 = "SELECT b.*, m.material_name, m.grade FROM bmr_material b LEFT JOIN material m ON b.material_code=m.material_code WHERE b.no='".$row["id"]."'";
+                $result1 = $conn->query($sql1);
+                if ($result->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                $row["materials"] = $output1;
+                
+                $row["data"] = json_decode($row["data"]);
+                
+                $details = $row["data"];
+                for ($i = 0; $i < count($details); $i++) {
+                    $data = $details[$i];
+                    if ($data->option == 'equipment') {
+                        $row["equipments"] = $data->list;
+                    } else if ($data->option == 'procedure') {
+                        $row["procedures"] = $data->list;
+                    }
+                }
+                
+                $sql1 = "SELECT * FROM inprocess_checks WHERE user_no='".$_GET["user_no"]."' AND product_code='".$row["product_code"]."' AND stage='".$row["stage"]."'";
+                $result1 = $conn->query($sql);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row["checks"] = json_decode($row1["checkpoints"]);
+                        $row["ischeck"] = 'yes';
+                        break;
+                    }
+                }
+                
+                // $row["checks"] = json_decode($row["checks"]);
+                
+                if ($row["istest"] == "yes") {
+                    $sql1 = "SELECT id FROM technical_info WHERE bmr_no='".$row["bmr_no"]."' AND stage='".$row["stage"]."'";
+                    $result1 = $conn->query($sql1);
+                    if ($result1->num_rows > 0) {
+                        $row["intimation"] = "send";
+                    } else {
+                        $row["intimation"] = "no";
+                    }
+                }
+                
+                $row["instructions"] = json_decode($row["instructions"]);
+                $row["clearances"] = json_decode($row["clearances"]);
+                $row["procedures"] = json_decode($row["procedures"]);
+                $row["equipments"] = json_decode($row["equipments"]);
+                
+                if ($row["isclearance"] == "inprocess") {
+                    $sql1 = "SELECT * FROM lineclearance WHERE status='active' AND id='".$row["clearance_no"]."'";
+                    $result1 = $conn->query($sql1);
+                    if ($result1->num_rows > 0) {
+                        while ($row1 = $result1->fetch_assoc()) {
+                            $row["isclearance"] = "active";
+                            $row["clearances"] = json_decode($row1["checkpoints"]);
+                            $row["clearance_request_by"] = $row1["request_by"];
+                            $row["clearance_request_date"] = $row1["request_date"];
+                            $row["clearance_by"] = $row1["entry_by"];
+                            $row["clearance_date"] = $row1["entry_date"];
+                        }
+                    }
+                }
+                
+                if ($row["isweighing"] == "true") {
+                    $sql1 = "SELECT * FROM bmr_stages WHERE bmr_no='".$row["bmr_no"]."' AND id <".$row["id"]. " AND isweighing='true' ORDER BY id DESC LIMIT 1";
+                    $result1 = $conn->query($sql1);
+                    if ($result1->num_rows > 0) {
+                        while ($row1 = $result1->fetch_assoc()) {
+                            $row["prev_yield_qty"] = $row1["yeild_qty"];
+                            $row["prev_yield_per"] = $row1["yeild_per"];
+                        }
+                    } else {
+                        $row["prev_yield_qty"] = $row["batch_size"];
+                        $row["prev_yield_per"] = 100;
+                    }
+                }
+                
+                echo json_encode($row);
+                break;
+            }
+        }
+    } else if ($_GET["type"] == "getEquipments") {
+        $output = Array();
+        $sql = "SELECT * FROM equipment WHERE equipment_name LIKE '%".$_GET["equipment_name"]."%'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "getOperators") {
+        $output = Array();
+        $sql = "SELECT * FROM labour WHERE status='approve' AND category='Operator'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "getInprocessCheckpoints") {
+        $output = array();
+        $sql = "SELECT * FROM inprocess_checks WHERE status='approve' AND stage='".$_GET["stage"]."' AND product_code='".$_GET["product_code"]."' LIMIT 1";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["checkpoints"] = json_decode($row["checkpoints"]);
+                echo json_encode($row);
+                break;
+            }
+        } else {
+            echo "{}";
+        }
+    }/* else if ($_GET["type"] == "saveStage") {
+        
+        $istest = "no";
+        if ($_GET["inprocess_testing"] == true) {
+            $istest = "yes";
+        } else {
+            $istest = "no";
+        }
+        
+        $sql = "UPDATE batch_stages SET instructions='".json_encode($input["instructions"])."', procedures='".json_encode($input["procedures"])."', details='".json_encode($input)."', status='inprocess', istest='$istest' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+            $sql = "SELECT * FROM batch_stages WHERE status='pending' AND no='".$_GET["no"]."'";
+            $result = $conn->query($sql);
+            if ($result->num_rows == 0) {
+                $sql1 = "UPDATE batch_formula SET status='inprocess' WHERE id='".$_GET["no"]."'";
+                $conn->query($sql1);
+            }
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }*/ else if ($_GET["type"] == "sendIntimation") {
+        $sql = "INSERT INTO technical_info (bmr_no, product_code, stage, entry_by, entry_date) VALUES ('".$_GET["bmr_no"]."', '".$_GET["product_code"]."', '".$_GET["stage"]."', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getPendingStages") {
+        $output = array();
+        $sql = "SELECT s.*, p.product_name, p.grade FROM stages s LEFT JOIN product p ON s.product_code=p.product_code WHERE s.user_no='".$_GET["user_no"]."' AND s.status='pending' GROUP BY s.id";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["clearances"] = json_decode($row["clearances"]);
+                $row["equipments"] = json_decode($row["equipments"]);
+                $row["instructions"] = json_decode($row["instructions"]);
+                $row["procedures"] = json_decode($row["procedures"]);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "updateStage") {
+        $sql = "UPDATE stages SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getProducts") {
+        $output = array();
+        $sql = "SELECT * FROM product WHERE user_no='".$_GET["user_no"]."' AND status='approve' AND dosage_form LIKE '%".$_GET["dosage_form"]."%' AND product_code LIKE '%".$_GET["product_code"]."%'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output1 = array();
+                $sql1 = "SELECT s.*, p.product_name, p.grade FROM stages s LEFT JOIN product p ON s.product_code=p.product_code WHERE s.user_no='".$_GET["user_no"]."' AND s.product_code='".$row["product_code"]."' GROUP BY s.id";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["clearances"] = json_decode($row1["clearances"]);
+                        $row1["equipments"] = json_decode($row1["equipments"]);
+                        $row1["instructions"] = json_decode($row1["instructions"]);
+                        $row1["procedures"] = json_decode($row1["procedures"]);
+                        $output1[] = $row1;
+                    }
+                    $row["stages"] = $output1;
+                    $output[] = $row;
+                }
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "saveTemperature") {
+        $sql = "INSERT INTO temperature (user_no, department, bmr_no, stage, temperature, humidity, entry_by, entry_date) VALUES ('".$_GET["user_no"]."', 'Production', '".$_GET["bmr_no"]."', '".$_GET["stage"]."', '".$input["temperature"]."', '".$input["humidity"]."', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getTemperatures") {
+        $output = array();
+        $sql = "SELECT *, DATE(entry_date) as entry_date, TIME(entry_date) as entry_time FROM temperature WHERE user_no='".$_GET["user_no"]."' AND bmr_no='".$_GET["bmr_no"]."' AND stage='".$_GET["stage"]."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "savePressure") {
+        $sql = "INSERT INTO pressure (user_no, pressure, department, bmr_no, stage, entry_by, entry_date) VALUES ('".$_GET["user_no"]."', '".$input["pressure"]."', 'Production', '".$_GET["bmr_no"]."', '".$_GET["stage"]."', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getPressures") {
+        $output = array();
+        $sql = "SELECT *, DATE(entry_date) as entry_date, TIME(entry_date) as entry_time FROM pressure WHERE user_no='".$_GET["user_no"]."' AND bmr_no='".$_GET["bmr_no"]."' AND stage='".$_GET["stage"]."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "callforclearance") {
+        $sql = "INSERT INTO lineclearance (user_no, department, activity, bmr_no, checkpoints, request_by, request_date) VALUES ('".$_GET["user_no"]."', 'Production', '".$_GET["stage"]."', '".$_GET["bmr_no"]."', '".json_encode($input)."', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            $last_id = $conn->insert_id;
+            $sql = "UPDATE bmr_stages SET isclearance='inprocess', clearances='".json_encode($input)."', clearance_no='".$last_id."' WHERE id='".$_GET["id"]."'";
+            $conn->query($sql);
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+
+
+}
+
+$conn->close();
+?>

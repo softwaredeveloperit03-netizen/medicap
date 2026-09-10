@@ -1,0 +1,145 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Receive FO/PO Log
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/Receivepofo" [queryParamsHandling]="'preserve'">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="tableSearchInput">Search PO/FO:</label>
+          <input type="text" id="tableSearchInput"
+            placeholder="Type to filter items..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <div class="rpfo-table-scroll" *ngIf="loading">
+        <span class="spinner spinner-inline"></span> Loading...
+      </div>
+
+      <div class="rpfo-legend" *ngIf="!loading" aria-hidden="true">
+        <span class="rpfo-legend-label">Row type</span>
+        <span class="rpfo-legend-item rpfo-legend-item--normal"><i></i> Standard</span>
+        <span class="rpfo-legend-item rpfo-legend-item--combi"><i></i> Combi</span>
+        <span class="rpfo-legend-item rpfo-legend-item--child"><i></i> Combi line (SFG)</span>
+      </div>
+
+      <div class="rpfo-table-scroll" *ngIf="!loading">
+        <table class="table table-bordered table-sm rpfo-po-table">
+          <colgroup>
+            <col class="rpfo-col-group">
+            <col class="rpfo-col-entry">
+            <col class="rpfo-col-forecast">
+            <col class="rpfo-col-fdate">
+            <col class="rpfo-col-pmonth">
+            <col class="rpfo-col-pcode">
+            <col class="rpfo-col-pname">
+            <col class="rpfo-col-pqty">
+            <col class="rpfo-col-woqty">
+            <col class="rpfo-col-wocnt">
+            <col class="rpfo-col-balance">
+            <col class="rpfo-col-unit">
+            <col class="rpfo-col-user">
+            <col class="rpfo-col-status">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>Entry No</th>
+              <th>Forecast No</th>
+              <th>Forecast Date</th>
+              <th>Plan Month</th>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>Plan Qty</th>
+              <th>Workorder Qty</th>
+              <th>Workorder Count</th>
+              <th>Balance</th>
+              <th>Unit</th>
+              <th>Entry By</th>
+              <th class="col-head-status">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let po of pendingpo; let i = index">
+
+              <!-- Standard FO (already received / WO generated) -->
+              <tr *ngIf="!po.products?.length" class="row-normal">
+                <td>{{ po.mainGroupName || '-' }}</td>
+                <td>{{ po.doc_no || '-' }}</td>
+                <td>{{ po.order_no || '-' }}</td>
+                <td>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ formatPlanMonth(po.planMonth) }}</td>
+                <td>{{ po.product_code || '-' }}</td>
+                <td class="cell-product" [title]="po.product_name || ''">{{ po.product_name || '-' }}</td>
+                <td class="cell-num">{{ po.plan_qty || po.planQty || '0' }}</td>
+                <td class="cell-num">{{ getWorkOrderQty(po) }}</td>
+                <td class="cell-batch">{{ formatBatchSummary(po.batches, po.planUnit) }}</td>
+                <td class="cell-num">{{ getBalance(po) }}</td>
+                <td>{{ po.planUnit || '-' }}</td>
+                <td class="cell-user" [title]="po.emp_name || ''">{{ po.emp_name || '-' }}</td>
+                <td class="cell-status">{{ po.status || 'WO Generated' }}</td>
+              </tr>
+
+              <!-- Combi parent -->
+              <tr class="row-combi" *ngIf="po.products?.length">
+                <td>{{ po.mainGroupName || '-' }}</td>
+                <td>{{ po.doc_no || '-' }}</td>
+                <td>{{ po.order_no || '-' }}</td>
+                <td>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ formatPlanMonth(po.planMonth) }}</td>
+                <td>{{ po.product_code || '-' }}</td>
+                <td class="cell-product" [title]="po.product_name || ''">
+                  <span class="rpfo-tag rpfo-tag--combi">Combi</span>
+                  {{ po.product_name || '-' }}
+                </td>
+                <td class="cell-num">{{ po.plan_qty || '0' }}</td>
+                <td class="cell-num">-</td>
+                <td class="cell-batch"><span class="rpfo-line-count">{{ po.products?.length || 0 }} lines</span></td>
+                <td class="cell-num">-</td>
+                <td>{{ po.planUnit || '-' }}</td>
+                <td class="cell-user" [title]="po.emp_name || ''">{{ po.emp_name || '-' }}</td>
+                <td class="cell-status rpfo-muted">See lines</td>
+              </tr>
+
+              <!-- Combi SFG lines -->
+              <tr *ngFor="let item of po.products" class="row-product">
+                <td>{{ item.mainGroupName || po.mainGroupName || '-' }}</td>
+                <td>{{ item.doc_no || po.doc_no || '-' }}</td>
+                <td>{{ item.order_no || '-' }}</td>
+                <td>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ formatPlanMonth(item.planMonth) }}</td>
+                <td>{{ item.product_code || '-' }}</td>
+                <td class="cell-product" [title]="item.product_name || ''">
+                  <span class="rpfo-tag rpfo-tag--line">Line</span>
+                  {{ item.product_name || '-' }}
+                </td>
+                <td class="cell-num">{{ item.planQty || item.plan_qty || '0' }}</td>
+                <td class="cell-num">{{ getWorkOrderQty(item) }}</td>
+                <td class="cell-batch">{{ formatBatchSummary(item.batches, item.planUnit || po.planUnit) }}</td>
+                <td class="cell-num">{{ getBalance(item) }}</td>
+                <td>{{ item.planUnit || po.planUnit || '-' }}</td>
+                <td class="cell-user" [title]="po.emp_name || ''">{{ po.emp_name || '-' }}</td>
+                <td class="cell-status">{{ item.status || 'WO Generated' }}</td>
+              </tr>
+
+            </ng-container>
+
+            <tr *ngIf="!pendingpo?.length">
+              <td colspan="14" class="cell-empty">No received PO/FO log records.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>

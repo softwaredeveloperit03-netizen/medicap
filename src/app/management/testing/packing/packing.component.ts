@@ -1,0 +1,46 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+@Component({
+  selector: 'app-packing',
+  templateUrl: './packing.component.html',
+  styleUrls: ['./packing.component.css']
+})
+export class PackingComponent implements OnInit {
+
+  isView = false;
+  samplings;
+
+  selectedReport = [];
+
+  material_name = "";
+  constructor(private service: DataAccessService) { }
+
+  ngOnInit() {
+    this.getARReport();
+  }
+
+  getARReport() {
+    this.service.get('qc/testing/packing.php?type=getTestingReport').subscribe(response => {
+      this.samplings = response;
+    });
+  }
+
+  viewReport(index) {
+    this.selectedReport = this.samplings[index];
+    this.isView = true;
+  }
+  downloadReport(){
+    this.service.open('pdf1/testing.php?type=ARReportlog');
+  }
+  downloadPDF(ar_no, type){
+    if(type == 'manual'){
+      this.service.open('pdf1/testing.php?type=ARReport&ar_no='+ar_no);
+    }else{
+      this.service.open('pdf1/testing.php?type=ARReportdigital&ar_no='+ar_no);
+    }
+  }
+
+
+
+}

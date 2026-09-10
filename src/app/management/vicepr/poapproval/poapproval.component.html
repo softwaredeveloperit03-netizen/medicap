@@ -1,0 +1,325 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Order For CFO Approval</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" routerLink="/management/vice" style="background-color: red;color: white;">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type:<span style="color: red">*</span></label>
+            <select name="material_type" [(ngModel)]="po_type" required (change)="getAllPendingPO()">
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Engg Store Mech</option>
+              <option>Engg Store Elect</option>
+              <option>Stationary</option>
+              <option>Housekeeping</option>
+              <option>Canteen</option>
+              <option>Building Material</option>
+              <option>Machine Spares (Dedicated)</option>
+              <option>Machine Spares (Common)</option>
+              <option>QC Materials</option>
+              <option>IT Materials</option>
+              <option>Others</option>
+              <option>Service</option>
+              <option>Equipment</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-5">
+            <label>Search </label>
+            <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+          </div>
+        </div>
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+            <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Material Type.</clr-dg-column>
+            <clr-dg-column>PO No.</clr-dg-column>
+            <clr-dg-column>Po Dt.</clr-dg-column>
+            <clr-dg-column>Materials</clr-dg-column>
+            <clr-dg-column>Entered By</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>PO Value</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+    
+            <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+              <clr-dg-cell>{{ result.po_type}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.po_no}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+              <clr-dg-cell>
+                <ul>
+                  <li *ngFor="let item of result.materials; let i = index"> {{ item.material_name }},</li>
+                </ul>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_by }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+              <clr-dg-cell><strong>{{ result.status }}</strong></clr-dg-cell>
+              <clr-dg-cell><strong>{{ result.final_total }} {{ result.currency }}</strong></clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+          </clr-datagrid>
+
+        </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div id="contentToConvert">
+    <div class="card-header">Purchase Order</div>
+    <div class="card-block">
+      <div class="card-text">
+ 
+
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;width: 13%;">PO No.:</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ selectedPO['po_no'] }}</td>
+            <td style="text-align: center; font-size:15px; color:green;width: 48%;"><strong>{{ selectedPO['vendor_name'] }} - {{ selectedPO['vendor_no'] }}</strong></td>
+            <td style="text-align: left;width: 13%;">PO Date.:</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ selectedPO['entry_date'] | date:'dd-MM-yyyy'}}</td>
+          </tr>
+  
+        </table>
+        
+      
+        <form #poform="ngForm">
+          
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left; color:blue;" colspan="3"> {{selectedBill['company_name']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedBill['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedBill['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedBill['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedBill['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Pin:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedBill['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Ship To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left; color:blue;" colspan="3"> {{selectedShip['company_name']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedShip['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedShip['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedShip['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedShip['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Pin:</td>
+                  <td style="text-align: left;color:blue;">{{ selectedShip['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div><br>
+
+    
+       
+          <h3>Materials:</h3>
+          <div class="unique-table-wrapper">
+            <table class="table table-border unique-table">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Code</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Name</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Discount %.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Quotation Amt.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Gross Total</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Discount Amt.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Taxable</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">TAX %</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Tax Total</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Net Total</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">SGST</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">CGST</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">IGST</th>
+              </tr>
+              <tr *ngFor="let user of selectedPO['materials']; let i = index">
+                <td style="color: blue;">{{i+1}}</td>
+                <td style="color: blue;text-align: left;">{{user.material_code}}</td>
+                <td style="color: blue;text-align: left;">{{user.material_name}}</td>
+                <td style="color: blue;" >{{user.disc_per}} %</td>
+                <td style="color: blue;">{{user.qty}} {{user.unit}}</td>
+                <td style="color: blue;">{{user.quotation_amt}} / {{user.quotation_per}}</td>
+                <td style="color: blue;">{{user.gross_total}} </td>
+                <td style="color: blue;">{{user.disc_amt}} </td>
+                <td style="color: blue;">{{user.taxable_amt}}</td>
+                <td style="color: blue;">{{user.gst}} %</td>
+                <td style="color: blue;">{{user.tax_total}}</td>
+                <td style="color: blue;">{{user.net_total}}</td>
+                <td style="color: blue;">{{user.sgst}}</td>
+                <td style="color: blue;">{{user.cgst}}</td>
+                <td style="color: blue;">{{user.igst}}</td>
+              </tr>
+              <tr *ngIf="selectedPO['materials']?.length==0">
+                <td colspan="15">No Record Found!</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <h3>Tax Splitup:</h3>
+                <table class="table table-border">
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">Percentage</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">Taxable</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">IGST</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">SGST</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">CGST</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;">TOTAL GST</th>
+                  </tr>
+                  <tr *ngFor="let item of selectedPO['gstSplitData']; let i = index">
+                    <td style="color: blue;">{{item.percentage}}%</td>
+                    <td style="color: blue;">{{item.taxable_amt}}</td>
+                    <td style="color: blue;">{{item.igst}}</td>
+                    <td style="color: blue;">{{item.sgst}}</td>
+                    <td style="color: blue;">{{item.cgst}}</td>
+                    <td style="color: blue;">{{item.totalGST}}</td>
+                  </tr>
+                </table>
+
+                <table class="table table-border" *ngIf="selectedPO['shipping_type'] == 'Company Account'">
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >Shipping Amount</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >GST %</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >GST Amount</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >Shipping Total</th>
+                  </tr>
+                  <tr>
+                    <th style="color: blue;" >{{selectedPO['shipping_handling'] || '-'}}</th>
+                    <th style="color: blue;" >{{selectedPO['shipping_gst'] || '-'}}</th>
+                    <th style="color: blue;" >{{selectedPO['shipping_Gst_amt'] || '-'}}</th>
+                    <th style="color: blue;" >{{selectedPO['shipping_total'] || '-'}}</th>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <h3>Delivery Schedule : </h3>
+                <table class="table table-border" >
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">{{'common.table.srNo' | translate}}</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder; text-align: left;">Material Name</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">Qty. <span style="color: red;"><strong>*</strong></span></th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">Schedule Dil. Dt. <span style="color: red;"><strong>*</strong></span></th>
+                  </tr>
+                  <tr *ngFor="let item of selectedPO['schedule_data']; let i = index">
+                    <td>{{i +1}}</td>
+                    <td style="text-align: left;color: blue;">{{item.material_name}} - {{item.material_code}}</td>
+                    <td style="color: blue;">{{item.qty}} - {{item.unit}}</td>
+                    <td style="color: blue;">{{item.delivery_schedule_date | date:'dd-MM-yyyy'}} </td>
+                  </tr>
+                </table>
+            </div>
+          </div>
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                 <h3>Terms & Conditions : </h3><br>
+
+                <table class="table table-border">
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Term Heading</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Terms & Conditions</th>
+                  </tr>
+                  <tr *ngFor="let term of selectedPO['terms_conditions']; let i = index">
+                    <td style="text-align: left;color: blue;">{{ term.term_heading }}</td>
+                    <td style="text-align: left;color: blue;">{{ term.term }}</td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3>Payment Terms :  Total Payable : <span style="color: green;">{{selectedPO['rounding']}}</span></h3><br>
+                <table class="table table-border">
+                  <tr>
+                    <td style="background-color: rgb(14, 67, 112); color: white;"><strong>Payment %</strong></td>
+                    <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>Payment Conditions</strong></td>
+                    <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>{{'common.amount' | translate}}</strong></td>
+                  </tr>
+                  <tr *ngFor="let term of selectedPO['paymentTerms']; let i = index">
+                    <td style="text-align: left;color: blue;">{{ term.pay_per }}</td>
+                    <td style="text-align: left;color: blue;">{{ term.term }}</td>
+                    <td style="text-align: left;color: blue;">{{ term.pay_amt }} {{ term.currency }}</td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label><strong>Narration :- </strong> <span style="color: blue;"> {{selectedPO['narration'] || '-'}}</span></label>
+            </div>
+          </div>
+
+        </form>
+   
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="updatePO(selectedPO['secondtApprover'])" >Sent {{selectedPO['secondtApprover']}} Approval</button>
+    <button class="btn btn-danger" (click)="updatePO('Rejected')" >{{'common.reject' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+ 
+
+ 
+
+
+ 

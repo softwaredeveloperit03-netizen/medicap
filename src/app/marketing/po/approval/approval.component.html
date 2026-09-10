@@ -1,0 +1,117 @@
+<div class="card po-approval-card" *ngIf="!isView">
+  <div class="card-header po-approval-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">PO Approval
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/marketing/po">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+<!-- Pending POs Datagrid -->
+  <div class="processing-entry-toolbar">
+    <label for="approvalFoEntryType">FO Type:</label>
+    <select id="approvalFoEntryType" [(ngModel)]="newFoEntryType" class="po-control processing-entry-select"
+      (ngModelChange)="onFoTypeFilterChange()">
+      <option value="FO Service">FO Service</option>
+      <option value="FO Product">FO Product</option>
+    </select>
+    <a class="btn btn-primary btn-sm"
+      [routerLink]="['/marketing/po/new']"
+      [queryParams]="{ returnUrl: '/marketing/po/approval' }">
+      New FO Entry
+    </a>
+    <span class="processing-entry-hint">
+      Showing {{ newFoEntryType === 'FO Service' ? 'service-only' : 'product' }} entries.
+    </span>
+  </div>
+  <div class="search-container">
+    <label for="tableSearchInput">Search PO/FO:</label>
+  <input type="text" id="tableSearchInput"
+       placeholder="Type to filter items..."
+       [(ngModel)]="searchText"
+       (ngModelChange)="applyFilter()">
+
+</div>
+<div class="datagrid-wrapper">
+  <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+    <clr-dg-column>Sr.No.</clr-dg-column>
+    <clr-dg-column>FO Type</clr-dg-column>
+    <clr-dg-column>Service Category</clr-dg-column>
+    <clr-dg-column>Group</clr-dg-column>
+    <clr-dg-column>Entry No</clr-dg-column>
+    <clr-dg-column>Forecast No</clr-dg-column>
+    <clr-dg-column>Forecast Date</clr-dg-column>
+    <clr-dg-column>Plan Month</clr-dg-column>
+    <clr-dg-column>Product Code</clr-dg-column>
+    <clr-dg-column>Product Name</clr-dg-column>
+    <clr-dg-column>Plan Unit</clr-dg-column>
+    <clr-dg-column>Plan Qty</clr-dg-column>
+    <clr-dg-column>Workorder Qty</clr-dg-column>
+    <clr-dg-column>Workorder Count</clr-dg-column>
+    <clr-dg-column>Balance</clr-dg-column>
+    <clr-dg-column>Unit</clr-dg-column>
+    <clr-dg-column>View File</clr-dg-column>
+    <clr-dg-column>Entry User Name</clr-dg-column>
+    <clr-dg-column>Wo Prepare User Name</clr-dg-column>
+    <clr-dg-column>Approve</clr-dg-column>
+    <clr-dg-column>Cancel</clr-dg-column>
+    <clr-dg-column>Hold</clr-dg-column>
+
+    <clr-dg-row *ngFor="let po of pendingpo; let i = index">
+      <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+      <clr-dg-cell>{{ getFoEntryTypeLabel(po) }}</clr-dg-cell>
+      <clr-dg-cell>{{ getServiceCategoryLabel(po) }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.mainGroupName || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.doc_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.order_no || po.po_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ formatPlanMonth(po.planMonth) }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.product_code || (po.isFoService ? '—' : '-') }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.product_name || (po.isFoService ? 'Service entry' : '-') }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.isFoService ? '—' : (po.planUnit || po.packingUnit || '-') }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.isFoService ? '—' : (po.plan_qty || po.planQty || '0') }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.isFoService ? '—' : getRowWorkorderQty(po) }}</clr-dg-cell>
+      <clr-dg-cell>
+        <div *ngIf="!po.isFoService && po?.batches?.length">
+          <ul>
+            <li *ngFor="let b of po.batches; let last = last">
+              {{ b.count }} × {{ b.size }} {{ b.unit || po.planUnit || '' }}{{ !last ? ', ' : '' }}
+            </li>
+          </ul>
+        </div>
+        <span *ngIf="!po.isFoService && !po?.batches?.length">-</span>
+        <span *ngIf="po.isFoService">N/A</span>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <span *ngIf="!po.isFoService" class="po-balance" [class.po-balance--short]="getRowBalance(po) > 0"
+          [class.po-balance--excess]="getRowBalance(po) < 0">
+          {{ getRowBalance(po) }}
+        </span>
+        <span *ngIf="po.isFoService">—</span>
+      </clr-dg-cell>
+      <clr-dg-cell>{{ po.isFoService ? '—' : (po.planUnit || po.packingUnit || '-') }}</clr-dg-cell>
+      <clr-dg-cell style="text-align:left;color:blue;">
+        <button [disabled]="po['file']=='NA'" class="btn btn-sm btn-info" (click)="downloadpo(po['file'])">View</button>
+      </clr-dg-cell>
+      <clr-dg-cell style="font-size:8px;">{{ po.emp_name || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.proceed_approved_by || '-' }}</clr-dg-cell>
+      <clr-dg-cell>
+        <button class="btn btn-success btn-sm" (click)="updatePendingPOs('Work Order Preparation Approved', po)">APPROVE</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button class="btn btn-danger btn-sm" (click)="updatePendingPOs('Rejected', po)">Cancel</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button class="btn btn-info btn-sm" (click)="updatePendingPOs('Hold', po)">On Hold</button>
+      </clr-dg-cell>
+    </clr-dg-row>
+  </clr-datagrid>
+</div>
+
+    </div>
+  </div>
+</div>

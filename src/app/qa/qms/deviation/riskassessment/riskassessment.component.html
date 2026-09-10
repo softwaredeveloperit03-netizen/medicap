@@ -1,0 +1,391 @@
+<!-- ========== List view ========== -->
+<div class="deviation-form-card" *ngIf="!isView && !isCapa">
+  <div class="deviation-form-header">
+    <h1 class="deviation-form-title">Deviation Closure</h1>
+    <button type="button" class="btn-close" routerLink="/qa/qms/deviation">
+      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+    </button>
+  </div>
+
+  <div class="log-search-wrap">
+    <div class="log-search-inner">
+      <clr-icon shape="search"></clr-icon>
+      <input type="text" class="log-search-input" placeholder="Search by Deviation No., Date, Dept, Type, Identified By..."
+        [(ngModel)]="searchText" name="searchText" aria-label="Search deviations">
+    </div>
+  </div>
+
+  <div class="log-table-wrap">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th class="th-sr">Sr.No.</th>
+          <th class="th-dev-no">Deviation No.</th>
+          <th class="th-date">Deviation Occurred Date</th>
+          <th class="th-time">Time Of Deviation</th>
+          <th class="th-dept">Deviation Dept</th>
+          <th class="th-type">Deviation Type</th>
+          <th class="th-identified">Identified By</th>
+          <th class="th-action">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of filteredResults; let i = index;">
+          <td class="td-sr">{{ i + 1 }}</td>
+          <td class="td-dev-no" title="{{ item.deviation_no }}">{{ item.deviation_no }}</td>
+          <td class="td-date" title="{{ item.devOccuredDate }}">{{ item.devOccuredDate ? (item.devOccuredDate | date:'dd/MM/yyyy') : 'NA' }}</td>
+          <td class="td-time" title="{{ item.timeOfDev }}">{{ item.timeOfDev }}</td>
+          <td class="td-dept" title="{{ item.devOccuredDept }}">{{ item.devOccuredDept }}</td>
+          <td class="td-type" title="{{ item.DeviationType }}">{{ item.DeviationType }}</td>
+          <td class="td-identified" title="{{ item.identifiedBy }}">{{ item.identifiedBy }}</td>
+          <td class="td-action action-cell">
+            <button type="button" class="btn-view" (click)="view(i)">View</button>
+          </td>
+        </tr>
+        <tr class="no-record-row" *ngIf="filteredResults?.length === 0">
+          <td colspan="8">No record found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="form-footer">
+    <span></span>
+    <button type="button" class="btn-danger-outline" routerLink="/qa/qms/deviation">CLOSE</button>
+  </div>
+</div>
+<!-- ========== View form – sequential from previous stage ========== -->
+<div class="deviation-form-card" *ngIf="isView && !isCapa">
+  <div class="deviation-form-header">
+    <h1 class="deviation-form-title">Deviation Closure – View</h1>
+    <button type="button" class="btn-close" (click)="onCloseCheck()">
+      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+    </button>
+  </div>
+
+  <div class="deviation-form-body">
+    <form #deviation="ngForm">
+      <!-- Stage 1: Initiation -->
+      <section class="form-section">
+        <h2 class="section-title">Part-I : Initiation of Deviation</h2>
+        <table class="log-view-table">
+          <tr>
+            <td>Identified By</td>
+            <td>{{ selectedResult['identifiedBy'] }}</td>
+            <td>Deviation Occurred Date</td>
+            <td>{{ selectedResult['devOccuredDate'] ? (selectedResult['devOccuredDate'] | date:'dd/MM/yyyy') : 'NA' }}</td>
+          </tr>
+          <tr>
+            <td>Deviation Occurred In Dept.</td>
+            <td>{{ selectedResult['devOccuredDept'] }}</td>
+            <td>Deviation Identified Date</td>
+            <td>{{ selectedResult['devIdentifiedDate'] ? (selectedResult['devIdentifiedDate'] | date:'dd/MM/yyyy') : 'NA' }}</td>
+          </tr>
+          <tr>
+            <td>Time Of Deviation</td>
+            <td>{{ selectedResult['timeOfDev'] }}</td>
+            <td>TCD</td>
+            <td>{{ selectedResult['tcd'] ? (selectedResult['tcd'] | date:'dd/MM/yyyy') : selectedResult['tcd'] }}</td>
+          </tr>
+        </table>
+        <div class="signature-box">
+          <span class="signature-box-label">Initiated by</span>
+          <span class="signature-check">&#10003;</span>
+          {{ selectedResult['entry_by_name'] || selectedResult['identifiedBy'] }}-{{ selectedResult['entry_by'] || 'NA' }}
+          | Date: {{ selectedResult['entry_date'] ? (selectedResult['entry_date'] | date:'dd/MM/yyyy') : 'NA' }}
+        </div>
+      </section>
+
+      <!-- Stage 2: Description & Source -->
+      <section class="form-section">
+        <h2 class="section-title">Description &amp; Source</h2>
+        <table class="log-view-table">
+          <tr>
+            <td>Description Of Deviation</td>
+            <td colspan="3">{{ selectedResult['detailsOfDev'] }}</td>
+          </tr>
+          <tr>
+            <td>Source Document</td>
+            <td colspan="3">{{ selectedResult['sourceDocument'] }}</td>
+          </tr>
+          <tr>
+            <td>Product/Material/Equipment Name</td>
+            <td colspan="3">{{ selectedResult['scopeItem'] }}</td>
+          </tr>
+          <tr>
+            <td>Lot No./Medicap Lot No/Equipment ID</td>
+            <td colspan="3">{{ selectedResult['ScopeCode'] }}</td>
+          </tr>
+          <tr>
+            <td>Deviation Type</td>
+            <td>{{ selectedResult['DeviationType'] }}</td>
+            <td>Related To</td>
+            <td>{{ selectedResult['relatedTo'] }}</td>
+          </tr>
+          <tr>
+            <td>Reason For Deviation</td>
+            <td colspan="3">{{ selectedResult['reasonForDeviation'] }}</td>
+          </tr>
+          <tr>
+            <td>Brief Investigation</td>
+            <td colspan="3">{{ selectedResult['briefInvestigation'] }}</td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Stage 3: Corrective Actions -->
+      <section class="form-section">
+        <h2 class="section-title">Corrective Actions</h2>
+        <table class="log-view-table">
+          <tr>
+            <td>Immediate Corrective Actions Taken</td>
+            <td colspan="3">{{ selectedResult['ImmCerrAct'] }}</td>
+          </tr>
+          <tr>
+            <td>Proposed Corrective Actions</td>
+            <td colspan="3">{{ selectedResult['ProCorrAct'] }}</td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Stage 4: Impact & Classification -->
+      <section class="form-section">
+        <h2 class="section-title">Impact &amp; Classification</h2>
+        <table class="log-view-table">
+          <tr><td>Reoccurrence</td><td>{{ selectedResult['reoccurrence'] }}</td><td>QA Review</td><td colspan="2">{{ selectedResult['qaReview'] }}</td></tr>
+          <tr><td>Deviation Impact</td><td colspan="3">{{ selectedResult['deviationImpact'] }}</td></tr>
+          <tr><td>Change Control Required</td><td>{{ selectedResult['changeControlRequired'] }}</td><td>Risk Assessment Required</td><td>{{ selectedResult['riskAssessmentRequired'] }}</td></tr>
+          <tr><td>CAPA Required</td><td>{{ selectedResult['capaRequired'] }}</td><td>Classification</td><td>{{ selectedResult['classification'] }}</td></tr>
+        </table>
+        <div class="signature-box">
+          <span class="signature-box-label">Reviewed by (Dept. Consent)</span>
+          <span class="signature-check">&#10003;</span>
+          {{ selectedResult['review_by_name'] || 'NA' }}-{{ selectedResult['review_by'] || 'NA' }}
+          | Date: {{ selectedResult['review_date'] ? (selectedResult['review_date'] | date:'dd/MM/yyyy') : 'NA' }}
+        </div>
+      </section>
+
+      <!-- Stage 5: Deviation Consent & Review By Dept. -->
+      <section class="form-section">
+        <h2 class="section-title">Deviation Consent &amp; Review By Dept.</h2>
+        <table class="log-view-table">
+          <tr>
+            <td class="log-view-table-header">Department</td>
+            <td colspan="2" class="log-view-table-header">Consent &amp; Review</td>
+          </tr>
+          <tr *ngFor="let item of (selectedResult['deptReview'] || [])">
+            <td>{{ item.department }}</td>
+            <td colspan="2">{{ item.consentAndReview || 'NA' }}</td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Stage 6: QA Approval -->
+      <section class="form-section">
+        <h2 class="section-title">QA Approval</h2>
+        <table class="log-view-table">
+          <tr>
+            <td>The deviation is</td>
+            <td colspan="3">{{ selectedResult['deviationApproval'] || 'NA' }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['deviationApproval'] == 'Rejected'">
+            <td>Comment</td>
+            <td colspan="3">{{ selectedResult['commentRejection'] || 'NA' }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['deviationApproval'] == 'Rejected'">
+            <td>Recommended CAPA</td>
+            <td colspan="3">{{ selectedResult['RecommendedCapa'] || 'NA' }}</td>
+          </tr>
+        </table>
+        <div class="signature-box">
+          <span class="signature-box-label">QA Approval by</span>
+          <span class="signature-check">&#10003;</span>
+          {{ selectedResult['qa_approval_by_name'] || 'NA' }}-{{ selectedResult['qa_approval_by'] || 'NA' }}
+          | Date: {{ selectedResult['qa_approval_date'] ? (selectedResult['qa_approval_date'] | date:'dd/MM/yyyy') : 'NA' }}
+        </div>
+      </section>
+
+      <!-- Stage 7: Closure by QA (current – editable) -->
+      <section class="form-section">
+        <h2 class="section-title">Closure by QA</h2>
+        <table class="log-view-table">
+          <tr>
+            <td>Corrective and Preventive Action Implemented</td>
+            <td>
+              <select name="capaImplemented" [(ngModel)]="capaImplemented"
+                (change)="checkNewDocument()" required class="form-control-custom" aria-label="CAPA Implemented">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>New document prepared</td>
+            <td>
+              <select name="newDocument" [(ngModel)]="newDocument" required class="form-control-custom" aria-label="New document prepared">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Document revised</td>
+            <td>
+              <select name="documentRevised" [(ngModel)]="documentRevised" required class="form-control-custom" aria-label="Document revised">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Training imparted to concerned persons</td>
+            <td>
+              <select name="trainingImparted" [(ngModel)]="trainingImparted" required class="form-control-custom" aria-label="Training imparted">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Relevant documents attached with deviation</td>
+            <td>
+              <select name="documentsAttached" [(ngModel)]="documentsAttached" required class="form-control-custom" aria-label="Documents attached">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Implemented CAPA is effective for the system</td>
+            <td>
+              <select name="capaEffective" [(ngModel)]="capaEffective" required class="form-control-custom" aria-label="CAPA effective">
+                <option value="" disabled>Select an option</option>
+                <option>Yes</option>
+                <option>No</option>
+                <option>NA</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Any Other</td>
+            <td>
+              <input type="text" name="otherCapa" [(ngModel)]="otherCapa"
+                placeholder="Specify if applicable" class="form-control-custom" aria-label="Any other">
+            </td>
+          </tr>
+          <tr *ngIf="showExtraField">
+            <td>Enclosing Attachment</td>
+            <td>
+              <input type="file" name="enclosingAttach" ngModel aria-label="Enclosing attachment">
+            </td>
+          </tr>
+          <tr>
+            <td class="log-view-table-header">Closure Comments by QA Officer</td>
+            <td>
+              <input type="text" placeholder="Closure Comment" name="ClosureComment" ngModel required class="form-control-custom" aria-label="Closure comment">
+            </td>
+          </tr>
+        </table>
+        <div class="signature-box">
+          <span class="signature-box-label">Closure by QA</span>
+          <span class="signature-check">&#10003;</span>
+          {{ selectedResult['closure_by_name'] || 'NA' }}-{{ selectedResult['closure_by'] || 'NA' }}
+          | Date: {{ selectedResult['closure_date'] ? (selectedResult['closure_date'] | date:'dd/MM/yyyy') : 'NA' }}
+        </div>
+      </section>
+    </form>
+  </div>
+
+  <div class="form-footer">
+    <span></span>
+    <div class="form-actions">
+      <button type="button" class="btn-primary" (click)="saveDeviation(deviation)">Save</button>
+      <button type="button" class="btn-danger-outline" (click)="onCloseCheck()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<div class="card deviation-form-card" *ngIf="isCapa && !isView">
+    <div class="card-header capa-card-header">
+        <div class="clr-row header-row">
+            <div class="clr-col-9 header-title"> CAPA INITIATE</div>
+            <div class="clr-col-lg-3 header-actions">
+                <button type="button" class="btn btn-sm btn-danger" (click)="onClose()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-block">
+        <form #capa="ngForm">
+            <div class="clr-row capa-form-row">
+                <div class="clr-col-4">
+                    <label for="capaDept">CAPA Occurred In Dept.</label>
+                    <input id="capaDept" type="text" name="CapaOccuredDept" [(ngModel)]="department_name" aria-label="CAPA Occurred In Dept." placeholder="Department name">
+                </div>
+                <div class="clr-col-4">
+                    <label for="initiateDate">Initiate Date</label>
+                    <input id="initiateDate" type="date" name="Initiate_date" ngModel required #initiateDate="ngModel" aria-label="Initiate Date">
+                    <div *ngIf="initiateDate.invalid && initiateDate.touched" class="text-danger">
+                        Initiate Date is required
+                    </div>
+                </div>
+            </div><br><br>
+            <hr class="clr-divider">
+            <div class="clr-row">
+                <div class="clr-col-4">
+                    <label for="categorySelect"><b>Request Source:</b></label>
+                </div>
+                <div class="clr-col-6">
+                    <div class="clr-control-container">
+                        <select id="categorySelect" class="clr-select capa-select-inline" name="selectedCategory" [(ngModel)]="selectedCategory" required #category="ngModel" aria-label="Request Source">
+                            <option>Deviation/Incident</option>
+                        </select>
+                        <div *ngIf="category.invalid && category.touched" class="text-danger">
+                            Please select a category
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="clr-col-6">
+                <label for="sourceDoc">Source Document No</label>
+                <input id="sourceDoc" type="text" name="Source_doc" ngModel required #sourceDoc="ngModel" aria-label="Source Document No" placeholder="Source document number">
+                <div *ngIf="sourceDoc.invalid && sourceDoc.touched" class="text-danger">
+                    Source Document No is required
+                </div>
+            </div>
+
+            <div class="clr-col-12">
+                <label for="desNonConformity">Description of the Non-Conformity</label>
+                <textarea id="desNonConformity" rows="2" name="DesNonConformity" ngModel required #description="ngModel" aria-label="Description of the Non-Conformity" placeholder="Description"></textarea>
+                <div *ngIf="description.invalid && description.touched" class="text-danger">
+                    Please provide a description
+                </div>
+            </div>
+
+            <div class="clr-col-12">
+                <label for="assessmentImpact">Preliminary Assessment of Potential Impact and/or Risk</label>
+                <textarea id="assessmentImpact" rows="2" name="AssessmentImpact" ngModel required #impact="ngModel" aria-label="Preliminary Assessment of Potential Impact and/or Risk" placeholder="Assessment"></textarea>
+                <div *ngIf="impact.invalid && impact.touched" class="text-danger">
+                    Please provide an assessment
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <div class="card-footer">
+        <button type="button" class="btn btn-primary" (click)="save(capa)" [disabled]="capa.invalid">Save</button>
+    </div>
+
+</div>

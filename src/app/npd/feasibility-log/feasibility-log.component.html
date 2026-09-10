@@ -1,0 +1,174 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Feasibility Form Log</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/npd" >
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+
+          <div class="clr-row">
+            <div class="clr-col-lg-5">
+              <label>Search </label>
+              <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+            </div>
+          </div>
+
+          <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                <clr-dg-column>Enquiry No.</clr-dg-column>
+                <clr-dg-column>Feasibility Form No.</clr-dg-column>
+                <clr-dg-column>Client Name</clr-dg-column>
+                <clr-dg-column>Product Name</clr-dg-column>
+                <clr-dg-column>Product Code (Temp)</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column>Tentative Launch Dt.</clr-dg-column>
+                <clr-dg-column>Product Feasibility & TCD</clr-dg-column>
+                <clr-dg-column>Feasibility By / ON</clr-dg-column>
+                <clr-dg-column >{{'common.table.action' | translate}}</clr-dg-column>
+                <clr-dg-column >Client Action</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let product of filteredMaterials; let i = index" [clrDgItem]="product">
+                  <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.enquiry_no || '-'}}</clr-dg-cell>
+                  <clr-dg-cell><strong>{{product.feasibilityFormNo || '-'}}</strong></clr-dg-cell>
+                  <clr-dg-cell>{{product.LglNm || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.product_name || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{product.product_code || '-'}}</clr-dg-cell>
+                  <clr-dg-cell><strong>{{product.status | uppercase}}</strong></clr-dg-cell>
+                  <clr-dg-cell>{{product.tentative_launch_dt | date : 'dd-MM-yyyy'}}</clr-dg-cell>        
+                  <clr-dg-cell>{{product.prodFeasibiTcd | date : 'dd-MM-yyyy'}}</clr-dg-cell>        
+                  <clr-dg-cell>{{product.entryByName || '-'}} - ( {{product.fesibilityBy}} ) / {{product.fesibilityOn | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                  <clr-dg-cell >
+                      <button class="btn btn-sm btn-primary" (click)="view(product)">{{'common.view' | translate}}</button>
+                  </clr-dg-cell>
+                  <clr-dg-cell >
+                      <button *ngIf="product.source_table == 'NEW' && product.clientStatus == 'Pending'" class="btn btn-sm btn-info" [disabled]="product.fesibilityApproveBy == 'Pending'" 
+                      (click)="sentClientForLegal(product)">Send Client For Legal</button>
+                    
+                      <span *ngIf="product.source_table == 'NEW' && product.clientStatus!== 'Pending'"  style="color:green" ><strong>{{product.clientStatus | uppercase}}</strong></span>
+                      <span *ngIf="product.source_table != 'NEW'" style="color:green" ><strong>Existing Client</strong></span>
+                  </clr-dg-cell>
+                </clr-dg-row>
+            </clr-datagrid>
+          </div>
+
+      </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title">Feasibility Form</h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+    
+            <div class="clr-row">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <table class="table">
+                        <tr>
+                            <td style="width:60%;text-align:right;font-size:16px;"><strong>Feasibility Form </strong></td>
+                            <td style="width:40%;text-align:right;font-size:9px;color:blue;font-weight:bold;">Feasibility Form No. :-  {{selectedEnquiry['feasibilityFormNo']}}</td>
+                        </tr>
+                    </table>
+                    <table class="table table-border">
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Product Name</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;font-weight:bold;"> {{selectedEnquiry['product_name']}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Client Name</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;font-weight:bold;"> {{selectedEnquiry['LglNm']}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Benchmark Product Name</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;font-weight:bold;"> {{selectedEnquiry['fg_benchmark_product']}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Brief ingredients list</strong></td>
+                            <td style="width:80%;text-align:left;"> 
+                                <ol>
+                                    <li *ngFor="let ing of selectedEnquiry['ingredients']"
+                                    style="text-align:left;color:blue;">{{ing.ingredientName}}</li>
+                                </ol>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Remark (If Any)</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;">{{selectedEnquiry['remark'] || 'NA'}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Target Region</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;font-weight:bold;"> {{selectedEnquiry['country']}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Label Claim </strong></td>
+                            <td style="width:80%;text-align:left;color:blue;"> {{selectedEnquiry['labelClaim'] || 'NA'}} </td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Target Bulk Cost </strong></td>
+                            <td style="width:80%;text-align:left;color:blue;"> {{selectedEnquiry['totalBulkCost'] || 'NA'}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Pack size</strong></td>
+                            <td style="width:80%;text-align:left;color:blue;font-weight:bold;"> {{selectedEnquiry['pack_size']}}</td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Pack Type </strong></td>
+                            <td style="width:80%;text-align:left;color:blue;"> {{selectedEnquiry['packType'] || 'NA'}} </td>
+                        </tr>
+                        <tr>
+                            <td style="width:20%;text-align:left;"> <strong>Product Feasibility & TCD </strong></td>
+                            <td style="width:80%;text-align:left;color:blue;"> {{selectedEnquiry['prodFeasibiTcd'] | date:'dd-MM-yyyy'}}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <table class="table table-border">
+                        <tr>
+                            <td style="text-align:center;"><strong>Preoculars</strong></td>
+                            <td style="text-align:center;"><strong>Requested By (NPD)</strong></td>
+                            <td style="text-align:center;"><strong>Reviewed By(R&D)</strong></td>
+                            <td style="text-align:center;"><strong>Approved By (R&D)</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:center;"><strong>{{'common.name' | translate}}</strong></td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['entryByName'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityReviewByName'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityApproveByName'] || '-'}}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:center;"><strong>{{'common.designation' | translate}}</strong></td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['entryByDesi'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityReviewByDesi'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityApproveByDesi'] || '-'}}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:center;"><strong>Sign. /Date</strong></td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityBy'] || '-'}} / {{selectedEnquiry['fesibilityOn'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityReviewBy'] || '-'}} / {{selectedEnquiry['fesibilityReviewOn'] || '-'}}</td>
+                            <td style="text-align:center;color:blue;">{{selectedEnquiry['fesibilityApproveBy'] || '-'}} / {{selectedEnquiry['fesibilityApproveOn'] || '-'}}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+ 
+  

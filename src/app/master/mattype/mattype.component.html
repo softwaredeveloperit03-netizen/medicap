@@ -1,0 +1,309 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Material Type Master
+          </div>
+          <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <app-master-excel-provision
+                *ngIf="isuser == 'Yes'"
+                configId="MATERIAL_TYPE"
+                buttonClass="btn btn-sm btn-primary"
+                (uploaded)="getgetMaterialtype()"
+              ></app-master-excel-provision>
+              <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" (click)="isView= true">New</button>
+              <button class="btn btn-sm" routerLink="/master" style="background-color: red;color: white;">
+                  Close </button>
+          </div>
+      </div>
+  </div>
+<!-- <div class="card-block datagrid-wrapper">
+  <div class="clr-row">
+      <div class="clr-col-lg-5">
+          <label>Search</label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+      </div>
+  </div>
+
+  <clr-datagrid [clrDgLoading]="loading">
+      <clr-dg-column>Sr No. </clr-dg-column>
+      <clr-dg-column clrDgField="material_type">Material Type</clr-dg-column>
+      <clr-dg-column clrDgField="material_subtype">Material Subtype </clr-dg-column>
+      <clr-dg-column clrDgField="control_sample_type">Control/Reserve Sample </clr-dg-column>
+      <clr-dg-column>Action</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let crit of filteredMaterials; let i = index" [clrDgItem]="crit">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ crit.material_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ crit.material_subtype }}</clr-dg-cell>
+          <clr-dg-cell>{{ crit.control_sample_type }}</clr-dg-cell>
+          <clr-dg-cell>
+              <button class="btn btn-sm btn-warning-outline btn-icon" (click)="delRow(crit.id)">
+                  <clr-icon shape="trash" class="is-warning"></clr-icon>
+              </button>
+          </clr-dg-cell>
+      </clr-dg-row>
+
+      <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} users
+          </clr-dg-pagination>
+      </clr-dg-footer>
+  </clr-datagrid>
+</div> -->
+
+
+<div class="card-block datagrid-wrapper">
+  <div class="clr-row">
+      <div class="clr-col-lg-5">
+          <label>Search</label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery" />
+      </div>
+  </div>
+
+  <clr-datagrid [clrDgLoading]="loading">
+      <clr-dg-column>Sr No.</clr-dg-column>
+      <clr-dg-column clrDgField="material_type">Material Type</clr-dg-column>
+      <clr-dg-column clrDgField="material_subtype">Material Subtype</clr-dg-column>
+      <clr-dg-column clrDgField="control_sample_type">Control/Reserve Sample</clr-dg-column>
+      <clr-dg-column clrDgField="control_reserve_criteria">Control/Reserve Sample Criteria</clr-dg-column>
+      <clr-dg-column clrDgField="retest_type">Retest</clr-dg-column>
+      <clr-dg-column clrDgField="restest_months">Retest Months</clr-dg-column>
+      <clr-dg-column clrDgField="entry_date">Entry Date</clr-dg-column>
+      <clr-dg-column clrDgField="entry_by">Entry By</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let crit of filteredMaterials; let i = index" [clrDgItem]="crit">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+
+          <!-- Highlighted Material Type -->
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.material_type, searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text }}</span>
+              </ng-container>
+          </clr-dg-cell>
+
+          <!-- Highlighted Material Subtype -->
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.material_subtype, searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text }}</span>
+              </ng-container>
+          </clr-dg-cell>
+
+          <!-- Highlighted Control Sample Type -->
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.control_sample_type, searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text || 'NA'  }}</span>
+              </ng-container>
+          </clr-dg-cell>
+
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.control_reserve_criteria || 'NA', searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text || 'NA' }}</span>
+              </ng-container>
+          </clr-dg-cell>
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.retest_type || 'NA', searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text }}</span>
+              </ng-container>
+          </clr-dg-cell>
+          <clr-dg-cell>
+              <span>{{ crit.restest_months || 'NA' }}</span>
+          </clr-dg-cell>
+          <clr-dg-cell>
+              <span>{{ crit.entry_date ? (crit.entry_date | date:'dd-MM-yyyy') : 'NA' }}</span>
+          </clr-dg-cell>
+          <clr-dg-cell>
+              <ng-container *ngFor="let part of getHighlightedParts(crit.entry_by || '-', searchQuery)">
+                  <span [ngClass]="{ 'highlight': part.match }">{{ part.text }}</span>
+              </ng-container>
+          </clr-dg-cell>
+      </clr-dg-row>
+      <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Users per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} users
+          </clr-dg-pagination>
+      </clr-dg-footer>
+  </clr-datagrid>
+</div>
+
+
+  <div class="card-footer">
+      <button class="btn btn-primary" (click)="exportToExcelMaterialType()">
+<clr-icon shape="download"></clr-icon> Download Excel
+</button>
+
+      <button class="btn btn-danger" routerLink="/master/material">Close</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">New Material Type</div>
+          <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" (click)="isView= false" style="background-color: red;color: white;">
+                  Close </button>
+          </div>
+      </div>
+  </div>
+  <div class="card-block">
+      <div class="card-text">
+          <form #materialTypeForm="ngForm">
+              <div class="clr-row">
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Material Type:</label>
+                      <select name="mat_type" [(ngModel)]="mat_type" (change)="initCategory()" required>
+                          <option>Raw Material</option>
+                          <option>Packing Material</option>
+                          <option>Engg Store Mech</option>
+                          <option>Engg Store Elect</option>
+                          <option>Stationary</option>
+                          <option>Housekeeping</option>
+                          <option>Canteen</option>
+                          <option>Building Material</option>
+                          <option>Machine Spares (Dedicated)</option>
+                          <option>Machine Spares (Common)</option>
+                          <option>QC Materials</option>
+                          <option>IT Materials</option>
+                          
+                          <option>Product Devlopment</option>
+                          <option>Others</option>
+                          <!-- <option>Services</option> -->
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Material Sub Type:</label>
+                      <input type="text" name="material_subtype" [(ngModel)]="material_subtype" required>
+                  </div>
+
+                  <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="mat_type=='Raw Material' || mat_type=='Packing Material'">
+                      <label>Sampling Criteria:</label>
+                      <select ngModel name="sampling_criteria" [(ngModel)]="sampling_criteria" required>
+                          <option>√n +1</option>
+                          <option>10%</option>
+                          <option>100%</option>
+                      </select>
+                  </div> -->
+
+                  <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="mat_type=='Raw Material' || mat_type=='Packing Material'">
+                      <label>Sampling Qty:</label>
+                      <select name="sampling_qty" [(ngModel)]="sampling_qty" required>
+                          <option>Test Specific</option>
+                          <option>Fixed</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="sampling_qty=='Fixed'">
+                      <label>Quantity:</label>
+                      <input type="text" name="quantity" [(ngModel)]="quantity" required Onlynumber>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"  *ngIf="sampling_qty=='Fixed'">
+                      <label>Unit: </label>
+                      <select name="unit" ngModel>
+                          <option></option>
+                          <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                      </select>
+                  </div> -->
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="mat_type=='Raw Material' || mat_type=='Packing Material'">
+                      <label>Control/ Reserve Sample:</label>
+                      <select name="control_sample_type" [(ngModel)]="control_sample_type" required>
+                          <option>Applicable</option>
+                          <option>Not Applicable</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="control_sample_type=='Applicable'">
+                      <label>Control/ Reserve Sample Criteria:</label>
+                      <select name="control_reserve_criteria" [(ngModel)]="control_reserve_criteria" required>
+                          <option>Two Times (of single analysis)</option>
+                          <option>Three Times (of single analysis)</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="mat_type=='Raw Material' || mat_type=='Packing Material'">
+                      <label>Retest:</label>
+                      <select name="retest_type" [(ngModel)]="retest_type" required>
+                          <option>Applicable</option>
+                          <option>Not Applicable</option>
+                      </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="retest_type=='Applicable'">
+                      <label>Retest Months:</label>
+                      <select name="restest_months" [(ngModel)]="restest_months" required>
+                          <option value="3"> 3 Months</option>
+                          <option value="6"> 6 Months</option>
+                          <option value="12">12 Months</option>
+                          <option value="18">18 Months</option>
+                          <option value="24">24 Months</option>
+                          <option value="36">36 Months</option>
+                      </select>
+                  </div>
+
+                  <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="mat_type!=='Engineering' && mat_type!=='Equipments'">
+                      <label>Weighing Criteria:</label>
+                      <select name="weighing_criteria" [(ngModel)]="weighing_criteria" required>
+                          <option>√n +1</option>
+                          <option>10%</option>
+                          <option>100%</option>
+                          <option>MIL-STD-105E(Military Standard)</option>
+                          <option>N/A</option>
+                      </select>
+                  </div> -->
+
+
+
+              </div>
+          </form>
+
+          <!-- <div class="clr-col-lg-5 clr-col-md-5 clr-col-sm-12 clr-col-xs-12"
+              *ngIf="plant_type=='Formulation' && mat_type=='Packing Material'">
+
+              <label>Categories:</label>
+              <form #labelForm="ngForm">
+                  <table class="table">
+                      <tr>
+                          <th>Sr. No</th>
+                          <th>Category</th>
+                          <th>ADD</th>
+                      </tr>
+                      <tr>
+                          <td>1</td>
+                          <td style="padding: 0px;">
+                              <input type="text" name="category" ngModel  #category="ngModel" style="margin: 0px;">                              
+                          </td>
+                          <td style="padding: 0px;vertical-align: middle;">
+                              <button class="btn btn-sm btn-info" (click)="addCategory(labelForm)">ADD</button>
+                          </td>
+                      </tr>
+                      <tr *ngFor="let list of categoryList;let i=index">
+                          <td>{{i+1}}</td>
+                          <td>{{list.category}}</td> 
+                          <td>
+                              <button class="btn btn-sm btn-info" (click)="deleteCategory(i)">Delete</button>
+                          </td>
+                      </tr>
+                  </table>
+              </form>
+          </div> -->
+          <div style="padding: 20px 0px;">
+              <button class="btn btn-primary" (click)="saveMaterialType(materialTypeForm)">Save</button>
+          </div>
+      </div>
+
+
+  </div>
+  <!-- <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView= false" >Close</button> 
+  </div> -->
+</div>

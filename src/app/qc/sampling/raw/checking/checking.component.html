@@ -1,0 +1,271 @@
+<div class="container-fluid" *ngIf="!isView">
+
+<div class="card"  >
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{listTitle}}</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" [routerLink]="listCloseRoute"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="!retestMode">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getActiveSamplings()"  >
+                  <option></option>
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                    <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Sampling No.</clr-dg-column>
+                    <clr-dg-column>Material Name</clr-dg-column>
+                    <clr-dg-column>Material Code</clr-dg-column>
+                    
+                    <clr-dg-column>Receiving no/ Dt.</clr-dg-column>
+                    <clr-dg-column>Total Containers</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Samp. By/On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            
+                    <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.sampling_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_name || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_code || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.grn_no }} / {{ result.grn_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell>{{ result.containers }} </clr-dg-cell>
+                        <clr-dg-cell><strong>{{ result.status | uppercase }}</strong> </clr-dg-cell>
+                        <clr-dg-cell>{{ result.sampledBy || result.samplngPersonName || '-' }} / {{ result.sampledOn | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell >
+                          <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" [routerLink]="listCloseRoute">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{listTitle}}</div>
+                <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isView = false" style="background-color: red;color: white;">
+                    CLOSE
+                  </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #checkingForm="ngForm">
+          
+                    <h3>Material Details:</h3>
+
+                    <div class="clr-row">
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table sampling-checklist-table">
+                                <colgroup>
+                                    <col class="chk-label">
+                                    <col class="chk-value">
+                                    <col class="chk-label">
+                                    <col class="chk-value">
+                                </colgroup>
+                                <tr>
+                                    <td class="chk-title" colspan="4"><strong>{{checklistTitle}}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">1. ITEM:</td>
+                                    <td class="chk-value">{{ selectedSampling['material_name'] || '-' }}</td>
+                                    <td class="chk-label">2. Receiving no:</td>
+                                    <td class="chk-value">{{ selectedSampling['grn_no'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">3. Medicap Lot No:</td>
+                                    <td class="chk-value">{{ selectedSampling['ar_no'] || '-' }}</td>
+                                    <td class="chk-label">4. Date of receipt:</td>
+                                    <td class="chk-value">{{ selectedSampling['grn_date'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">5. Qty. received:</td>
+                                    <td class="chk-value">{{ selectedSampling['received_qty'] || selectedSampling['qty_received'] || '-' }}</td>
+                                    <td class="chk-label">6. Lot No./Medicap Lot No.:</td>
+                                    <td class="chk-value">{{ selectedSampling['batch_no'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">7. Manufacturer Name:</td>
+                                    <td class="chk-value">{{ selectedSampling['manuNAme'] || '-' }}</td>
+                                    <td class="chk-label">8. Supplier Name:</td>
+                                    <td class="chk-value">{{ selectedSampling['supplierNAme'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">9. Mfg Date:</td>
+                                    <td class="chk-value">{{ selectedSampling['mfg_date'] | date:'dd-MM-yyyy' }}</td>
+                                    <td class="chk-label">10. Exp. Date:</td>
+                                    <td class="chk-value">{{ selectedSampling['exp_date'] | date:'dd-MM-yyyy' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">11. Storage Condition:</td>
+                                    <td class="chk-value">{{ selectedSampling['storage_condition'] || '-' }}</td>
+                                    <td class="chk-label">12. Physical observations:</td>
+                                    <td class="chk-value">{{ selectedSampling['physicalObservation'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">i) Appearance:</td>
+                                    <td class="chk-value">{{ selectedSampling['appearance'] || '-' }}</td>
+                                    <td class="chk-label">ii) Presence of foreign particles:</td>
+                                    <td class="chk-value">{{ selectedSampling['presenceOfForeignParticles'] || '-' }}</td>
+                                </tr>
+                                <tr *ngIf="selectedSampling['material_subtype']?.includes('Perfume')">
+                                    <td class="chk-label">iii) Perfume verification:</td>
+                                    <td class="chk-value">{{ selectedSampling['perfumeOderVerification'] || '-' }}</td>
+                                    <td class="chk-label">Odor verification:</td>
+                                    <td class="chk-value chk-nested">
+                                        <table class="table table-border chk-inner-table">
+                                            <tr>
+                                                <th>Cont. No.</th>
+                                                <th>Observation</th>
+                                            </tr>
+                                            <tr *ngFor="let cont of selectedSampling['sampling_details']">
+                                                <td>{{ cont.container_no }}</td>
+                                                <td>{{ cont.odorObservation || '-' }}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">13. No. of Containers / Pallets / Boxes received:</td>
+                                    <td class="chk-value">{{ selectedSampling['containers'] || '-' }}</td>
+                                    <td class="chk-label">14. No. of Containers / Pallets / Boxes Sampled: <span class="req">*</span></td>
+                                    <td class="chk-value">{{ selectedSampling['sampledContainers'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">15. Sample Quantity {{ selectedSampling['sample_unit'] ? '(' + selectedSampling['sample_unit'] + ')' : '' }}: <span class="req">*</span></td>
+                                    <td class="chk-value">{{ selectedSampling['sample_qty'] || '-' }}</td>
+                                    <td class="chk-label">Qty. Converted To Base Unit {{ selectedSampling['baseUnit'] ? '(' + selectedSampling['baseUnit'] + ')' : '' }}:</td>
+                                    <td class="chk-value">{{ selectedSampling['convertedQtyToBaseUnit'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="chk-label">16. Remark: <span class="req">*</span></td>
+                                    <td class="chk-value">{{ selectedSampling['samplingRemark'] || '-' }}</td>
+                                    <td class="chk-label">17. Sampling Equipment: <span class="req">*</span></td>
+                                    <td class="chk-value">{{ selectedSampling['samplerId'] || '-' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table table-border chk-detail-table">
+                                <tr>
+                                    <th>Cont. No. / Boxes</th>
+                                    <th>Sample Qty.</th>
+                                    <th>Remark / Observation</th>
+                                    <th>{{'common.status' | translate}}</th>
+                                </tr>
+                                <tr *ngFor="let cont of selectedSampling['sampling_details']">
+                                    <td>{{ cont.container_no }}</td>
+                                    <td>{{ containerSampleQty(cont) }}</td>
+                                    <td>{{ cont.remark || '-' }}</td>
+                                    <td>{{ cont.status || '-' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table table-border chk-detail-table">
+                                <tr>
+                                    <th>Checking / Rejection Remark : <span class="req">*</span></th>
+                                </tr>
+                                <tr>
+                                    <td style="margin:0; padding:0;">
+                                        <input type="text" name="checkingRemark" [(ngModel)]="checkingRemark" required style="margin:0;" placeholder="Enter Checking / Rejection Remark" >
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="areaCleaningAgents.length">
+                            <table class="table table-border chk-detail-table">
+                                <tr>
+                                    <th colspan="4" style="text-align:left;">Cleaning Agent Used</th>
+                                </tr>
+                                <tr>
+                                    <th>Sr.</th>
+                                    <th style="text-align:left;">Cleaning Agent</th>
+                                    <th style="text-align:left;">Material Code</th>
+                                    <th>Qty Used</th>
+                                </tr>
+                                <tr *ngFor="let agent of areaCleaningAgents; let i = index">
+                                    <td>{{ i + 1 }}</td>
+                                    <td style="text-align:left;">{{ agent.material_name || '-' }}</td>
+                                    <td style="text-align:left;">{{ agent.material_code || '-' }}</td>
+                                    <td>{{ agent.qty_used || '-' }} {{ agent.unit || '' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+                    <div  class="clr-row">
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+
+                            <div class="card" >
+                                <div class="card-header" style="text-align: center">
+                                    <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Activity Log </div>
+                                    <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                                    </div>
+                                </div>
+                                <div class="card-block">
+                                    <div class="card-text">
+                                        <div class="clr-row">
+                                         
+
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>Start Time <span style="color: red;">*</span></strong> </label>
+                                                <input type="datetime-local" name="start_time" [(ngModel)]="selectedSampling['start_time']" required readonly >
+                                            </div>
+
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>End Time <span style="color: red;">*</span></strong> </label>
+                                                <input type="datetime-local" name="end_time" [(ngModel)]="selectedSampling['end_time']" required readonly >
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+        
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-success"  (click)="updateSampling(checkingForm,'Checked')" >{{'common.approve' | translate}}</button>
+            <button class="btn btn-danger"  (click)="updateSampling(checkingForm,'Rejected')" >{{'common.reject' | translate}}</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

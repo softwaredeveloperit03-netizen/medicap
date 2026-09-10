@@ -1,0 +1,196 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+interface QcCategory {
+  id: string;
+  name: string;
+  icon: string;
+  theme: 'qc';
+  sourceCategory: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  software_type = '';
+  searchQuery = '';
+  selectedCategoryId = 'lab';
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+  showPalette = false;
+
+  qcCards: DeptCard[] = [
+    { id: 'specifications', title: 'Specifications', description: 'Raw & pack material specs', route: '/master/specification/raw', icon: 'fa-cogs', category: 'Lab', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    // { id: 'moa', title: 'STP', description: 'Standard testing procedures', route: 'moa/raw/new', icon: 'fa-flask', category: 'Lab', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'receiving', title: 'Receive Material (For Sampling)', description: 'RM/PM sampling intimation for QC', route: 'sampling/raw/receving', icon: 'fa-truck-loading', category: 'Lab', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'sampling', title: 'Sampling', description: 'Sample collection & logging', route: 'sampling', icon: 'fa-vial', category: 'Lab', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'testing-rds', title: 'Testing', description: 'RDS testing & reports', route: 'testing-rds', icon: 'fa-flask', category: 'Lab', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'analytical-test-request', title: 'Analytical Test Request', description: 'Form FQC-005-06-A with approval workflow', route: 'analytical-test-request', icon: 'fa-file-medical-alt', category: 'Lab', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'processing-laboratory-samples', title: 'Processing Laboratory Samples', description: 'Form FQC-005-08-A — sampling, lab receiving & QC release', route: 'processing-laboratory-samples', icon: 'fa-microscope', category: 'Lab', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'shipping-order', title: 'QC Shipping Order', description: 'Form FQC-005-09-A — contract lab sample shipping', route: 'shipping-order', icon: 'fa-shipping-fast', category: 'Lab', gradient: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)' },
+    { id: 'in-process-product-sampling', title: 'In Process Product Sampling', description: 'Sampling, testing & reporting — QC Lab workflow', route: 'in-process-product-sampling', icon: 'fa-vials', category: 'Lab', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
+    { id: 'finished-product-sampling', title: 'Finished Product Sampling', description: 'Form FQC-005-12-A — sampling plan, testing & C of A', route: 'finished-product-sampling', icon: 'fa-box-open', category: 'Lab', gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' },
+    // { id: 'Samplevendor', title: 'Vendor Sample Testing', description: 'Vendor sample QC', route: 'Samplevendor', icon: 'fa-flask', category: 'Lab', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'water', title: 'Water Analysis', description: 'Water quality testing', route: 'water', icon: 'fa-tint', category: 'Lab', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'fgProductApproval', title: 'FG Product Approval', description: 'Finished goods release', route: 'fgProductApproval', icon: 'fa-clipboard-check', category: 'Lab', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'chemistqualification', title: 'Chemist Qualification', description: 'Analyst qualification records', route: 'chemistqualification', icon: 'fa-user-graduate', category: 'Lab', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    // { id: 'ooscheck', title: 'OOS Check', description: 'Out of spec investigation', route: 'ooscheck', icon: 'fa-times-circle', category: 'Lab', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    { id: 'materialApproval', title: 'Material Approval', description: 'Material Approval', route: 'materialApproval', icon: 'fa-weight', category: 'materialApproval', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    
+    { id: 'controlsample', title: 'Control Sample', description: 'Control sample management', route: 'controlsample', icon: 'fa-vial', category: 'Lab', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'retest', title: 'Retest', description: 'Retest requests & logs', route: 'retest', icon: 'fa-sync-alt', category: 'Lab', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'standard', title: 'Standard', description: 'Reference standards', route: 'standard', icon: 'fa-weight', category: 'Standards & Reagents', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'reagents', title: 'Reagents', description: 'Reagent preparation & use', route: 'reagents', icon: 'fa-vial', category: 'Standards & Reagents', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'volumetric', title: 'Volumetric', description: 'Volumetric solution management', route: 'volumetric', icon: 'fa-flask', category: 'Standards & Reagents', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    // { id: 'chemical', title: 'Chemical', description: 'Chemical inventory & usage', route: 'chemical', icon: 'fa-vial', category: 'Standards & Reagents', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    // { id: 'glassware', title: 'Glassware', description: 'Glassware calibration & log', route: 'glassware', icon: 'fa-glass-martini-alt', category: 'Equipment', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'equipment', title: 'Equipment', description: 'Lab equipment master', route: 'equipment', icon: 'fa-cogs', category: 'Equipment', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'equipments', title: 'Equipments', description: 'Equipment list & status', route: 'equipments', icon: 'fa-tools', category: 'Equipment', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'calibration', title: 'Calibration', description: 'Calibration schedule & records', route: 'calibration', icon: 'fa-tachometer-alt', category: 'Equipment', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    { id: 'hplc', title: 'HPLC', description: 'HPLC system & data', route: 'hpl', icon: 'fa-chart-line', category: 'Equipment', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'cleaning', title: 'Cleaning', description: 'Cleaning validation', route: 'cleaning', icon: 'fa-broom', category: 'QMS', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'oos', title: 'OOS', description: 'Out of specification logs', route: 'oos', icon: 'fa-times-circle', category: 'QMS', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'client-doc-request', title: 'Client Document Request', description: 'Upload documents requested by QA Head', route: 'client-doc-request', icon: 'fa-file-alt', category: 'QMS', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+  ];
+
+  readonly categories: QcCategory[] = [
+    { id: 'lab', name: 'Lab', icon: 'fa-flask', theme: 'qc', sourceCategory: 'Lab' },
+    { id: 'standards-reagents', name: 'Standards & Reagents', icon: 'fa-weight', theme: 'qc', sourceCategory: 'Standards & Reagents' },
+    { id: 'equipment', name: 'Equipment', icon: 'fa-tools', theme: 'qc', sourceCategory: 'Equipment' },
+    { id: 'qms', name: 'QMS', icon: 'fa-shield-alt', theme: 'qc', sourceCategory: 'QMS' },
+    { id: 'material-approval', name: 'Material Approval', icon: 'fa-clipboard-check', theme: 'qc', sourceCategory: 'materialApproval' },
+  ];
+
+  paletteOptions: { name: string; background: string; cardShadow: string }[] = [
+    { name: 'Corporate', background: 'linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)', cardShadow: '0 8px 24px rgba(15, 23, 42, 0.08)' },
+    { name: 'Light', background: '#f8fafc', cardShadow: '0 8px 24px rgba(15, 23, 42, 0.06)' },
+    { name: 'Cool gray', background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)', cardShadow: '0 8px 24px rgba(51, 65, 85, 0.1)' },
+    { name: 'Warm white', background: 'linear-gradient(180deg, #fffdfb 0%, #f8fafc 100%)', cardShadow: '0 8px 24px rgba(180, 83, 9, 0.08)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(private service: DataAccessService) {
+    this.software_type = this.service.getPlantConfigFields('software_type');
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  get currentCategory(): QcCategory | undefined {
+    return this.categories.find((category) => category.id === this.selectedCategoryId);
+  }
+
+  private isCardVisible(card: DeptCard): boolean {
+    return !(card.id === 'water' && this.software_type === 'Nutraceutical');
+  }
+
+  private cardsForCategory(categoryId: string): DeptCard[] {
+    const category = this.categories.find((item) => item.id === categoryId);
+    if (!category) {
+      return [];
+    }
+    return this.qcCards.filter((card) => this.isCardVisible(card) && card.category === category.sourceCategory);
+  }
+
+  countForCategory(categoryId: string): number {
+    return this.cardsForCategory(categoryId).length;
+  }
+
+  selectCategory(categoryId: string): void {
+    this.selectedCategoryId = categoryId;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+    try {
+      localStorage.setItem('qc_dashboard_category', categoryId);
+    } catch {
+      // Ignore storage errors.
+    }
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get filteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cardsForCategory(this.selectedCategoryId).filter((card) => {
+      return (
+        !q ||
+        card.title.toLowerCase().includes(q) ||
+        (card.description && card.description.toLowerCase().includes(q)) ||
+        card.category.toLowerCase().includes(q)
+      );
+    });
+  }
+
+  ngOnInit(): void {
+    const savedPalette = localStorage.getItem('qc_dashboard_palette_master_style');
+    if (savedPalette) {
+      const found = this.paletteOptions.find((palette) => palette.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+
+    try {
+      const savedCategory = localStorage.getItem('qc_dashboard_category');
+      if (savedCategory && this.categories.some((category) => category.id === savedCategory)) {
+        this.selectedCategoryId = savedCategory;
+      }
+    } catch {
+      // Ignore storage errors.
+    }
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  trackByCategoryId(_index: number, category: QcCategory): string {
+    return category.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('qc_dashboard_palette_master_style', palette.name);
+    } catch {
+      // Ignore storage errors.
+    }
+  }
+}

@@ -1,0 +1,866 @@
+import {
+  AfterViewInit,
+  Component,
+  OnInit,
+  AfterViewChecked,
+  OnDestroy,
+} from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+import {
+  Chart,
+  ChartConfiguration,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  Title,
+  registerables,
+} from 'chart.js';
+import { DatePipe } from '@angular/common';
+
+interface ManagementCard {
+  id: string;
+  title: string;
+  description: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'dept_head';
+  badgeCount?: () => number;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  providers: [DatePipe],
+})
+export class DashboardComponent
+  implements OnInit, AfterViewChecked, OnDestroy, AfterViewInit
+{
+  private isChartInitialized = false;
+  public vendorName: any = [];
+  public vendorPurchase: any = [];
+  public vendorColor: any = [];
+  public po: any = [];
+
+  public materialType: any = [];
+  RM: number = 0;
+  PM: number = 0;
+  FM: number = 0;
+  public materialPurchase: any = [];
+  from_date: any;
+  to_date: any;
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights;
+  loggedInDept;
+  dispatchData: any;
+  product_type: any;
+  company_unit: any;
+  product_for: any;
+  costing_type: any;
+  product_code: any;
+  purchaseData: any;
+  constingReport: any;
+  shortageReport: any;
+  constructor(private service: DataAccessService, private datePipe: DatePipe) {
+    Chart.register(...registerables);
+    this.loggedInDept = localStorage.getItem('department');
+  }
+  ngAfterViewInit(): void {
+   
+  }
+  ngOnInit() {
+    this.AllRecord();
+    this.get_rights();
+    this.getPendingExpiry();
+    const savedPalette = localStorage.getItem('management_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+    this.from_date = this.datePipe.transform(Date.now(), 'yyyy-MM-01');
+    this.to_date = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+    this.getdata();
+    this.getProducts();
+    this.getbatchrelease();
+    this.getCostingReport();
+  }
+  getProducts() {
+    this.service
+      .get('master/product.php?type=getProductsLog')
+      .subscribe((response: any) => {
+        this.dispatchData = response;
+        this.dispatchReportFun();
+      });
+  }
+
+  getdata() {
+    this.service
+      .get('purchase/po/raw.php?type=getRawlog')
+      .subscribe((response: any) => {
+        this.purchaseData = response;
+        this.purchseReport();
+      });
+  }
+
+  results;
+  getbatchrelease() {
+    this.service
+      .get(
+        'ipqc/finish.php?type=getBatchReleaseLog&product_type=' +
+          this.product_type +
+          '&from_date=' +
+          this.from_date +
+          '&to_date=' +
+          this.to_date +
+          '&company_unit=' +
+          this.company_unit
+      )
+      .subscribe((response: any) => {
+        this.shortageReport = response;
+        this.shortageReportFun();
+      });
+  }
+  getCostingReport() {
+    this.service
+      .get(
+        'planning/costing.php?type=getCostingReport&product_code=' +
+          this.product_code +
+          '&costing_type=' +
+          this.costing_type +
+          '&product_for=' +
+          this.product_for
+      )
+      .subscribe((response) => {
+        this.constingReport = response;
+        this.costingReportFun();
+      });
+  }
+
+  ngAfterViewChecked(): void {}
+  checkboxes = [
+    {
+      checked: false,
+      content: 'Content for Checkbox 1',
+      name: 'Production Report',
+    },
+    {
+      checked: false,
+      content: 'Content for Checkbox 2',
+      name: 'Dispatch Report',
+    },
+    {
+      checked: false,
+      content: 'Content for Checkbox 3',
+      name: 'Purchase Report',
+    },
+    {
+      checked: false,
+      content: 'Content for Checkbox 4',
+      name: 'Shortages Report',
+    },
+    
+  ];
+
+ 
+  ngOnDestroy(): void {}
+
+  // Example method to handle custom logic based on the selection
+  performActionBasedOnSelection(checkbox: any, index: number) {
+    if (checkbox.checked) {
+      console.log(`Checkbox ${checkbox.name} at index ${index} was checked.`);
+    } else {
+      console.log(`Checkbox ${checkbox.name} at index ${index} was unchecked.`);
+      // Add custom logic for when the checkbox is unchecked
+    }
+  }
+
+  get_rights() {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) return;
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          encodeURIComponent(empId) +
+          '&dep_name=' +
+          encodeURIComponent(this.loggedInDept || '')
+      )
+      .subscribe((response: any) => {
+        this.rights = response;
+        const r = Array.isArray(response) && response[0] ? response[0] : {};
+        this.isuser = r.isuser || 'No';
+        this.ischecker = r.ischecker || 'No';
+        this.isapprover = r.isapprover || 'No';
+        this.qms_approver = r.qms_approver || 'No';
+        this.dept_head = r.dept_head || 'No';
+        this.isauditor = r.isauditor || 'No';
+        this.plant_head = r.plant_head || 'No';
+        this.shift_allocator = r.shift_allocator || 'No';
+      });
+  }
+
+  destroyChart(chart: Chart | null): void {
+    if (chart) {
+      // chart.destroy();
+    }
+  }
+
+  public colorArray: any = [
+    '#FF6633',
+    '#FFB399',
+    '#FF33FF',
+    '#FFFF99',
+    '#00B3E6',
+    '#E6B333',
+    '#3366E6',
+    '#999966',
+    '#99FF99',
+    '#B34D4D',
+    '#80B300',
+    '#809900',
+    '#E6B3B3',
+    '#6680B3',
+    '#FF99E6',
+    '#CCFF1A',
+    '#FF1A66',
+    '#E6331A',
+    '#33FFCC',
+    '#66664D',
+    '#991AFF',
+    '#E666FF',
+    '#4DB3FF',
+    '#1AB399',
+    '#E666B3',
+    '#33991A',
+    '#CC9999',
+    '#B3B31A',
+    '#00E680',
+    '#4D8066',
+    '#809980',
+    '#E6FF80',
+    '#1AFF33',
+    '#999933',
+    '#FF3380',
+    '#CCCC00',
+    '#66E64D',
+    '#4D80CC',
+    '#9900B3',
+    '#E64D66',
+    '#4DB380',
+    '#FF4D4D',
+    '#99E6E6',
+    '#6666FF',
+  ];
+
+  public yearlyPurchase: any;
+  public fourthNightlyPurchase: any;
+  public monthlyPurchase: any;
+  public materialTypePurchase: any;
+  public threeMonthlyPurchase: any;
+  public vendorVicePurchase: any;
+  public rawMaterialmonthly: any;
+  public rawMaterialQuarterly: any;
+  public dispatchReportChart: any;
+
+  public month: any = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  public quartly: any = ['jan-Mar', 'Apr-Jun', 'july-Sep', 'Oct-Dec'];
+
+  public totalMonthlyPurchaseData: any = [
+    '220100',
+    '423121',
+    '511122',
+    '134221',
+    '253121',
+    '524511',
+    '662516',
+    '421133',
+    '162134',
+    '343621',
+    '603121',
+    '501122',
+  ];
+  public totalQuartlyPurchaseData: any = [
+    '765654',
+    '675841',
+    '876543',
+    '650000',
+  ];
+  public Raw_Material_Monthly_Purchase_Data: any = [
+    '420100',
+    '223121',
+    '311122',
+    '434221',
+    '553121',
+    '624511',
+    '662516',
+    '321133',
+    '262134',
+    '443621',
+    '203121',
+    '301122',
+  ];
+  public Packing_Material_Monthly_Purchase_Data: any = [
+    '220100',
+    '423121',
+    '511122',
+    '134221',
+    '253121',
+    '524511',
+    '662516',
+    '421133',
+    '162134',
+    '343621',
+    '603121',
+    '501122',
+  ];
+  public Finished_Material_Monthly_Purchase_Data: any = [
+    '320100',
+    '123121',
+    '211122',
+    '334221',
+    '453121',
+    '324511',
+    '562516',
+    '221133',
+    '362134',
+    '543621',
+    '103121',
+    '201122',
+  ];
+
+  public Raw_Material_Quartly_Purchase_Data: any = [
+    '565654',
+    '575841',
+    '976543',
+    '550000',
+  ];
+  public Packing_Material_Quartly_Purchase_Data: any = [
+    '865654',
+    '775841',
+    '976543',
+    '750000',
+  ];
+  public Finished_Material_Quartly_Purchase_Data: any = [
+    '665654',
+    '575841',
+    '776543',
+    '550000',
+  ];
+
+  unreadExpiry = 0;
+  unreaddirectorIndent = 0;
+  unreadVpIndent = 0;
+
+  /** Search filter for management cards (safe: used only for filtering, not rendered as HTML) */
+  searchQuery = '';
+  selectedCategory = 'All';
+  selectedSidebarModule: 'ALL' | 'MANAGEMENT_REPORTS' | 'MANAGEMENT_OPERATIONS' | 'MANAGEMENT_MASTER' = 'ALL';
+  private readonly managementReportsIds = new Set([
+    'production',
+    'dispatch',
+    'purchase',
+    'testing',
+    'batchrelease',
+    'shortage'
+  ]);
+  private readonly managementOperationsIds = new Set([
+    'expiry',
+    'inventory'
+  ]);
+  private readonly managementMasterIds = new Set([
+    'products'
+  ]);
+  private readonly managementOtherIds = new Set([
+    'hr',
+    'costing',
+    'meeting',
+    'director-approvals',
+    'cfo-approvals'
+  ]);
+
+  /** Management section cards (reference dashboard: gradient per tile) */
+  readonly managementCards: ManagementCard[] = [
+    { id: 'products', title: 'Products List', description: 'View and manage product master data', route: 'product', icon: 'fa-box-open', category: 'Master', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'hr', title: 'HR Admin', description: 'HR administration and employee data', route: 'hr', icon: 'fa-user-tie', category: 'Admin', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    { id: 'production', title: 'Production Report', description: 'Production metrics and output reports', route: 'production', icon: 'fa-chart-line', category: 'Reports', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'dispatch', title: 'Dispatch Report', description: 'Dispatch and shipment status', route: 'report/report', icon: 'fa-truck', category: 'Reports', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'purchase', title: 'Purchase Report', description: 'Purchase orders and raw material logs', route: 'purchase', icon: 'fa-file-invoice-dollar', category: 'Reports', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'testing', title: 'Analytical Status', description: 'Lab testing and analytical status', route: 'testing', icon: 'fa-vial', category: 'Reports', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'batchrelease', title: 'Batch Release Status', description: 'Batch release and QC release logs', route: 'report/batchrelease', icon: 'fa-certificate', category: 'Reports', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'shortage', title: 'Shortage Report', description: 'Material shortage and alerts', route: 'report/shortage', icon: 'fa-exclamation-triangle', category: 'Reports', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+    { id: 'expiry', title: 'Expiry Management', description: 'Track and manage material expiry', route: 'expManagement', icon: 'fa-clock', category: 'Operations', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', badgeCount: () => this.unreadExpiry },
+    { id: 'inventory', title: 'Inventory', description: 'Stock and inventory overview', route: 'inventory', icon: 'fa-warehouse', category: 'Operations', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'costing', title: 'Product Costing', description: 'Product cost and costing reports', route: 'costing', icon: 'fa-coins', category: 'Finance', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'meeting', title: 'Mgt. Review Meeting', description: 'Management review meetings', route: 'meeting', icon: 'fa-handshake', category: 'Admin', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'director-approvals', title: 'Director Approvals', description: 'VP and PO approvals', route: '/management/director', icon: 'fa-user-check', category: 'Approvals', gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', showWhen: 'dept_head' },
+    { id: 'cfo-approvals', title: 'CFO Approvals', description: 'Purchase order approvals', route: '/management/vice', icon: 'fa-file-signature', category: 'Approvals', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', showWhen: 'dept_head' },
+  ];
+
+  getFilteredCards(): ManagementCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.managementCards.filter((c) => {
+      if (c.showWhen === 'dept_head' && this.dept_head !== 'Yes') {
+        return false;
+      }
+      const matchSidebar =
+        this.selectedSidebarModule === 'ALL' ||
+        (this.selectedSidebarModule === 'MANAGEMENT_REPORTS' && this.managementReportsIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'MANAGEMENT_OPERATIONS' && this.managementOperationsIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'MANAGEMENT_MASTER' && this.managementMasterIds.has(c.id));
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+      return matchSidebar && matchCategory && matchSearch;
+    });
+  }
+
+  getOtherManagementSidebarCards(): ManagementCard[] {
+    const self = this;
+    const cardsById = new Map(this.managementCards.map(function(c) { return [c.id, c] as [string, ManagementCard]; }));
+    return Array.from(this.managementOtherIds)
+      .map(function(id) { return cardsById.get(id); })
+      .filter(function(c): c is ManagementCard {
+        if (!c) { return false; }
+        if (c.showWhen === 'dept_head' && self.dept_head !== 'Yes') { return false; }
+        return true;
+      });
+  }
+
+  selectSidebarModule(module: 'ALL' | 'MANAGEMENT_REPORTS' | 'MANAGEMENT_OPERATIONS' | 'MANAGEMENT_MASTER'): void {
+    this.selectedSidebarModule = module;
+    this.selectedCategory = 'All';
+    this.searchQuery = '';
+  }
+
+  showAllTabs(): void {
+    this.selectSidebarModule('ALL');
+  }
+
+  trackByCardId(_index: number, card: ManagementCard): string {
+    return card.id;
+  }
+
+  /** Theme palette (reference dashboard: name, background, cardShadow) */
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+  showPalette = false;
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('management_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  getPendingExpiry() {
+    this.service
+      .get('notification.php?type=ExpiryNotification')
+      .subscribe((response) => {
+        this.unreadExpiry = response['Pending_expiry'];
+        if (this.unreadExpiry > 0) {
+          alertify.warning(response['text']);
+        }
+      });
+  }
+
+  directorindent() {
+    this.service
+      .get('notification.php?type=DirectorIndentNotification')
+      .subscribe((response) => {
+        this.unreaddirectorIndent = response['Pending_indent'];
+        if (this.unreaddirectorIndent > 0) {
+          alertify.warning(response['text']);
+        }
+      });
+  }
+
+  vpindent() {
+    this.service
+      .get('notification.php?type=VpindentNotification')
+      .subscribe((response) => {
+        this.unreadVpIndent = response['Pending_indent'];
+        if (this.unreadVpIndent > 0) {
+          alertify.warning(response['text']);
+        }
+      });
+  }
+
+  monthlypurchase1() {
+    Chart.register(
+      LineController,
+      LineElement,
+      PointElement,
+      LinearScale,
+      Title
+    );
+    this.destroyChart(this.monthlyPurchase);
+
+    this.monthlyPurchase = new Chart('monthlyPurchaseChart', {
+      type: 'line',
+
+      data: {
+        labels: this.month,
+        datasets: [
+          {
+            label: 'Total monthly Purchase',
+            data: this.totalMonthlyPurchaseData,
+            backgroundColor: [
+              '#B34D4D',
+              '#3366E6',
+              '#FF33FF',
+              '#FFFF99',
+              '#00B3E6',
+              '#E6B333',
+              '#3366E6',
+              '#FF6633',
+              '#FFB399',
+              '#FF38FF',
+            ],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+        ],
+      },
+    });
+  }
+
+  AllRecord() {
+    this.service
+      .get('purchase/po/raw.php?type=getAllPOLog')
+      .subscribe((data) => {
+        if (data) {
+          console.log(data);
+          this.po = data;
+
+          for (let i in this.po) {
+            this.vendorName.push(this.po[i].vendor_name);
+            this.vendorColor.push(this.colorArray[i]);
+            this.vendorPurchase.push(this.po[i].net_total);
+          }
+
+          for (let i in this.po) {
+            if (this.po[i].Po_Group == 'RM') {
+              this.RM = this.RM + Math.trunc(this.po[i].net_total);
+            } else if (this.po[i].Po_Group == 'PM') {
+              this.PM = this.PM + Math.trunc(this.po[i].net_total);
+            } else if (this.po[i].Po_Group == 'FM') {
+              this.FM = this.FM + Math.trunc(this.po[i].net_total);
+            }
+          }
+          this.materialPurchase.push(this.RM);
+          this.materialPurchase.push(this.PM);
+          this.materialPurchase.push(this.FM);
+        }
+      });
+  }
+
+  MaterialMonthlypurchase() {
+    Chart.register(
+      LineController,
+      LineElement,
+      PointElement,
+      LinearScale,
+      Title
+    );
+
+    this.rawMaterialmonthly = new Chart('MaterialWiseMonthlyChart', {
+      type: 'bar',
+
+      data: {
+        labels: this.month,
+        datasets: [
+          {
+            label: 'Raw',
+            data: this.Raw_Material_Monthly_Purchase_Data,
+            backgroundColor: ['#66994D'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+          {
+            label: 'Packing',
+            data: this.Packing_Material_Monthly_Purchase_Data,
+            backgroundColor: ['#FF6633'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+          {
+            label: 'Finished',
+            data: this.Finished_Material_Monthly_Purchase_Data,
+            backgroundColor: ['#FF3380'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+        ],
+      },
+    });
+  }
+
+  MaterialQuarterlypurchase() {
+    Chart.register(
+      LineController,
+      LineElement,
+      PointElement,
+      LinearScale,
+      Title
+    );
+
+    this.rawMaterialQuarterly = new Chart('MaterialWiseQuarterlyChart', {
+      type: 'bar',
+
+      data: {
+        labels: this.quartly,
+        datasets: [
+          {
+            label: 'Raw',
+            data: this.Raw_Material_Quartly_Purchase_Data,
+            backgroundColor: ['#E666B3'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+          {
+            label: 'Packing',
+            data: this.Packing_Material_Quartly_Purchase_Data,
+            backgroundColor: ['#66664D'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+          {
+            label: 'Finished',
+            data: this.Finished_Material_Quartly_Purchase_Data,
+            backgroundColor: ['#FF99E6'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+        ],
+      },
+    });
+  }
+
+  dispatchReportFun() {
+    const ids = this.dispatchData.map((item) => item.id);
+    const values = this.dispatchData.map(
+      (item) => parseInt(item.primary_qty, 10) || 0
+    ); // Parse primary_qty or default to 0 if not available
+    const colors = this.dispatchData.map(
+      () =>
+        `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(
+          Math.random() * 255
+        )}, ${Math.floor(Math.random() * 255)}, 0.2)`
+    );
+    const borderColor = colors.map((color) => color.replace('0.2', '1'));
+
+    const ctx = (
+      document.getElementById('dispatchReport') as HTMLCanvasElement
+    ).getContext('2d');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ids,
+          datasets: [
+            {
+              label: 'Product Primary Quantity',
+              data: values,
+              backgroundColor: colors,
+              borderColor: borderColor,
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            title: {
+              display: true,
+              text: 'Product Distribution by Primary Quantity',
+            },
+          },
+        },
+      });
+    }
+  }
+
+  purchseReport() {
+    // Extract ids and financial metrics
+    const labels = this.purchaseData.map((item) => `${item.vendor_name}`);
+    const grossTotalData = this.purchaseData.map((item) =>
+      parseFloat(item.gross_total)
+    );
+    const gstTotalData = this.purchaseData.map((item) =>
+      parseFloat(item.gst_total)
+    );
+    const netTotalData = this.purchaseData.map((item) =>
+      parseFloat(item.net_total)
+    );
+
+    // Create the chart
+    new Chart('purchaseReport', {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Gross Total',
+            data: grossTotalData,
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1,
+          },
+          {
+            label: 'Tax Total',
+            data: gstTotalData,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1,
+          },
+          {
+            label: 'Net Total',
+            data: netTotalData,
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            beginAtZero: true,
+          },
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  }
+
+  shortageReportFun() {
+    // Prepare data for the bar chart
+    const labels = this.shortageReport.map((item) => item.material_name);
+    const qtyData = this.shortageReport.map((item) => parseFloat(item.qty));
+    // Create the bar chart
+    new Chart('materialQtyChart', {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Available Qty',
+            data: qtyData,
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            beginAtZero: true,
+          },
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  }
+
+  costingReportFun() {
+    const labels = this.constingReport.map(
+      (item) => item.product_code || item.product_name || `Product ${item.id}`
+    );
+    const unitCostData = this.constingReport.map((item) =>
+      parseFloat(item.unit_cost)
+    );
+    const packCostData = this.constingReport.map((item) =>
+      parseFloat(item.pack_cost)
+    );
+
+    new Chart('productCostChart', {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Cost/Unit',
+            data: unitCostData,
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+          },
+          {
+            label: 'Cost/Pack',
+            data: packCostData,
+            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: {
+              color: '#ddd', // X-axis grid color
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: '#ddd', // Y-axis grid color
+            },
+          },
+        },
+      },
+    });
+  }
+}

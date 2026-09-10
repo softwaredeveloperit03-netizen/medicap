@@ -1,0 +1,274 @@
+<div class="card recv-page" *ngIf="!isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Log</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/dispensing"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-block">
+        <div class="clr-row">
+           <div class="clr-col-lg-2 clr-col-md-4">
+            <label>Product Type</label>
+            <select  name="dosage_form" [(ngModel)]="product_type" required>
+                <option></option>
+                <option>API</option>
+                <option>Excipient</option>
+                <option>Liquid</option>
+            </select>
+           </div>
+           <!-- <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Unit:</label>
+            <select name="company_unit" [(ngModel)]="company_unit">
+                <option></option>
+                <option *ngFor="let unit of company" [value]="unit.unit">{{unit.unit}}</option>
+            </select>
+           </div> -->
+           <div class="clr-col-lg-2 clr-col-md-4">
+                <label>{{'common.date' | translate}}</label>
+                <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+           </div>
+          <div class="clr-col-lg-1 clr-col-md-2">
+                <button class="btn btn-primary" (click)="getDispensingLog()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+           </div>
+        </div>
+        <div class="card-text">
+            <table class="table table-border recv-kv-table">
+                <tr>
+                  <th>Sr.</th>
+                  <th>{{'common.date' | translate}}</th>
+                  <th>Document  No.</th>
+                  <th>Dispensing For</th>
+                  <th>Product Name</th>  
+                  <th>Product Type</th>
+                  <th>Calculate API</th>
+                  <th>Product Code</th>
+                  <th>Batch Size</th>
+                  <th>Medicap Lot No</th>
+                  <th>Request By</th>
+                  <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ result.request_date |date: 'dd-MM-yyyy'}}</td>
+                  <td>{{ result.document_no }}</td>
+                  <td>{{result.dispensing_for}}</td>
+                  <td style="text-align: left;">{{ result.product_name }}</td>
+              
+                  <td style="text-align: left;">{{ result.dosage_form }}</td>
+                  <td style="text-align: left;">{{ result.calculate_api }}</td>
+                  <td style="text-align: left;">{{ result.product_code }}</td>
+                  <td style="text-align: left;">{{ result.batch_size }}</td>
+                  <td style="text-align: left;">{{ result.batch_no }}</td>
+                  <td>{{ result.request_by }}{{ result.unit }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                  </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="9">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Details</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView=false"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+        
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>BMR No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['bmr']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr']}}</td>
+                    
+                    </tr>
+                </table>
+          
+                <h3>Material Details:</h3>
+                <div style="overflow-x: auto;overflow-y:auto ;">
+                    <table class="table table-border recv-kv-table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Dispensing No</th>
+                            <th>Material Subtype</th>
+                            <th>Material Code</th>
+                            <th>Material Name</th>
+                            <th>Grade</th>
+                            <th>Standard Qty</th>
+                            <th>Overages</th>
+                            <th>LOD %</th>
+                            <th>LOD Qty</th>
+                            <th>Batch Qty</th>
+                            <th>Role</th>
+                            <th>Gross Wt</th>
+                            <th>Tare Wt</th>
+                            <th>Net Wt</th>
+                            <th>{{'common.table.action' | translate}}</th>
+                        </tr>
+                        <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+                            <td>{{ i + 1 }}.</td>
+                            <td>{{comp.dispensing_no}}</td>
+                            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                            <td style="text-align: left;">{{ comp.material_code }}</td>
+                            <td style="text-align: left;">{{ comp.material_name }}</td>
+                            <td style="text-align: left;">{{ comp.grade }}</td>
+                            <td>{{ comp.qty }} {{ comp.unit }}</td>
+                                                        <td>{{ comp.overages }}</td>
+
+                            <td>{{ comp.lod_per }}</td>
+                            <td>{{ comp.lod_qty }}</td>
+                            <td>{{ comp.batch_qty }}</td>
+                            <td style="text-align: left;">{{ comp.role }}</td> 
+                            <td>{{comp.gross_wt }}</td>
+                            <td>{{comp.tare_wt }}</td>
+                            <td>{{comp.net_wt }}</td>   
+                            <td><button class="btn btn-sm" (click)="show(i)">{{'common.view' | translate}}</button></td>
+                        </tr>
+                        <tr *ngIf="selectedResult['materials'].length == 0">
+                            <td colspan="6">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                    </table>
+                </div>
+                <h3>Dispensing:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Date Of Dispensing</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['dispensing_date'] |date: 'dd-MM-yyyy'}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Dispensing To Time:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['dispensing_to']}}</td>  
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Dispensing From Time:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['dispensing_from']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>RLAF ID</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_id']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>LAF Start Time:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_start_time']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>LAF Stop Time</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['laf_stop_time']}}</td>
+                    </tr>
+                 
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Pressure Differential Differential:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['pressure']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>Line Clearance by</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['lineclearance_by']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Pressure Differential Differential:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['pressure']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>Line Clearance by</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['lineclearance_by']}}</td>
+                    </tr>
+                    <!-- <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Production Executive Officer</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['production_person']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>Cleaned By</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['cleaned_by']}}</td>
+                    </tr> -->
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Cleaning Start Time:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['cleaning_from']}}</td>  
+                        <td style="text-align: left; border:1px solid black;"><b>Cleaning End Time</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['cleaning_to']}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadRecord()">{{'common.download' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isShow" clrModalSize="xl">
+    <h3 class="modal-title">Dispensing Details:</h3>
+    <div class="modal-body">
+        <table class="table">
+            <tr>
+               <td style="text-align: left;"><b>Dispensing No:</b></td>
+               <td style="text-align: left;">{{selectedMaterial['dispensing_no']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><b>Material Name:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['material_name']}}</td>
+             </tr>
+             <tr>
+                <td style="text-align: left;"><b>Grade:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['grade']}}</td>
+             </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6">
+                <label> Qty:</label>
+                <input type="text" name="qty" [ngModel]="selectedMaterial['qty']" readonly tabindex="-1">
+            </div>
+        
+        </div>
+        <h3>Containers</h3>
+        <table class="table table-border recv-kv-table">
+            <tr>
+                <th>Medicap Lot No</th>
+                <th>Container No</th>
+                <th>Gross Wt</th>
+                <th>Tare Wt</th>
+                <th>Net Wt</th>
+            </tr>
+            <tr *ngFor="let list of selectedMaterial['containers'];let i=index;">
+                <td style="text-align: left;">{{list.ar_no}}</td>
+                <td style="text-align: left;">{{list.container_no}}</td>
+                <td style="text-align: left;">{{list.gross_wt}}</td>
+                <td style="text-align: left;">{{list.tare_wt}}</td>
+                <td style="text-align: left;">{{list.net_wt}}</td>
+            </tr>
+        </table>
+        <h3>Medicap Lot No Details</h3>
+        <table class="table table-border recv-kv-table">
+            <tr>
+                <th>Sr.</th>
+                <th>Medicap Lot No</th>
+                <th>Qty</th>
+            </tr>
+            <tr *ngFor="let ar of selectedMaterial['ars'];let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{ar.ar_no}}</td>
+                <td style="text-align: left;">{{ar.qty}}</td>
+            </tr>
+            <tr *ngIf="selectedMaterial['ars']?.length==0">
+                <td>No Record Found!</td>
+            </tr>
+        </table>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-danger" (click)="isShow = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>

@@ -1,0 +1,878 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Receiving Rejected Material</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" routerLink="/rnd/store/raw/receiving" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table">
+              <tr>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip Date</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving Date</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Qty</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+              </tr>
+              <tr *ngFor="let user of results; let i = index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{user.vendor_name}}</td>
+                <td style="text-align: left;">{{user.challan_no}}</td>
+                <td style="text-align: left;">{{user.challan_date | date: 'dd-MM-yyyy'}}</td>
+                <td style="text-align: left;">{{user.material_subtype}}</td>
+                <td style="text-align: left;">{{user.grade}}</td>
+                <td style="text-align: left;">{{user.material_name}}</td>
+                <td style="text-align: left;">{{user.material_code}}</td>
+                <td style="text-align: left;">{{ user.receiving_details.received_date | date: 'dd-MM-yyyy' }}</td>
+                <td style="text-align: left;">{{ user.received_qty }} {{ selectedReport['unit'] }}</td>
+                <td style="text-align: left;">{{ user.receiving }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info btn-icon" (click)="view(i)"><clr-icon shape="eye" class="is-info"></clr-icon></button>
+                </td>
+              </tr>
+              <tr *ngIf="results?.length == 0">
+                <td colspan="10">{{'common.noRecords' | translate}}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header">Receiving of Material Log</div>
+      <div class="card-block">
+        <div class="card-text"> 
+            <table class="table" style="border: 1px solid black;">
+                <tr>
+                <td style="text-align: left;border: 1px solid;"><b>Material Name:</b></td>
+                <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['material_name'] }}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;border: 1px solid;"><b>Vendor Name:</b></td>
+                <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['vendor_name'] }}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;"><b>Packaging Slip:</b></td>
+                <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['challan_no'] }}</td>
+                <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+                <td style="text-align: left;">{{ selectedReport['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;"><b>PO No.:</b></td>
+                <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['po_no'] }}</td>
+                <td style="text-align: left;"><b>PO Date:</b></td>
+                <td style="text-align: left;">{{ selectedReport['po_date'] | date: 'dd-MM-yyyy'}}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;"><b>Material Type:</b></td>
+                <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_type'] }}</td>
+                <td style="text-align: left;"><b>Material Subtype:</b></td>
+                <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;"><b>Material Code:</b></td>
+                <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_code'] }}</td>
+                <td style="text-align: left;"><b>Material Grade:</b></td>
+                <td style="text-align: left;">{{ selectedReport['grade'] }}</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;"><b>PO Qty:</b></td>
+                <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+                </tr>
+            </table>
+             <!-- button previous of deviation -->
+            <div *ngIf="selectedReport['iserror'] == 'yes' && selecteddeviation['status'] =='approve' && selectedReport['error_type']=='error2'">
+               <button class="btn btn-sm btn-info"  (click)="isupdatedetails()" style=margin-top:20px;>Privious Details</button>
+            </div>
+              <!-- button previous of incident -->
+              <div *ngIf="selectedReport['iserror'] == 'yes' && selectedincident['status'] =='approve' && selectedReport['error_type']=='error1'">
+                <button class="btn btn-sm btn-info"  (click)="isupdateincident()" style=margin-top:20px;>Privious Details</button>
+             </div>
+             <!-- edit data of deviation -->
+              <div *ngIf="selectedReport['iserror'] == 'yes' && selecteddeviation['status'] =='approve' && selectedReport['error_type']=='error2'">
+                <div class="card">
+                    <div class="card-block">
+                        <h4><span style="color: blue;">Update Details:</span></h4>
+                        <form #editform="ngForm">
+                            <h3>Labeling Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-4">
+                                <label>Medicap Lot No:</label>
+                                <input type="text" name="batch_no" [ngModel]="selectedReport['batch_no']">
+                                </div>
+                                <div class="clr-col-4">
+                                <label>Mfg. Date:</label>
+                                <input type="date" name="mfg_date" [ngModel]="selectedReport['mfg_date']">
+                                </div>
+                                <div class="clr-col-4">
+                                <label>Expiry Date:</label>
+                                <input type="date" name="exp_date" [ngModel]="selectedReport['exp_date']">
+                                </div>
+                            </div>
+                            <h3>Received Quantity Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-3">
+                                    <label>Pack Size:</label>
+                                    <input type="text" name="pack_size" [ngModel]="selectedReport['receiving_details'].pack_size">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Challan Qty: {{ selectedReport['unit'] }}</label>
+                                    <input type="text" name="challan_qty" [ngModel]="selectedReport['receiving_details'].challan_qty">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Received Qty: {{ selectedReport['unit'] }}</label>
+                                    <input type="text" name="qty_received" [ngModel]="selectedReport['received_qty']">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>No. of Containers:</label>
+                                    <input type="text" name="total_containers" [ngModel]="selectedReport['containers']">
+                                </div>
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Damage Container Observed:</label>
+                                    <select name="isdamagecontainer" [ngModel]="selectedReport['receiving_details'].isdamagecontainer" required>
+                                      <option>Yes</option>
+                                      <option>No</option>
+                                    </select>
+                                  </div>
+                                <div class="clr-col-3">
+                                    <label>Outer Damage Containers:</label>
+                                    <input type="text" name="outer_damage" [ngModel]="selectedReport['receiving_details'].outer_damage">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Inner Damage Containers:</label>
+                                    <input type="text" name="inner_damage" [ngModel]="selectedReport['receiving_details'].inner_damage">
+                                </div>
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12">
+                                    <label>Remark (if Any):</label>
+                                    <textarea rows="2" name="remark" [ngModel]="selectedReport['receiving_details'].remark"></textarea>
+                                </div>
+                            </div>
+                            <h3>Packing Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Packing Intactness / Condition:</label>
+                                    <select name="packing_condition" [ngModel]="selectedReport['receiving_details'].packing_condition" required>
+                                      <option>OK</option>
+                                      <option>NOT OK</option>
+                                    </select>
+                                </div>
+                                 <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Outer Packing:</label>
+                                    <select id="outer_packing" name="outer_packing" [ngModel]="selectedReport['receiving_details'].outer_packing" required>
+                                      <option>Sealed</option>
+                                      <option>Unsealed</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Container type:</label>
+                                    <select name="container_type" [ngModel]="selectedReport['receiving_details'].container_type" (change)="checkContainerType($event.target.value)" required>
+                                      <option>Drum</option>
+                                      <option>Bag</option>
+                                      <option>Boxes</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isDrum">
+                                    <label>Drum:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Plastic</option>
+                                      <option>HDPE Drum</option>
+                                      <option>Fiber Board Drum</option>
+                                      <option>Aluminium Container</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBag">
+                                    <label>Bag:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Polyethylene Bag</option>
+                                      <option>Pollinated Bag</option>
+                                      <option>Gunny Bag</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBox">
+                                    <label>Boxes:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Corrugated Boxes</option>
+                                      <option>Cartons</option>
+                                    </select>
+                                  </div>
+                            </div>
+                            <h3>Transporter’s Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-4">
+                                    <label>Vehicle Condition:</label>
+                                    <select name="vehicle_condition" [ngModel]="selectedReport['receiving_details'].vehicle_condition" required>
+                                      <option>OPEN</option>
+                                      <option>COVERED</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-4">
+                                    <label>COA Received:</label>
+                                    <select name="coa_received" [ngModel]="selectedReport['coa_received']" (change)="checkcoa($event.target.value)" required>
+                                      <option>Yes</option>
+                                      <option>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div> 
+                    <div class="card-footer">
+                        <button class="btn btn-primary" (click)="updateProdDetails(editform)">{{'common.edit' | translate}}</button>
+                    </div>   
+                </div>
+              </div>
+         <!-- ///////////////edit data of incident///////////// -->
+              <div *ngIf="selectedReport['iserror'] == 'yes' && selectedincident['status'] =='approve' && selectedReport['error_type']=='error1'">
+                <div class="card">
+                    <div class="card-block">
+                        <h4><span style="color: blue;">Update Details:</span></h4>
+                        <form #editincidentform="ngForm">
+                            <h3>Labeling Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-4">
+                                <label>Medicap Lot No:</label>
+                                <input type="text" name="batch_no" [ngModel]="selectedReport['batch_no']">
+                                </div>
+                                <div class="clr-col-4">
+                                <label>Mfg. Date:</label>
+                                <input type="month" name="mfg_date" [ngModel]="selectedReport['mfg_date']">
+                                </div>
+                                <div class="clr-col-4">
+                                <label>Expiry Date:</label>
+                                <input type="month" name="exp_date" [ngModel]="selectedReport['exp_date']">
+                                </div>
+                            </div>
+                            <h3>Received Quantity Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-3">
+                                    <label>Pack Size:</label>
+                                    <input type="text" name="pack_size" [ngModel]="selectedReport['receiving_details'].pack_size">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Challan Qty: {{ selectedReport['unit'] }}</label>
+                                    <input type="text" name="challan_qty" [ngModel]="selectedReport['receiving_details'].challan_qty">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Received Qty: {{ selectedReport['unit'] }}</label>
+                                    <input type="text" name="qty_received" [ngModel]="selectedReport['received_qty']">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>No. of Containers:</label>
+                                    <input type="text" name="total_containers" [ngModel]="selectedReport['containers']">
+                                </div>
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Damage Container Observed:</label>
+                                    <select name="isdamagecontainer" [ngModel]="selectedReport['receiving_details'].isdamagecontainer" required>
+                                      <option>Yes</option>
+                                      <option>No</option>
+                                    </select>
+                                  </div>
+                                <div class="clr-col-3">
+                                    <label>Outer Damage Containers:</label>
+                                    <input type="text" name="outer_damage" [ngModel]="selectedReport['receiving_details'].outer_damage">
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Inner Damage Containers:</label>
+                                    <input type="text" name="inner_damage" [ngModel]="selectedReport['receiving_details'].inner_damage">
+                                </div>
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12">
+                                    <label>Remark (if Any):</label>
+                                    <textarea rows="2" name="remark" [ngModel]="selectedReport['receiving_details'].remark"></textarea>
+                                </div>
+                            </div>
+                            <h3>Packing Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Packing Intactness / Condition:</label>
+                                    <select name="packing_condition" [ngModel]="selectedReport['receiving_details'].packing_condition" required>
+                                      <option>OK</option>
+                                      <option>NOT OK</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Outer Packing:</label>
+                                    <select id="outer_packing" name="outer_packing" [ngModel]="selectedReport['receiving_details'].outer_packing" required>
+                                      <option>Sealed</option>
+                                      <option>Unsealed</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                                    <label>Container type:</label>
+                                    <select name="container_type" [ngModel]="selectedReport['receiving_details'].container_type" (change)="checkContainerType($event.target.value)" required>
+                                      <option>Drum</option>
+                                      <option>Bag</option>
+                                      <option>Boxes</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isDrum">
+                                    <label>Drum:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Plastic</option>
+                                      <option>HDPE Drum</option>
+                                      <option>Fiber Board Drum</option>
+                                      <option>Aluminium Container</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBag">
+                                    <label>Bag:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Polyethylene Bag</option>
+                                      <option>Pollinated Bag</option>
+                                      <option>Gunny Bag</option>
+                                    </select>
+                                  </div>
+                                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBox">
+                                    <label>Boxes:</label>
+                                    <select name="container_subtype" [ngModel]="selectedReport['receiving_details'].container_subtype" required>
+                                      <option>Corrugated Boxes</option>
+                                      <option>Cartons</option>
+                                    </select>
+                                  </div>
+                            </div>
+                            <h3>Transporter’s Details:</h3>
+                            <div class="clr-row">
+                                <div class="clr-col-4">
+                                    <label>Vehicle Condition:</label>
+                                    <select name="vehicle_condition" [ngModel]="selectedReport['receiving_details'].vehicle_condition" required>
+                                      <option>OPEN</option>
+                                      <option>COVERED</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-4">
+                                    <label>COA Received:</label>
+                                    <select name="coa_received" [ngModel]="selectedReport['coa_received']" (change)="checkcoa($event.target.value)" required>
+                                      <option>Yes</option>
+                                      <option>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div> 
+                    <div class="card-footer">
+                        <button class="btn btn-primary" (click)="updateProdDetails(editincidentform)">{{'common.edit' | translate}}</button>
+                    </div>   
+                </div>
+              </div>
+
+            <div *ngIf="selectedReport['coa_received'] == 'No'">
+                <h3>Deviation Details:</h3>
+                <div class="clr-row">
+                  <div class="clr-col-4">
+                    <label>Deviation Related To:</label>
+                    <input type="text" name="related_to" ngModel="Material" readonly tabindex="-1">
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Deviation Category:</label>
+                    <input type="text" name="deviation_category" ngModel="Unplanned Deviation" readonly tabindex="-1">
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Type Of Deviation:</label>
+                    <input type="text" name="type" [ngModel]="selectedReport['dev_details'].type" readonly tabindex="-1">
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Justification for type:</label>
+                    <textarea name="justification" [ngModel]="selectedReport['dev_details'].justification" readonly tabindex="-1"></textarea>
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Cause of Deviation:</label>
+                    <textarea name="cause" [ngModel]="selectedReport['dev_details'].cause" readonly tabindex="-1"></textarea>
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Description of Deviation:</label>
+                    <textarea name="description" [ngModel]="selectedReport['dev_details'].description" readonly tabindex="-1"></textarea>
+                  </div>
+                </div>
+                <h3>Department Comments:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th>{{'common.department' | translate}}</th>
+                        <th>Comment</th>
+                    </tr>
+                    <tr *ngFor="let comment of selectedReport['dev_details'].comments; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comment.department }}</td>
+                        <td>{{ comment.comment }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div *ngIf="selectedReport['error_type']=='error1' && selectedReport['iserror'] == 'yes'&& selectedincident['status'] =='pending'">
+                <div *ngIf="selectedincident['status'] =='pending'">
+                    <h3 style="text-align:center;"><span style="color: red;">Incident Report Form Approval Pending</span></h3>
+                </div>
+                <h3>Incident Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align:left;">Incident No:</td>
+                        <td style="text-align:left;">{{selectedincident['incident_no']}}</td>
+                        <td style="text-align:left;">Document Type:</td>
+                        <td style="text-align:left;">{{selectedincident['document_type']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Incident Related To:</td>
+                        <td style="text-align:left;">{{selectedincident['related_to']}}</td>
+                        <td style="text-align:left;">Incident Category:</td>
+                        <td style="text-align:left;">{{selectedincident['category']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Type Of Incident:</td>
+                        <td style="text-align:left;">{{selectedincident['type']}}</td>
+                        <td style="text-align:left;">Date Of Incident:</td>
+                        <td style="text-align:left;">{{selectedincident['incident_date'] | date: 'dd-MM-yyyy'}}</td>
+                    </tr>
+                </table>
+                <div class="clr-row">
+                    <div class="clr-col-12">
+                        <label>Justification:</label>
+                        <input type="text" name="justification" [ngModel]="selectedincident['justification']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Cause of Incident:</label>
+                        <input type="text" name="cause" [ngModel]="selectedincident['cause']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Description of Incident:</label>
+                        <input type="text" name="description" [ngModel]="selectedincident['description']" readonly tabindex="-1">
+                    </div>
+                </div>
+                <h4>Cross Functional Departments:</h4>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align:left;">{{'common.department' | translate}}</th>
+                        <th style="text-align:left;">Comment</th>
+                        <th style="text-align:left;">Comment By</th>
+                        <th>Comment Date</th>
+                    </tr>
+                    <tr *ngFor="let dept of selectedincident['departments'];let i=index">
+                        <td>{{i+1}}</td>
+                        <td style="text-align:left;">{{dept.department}}</td>
+                        <td style="text-align:left;">{{dept.comment}}</td>
+                        <td style="text-align:left;">{{dept.entry_by}}</td>
+                        <td>{{dept.entry_date}}</td>
+                    </tr>
+                </table>
+            </div>
+            <div *ngIf="selectedReport['error_type']=='error2' && selectedReport['iserror'] == 'yes'">
+                <div *ngIf="selecteddeviation['status']=='pending'">
+                    <h3 style="text-align:center;"><span style="color: red;">Deviation Report Form Approval Pending</span></h3>
+                </div>
+                <h3>Deviation Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align:left;">Deviation No:</td>
+                        <td style="text-align:left;">{{selecteddeviation['dev_no']}}</td>
+                        <td style="text-align:left;">Document Type:</td>
+                        <td style="text-align:left;">{{selecteddeviation['document_type']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Deviation Related To:</td>
+                        <td style="text-align:left;">{{selecteddeviation['related_to']}}</td>
+                        <td style="text-align:left;">Deviation Category:</td>
+                        <td style="text-align:left;">{{selecteddeviation['category']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Type Of Deviation:</td>
+                        <td style="text-align:left;">{{selecteddeviation['type']}}</td>
+                        <td style="text-align:left;">Date Of Deviation:</td>
+                        <td style="text-align:left;">{{selecteddeviation['deviation_date']}}</td>
+                    </tr>
+                </table>
+                <div class="clr-row">
+                    <div class="clr-col-12">
+                        <label>Justification:</label>
+                        <input type="text" name="justification" [ngModel]="selecteddeviation['justification']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Cause of Incident:</label>
+                        <input type="text" name="cause" [ngModel]="selecteddeviation['cause']" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-12">
+                        <label>Description of Incident:</label>
+                        <input type="text" name="description" [ngModel]="selecteddeviation['description']" readonly tabindex="-1">
+                    </div>
+                </div>
+                <h4>Cross Functional Departments:</h4>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align:left;">{{'common.department' | translate}}</th>
+                        <th style="text-align:left;">Comment</th>
+                        <th style="text-align:left;">Comment By</th>
+                        <th>Comment Date</th>
+                    </tr>
+                    <tr *ngFor="let dept of selecteddeviation['departments'];let i=index">
+                        <td>{{i+1}}</td>
+                        <td style="text-align:left;">{{dept.department}}</td>
+                        <td style="text-align:left;">{{dept.comment}}</td>
+                        <td style="text-align:left;">{{dept.entry_by}}</td>
+                        <td>{{dept.entry_date}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+      </div>
+      <div class="card-footer" *ngIf="selectedReport['iserror'] == 'no'">
+        <button class="btn btn-primary" (click)="reporterror()">Report Error</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+      <div class="card-footer" *ngIf="selectedReport['iserror'] === 'yes'">
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isObservation" [clrModalSize]="'xl'">
+    <h3 class="modal-title"> Incident / Deviation Reporting Form</h3>
+    <div class="modal-body">
+        <table class="table" style="border: 1px solid black;">
+            <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Material Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['material_name'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Vendor Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedReport['vendor_name'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['challan_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_date'] | date: 'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedReport['grade'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO Qty:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+            </tr>
+        </table>
+  
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Error type:</label>
+            <select name="error_type" [(ngModel)]="error_type" required>
+              <option value="error1">Typographical / Non Technical Error</option>
+              <option value="error2">Deviation</option>
+            </select>
+          </div>
+        </div>
+        <form #incidanceReport="ngForm">
+          <div class="clr-row" *ngIf="error_type == 'error1'">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Incident Related To:<span style="color: red">*</span></strong></label>
+                <select name="related_to" ngModel required>
+                     <option value="Process">Process</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Incident Category:<span style="color: red">*</span></strong></label>
+                <select name="category" ngModel required>
+                <option value="Unplanned Incident">Unplanned Incident</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Type Of Incident:<span style="color: red">*</span></strong></label>
+                <select name="type" ngModel required>
+                <option value="Minor">Minor</option>
+                <option value="Major">Major</option>
+                <option value="Critical">Critical</option>
+                </select>
+            </div>
+            <!-- <div class="clr-col-md-3 clr-col-12">
+                <label><strong>Date Of Deviation</strong></label>
+                <input ngModel name="deviation_date" type="date">
+            </div> -->
+            <div class="clr-col-12">
+                <label><strong>Justification for type:</strong></label>
+                <textarea ngModel name="justification"></textarea>
+            </div>
+            <div class="clr-col-12">
+                <label><strong>Cause of Incident:</strong></label>
+                <textarea ngModel name="cause"></textarea>
+            </div>
+            <div class="clr-col-12">
+                <label><strong>Description of Incident:</strong></label>
+                <textarea ngModel name="description"></textarea>
+            </div>
+
+              <div class="clr-row" style="padding: 1%;">
+                <div class="clr-col-md-12 clr-col-12">
+                  <fieldset style="border: solid 1px #a8a8a8;">
+                    <legend style="width:auto; margin-bottom: 0px; font-size: 12px; font-weight: bold; color: #1f497d;">Cross Functional Departments Remark</legend>
+                    <div class="clr-row" style="padding-left: 15px;">
+                      <div class="clr-control-container clr-control-inline" style="margin: 1%;">
+                        <div class="clr-checkbox-wrapper" *ngFor="let order of departments; let i = index">
+                            <input class="clr-checkbox" id="{{order.department_name}}" type="checkbox" name="{{order.department_name}}" [(ngModel)]="order.value" (change)="updateDept($event.target.checked, i)">
+                            <label for="{{order.department_name}}" class="clr-control-label">{{order.department_name}}</label>
+                        </div>
+                      </div>
+                    </div>
+                  </fieldset>
+                </div>
+              </div>
+          </div>
+        </form>
+        <form #deviationReport="ngForm">
+            <div class="clr-row" *ngIf="error_type == 'error2'">    
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Deviation Related To:</strong></label>
+                    <select name="related_to" ngModel required>
+                    <option value="Process">Process</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Deviation Category:</strong></label>
+                    <select name="category" ngModel required>
+                    <option value="Unplanned Deviation">Unplanned Deviation</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Type Of Deviation:</strong></label>
+                    <select name="type" ngModel required>
+                    <option value="Minor">Minor</option>
+                    <option value="Major">Major</option>
+                    <option value="Critical">Critical</option>
+                    </select>
+                </div>
+                <div class="clr-col-12">
+                    <label><strong>Justification for type:</strong></label>
+                    <textarea ngModel name="justification"></textarea>
+                </div>
+                <div class="clr-col-12">
+                    <label><strong>Cause of Deviation:</strong></label>
+                    <textarea ngModel name="cause"></textarea>
+                </div>
+                <div class="clr-col-12">
+                    <label><strong>Description of Deviation:</strong></label>
+                    <textarea ngModel name="description"></textarea>
+                </div>
+                <div class="clr-row" style="padding:2%;">
+                    <label>Departments for Review:</label>
+                    <div class="clr-control-container clr-control-inline" style="margin:2%">
+                        <div class="clr-checkbox-wrapper" *ngFor="let order of dev_departments; let i = index">
+                            <input class="clr-checkbox" id="{{order.name}}" type="checkbox" name="{{order.name}}" [(ngModel)]="order.value" (change)="updateDevDept($event.target.checked, i)">
+                            <label for="{{order.name}}" class="clr-control-label">{{order.name}}</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer" *ngIf="error_type == 'error1'">
+        <button type="button" class="btn btn-primary" (click)="submitOOS(incidanceReport)">{{'common.submit' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isObservation = false">{{'common.cancel' | translate}}</button>
+    </div>
+    <div class="modal-footer" *ngIf="error_type == 'error2'">
+        <button type="button" class="btn btn-primary" (click)="submitOOS(deviationReport)">{{'common.submit' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isObservation = false">{{'common.cancel' | translate}}</button>
+    </div>
+</clr-modal>
+<!-- /////prev details////data in deviation in product details -->
+<clr-modal [(clrModalOpen)]="isupdate" [clrModalSize]="'xl'">
+  <div class="modal-body">
+    <h3>Labeling Details:</h3>
+      <div class="clr-row">
+          <div class="clr-col-4">
+          <label>Medicap Lot No:</label>
+          <input type="text" name="batch_no" [ngModel]="productdetails['batch_no']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+          <label>Mfg. Date:</label>
+          <input type="date" name="mfg_date" [ngModel]="productdetails['mfg_date']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+          <label>Expiry Date:</label>
+          <input type="date" name="exp_date" [ngModel]="productdetails['exp_date']" readonly tabindex="-1">
+          </div>
+      </div>
+      <h3>Received Quantity Details:</h3>
+      <div class="clr-row">
+        <div class="clr-col-3">
+          <label>Pack Size:</label>
+          <input type="text" name="pack_size" [ngModel]="productdetails['pack_size']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Challan Qty: {{ selectedReport['unit'] }}</label>
+          <input type="text" name="challan_qty" [ngModel]="productdetails['challan_qty']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Received Qty: {{ selectedReport['unit'] }}</label>
+          <input type="text" name="qty_received" [ngModel]="productdetails['qty_received']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>No. of Containers:</label>
+          <input type="text" name="total_containers" [ngModel]="productdetails['total_containers']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Damage Container Observed:</label>
+          <input type="text" name="isdamagecontainer" [ngModel]="productdetails['isdamagecontainer']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Outer Damage Containers:</label>
+          <input type="text" name="outer_damage" [ngModel]="productdetails['outer_damage']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Inner Damage Containers:</label>
+          <input type="text" name="inner_damage" [ngModel]="productdetails['inner_damage']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12">
+          <label>Remark (if Any):</label>
+          <textarea rows="2" name="remark" [ngModel]="productdetails['remark']" readonly tabindex="-1"></textarea>
+        </div>   
+      </div>
+      <h3>Packing Details:</h3>
+      <div class="clr-row">
+        <div class="clr-col-4">
+          <label>Packing Intactness / Condition:</label>
+          <input type="text" name="packing_condition" [ngModel]="productdetails['packing_condition']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Outer Packing:</label>
+          <input type="text" name="outer_packing" [ngModel]="productdetails['outer_packing']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Container type:</label>
+          <input type="text" name="container_type" [ngModel]="productdetails['container_type']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Container Subtype:</label>
+          <input type="text" name="container_subtype" [ngModel]="productdetails['container_subtype']" readonly tabindex="-1">
+        </div>
+      </div>
+      <h3>Transporter’s Details:</h3> 
+      <div class="clr-row">
+          <div class="clr-col-4">
+              <label>Vehicle Condition:</label>
+              <input type="text" name="vehicle_condition" [ngModel]="productdetails['vehicle_condition']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+              <label>COA Received:</label>
+              <input type="text" name="coa_received" [ngModel]="productdetails['coa_received']" readonly tabindex="-1">
+          </div>
+      </div> 
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" type="button" (click)="isupdate= false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal> 
+<!-- /////prev details////data in incident in product details -->
+
+<clr-modal [(clrModalOpen)]="isUpincedent" [clrModalSize]="'xl'">
+  <div class="modal-body">
+    <h3>Labeling Details:</h3>
+      <div class="clr-row">
+          <div class="clr-col-4">
+          <label>Medicap Lot No:</label>
+          <input type="text" name="batch_no" [ngModel]="incidentProduct['batch_no']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+          <label>Mfg. Date:</label>
+          <input type="date" name="mfg_date" [ngModel]="incidentProduct['mfg_date']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+          <label>Expiry Date:</label>
+          <input type="date" name="exp_date" [ngModel]="incidentProduct['exp_date']" readonly tabindex="-1">
+          </div>
+      </div>
+      <h3>Received Quantity Details:</h3>
+      <div class="clr-row">
+        <div class="clr-col-3">
+          <label>Pack Size:</label>
+          <input type="text" name="pack_size" [ngModel]="incidentProduct['pack_size']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Challan Qty: {{ selectedReport['unit'] }}</label>
+          <input type="text" name="challan_qty" [ngModel]="incidentProduct['challan_qty']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Received Qty: {{ selectedReport['unit'] }}</label>
+          <input type="text" name="qty_received" [ngModel]="incidentProduct['received_qty']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>No. of Containers:</label>
+          <input type="text" name="total_containers" [ngModel]="incidentProduct['containers']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Damage Container Observed:</label>
+          <input type="text" name="isdamagecontainer" [ngModel]="incidentProduct['isdamagecontainer']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Outer Damage Containers:</label>
+          <input type="text" name="outer_damage" [ngModel]="incidentProduct['outer_damage']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-3">
+          <label>Inner Damage Containers:</label>
+          <input type="text" name="inner_damage" [ngModel]="incidentProduct['inner_damage']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12">
+          <label>Remark (if Any):</label>
+          <textarea rows="2" name="remark" [ngModel]="incidentProduct['remark']" readonly tabindex="-1"></textarea>
+        </div>   
+      </div>
+      <h3>Packing Details:</h3>
+      <div class="clr-row">
+        <div class="clr-col-4">
+          <label>Packing Intactness / Condition:</label>
+          <input type="text" name="packing_condition" [ngModel]="receiveDetails['packing_condition']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Outer Packing:</label>
+          <input type="text" name="outer_packing" [ngModel]="receiveDetails['outer_packing']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Container type:</label>
+          <input type="text" name="container_type" [ngModel]="receiveDetails['container_type']" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-4">
+          <label>Container Subtype:</label>
+          <input type="text" name="container_subtype" [ngModel]="receiveDetails['container_subtype']" readonly tabindex="-1">
+        </div>
+      </div>
+      <h3>Transporter’s Details:</h3> 
+      <div class="clr-row">
+          <div class="clr-col-4">
+              <label>Vehicle Condition:</label>
+              <input type="text" name="vehicle_condition" [ngModel]="receiveDetails['vehicle_condition']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-4">
+              <label>COA Received:</label>
+              <input type="text" name="coa_received" [ngModel]="selectedReport['coa_received']" readonly tabindex="-1">
+          </div>
+      </div> 
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" type="button" (click)="isupdate= false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal> 
+
+ 

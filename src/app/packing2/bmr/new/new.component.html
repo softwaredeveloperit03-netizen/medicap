@@ -1,0 +1,213 @@
+<div class="pe-shell">
+  <div class="pe-page">
+    <div class="card pe-card pe-header">
+      <div class="pe-title-row">
+        <div class="pe-title">Packing eBMR - Proceed / Fill</div>
+        <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" routerLink="/packing/bmr" [disabled]="busy">Back</button>
+      </div>
+      <p class="pe-subtitle">Simple flow: select batch -> load rows -> design headers in popup -> add execution rows -> save.</p>
+      <div
+        class="pe-message"
+        *ngIf="message"
+        [class.pe-ok]="messageKind === 'ok'"
+        [class.pe-err]="messageKind === 'err'"
+        [class.pe-info]="messageKind === 'info'"
+      >
+        {{ message }}
+      </div>
+    </div>
+
+    <div class="card pe-card">
+      <div class="card-header">Batch Context</div>
+      <div class="card-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-12">
+            <label>Approved batch</label>
+            <select [(ngModel)]="selectedBatchKey" (ngModelChange)="onBatchSelectionChanged()" [disabled]="busy || loadingBatches">
+              <option value="">-- Select approved batch --</option>
+              <option *ngFor="let b of approvedBatches; trackBy: trackApprovedBatch" [value]="composeBatchKey(b)">
+                {{ batchOptionLabel(b) }}
+              </option>
+            </select>
+            <small class="pe-muted" *ngIf="!loadingBatches">Options: {{ approvedBatches.length }}</small>
+          </div>
+
+          <div class="clr-col-lg-3">
+            <label>Product code *</label>
+            <input type="text" [(ngModel)]="product_code" [disabled]="busy" />
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Product name</label>
+            <input type="text" [(ngModel)]="product_name" [disabled]="busy" />
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Work order *</label>
+            <input type="text" [(ngModel)]="work_order_no" [disabled]="busy" />
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Batch number *</label>
+            <input type="text" [(ngModel)]="batch_number" [disabled]="busy" />
+          </div>
+        </div>
+
+        <div class="pe-action-row pe-context-actions">
+          <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="getApprovedBatches()" [disabled]="busy || loadingBatches">
+            Refresh batches
+          </button>
+          <button type="button" class="btn btn-sm btn-primary pe-btn" (click)="loadMasterAndSaved()" [disabled]="busy">
+            Load master + saved
+          </button>
+          <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="loadSaved()" [disabled]="busy">
+            Reload saved
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pe-card" *ngIf="rows.length">
+      <div class="card-header pe-rows-header">
+        <span>Stage / Step Execution ({{ rows.length }} actions)</span>
+        <div class="pe-action-row pe-right-actions">
+          <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="generateFormsForAll()" [disabled]="busy">Auto-build forms</button>
+          <button type="button" class="btn btn-sm btn-success pe-btn" (click)="saveAll()" [disabled]="busy">Save all</button>
+        </div>
+      </div>
+
+      <div class="card-block">
+        <div class="pe-filter-row">
+          <label>Stage selection</label>
+          <select [(ngModel)]="selectedStageFilter" [disabled]="busy">
+            <option value="">All stages</option>
+            <option *ngFor="let stageName of stageFilterOptions" [value]="stageName">{{ stageName }}</option>
+          </select>
+        </div>
+
+        <div class="pe-stage-block" *ngFor="let g of visibleStageStepGroups; let gi = index; trackBy: trackStageGroup">
+          <div class="pe-stage-heading">Stage {{ gi + 1 }}: {{ g.stageTitle }}</div>
+          <div class="pe-row" *ngFor="let s of g.steps; let si = index; trackBy: trackStepBlock">
+            <div class="pe-row-head">
+              <span class="pe-step">Step {{ gi + 1 }}.{{ si + 1 }}: {{ s.stepId }} - {{ s.stepName }}</span>
+            </div>
+
+            <ng-container *ngIf="s.mainRow as row">
+              <div class="pe-row-tools">
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="openHeaderPopup(row)" [disabled]="busy">Design headers</button>
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="addTableDataRow(row)" [disabled]="busy">Add execution row</button>
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="generateFormForRow(row)" [disabled]="busy">Auto form</button>
+                <button type="button" class="btn btn-sm btn-primary pe-btn" (click)="saveRow(row)" [disabled]="busy">Save step</button>
+                <span class="pe-time" *ngIf="savedAtMap[row.key]">Saved: {{ savedAtMap[row.key] }}</span>
+              </div>
+
+              <div class="pe-table-builder">
+                <p class="pe-note" *ngIf="!getTableColumns(row).length">No headers yet. Click <b>Design headers</b> first.</p>
+                <table class="table pe-mini-table" *ngIf="getTableColumns(row).length">
+                  <thead>
+                    <tr>
+                      <th *ngFor="let c of getTableColumns(row)">{{ c.header }} ({{ c.type }})</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let rData of getTableRows(row); let ri = index">
+                      <td *ngFor="let c of getTableColumns(row)">
+                        <input *ngIf="c.type === 'text'" type="text" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'number'" type="number" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'date'" type="date" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'time'" type="time" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <select *ngIf="c.type === 'equipment'" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy">
+                          <option value="">-- Select equipment --</option>
+                          <option *ngFor="let e of equipments" [value]="e.equipment_code || e.id || equipmentLabel(e)">{{ equipmentLabel(e) }}</option>
+                        </select>
+                        <select *ngIf="c.type === 'employee'" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy">
+                          <option value="">-- Select employee --</option>
+                          <option *ngFor="let emp of employees" [value]="emp.emp_id || emp.id || employeeLabel(emp)">{{ employeeLabel(emp) }}</option>
+                        </select>
+                      </td>
+                      <td><button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="removeTableDataRow(row, ri)" [disabled]="busy">Delete row</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+
+            <div class="pe-sub-block" *ngFor="let row of s.subRows; let subi = index; trackBy: trackRow">
+              <div class="pe-sub-title">Substep {{ gi + 1 }}.{{ si + 1 }}.{{ subi + 1 }}: {{ row.substepId }} - {{ row.substepName }}</div>
+              <div class="pe-row-tools">
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="openHeaderPopup(row)" [disabled]="busy">Design headers</button>
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="addTableDataRow(row)" [disabled]="busy">Add execution row</button>
+                <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="generateFormForRow(row)" [disabled]="busy">Auto form</button>
+                <button type="button" class="btn btn-sm btn-primary pe-btn" (click)="saveRow(row)" [disabled]="busy">Save substep</button>
+                <span class="pe-time" *ngIf="savedAtMap[row.key]">Saved: {{ savedAtMap[row.key] }}</span>
+              </div>
+
+              <div class="pe-table-builder">
+                <p class="pe-note" *ngIf="!getTableColumns(row).length">No headers yet. Click <b>Design headers</b> first.</p>
+                <table class="table pe-mini-table" *ngIf="getTableColumns(row).length">
+                  <thead>
+                    <tr>
+                      <th *ngFor="let c of getTableColumns(row)">{{ c.header }} ({{ c.type }})</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let rData of getTableRows(row); let ri = index">
+                      <td *ngFor="let c of getTableColumns(row)">
+                        <input *ngIf="c.type === 'text'" type="text" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'number'" type="number" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'date'" type="date" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <input *ngIf="c.type === 'time'" type="time" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy" />
+                        <select *ngIf="c.type === 'equipment'" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy">
+                          <option value="">-- Select equipment --</option>
+                          <option *ngFor="let e of equipments" [value]="e.equipment_code || e.id || equipmentLabel(e)">{{ equipmentLabel(e) }}</option>
+                        </select>
+                        <select *ngIf="c.type === 'employee'" [name]="'cell_' + row.key + '_' + ri + '_' + c.key" [(ngModel)]="rData[c.key]" (ngModelChange)="syncPayloadFromTable(row)" [disabled]="busy">
+                          <option value="">-- Select employee --</option>
+                          <option *ngFor="let emp of employees" [value]="emp.emp_id || emp.id || employeeLabel(emp)">{{ employeeLabel(emp) }}</option>
+                        </select>
+                      </td>
+                      <td><button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="removeTableDataRow(row, ri)" [disabled]="busy">Delete row</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="pe-note" *ngIf="!visibleStageStepGroups.length">No rows found for selected stage.</p>
+      </div>
+    </div>
+
+    <div class="pe-modal-backdrop" *ngIf="headerPopupOpen">
+      <div class="pe-modal-card">
+        <div class="pe-modal-head">
+          <b>Design Headers</b>
+          <button type="button" class="btn btn-sm pe-btn pe-btn-ghost" (click)="closeHeaderPopup()">Close</button>
+        </div>
+        <div class="pe-modal-body" *ngIf="popupRow as prow">
+          <p class="pe-note">
+            {{ prow.stepId }} - {{ prow.stepName }}
+            <span *ngIf="prow.kind === 'substep'"> / Sub {{ prow.substepId }} - {{ prow.substepName }}</span>
+          </p>
+          <div class="pe-action-row">
+            <input type="text" [name]="'new_col_name_' + prow.key" [(ngModel)]="newColNameByRow[prow.key]" placeholder="Header name" [disabled]="busy" />
+            <select [name]="'new_col_type_' + prow.key" [(ngModel)]="newColTypeByRow[prow.key]" [disabled]="busy">
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
+              <option value="time">Time</option>
+              <option value="equipment">Equipment (dropdown)</option>
+              <option value="employee">Employee (dropdown)</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-primary pe-btn" (click)="addTableColumn(prow)" [disabled]="busy">Add header</button>
+          </div>
+          <div class="pe-header-chip-wrap">
+            <span class="pe-header-chip" *ngFor="let c of getTableColumns(prow); let ci = index">
+              {{ c.header }} ({{ c.type }})
+              <button type="button" class="btn btn-sm pe-chip-del" (click)="removeTableColumn(prow, ci)" [disabled]="busy">x</button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

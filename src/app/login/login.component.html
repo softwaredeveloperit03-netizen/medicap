@@ -1,0 +1,266 @@
+<div class="login-page" *ngIf="!isLogin && !isNewReset">
+  <div class="login-shell">
+    <aside class="login-brand">
+      <div class="login-brand__inner">
+        <img src="assets/aurenyx-logo.png" alt="Aurenyx Pharmatech Pvt Ltd" class="login-brand__logo" />
+        <p class="login-brand__company">Project By Aurenyx Pharmatech Pvt Ltd</p>
+        <div class="login-brand__support">
+          <span class="login-brand__support-label">Support</span>
+          <a href="tel:+918181000550" class="login-brand__support-value">0091 8181000550</a>
+        </div>
+        <a class="login-brand__link" href="https://aurenyxgmp.com" target="_blank" rel="noopener">Know More</a>
+        <p class="login-brand__copyright">&copy; 2026 Aurenyx Pharmatech Pvt Ltd. All rights reserved.</p>
+      </div>
+    </aside>
+
+    <main class="login-panel">
+      <div class="login-card">
+        <div class="login-card__head">
+          <h2>Sign In</h2>
+          <p>Sign in with your username and password</p>
+          <p class="login-selected-hint" *ngIf="service?.apiMode">
+            API: <strong>{{ service.getApiModeLabel() }}</strong>
+            <span *ngIf="service.apiMode === 'server'"> (live DB)</span>
+          </p>
+        </div>
+
+        <div class="login-lockout" *ngIf="lockoutSeconds > 0">
+          <i class="fas fa-lock"></i>
+          Account locked. Try again in <strong>{{ lockoutSeconds }}</strong>s
+        </div>
+
+        <form method="post" #formData="ngForm" class="login-form" novalidate (ngSubmit)="checkLogin(formData)">
+          <div class="login-field">
+            <label>Plant</label>
+            <select name="plant_id" [(ngModel)]="selectedPlantId" (ngModelChange)="onPlantChange($event)" class="login-control login-control--select">
+              <option value="" disabled>Select plant</option>
+              <option *ngFor="let res of plants" [ngValue]="plantOptionId(res.plant_id)">{{ res.display_name }}</option>
+            </select>
+            <p class="login-selected-hint" *ngIf="selectedPlantLabel">Selected: <strong>{{ selectedPlantLabel }}</strong></p>
+          </div>
+
+          <div class="login-field">
+            <label>Username</label>
+            <input type="text" name="username" [(ngModel)]="selectedUsername" class="login-control" autocomplete="username" placeholder="Employee ID / Username" required />
+          </div>
+
+          <div class="login-field">
+            <label>Password</label>
+            <div class="login-password-wrap">
+              <input
+                id="loginPassword"
+                [type]="showLoginPassword ? 'text' : 'password'"
+                name="password"
+                [(ngModel)]="loginPassword"
+                class="login-control"
+                autocomplete="current-password"
+                required
+              />
+              <button type="button" class="login-password-toggle" (click)="toggleShowPassword('login')" aria-label="Toggle password">
+                <i class="fas" [ngClass]="showLoginPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <button class="login-submit" type="submit" [disabled]="lockoutSeconds > 0 || submitting">
+            <i class="fas" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-right-to-bracket'"></i>
+            {{ submitting ? 'Signing in...' : 'Login' }}
+          </button>
+
+          <div class="login-links login-links--below-submit">
+            <a href="#" (click)="$event.preventDefault(); openForgotPassword()">Forgot Password</a>
+            <a href="#" (click)="$event.preventDefault(); openChangePin()">Change Session PIN</a>
+          </div>
+        </form>
+
+        <div class="login-security-note">
+          <i class="fas fa-shield-halved"></i>
+          {{ maxAttempts }} failed attempts lock account for {{ lockSeconds }}s. Idle &gt;10 min asks for your 4-digit Session PIN (default {{ defaultPin }}); session expires after 3 hours.
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<app-navbar *ngIf="isLogin"></app-navbar>
+<app-footer *ngIf="isLogin"></app-footer>
+
+<!-- Forgot password -->
+<clr-modal [(clrModalOpen)]="isreset">
+  <h3 class="modal-title">Forgot Password</h3>
+  <div class="modal-body">
+    <form #resetForm="ngForm">
+      <div class="login-field">
+        <label>Select Plant</label>
+        <select name="plant_id" [(ngModel)]="resetPlantId" (ngModelChange)="onResetPlantChange($event)" required class="login-control login-control--select">
+          <option value="" disabled>Select plant</option>
+          <option *ngFor="let res of plants" [ngValue]="res.plant_id">{{ res.display_name }}</option>
+        </select>
+        <p class="login-selected-hint" *ngIf="resetPlantLabel">Selected: <strong>{{ resetPlantLabel }}</strong></p>
+      </div>
+      <div class="login-field">
+        <label>Employee ID / Username</label>
+        <input type="text" name="emp_id" [(ngModel)]="resetEmpId" required class="login-control"
+               autocomplete="username" placeholder="Employee ID / Username" />
+        <p class="login-selected-hint" *ngIf="resetEmpId">Reset request for: <strong>{{ resetEmpId }}</strong></p>
+      </div>
+      <div class="login-field">
+        <label>New Password</label>
+        <input type="password" name="new_password" [(ngModel)]="new_password" required class="login-control"
+               pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$" #newPassword="ngModel" (input)="validatePasswords()" />
+        <div *ngIf="newPassword.invalid && newPassword.touched" class="login-error">{{ passwordPolicyText }}</div>
+      </div>
+      <div class="login-field">
+        <label>Confirm Password</label>
+        <input type="password" name="confirm_password" [(ngModel)]="confirm_password" required class="login-control"
+               [class.login-control--invalid]="!passwordsMatch && confirm_password" (input)="validatePasswords()" />
+        <div *ngIf="!passwordsMatch && confirm_password" class="login-error">Passwords do not match.</div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="isreset = false">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="reset(resetForm)">Send for IT Approval</button>
+  </div>
+</clr-modal>
+
+<!-- Change PIN (pre-login, immediate â€” no IT approval) -->
+<clr-modal [(clrModalOpen)]="isChangePin">
+  <h3 class="modal-title">Change PIN</h3>
+  <div class="modal-body">
+    <div class="login-field" *ngIf="resolvedPlantLabel || selectedPlantLabel">
+      <label>Plant</label>
+      <div class="login-readonly-value">{{ resolvedPlantLabel || selectedPlantLabel }}</div>
+      <p class="login-selected-hint">Using plant selected on the login screen.</p>
+    </div>
+    <div class="login-field">
+      <label>Employee ID / Username</label>
+      <input type="text" name="change_pin_emp_id" [(ngModel)]="changePinEmpId"
+             (ngModelChange)="onChangePinEmpIdChange($event)"
+             required class="login-control" autocomplete="username"
+             placeholder="Employee ID / Username" />
+    </div>
+    <div class="login-field">
+      <label>Current Login Password</label>
+      <input type="password" name="changePinPassword" [(ngModel)]="changePinPassword" autocomplete="off" class="login-control" />
+    </div>
+    <div class="login-field">
+      <div class="login-pin-label-row">
+        <label>New 4-Digit PIN</label>
+        <button type="button" class="login-pin-toggle" (click)="togglePinVisibility('change')"
+                [attr.aria-label]="showChangePin ? 'Hide PIN' : 'Show PIN'">
+          <i class="fas" [ngClass]="showChangePin ? 'fa-eye-slash' : 'fa-eye'"></i>
+          {{ showChangePin ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      <div class="login-pin-row login-pin-row--modal" (paste)="onChangePinPaste($event)">
+        <input *ngFor="let d of changePinDigits; let i = index; trackBy: pinTrackBy"
+               [id]="'change-pin-' + i"
+               type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               maxlength="1"
+               [attr.name]="'change-pin-' + i"
+               autocomplete="one-time-code"
+               [attr.placeholder]="null"
+               aria-label="New PIN digit {{ i + 1 }}"
+               class="login-pin-box"
+               [class.login-pin-box--masked]="!showChangePin"
+               (input)="onChangePinInput(i, $event)"
+               (keydown)="onChangePinKeydown(i, $event)" />
+      </div>
+    </div>
+    <div class="login-field">
+      <div class="login-pin-label-row">
+        <label>Confirm New PIN</label>
+        <button type="button" class="login-pin-toggle" (click)="togglePinVisibility('changeConfirm')"
+                [attr.aria-label]="showChangePinConfirm ? 'Hide PIN' : 'Show PIN'">
+          <i class="fas" [ngClass]="showChangePinConfirm ? 'fa-eye-slash' : 'fa-eye'"></i>
+          {{ showChangePinConfirm ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+      <div class="login-pin-row login-pin-row--modal" (paste)="onChangePinConfirmPaste($event)">
+        <input *ngFor="let d of changePinConfirmDigits; let i = index; trackBy: pinTrackBy"
+               [id]="'change-pin-c-' + i"
+               type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               maxlength="1"
+               [attr.name]="'change-pin-c-' + i"
+               autocomplete="one-time-code"
+               [attr.placeholder]="null"
+               aria-label="Confirm PIN digit {{ i + 1 }}"
+               class="login-pin-box"
+               [class.login-pin-box--masked]="!showChangePinConfirm"
+               (input)="onChangePinConfirmInput(i, $event)"
+               (keydown)="onChangePinConfirmKeydown(i, $event)" />
+      </div>
+    </div>
+    <p class="login-error" *ngIf="changePinAvailabilityMsg">{{ changePinAvailabilityMsg }}</p>
+    <p class="login-pin-hint">Enter your Employee ID and <strong>login password</strong>, then set a unique 4-digit Session PIN used when idle timeout asks you to re-authorise (default {{ defaultPin }}).</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="isChangePin = false">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="submitChangePin()">Update PIN</button>
+  </div>
+</clr-modal>
+
+<!-- First-login password reset -->
+<clr-main-container *ngIf="isNewReset">
+  <clr-header class="header-6" style="z-index: 10000;">
+    <div class="branding" style="background: white;cursor: pointer;">
+      <a class="nav-link">
+        <img src="assets/aurenyx-logo.png" class="login-reset-logo" alt="Aurenyx Pharmatech Pvt Ltd" />
+      </a>
+    </div>
+    <div class="header-nav">
+      <a class="active nav-link nav-text login-reset-title">Project By Aurenyx Pharmatech Pvt Ltd</a>
+    </div>
+    <div class="header-actions" style="color: white;">
+      <a class="nav-link" (click)="service.logout()" style="cursor: pointer;color: white"><img src="assets/logout.png" style="width:25px; height: 25px;"></a>
+    </div>
+  </clr-header>
+
+  <nav class="subnav" style="background-color: white;">
+    <div class="clr-row" style="width: 100%;color: black;">
+      <div class="clr-col-lg-8 login-reset-subnav">Project By Aurenyx Pharmatech Pvt Ltd</div>
+      <div class="clr-col-lg-2" style="text-align: center; border-left:solid 1px gray">{{ myDate | date: 'medium' }}</div>
+    </div>
+  </nav>
+
+  <div class="content-container">
+    <div class="content-area" style="padding-top: 0px;">
+      <ngx-loading-bar fixed></ngx-loading-bar>
+      <div class="clr-row">
+        <div class="clr-col-lg-4"></div>
+        <div class="clr-col-lg-4">
+          <div class="card">
+            <div class="card-header">Set New Password</div>
+            <div class="card-block">
+              <form #resetForm="ngForm">
+                <div class="login-field">
+                  <label>New Password</label>
+                  <input type="password" name="new_password" [(ngModel)]="new_password" required class="login-control"
+                         pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$" #newPassword="ngModel" (input)="validatePasswords()" />
+                  <div *ngIf="newPassword.invalid && newPassword.touched" class="login-error">{{ passwordPolicyText }}</div>
+                </div>
+                <div class="login-field">
+                  <label>Confirm Password</label>
+                  <input type="password" name="confirm_password" [(ngModel)]="confirm_password" required class="login-control"
+                         [class.login-control--invalid]="!passwordsMatch && confirm_password" (input)="validatePasswords()" />
+                  <div *ngIf="!passwordsMatch && confirm_password" class="login-error">Passwords do not match.</div>
+                </div>
+              </form>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-primary" (click)="resetPassword(resetForm)">Reset Password</button>
+              <button class="btn btn-danger" (click)="isNewReset = false">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="clr-col-lg-4"></div>
+      </div>
+    </div>
+  </div>
+</clr-main-container>
+

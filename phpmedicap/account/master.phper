@@ -1,0 +1,110 @@
+<?php
+require '../db.php';
+require '../token.php';
+require '../tcpdf/tcpdf.php';
+header('Access-Control-Allow-Origin: *');
+date_default_timezone_set("Asia/Kolkata");
+$token = $_GET["token"];
+$timestamp = time();
+$entry_date = date("Y-m-d h:i:s", $timestamp);
+$input = json_decode(file_get_contents('php://input'),true);
+
+$sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+$result = $conn->query($sql);
+$_GET["emp_id"] = "";
+$_GET["department"] = "";
+
+if($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()){
+    	$string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+    	$string = explode("$",$string);
+    	$_GET["emp_id"] = $string[0];
+    	$_GET["department"] = $string[1];
+    	break;
+    }
+    
+    $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "'.$_GET["type"].'", "actiontime": "'.$entry_date.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'"}';
+    $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+    
+   
+        echo json_encode($output);
+    } else if ($_GET["type"] == "saveAcCategory") {
+        $sql = "INSERT INTO ac_categories (user_no, category) VALUES ('".$_GET["user_no"]."', '".$input["category"]."')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "saveCategory") {
+        $sql = "INSERT INTO expense (category name ) VALUES ( '".$input["category_name"]."')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getExpenses") {
+        $output = array();
+        $sql = "SELECT * FROM expense WHERE user_no='".$_GET["user_no"]."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["particulars"] = json_decode($row["particulars"]);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "updateExpense") {
+        $sql = "UPDATE expense SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getPendingExpenses") {
+        $output = array();
+        $sql = "SELECT * FROM expense WHERE user_no='".$_GET["user_no"]."' AND status='pending'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["particulars"] = json_decode($row["particulars"]);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }else if ($_GET["type"] == "downloadCategory") {
+        $GET['filename'] = 'master'; $_GET['pdftype'] = 'onlyheader';  include('../pdfimp.php');
+        $html="";
+          $html.='<table cellpadding="5" border="1">
+        <tr>
+            
+            <td style="width:40%; text-align:centre;"><b>Category Name</b></td>
+          </tr>
+         
+          <tr>
+            
+            <td style="width:40%; text-align:centre;"><b>Group Name</b></td>
+            </tr>
+            
+            <td style="width:40%; text-align:centre;"><b>Group Code</b></td>
+            <tr>
+            
+            <td style="width:40%; text-align:centre;"><b>Category Id</b></td>
+          </tr>';
+        
+        $sql = "SELECT * FROM expense WHERE user_no='".$_GET["user_no"]."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            $i=1;
+            while ($row = $result->fetch_assoc()) {
+       
+            
+        }
+        $html.='</table>';
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('expanse.pdf','I');
+    }
+    
+}
+
+$conn->close();
+?>

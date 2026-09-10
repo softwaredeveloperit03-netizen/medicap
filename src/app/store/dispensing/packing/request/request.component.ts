@@ -1,0 +1,207 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+
+@Component({
+  selector: 'app-request',
+  templateUrl: './request.component.html',
+  styleUrls: ['./request.component.css']
+})
+export class RequestComponent implements OnInit {
+  isView = false;
+  isShow = false;
+  results;
+  remarks = '';
+  stocks;
+  material_type = '';
+  selectedResult = [];
+  pack_sizes:any = [];
+  packs:any = [];
+  remark;
+  plant_id;
+    emp_id: string;
+    isDIGI: boolean=false
+    status: any;
+    isbutton: boolean=true
+  constructor(private service: DataAccessService) { }
+
+
+  ngOnInit() {
+    this.getDispensingActivities();
+    this.getMaterialOutDetails();
+    this.getadddisp_chek();
+    this.plant_id = this.service.getPlantConfigFields("plant_id")
+  }
+  checks;
+  getadddisp_chek(){
+    this.service.get('bmr/process.php?type=GET_adddisp_chek').subscribe(response=>{
+      this.checks = response;
+     
+    });
+  }
+  getDispensingActivities() {
+    this.service.get('store/dispensing.php?type=get_PM_Dispensing_Requests&material_type=Packing Material').subscribe(response => {
+      this.results = response;
+
+    });
+  }
+
+
+  getMaterialOutDetails() {
+    this.service.get('store/bincard.php?type=getMaterials&material_type=' + this.material_type).subscribe(response => {
+      this.stocks = response;
+    });
+  }
+
+
+  view(index) {
+    this.pack_sizes = [];
+    this.packs = [];
+    this.selectedResult = this.results[index];
+    // this.pack_sizes = this.selectedResult['pack_sizes'];
+    // this.packs = this.pack_sizes[0]['packing_material'];
+    // this.packs = this.pack_sizes[index]['packing_material'];
+
+    console.log(this.packs);
+    // this.isView = true;
+    this.isShow = true;
+    this.get_int_sift();
+
+  }
+ 
+  add(index){
+    this.selectedResult=this.int_sifters[index]
+    console.log(this.selectedResult)
+    this.pack_sizes = this.selectedResult['pack_sizes'];
+    this.packs = this.pack_sizes[0]['packing_material'];
+    this.isView = true;
+    this.isShow = false;  
+  }
+  get_int_sift() {
+    this.service.get('production/product.php?type=get_savebmr_sift_pk_request&id='+this.selectedResult['id']+'&a_id='+this.selectedResult['a_id']).subscribe(response => {
+      this.int_sifters = response;
+    });
+  }
+  int_sifters;
+  materials = [];
+  updatePhysicalStock(status,j,i) {
+    this.selectedResult['pack_sizes'][j].packing_material[i]['physical_stock'] = status;
+  }
+
+
+  save(remark) {
+    if (remark != 'Accept') {
+      alertify.error('Please enter remarks');
+      return;
+    }
+
+
+    
+    let materials = [];
+    for (var i = 0; i < this.selectedResult['pack_sizes'].length; i++) {
+      for (let x = 0; x < this.selectedResult['pack_sizes'][i]['packing_material'].length; x++) {
+        let mat = {
+          "id": this.selectedResult['pack_sizes'][i]['packing_material'][x]['id'],
+          "physical_stock_status": this.selectedResult['pack_sizes'][i]['packing_material'][x]['physical_stock']
+        }
+
+        materials.push(mat);
+      }
+    }
+
+
+
+    let obj = {
+      "id": this.selectedResult['id'],
+      "work_order_id": this.selectedResult['a_id'],
+      "status": remark,
+      "remarks": this.remarks,
+      "materials": this.materials,
+      // "checklist":this.checks
+    }
+    this.service.post('store/dispensing.php?type=saveRequestPM&id=' + this.selectedResult['a_id'], JSON.stringify(obj)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success('data save successfuly');
+        this.getDispensingActivities();
+        this.isView = false;
+      } else {
+        alertify.error('some error occured!');
+      }
+    });
+  }
+
+  openDigiSign(value){
+    this.emp_id = localStorage.getItem('emp_id');
+    this.isDIGI = true;
+    this.status=value
+  }
+
+  loginPassward ='';
+  digiSign(data){
+
+    if (!data.valid) {
+      alert('Passward OR Login PIN Required!!!!');
+      return;
+    }
+ 
+    this.service.get('login.php?type=checkDigiSIgn&mpin=' + this.loginPassward +'&emp_id=' + this.emp_id).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success('Digi-Sign Verified successfully');
+        this.isDIGI = false;
+        this.isbutton = false;
+        this.loginPassward ='';
+        this.save_saipro(this.status)
+      } else {
+        alertify.error('Digi-Sign Not Verified');
+      }
+    });
+  }
+
+  save_saipro(remark) {
+    // if (remark != 'Accept') {
+    //   alertify.error('Please enter remarks');
+    //   return;
+    // }
+  
+    
+
+    let materials = [];
+    for (var i = 0; i < this.selectedResult['pack_sizes'].length; i++) {
+      for (let x = 0; x < this.selectedResult['pack_sizes'][i]['packing_material'].length; x++) {
+        let mat = {
+
+          "actual_qtyy": this.selectedResult['pack_sizes'][i]['packing_material'][x]['actual_qtyy'],
+          "id": this.selectedResult['pack_sizes'][i]['packing_material'][x]['dtl_id'],
+          "physical_stock_status": this.selectedResult['pack_sizes'][i]['packing_material'][x]['physical_stock']
+        }
+
+        materials.push(mat);
+      }
+    }
+
+    let obj = {
+      "id": this.selectedResult['id'],
+      "work_order_id": this.selectedResult['a_id'],
+      "status": remark,
+      "remarks": this.remarks,
+      "materials": materials,
+      "checklist":this.checks
+    }
+
+   // console.log(this.pack_sizes);
+    console.log("materials");
+    console.log(materials);
+
+    this.service.post('store/dispensing.php?type=saveRequestPM_saipro&work_id=' + this.selectedResult['a_id']+'&sift_id='+this.selectedResult['id'], JSON.stringify(obj)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success('data save successfuly');
+        this.isbutton=true
+        this.getDispensingActivities();
+        this.isShow = false;
+      } else {
+        alertify.error('some error occured!');
+      }
+    });
+    
+  }
+}

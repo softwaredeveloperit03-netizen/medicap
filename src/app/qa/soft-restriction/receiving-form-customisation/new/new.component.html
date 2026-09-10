@@ -1,0 +1,121 @@
+<div class="card">
+  <div class="card-header">
+    <div class="row-flex">
+      <div>Receiving Form Customisation - New Request</div>
+      <div class="actions">
+        <button class="btn btn-sm btn-success" (click)="submit()">Save</button>
+        <button class="btn btn-sm btn-danger" (click)="cancel()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="card custom-add">
+      <div class="card-header">Add Additional Input Field</div>
+      <div class="card-block">
+        <div class="form-inline">
+          <input type="text" placeholder="Input Field Display Name" [(ngModel)]="customFieldLabel" />
+          <input type="text" placeholder="Auto Input Field Name" [value]="autoCustomFieldKey" readonly />
+          <select [(ngModel)]="customFieldType" (ngModelChange)="onCustomFieldTypeChange()">
+            <option *ngFor="let t of types" [ngValue]="t">{{ t }}</option>
+          </select>
+          <select *ngIf="customFieldType === 'DROPDOWN' || customFieldType === 'YESNO'" [(ngModel)]="customFieldPattern" (ngModelChange)="onCustomPatternChange()">
+            <option *ngFor="let p of dropdownPatterns" [ngValue]="p">{{ p }}</option>
+          </select>
+          <input
+            *ngIf="customFieldType === 'DROPDOWN' || customFieldType === 'YESNO'"
+            type="text"
+            placeholder="Dropdown Pattern (comma-separated)"
+            [(ngModel)]="customFieldOptions"
+          />
+          <select [(ngModel)]="customFieldGroup">
+            <option *ngFor="let g of groups" [ngValue]="g">{{ g }}</option>
+          </select>
+          <select [(ngModel)]="customVisibleWhenKey" (ngModelChange)="onCustomConditionFieldChange()">
+            <option value="">Always Visible</option>
+            <option *ngFor="let c of getConditionCandidates()" [value]="c.key">{{ c.label }}</option>
+          </select>
+          <select *ngIf="getConditionValueOptionsByKey(customVisibleWhenKey).length > 0" [(ngModel)]="customVisibleWhenValue">
+            <option *ngFor="let v of getConditionValueOptionsByKey(customVisibleWhenKey)" [value]="v">{{ v }}</option>
+          </select>
+          <input *ngIf="customVisibleWhenKey && getConditionValueOptionsByKey(customVisibleWhenKey).length === 0" type="text" placeholder="Condition Value" [(ngModel)]="customVisibleWhenValue" />
+          <input type="text" placeholder="Default Value (editable in form)" [(ngModel)]="customDefaultValue" />
+          <button class="btn btn-sm btn-primary" (click)="addCustomField()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-block" *ngFor="let group of groups">
+      <h5>{{ group | titlecase }}</h5>
+      <div class="datagrid-wrapper">
+        <clr-datagrid >
+          <clr-dg-column>Input Field Name</clr-dg-column>
+          <clr-dg-column>Input Field Display Name</clr-dg-column>
+          <clr-dg-column>Input Criteria</clr-dg-column>
+          <clr-dg-column>Sort</clr-dg-column>
+          <clr-dg-column>Applicable</clr-dg-column>
+          <clr-dg-column>Visible When</clr-dg-column>
+          <clr-dg-column>Default Value</clr-dg-column>
+          <clr-dg-column>Read Only</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let row of rowsForGroup(group); let i = index" [clrDgItem]="row">
+            <clr-dg-cell>{{ row.field_key }}</clr-dg-cell>
+            <clr-dg-cell><input type="text" [(ngModel)]="row.field_label" [disabled]="isReadOnlyLocked(row)" /></clr-dg-cell>
+            <clr-dg-cell>
+              <select [(ngModel)]="row.field_type" [disabled]="!row.allowTypeOverride || isReadOnlyLocked(row)">
+                <option *ngFor="let t of types" [ngValue]="t">{{ t }}</option>
+              </select>
+              <select
+                *ngIf="row.field_type === 'DROPDOWN' || row.field_type === 'YESNO'"
+                [ngModel]="getRowPattern(row)"
+                (ngModelChange)="setRowPattern(row, $event)"
+                [disabled]="isReadOnlyLocked(row)"
+                style="margin-top: 4px;"
+              >
+                <option *ngFor="let p of dropdownPatterns" [ngValue]="p">{{ p }}</option>
+              </select>
+              <input
+                *ngIf="row.field_type === 'DROPDOWN' || row.field_type === 'YESNO'"
+                type="text"
+                [(ngModel)]="row.field_options"
+                placeholder="Options: YES,No,Applicable,Not Applicable"
+                [disabled]="isReadOnlyLocked(row)"
+                style="margin-top: 4px;"
+              />
+            </clr-dg-cell>
+            <clr-dg-cell><input type="number" [(ngModel)]="row.sort_order" [disabled]="isReadOnlyLocked(row)" /></clr-dg-cell>
+            <clr-dg-cell>
+              <select [(ngModel)]="row.applicable" [disabled]="isReadOnlyLocked(row)">
+                <option [ngValue]="'Applicable'">Applicable</option>
+                <option [ngValue]="'Not Applicable'">Not Applicable</option>
+              </select>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <select [(ngModel)]="row.visible_when_key" [disabled]="isReadOnlyLocked(row)" (ngModelChange)="onRowConditionFieldChange(row)">
+                <option value="">Always Visible</option>
+                <option *ngFor="let c of getConditionCandidates(row.field_key)" [value]="c.key">{{ c.label }}</option>
+              </select>
+              <select *ngIf="getConditionValueOptionsByKey(row.visible_when_key).length > 0" [(ngModel)]="row.visible_when_value" [disabled]="isReadOnlyLocked(row)" style="margin-top: 4px;">
+                <option *ngFor="let v of getConditionValueOptionsByKey(row.visible_when_key)" [value]="v">{{ v }}</option>
+              </select>
+              <input *ngIf="row.visible_when_key && getConditionValueOptionsByKey(row.visible_when_key).length === 0" type="text" [(ngModel)]="row.visible_when_value" placeholder="Condition Value" [disabled]="isReadOnlyLocked(row)" style="margin-top: 4px;" />
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <input type="text" [(ngModel)]="row.default_value" placeholder="default" [disabled]="isReadOnlyLocked(row)" />
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="lock-pill" *ngIf="isReadOnlyLocked(row)">Locked</span>
+              <span class="free-pill" *ngIf="!isReadOnlyLocked(row)">Editable</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-danger" [disabled]="isDefaultRow(row)" (click)="removeCustomField(row)">
+                Remove
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,169 @@
+<div class="card rcd-form" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Conditional Release Tracking Log ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-outline" (click)="downloadLog()" style="margin-right: 0.35rem">Download PDF</button>
+        <button class="btn btn-sm" routerLink="/qa/conditional-release" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">TITLE:</td>
+        <td colspan="3" class="rcd-form__title-cell">CONDITIONAL RELEASE TRACKING LOG</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">FORM NO.:</td>
+        <td class="rcd-form__value-cell">{{ formNo }}</td>
+        <td class="rcd-form__label-cell">REF:</td>
+        <td class="rcd-form__value-cell">{{ sopRef }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">REVISION NO.:</td>
+        <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+        <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+        <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+      </tr>
+    </table>
+
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3">
+        <label>From</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3">
+        <label>To</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3" style="padding-top: 1.2rem">
+        <button class="btn btn-sm btn-primary" (click)="getLog()">Search</button>
+      </div>
+    </div>
+
+    <div class="rcd-form__scroll-wrap">
+      <table class="rcd-form__sheet-table rcd-form__tracking-table">
+        <tr>
+          <th rowspan="2">CR# (YY/XXX)</th>
+          <th rowspan="2">Material/Product Name</th>
+          <th rowspan="2">Code #</th>
+          <th rowspan="2">Lot #</th>
+          <th rowspan="2">Description</th>
+          <th colspan="2">Requested By</th>
+          <th colspan="2">Conditional QA Approval (Sec. 2)</th>
+          <th colspan="2">Final Approval for Full Release (Sec. 3)</th>
+          <th rowspan="2">Status</th>
+          <th rowspan="2">Action</th>
+        </tr>
+        <tr>
+          <th class="rcd-form__sub-head">By</th>
+          <th class="rcd-form__sub-head">Date</th>
+          <th class="rcd-form__sub-head">By</th>
+          <th class="rcd-form__sub-head">Date</th>
+          <th class="rcd-form__sub-head">By</th>
+          <th class="rcd-form__sub-head">Date</th>
+        </tr>
+        <tr *ngFor="let r of results">
+          <td style="text-align: center">{{ r.cr_no || 'Pending' }}</td>
+          <td>{{ r.product_name }}</td>
+          <td style="text-align: center">{{ r.product_code }}</td>
+          <td style="text-align: center">{{ r.lot_no }}</td>
+          <td>{{ r.description }}</td>
+          <td>{{ approverName(r, 'requested') }}</td>
+          <td style="text-align: center">{{ approverDate(r, 'requested') | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ approverName(r, 'qa') }}</td>
+          <td style="text-align: center">{{ approverDate(r, 'qa') | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ approverName(r, 'final') }}</td>
+          <td style="text-align: center">{{ approverDate(r, 'final') | date: 'dd-MM-yyyy' }}</td>
+          <td style="text-align: center">
+            <span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status_label || r.status }}</span>
+          </td>
+          <td style="text-align: center; white-space: nowrap">
+            <button class="btn btn-sm btn-info" (click)="view(r)">View</button>
+            <button class="btn btn-sm btn-success" *ngIf="canFinalRelease(r)" (click)="finalRelease(r)">Final Release</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length">
+          <td colspan="14" style="text-align: center">No records found</td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="rcd-form__confidential">Confidential Information: Do Not Disclose</p>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Tracking Entry — CR # {{ selectedRecord.cr_no || 'Pending' }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()" style="margin-right: 0.35rem">Back</button>
+        <button class="btn btn-sm btn-outline" (click)="downloadRequest(selectedRecord.id)">Request PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Status</td>
+        <td class="rcd-form__value-cell">
+          <span class="label" [ngClass]="getStatusClass(selectedRecord.status)">{{ selectedRecord.status_label || selectedRecord.status }}</span>
+        </td>
+        <td class="rcd-form__label-cell">Proceed with Processing</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.proceed_processing || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Product</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.product_name }}</td>
+        <td class="rcd-form__label-cell">Lot #</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.lot_no }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Description</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.description }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.reject_reason">
+        <td class="rcd-form__label-cell">Remarks / Reason</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.reject_reason }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">Approval Trail (FQA-020-B)</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Requested By</td>
+        <td class="rcd-form__value-cell">{{ approverName(selectedRecord, 'requested') }}</td>
+        <td class="rcd-form__label-cell">Request Date</td>
+        <td class="rcd-form__value-cell">{{ approverDate(selectedRecord, 'requested') | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Conditional QA Approval (Sec. 2)</td>
+        <td class="rcd-form__value-cell">{{ approverName(selectedRecord, 'qa') || '—' }}</td>
+        <td class="rcd-form__label-cell">Approval Date</td>
+        <td class="rcd-form__value-cell">{{ approverDate(selectedRecord, 'qa') | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Final Full Release (Sec. 3)</td>
+        <td class="rcd-form__value-cell">{{ approverName(selectedRecord, 'final') || '—' }}</td>
+        <td class="rcd-form__label-cell">Final Release Date</td>
+        <td class="rcd-form__value-cell">{{ approverDate(selectedRecord, 'final') | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem" *ngIf="canFinalRelease(selectedRecord)">
+      <button class="btn btn-success" (click)="finalRelease(selectedRecord)">Record Final Full Release</button>
+      <p class="rcd-form__note">Per SOP-QA-020 Section 3 — record after all documentation review and QC testing is complete.</p>
+    </div>
+  </div>
+</div>

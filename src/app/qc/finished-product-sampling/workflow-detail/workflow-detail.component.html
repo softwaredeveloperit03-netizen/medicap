@@ -1,0 +1,107 @@
+<div class="fps-page-wrap" *ngIf="!loading && record">
+  <div class="card fps-form-card">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">{{ formTitle }} — {{ isViewOnly() ? 'View' : step }}</div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+          <button class="btn btn-sm btn-danger" [routerLink]="backRoute()">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <app-fps-form-display
+        [record]="record"
+        [testRows]="testRows"
+        [editableRequired]="editableRequired()"
+        [editableSampled]="editableSampled()">
+      </app-fps-form-display>
+
+      <div class="action-panel" *ngIf="step === 'qc-manager' && !isViewOnly()">
+        <h4>QC Manager Approval (§1.2 / §2.0)</h4>
+        <p class="hint">Review and confirm sampling quantities for full testing as per release specification.</p>
+        <label>Remark</label>
+        <textarea rows="2" [(ngModel)]="remark"></textarea>
+        <button class="btn btn-primary" (click)="approveQcManager()" [disabled]="processing">Approve QC Manager</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'qa-approval' && !isViewOnly()">
+        <h4>QA Approval (§1.1 / §2.0)</h4>
+        <p class="hint">QA approval on finished product sampling plan before production sampling.</p>
+        <label>Remark</label>
+        <textarea rows="2" [(ngModel)]="remark"></textarea>
+        <button class="btn btn-primary" (click)="approveQa()" [disabled]="processing">Approve QA</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'production' && !isViewOnly()">
+        <h4>Production Sampling (§1.3 / §3.0)</h4>
+        <p class="hint">Record quantities sampled by production. Submit completed ATR FQC-005-06-A with physical samples to QC Lab (§1.3.2).</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-6">
+            <label>ATR Reference (FQC-005-06-A)</label>
+            <input type="text" [(ngModel)]="atrReference" placeholder="Analytical Test Request form no." />
+            <small class="hint"><a routerLink="/qc/analytical-test-request/new">Create ATR</a></small>
+          </div>
+        </div>
+        <label>Remark</label>
+        <textarea rows="2" [(ngModel)]="remark"></textarea>
+        <button class="btn btn-primary" (click)="submitProduction()" [disabled]="processing">Submit to QC Lab</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'qc-receive' && !isViewOnly()">
+        <h4>QC Sample Receiving (§1.3.2.3)</h4>
+        <p class="hint">Record samples in QC Sample Receiving Log and assign unique QC-lab number.</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>QC Lab Number</label><input type="text" [(ngModel)]="labNumber" /></div>
+          <div class="clr-col-lg-2" style="padding-top:1.4rem"><button type="button" class="btn btn-sm btn-secondary" (click)="getNextLabNumber()">Auto #</button></div>
+        </div>
+        <label>Receiving Remark</label>
+        <textarea rows="2" [(ngModel)]="receiveRemark"></textarea>
+        <button class="btn btn-primary" (click)="qcReceive()" [disabled]="processing">Confirm QC Receive</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'results' && !isViewOnly()">
+        <h4>Test Results Entry (§1.3.3.1)</h4>
+        <p class="hint">Record results on current approved Test Specification Form per WI-QC-011.01.</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-6"><label>Test Specification Form Ref</label><input type="text" [(ngModel)]="testSpecRef" /></div>
+          <div class="clr-col-lg-3"><label>Conforms?</label><select [(ngModel)]="resultsData.conforms"><option value="">—</option><option>Yes</option><option>No</option></select></div>
+        </div>
+        <label>Results Summary</label>
+        <textarea rows="4" [(ngModel)]="resultsData.results_summary"></textarea>
+        <div class="clr-row" *ngIf="record.batch_type === 'stability'">
+          <div class="clr-col-lg-4"><label>Stability Date of Analysis (§1.4.5)</label><input type="date" [(ngModel)]="resultsData.stability_date_of_analysis" /></div>
+        </div>
+        <button class="btn btn-primary" (click)="submitResults()" [disabled]="processing">Submit Results</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'coa-approval' && !isViewOnly()">
+        <h4>C of A Approval (§1.3.3.2)</h4>
+        <p class="hint">Upon QC management approval, the Test Specification Form becomes the Certificate of Analysis (C of A).</p>
+        <label>Approval Remark</label>
+        <textarea rows="3" [(ngModel)]="coaRemark"></textarea>
+        <button class="btn btn-success" (click)="approveCoa()" [disabled]="processing">Approve &amp; Issue C of A</button>
+      </div>
+
+      <div class="log-panel" *ngIf="workflowLog.length">
+        <h4>Workflow Log</h4>
+        <table class="table table-compact">
+          <thead><tr><th>Action</th><th>From</th><th>To</th><th>By</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let l of workflowLog">
+              <td>{{ l.action }}</td>
+              <td>{{ l.from_status }}</td>
+              <td>{{ l.to_status }}</td>
+              <td>{{ l.action_by_name || l.action_by }}</td>
+              <td>{{ l.action_date | date:'dd-MM-yyyy HH:mm' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading"><div class="card-block">Loading...</div></div>
+<div class="card" *ngIf="!loading && !record"><div class="card-block">Record not found.</div></div>

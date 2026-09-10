@@ -1,0 +1,378 @@
+﻿<div class="card" *ngIf="!isView && !isShow">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Work Orders For
+                Approval</div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/packing">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                <label>From Date</label>
+                <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                <label>To Date</label>
+                <input type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+                <button class="btn btn-danger" (click)="getPlans()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+            </div>
+        </div>
+        <div class="card-text">
+            <clr-datagrid [clrDgLoading]="loading">
+                <clr-dg-column>Sr..</clr-dg-column>
+                <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+                <clr-dg-column>Batch_no.</clr-dg-column>
+                <clr-dg-column>Work Order No.</clr-dg-column>
+                <clr-dg-column>Product code</clr-dg-column>
+                <clr-dg-column>Product Name</clr-dg-column>
+                <clr-dg-column>BFR No</clr-dg-column>
+                <clr-dg-column>Prepared By</clr-dg-column>
+                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+                    <clr-dg-cell>{{i+1}}.</clr-dg-cell>
+                    <clr-dg-cell>{{ res.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.batch_number }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.work_order_no }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_code }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_name }} {{ res.grade }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.bfr_no }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.entry_by}} </clr-dg-cell>
+                    <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button></clr-dg-cell>
+                </clr-dg-row>
+                <clr-dg-footer>
+                    <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+                        of {{pagination.totalItems}} users
+                    </clr-dg-pagination>
+                </clr-dg-footer>
+            </clr-datagrid>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card"  *ngIf="isShow && !isView">
+  
+  <div class="modal-title">ADD DETAILS</div>
+  
+  <div class="modal-body">
+    <table class="table" style="border-collapse: collapse; width: 100%;">
+        <tr>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">
+            <b>Plan No.</b>
+          </td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">
+            {{selectedResult['plan_no'] }}
+          </td>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">
+            <b>Plan Date</b>
+          </td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">
+            {{selectedResult['plan_date'] | date: 'dd-MM-yyyy' }}
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b>Product Code</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{ selectedResult['product_code']}}</td>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b>Product Name</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{selectedResult['product_name']}} {{selectedResult['grade']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b> Dosage Form</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{selectedResult['dosage_form']}}</td>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b> Shelf Life</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{selectedResult['shelf_life']}}</td>
+        </tr>
+        
+        <tr>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b>BMR No.</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{selectedResult['bmr_no']}}</td>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b>Medicap Lot No</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);">{{selectedResult['batch_number']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border: 1px solid #ccc; background: linear-gradient(to bottom, #0e4370, #0c355b); color: white; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);"><b>Label Claim</b></td>
+          <td style="text-align: left; border: 1px solid #ccc; background-color: #f2f2f2; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);" colspan="3">{{selectedResult['label_claim']}}</td>
+        </tr>
+      </table>
+
+      <div class="clr-row">
+        <div class="clr-col-xl-3 clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-12" *ngFor="let data of int_sifters;let i = index;">
+          <div class="card clickable" (click)="add(i)" style="height: auto; border: none; border-radius: 7px; box-shadow: rgba(0, 0, 0, 0.07) 0px 1px 2px, rgba(0, 0, 0, 0.07) 0px 2px 4px, rgba(0, 0, 0, 0.07) 0px 4px 8px, rgba(0, 0, 0, 0.07) 0px 8px 16px, rgba(0, 0, 0, 0.07) 0px 16px 32px, rgba(0, 0, 0, 0.07) 0px 32px 64px">
+              <div class="card-block" style="text-align: center; border-top: solid 3px rgb(0, 51, 102); border-radius: 7px;">
+                  <img width="50px" height="50px" src="assets/batches.png">
+                  <p class="card-text"><b> {{data.lot}}</b></p>
+              </div>
+          </div>
+      </div>
+      </div>
+
+
+   
+
+  </div>
+  <div class="modal-footer">
+
+    <button class="btn btn-danger" (click)="isShow = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView && !isShow">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Plan Details</div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div> 
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR No</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Effective Date</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['entry_date']}}</td>
+                            <td style="text-align: left; border:1px solid black;"><b>Work Order No</b></td>
+                            <td style="text-align: left; border:1px solid black;">{{selectedResult['work_order_no']}}</td>
+                    </tr>
+
+                </table>
+                <form #basicForm="ngForm" class="pharma-form">
+                  <div class="clr-row">
+                      <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <label class="pharma-label">Standard Actual Size</label>
+                          <input type="number" name="std_actual_yeilds" [(ngModel)]="std_actual_yeilds" >
+                      </div> -->
+                      
+                      </div>
+                      <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <label class="pharma-label">Batch Size (Packing MFR)</label>
+                          <select name="batch_size" [(ngModel)]="batch_size" class="pharma-select" required (change)="get_pmData($event.target.selectedIndex)" required>
+                              <option></option>
+                              <option *ngFor="let data of pack_sizes;">{{data.batch_size}}</option>
+                          </select>
+                      </div>
+
+                      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Lot Batch Size</label>
+                        <input type="number" name="lot_b_size"  [(ngModel)]="lot_b_size" required readonly>
+                      </div>
+                     
+                      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Balance Lot qty</label>
+                        <input type="number" name="balance_qty"  [(ngModel)]="balance_qty" readonly >
+                      </div>
+
+                    
+                      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Pack Size</label>
+                        <!-- <input type="number" name="batch_size" [(ngModel)]="selectedResult['batch_size'] " readonly> -->
+                        <select name="pack_size" [(ngModel)]="pack_size" 
+                        required (change)="get_pm_dtl($event.target.selectedIndex)">
+                        <option></option>
+                        <!-- <option *ngFor="let data of pack_sizes;" >{{data.pack_size}}</option> -->
+                        <option *ngFor="let data of pack_sizes;" >{{data.pack_size}}</option>
+                      </select>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Pack Size Unit</label>
+                        <input type="text" name="pack_size_unit" [(ngModel)]="pack_size_unit" readonly>
+                      </div>
+
+                      
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Packing Qty (KG)</label>
+                        <input type="text" name="packing_qty" [(ngModel)]="packing_qty" required (keyup)="no_packs()">
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">No. Of Packs </label>
+                        <input type="text" name="no_of_packs" [(ngModel)]="no_of_packs" required>
+                      </div>
+                      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">Batch Yield / Output Qty (KG)</label>
+                        <input type="number" name="actual_yeilds"  [(ngModel)]="actual_yeilds" required (keyup)="yield()">
+                      </div>
+
+                      
+                      
+                      <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label>Medicap Lot No</label>
+                        <select name="batch_number" [(ngModel)]="batch_number"
+                        (change)="yeild($event.target.selectedIndex)" required>
+                        <option></option>
+                        <option *ngFor="let data of resultsss;">{{data.batch_number}}</option>
+                    </select>
+                      </div> -->
+                 
+
+
+                    <!-- <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 clr-col-xs-3">
+                        <label class="pharma-label">{{'common.unit' | translate}}</label>
+                        <input type="text" name="ac_y" ngModel="Kg" readonly>
+                      </div> -->
+                      <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label>Actual %</label>
+                        <input type="number" name="yeild_per" [(ngModel)]="yeild_per">
+                      </div> -->
+                      <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                        <label>Allocate Seprate Medicap Lot No: </label>
+                        <select ngModel [(ngModel)]="allocate_batch_no">              
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                     </div> -->
+
+              
+                   
+
+              </div>
+              <table class="table" style="margin-top:10px" >
+                <tr>
+                  <th style="background-color: #dcebf7; color:black;">Sr.</th>
+                  <th style="background-color: #dcebf7; color:black;">Material type</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Code</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Name</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+                  <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+                  <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+                  <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+                  <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+                  <!-- <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th> -->
+                  <th style="background-color: #dcebf7; color:black;">Actual  Qty</th>
+                  <!-- <th style="background-color: #dcebf7; color:black;">Available Stock</th> -->
+      
+                </tr>
+                <tr *ngFor="let comp of packing_material; let i = index">
+                <!-- <tr *ngFor="let comp of pm_results.packing_material; let i = index"> -->
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ comp.material_subtype }}</td>
+                  <td>{{ comp.m_code }}</td>
+                  <td>{{ comp.material_name }}</td>
+                  <td>{{ comp.gradeName }}</td>
+                  <td>{{ comp.b_qty }} {{ comp.unit }}</td>
+                  <td>{{ comp.overages }}</td>
+                  <td>{{ comp.total_qty}}</td>
+                  <td>{{ comp.batch_qty }}</td>
+                  <!-- <td>{{ comp.batch_overages}}</td> -->
+                  <td>{{ comp.actual_qtyy | number:'1.2-6'}}</td>
+
+                  <!-- <td>{{ comp.avbl_stock }}</td> -->
+                </tr>
+                <tr *ngIf="raw_materials?.length == 0">
+                  <td colspan="8">{{'common.noRecords' | translate}}</td>
+                </tr>
+              </table>
+            
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+                <button class="pharma-btn btn btn-danger" (click)="generateData(basicForm)">Generate</button>
+            </div><br>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-6" >
+              <button class="btn btn-success" (click)="AddgenerateData(basicForm)" [disabled]="balance_qty<0">{{'common.add' | translate}}</button>
+          </div>
+          </form>
+
+                <div class="card-text">
+                  <div class="clr-row">
+                    <h3 style="float: left; color: rgb(94, 19, 77); font-weight: bold;">Packing Materials:</h3>
+                </div>
+              
+                    <!-- <div *ngFor="let pack of selectedpacks; let i = index"> -->
+              
+                      <!-- <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Country Name:
+                            {{pack.country_name}}</h6>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Type:
+                            {{pack.pack_type}}</h6>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Size:
+                            {{pack.pack_batch_size}}
+                            -
+                            {{pack.pack_size_unit}}</h6>
+                        </div>
+              
+              
+                      </div> -->
+                      <table class="table" style="margin-top:10px" *ngFor="let comps of genrated_list; let i = index">
+                        <tr>
+                          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+                          <th style="background-color: #dcebf7; color:black;">Material type</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+                          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+                          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+                          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+                          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+                          <!-- <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th> -->
+                          <th style="background-color: #dcebf7; color:black;">Actual  Qty</th>
+                          <!-- <th style="background-color: #dcebf7; color:black;">Available Stock</th> -->
+              
+                        </tr>
+                        <tr *ngFor="let comp of comps.packing_list; let i = index">
+                        <!-- <tr *ngFor="let comp of pm_results.packing_material; let i = index"> -->
+                          <td>{{ i + 1 }}.</td>
+                          <td>{{ comp.material_subtype }}</td>
+                          <td>{{ comp.m_code }}</td>
+                          <td>{{ comp.material_name }}</td>
+                          <td>{{ comp.gradeName }}</td>
+                          <td>{{ comp.b_qty }} {{ comp.unit }}</td>
+                          <td>{{ comp.overages }}</td>
+                          <td>{{ comp.total_qty }}</td>
+                          <td>{{ comp.batch_qty }}</td>
+                          <!-- <td>{{ comp.batch_overages}}</td> -->
+                          <td>{{ comp.actual_qtyy }}</td>
+                          <!-- <td>{{ comp.avbl_stock }}</td> -->
+                        </tr>  
+                        <tr *ngIf="raw_materials?.length == 0">
+                          <td colspan="8">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                      </table>
+                     
+                    <!-- </div> -->
+              
+                  </div>
+
+                 
+
+                
+              
+           </div>
+        </div>
+    </div>
+    <div class="card-footer" *ngIf="plant_id=='67'">
+        <button class="btn btn-primary" (click)="saveData_saipro('approved')">Approve.</button>
+        <button class="btn btn-primary" (click)="saveData('on hold')">Hold</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+    <div class="card-footer" *ngIf="plant_id!='67'">
+        <button class="btn btn-primary" (click)="saveData('approved')">{{'common.approve' | translate}}</button>
+        <button class="btn btn-primary" (click)="saveData('on hold')">Hold</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</div>

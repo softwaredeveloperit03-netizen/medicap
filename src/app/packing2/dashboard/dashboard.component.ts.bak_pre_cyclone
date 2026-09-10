@@ -1,0 +1,304 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
+declare let alertify: any;
+
+interface PackCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'plant_not_67_86' | 'plant_67_86' | 'reconciliation';
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  cards: PackCard[] = [
+    { id: 'packing-checklist', title: 'Packing Checklist', description: 'Packing checklist', route: 'packing_cheklist', icon: 'fa-clipboard-check', category: 'Packing', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'bmr', title: 'BPR Master', description: 'BPR master', route: 'bmr', icon: 'fa-file-alt', category: 'Packing', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'transform', title: 'Transform From Prod', description: 'Transform from production', route: 'Promproduction', icon: 'fa-database', category: 'Packing', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'packing-plan', title: 'Packing Plan', description: 'Packing plan', route: 'planning', icon: 'fa-clipboard-list', category: 'Packing', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhen: 'plant_not_67_86' },
+    { id: 'packing-plan-sp', title: 'Packing Plan', description: 'Packing plan (SP approval)', route: '/packing/spplanning-approval', icon: 'fa-clipboard-list', category: 'Packing', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhen: 'plant_67_86' },
+    { id: 'dispensing', title: 'Dispensing', description: 'Dispensing', route: 'dispensing', icon: 'fa-prescription-bottle', category: 'Packing', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'bpr', title: 'Batch Pack Rec (eBPR)', description: 'Batch packing record eBPR', route: 'bpr', icon: 'fa-book-medical', category: 'Packing', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'sampling', title: 'FG Sampling', description: 'Finished goods sampling', route: 'sampling', icon: 'fa-vial', category: 'Packing', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'transfer', title: 'Transfer to FG Store', description: 'Transfer to FG store', route: 'transfer', icon: 'fa-truck', category: 'Packing', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'reconciliation', title: 'Pack Material Reconc', description: 'Packing material reconciliation', route: 'reconciliation', icon: 'fa-balance-scale', category: 'Packing', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)', showWhen: 'reconciliation' },
+    { id: 'packing-list', title: 'Packing List', description: 'Packing list', route: '/packing/packing-list', icon: 'fa-box-open', category: 'Packing', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+  ];
+
+  results: any;
+  material_subtype = '';
+  results1: any[] = [];
+  isUpload = false;
+  grade = '';
+  category = '';
+  selectedResult: any[] = [];
+  isEdit = false;
+  categories: any;
+  grades: any;
+  plant_type: string = '';
+  plant_id: string = '';
+
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights: any;
+  loggedInDept: string | null = null;
+
+  constructor(public service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (c.showWhen === 'plant_not_67_86' && (this.plant_id === '67' || this.plant_id === '86')) {
+        return false;
+      }
+      if (c.showWhen === 'plant_67_86' && this.plant_id !== '67' && this.plant_id !== '86') {
+        return false;
+      }
+      if (c.showWhen === 'reconciliation' && (this.plant_type === 'API/ Excipients' || this.isuser !== 'Yes')) {
+        return false;
+      }
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  ngOnInit(): void {
+    this.plant_type = this.service.getPlantConfigFields('plant_type') || '';
+    this.plant_id = this.service.getPlantConfigFields('plant_id') || '';
+    this.service.observableGrade?.subscribe((response: any) => {
+      this.grades = response;
+    });
+    this.getMaterialsLog();
+    this.loadMaterialCategories();
+    this.get_rights();
+    const savedPalette = localStorage.getItem('packing2_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.cards.map(c => c.category))));
+  }
+
+  getFilteredCards(): PackCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      if (c.showWhen === 'plant_not_67_86' && (this.plant_id === '67' || this.plant_id === '86')) return false;
+      if (c.showWhen === 'plant_67_86' && this.plant_id !== '67' && this.plant_id !== '86') return false;
+      if (c.showWhen === 'reconciliation' && (this.plant_type === 'API/ Excipients' || this.isuser !== 'Yes')) return false;
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_i: number, card: PackCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('packing2_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  get_rights() {
+    this.service.get('hr/employee.php?type=getrights&emp_id=' + localStorage.getItem('emp_id') + '&dep_name=' + (this.loggedInDept || ''))
+      .subscribe((response: any) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+        this.ischecker = this.rights[0].ischecker;
+        this.isapprover = this.rights[0].isapprover;
+        this.qms_approver = this.rights[0].qms_approver;
+        this.dept_head = this.rights[0].dept_head;
+        this.isauditor = this.rights[0].isauditor;
+        this.plant_head = this.rights[0].plant_head;
+        this.shift_allocator = this.rights[0].shift_allocator;
+      });
+  }
+
+  getMaterialsLog() {
+    this.service.get('master/material.php?type=getMaterials&material_type=Packing Material&material_subtype=' + this.material_subtype + '&grade=' + this.grade + '&category=' + this.category).subscribe((response: any) => {
+      this.results = response;
+    });
+  }
+
+  loadMaterialCategories() {
+    this.service.get('qa/material.php?type=getCategories').subscribe((response: any) => {
+      this.categories = response;
+    });
+  }
+
+  downloadReport() {
+    this.service.open('qa/material.php?type=materialmasterlog&material_type=Packing Material&material_subtype=' + this.material_subtype + '&grade=' + this.grade + '&category=' + this.category);
+  }
+
+  edit(index: number) {
+    this.selectedResult = this.results[index];
+    this.isEdit = true;
+  }
+
+  editRawMaterial() {
+    this.service.post('master/material.php?type=updateMaterial&id=' + this.selectedResult['id'], JSON.stringify(this.selectedResult)).subscribe((response: any) => {
+      if (response['status'] === 'success') {
+        alertify.success('Material Updated Successfully');
+        this.isEdit = false;
+        this.getMaterialsLog();
+      } else {
+        alertify.error('Some error occurred');
+      }
+    });
+  }
+
+  deleteRawMaterial(id: string, status: string) {
+    this.service.get('master/material.php?type=deleteMaterial&id=' + id + '&status=' + status).subscribe((response: any) => {
+      if (response['status']) {
+        alertify.success('Material Deleted Successfully');
+        this.getMaterialsLog();
+      } else {
+        alertify.error('Some error occurred');
+      }
+    });
+  }
+
+  onSelectFile(event: any) {
+    const af = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+    if (event.target.files.length > 0) {
+      const file = event.target.files[0];
+      if (!af.includes(file.type)) {
+        alertify.error('Only EXCEL Docs Allowed!');
+      } else {
+        const target: DataTransfer = event.target as DataTransfer;
+        const reader: FileReader = new FileReader();
+        reader.readAsBinaryString(target.files[0]);
+        reader.onload = (e: any) => {
+          const binarystr: string = e.target.result;
+          const wb: XLSX.WorkBook = XLSX.read(binarystr, { type: 'binary' });
+          const wsname: string = wb.SheetNames[0];
+          const ws: XLSX.WorkSheet = wb.Sheets[wsname];
+          const data = XLSX.utils.sheet_to_json(ws);
+          data.forEach((element: any) => {
+            element['STATUS'] = (element['Material Type'] === '' || element['Material Type'] === undefined) || (element['Material Name'] === '' || element['Material Name'] === undefined) ? 'INVALID' : 'VALID';
+          });
+          this.results1 = data;
+        };
+      }
+    }
+  }
+
+  downloadSample() {
+    const data = `material type, subtype,material name,Min.Order Qty,unit`;
+    const blob = new Blob([data as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, 'SAMPLE Packing Material EXCEL FORMAT.csv');
+  }
+
+  uploadData() {
+    this.service.post('master/material.php?type=uploadPackingMaterialRecords', JSON.stringify(this.results1)).subscribe((response: any) => {
+      if (response['status'] === 'success') {
+        alertify.success('Records have been Uploaded!');
+        this.results1 = response['results'];
+        this.getMaterialsLog();
+        this.isUpload = false;
+      } else {
+        alertify.error('Failed: An error occurred, Please try again!');
+      }
+    });
+  }
+}

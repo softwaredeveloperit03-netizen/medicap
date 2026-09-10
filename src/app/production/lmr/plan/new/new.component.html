@@ -1,0 +1,152 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Lot Planning Form</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/production/lmr/plan" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #batchForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Product Type:</label>
+                            <select name="product_type" ngModel (change)="getProducts($event.target.value)">
+                                <option></option>
+                                <option>API</option>
+                                <option>Intermediate</option>
+                                <option>Excipient</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Product Name:</label>
+                            <select name="product_code" ngModel (change)="getProductDetails($event.target.selectedIndex)" required>
+                                <option></option>
+                                <option *ngFor="let product of products;let i = index" value="i">{{ product.product_name }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Batch Size</label>
+                            <select name="bom_no" ngModel (change)="getBatchDetails($event.target.selectedIndex)">
+                                <option></option>
+                                <option *ngFor="let batch of batches" [value]="batch.bom_no">{{ batch.batch_size }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['product_code']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['product_name']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Generic Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['generic_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['grade']}}</td>
+                    </tr>
+                    <!-- <tr>
+                        <td style="text-align: left; border:1px solid black;"><b> Dosage Form</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['dosage_form']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Shelf Life</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['shelf_life']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Starting Date</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['entry_date']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Completed Date</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedProduct['complete_date']}}</td>
+                    </tr> -->
+
+                    <!-- <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Label Claim</b></td>
+                        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedProduct['label_claim']}}</td>
+                    </tr> -->
+                </table>
+                <div *ngIf="isShow">
+                    <h4>Raw Material:</h4>
+                    <table class="table">
+                        <tr>
+                            <th style="text-align: left;">Material Type</th>
+                            <th style="text-align: left;">Material Code</th>
+                            <th style="text-align: left;">Material Name</th>
+                            <th>Grade</th>
+                            <th>Qty</th>
+                            <th>Batch Qty</th>
+                            <th>Overages</th>
+                            <th>Role</th>
+                        </tr>
+                        <tr *ngFor="let result of selectedResult['raw_materials']; let i = index">
+                            <td style="text-align: left;">{{ result.material_subtype }}</td>
+                            <td style="text-align: left;">{{ result.material_code }}</td>
+                            <td style="text-align: left;">{{ result.material_name }}</td>
+                            <td>{{ result.grade }}</td>
+                            <td>{{ result.qty }} {{ result.unit }}</td>
+                            <td>{{ result.batch_qty }} {{ result.batch_unit }}</td>
+                            <td>{{ result.overages }} %</td>
+                            <td>{{ result.role }}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+                            <td colspan="8">No. Records Found</td>
+                        </tr>
+                    </table>
+      
+                    <h4>Packing Material:</h4>
+                    <table class="table">
+                        <tr>
+                            <th style="text-align: left;">Material Type</th>
+                            <th style="text-align: left;">Material Code</th>
+                            <th style="text-align: left;">Material Name</th>
+                            <th>Qty</th>
+                            <th>Batch Qty</th>
+                            <th>Overages</th>
+                            <th>Role</th>
+                        </tr>
+                        <tr *ngFor="let result of selectedResult['packing_materials']; let i = index">
+                            <td style="text-align: left;">{{ result.material_subtype }}</td>
+                            <td style="text-align: left;">{{ result.material_code }}</td>
+                            <td style="text-align: left;">{{ result.material_name }}</td>
+                            <td>{{ result.qty }} {{ result.batch_unit }}</td>
+                            <td>{{ result.batch_qty }} {{ result.batch_unit }}</td>
+                            <td>{{ result.overages }} %</td>
+                            <td>{{ result.role }}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['packing_materials']?.length == 0">
+                            <td colspan="8">No. Records Found</td>
+                        </tr>
+                    </table>
+                    <h3> Stages:</h3>
+                    <table class="table">
+                        <tr>
+                            <th  style="text-align: left;">Sr.</th>
+                            <th style="text-align: left;">Stage</th>
+                            <th style="text-align: left;">Sampling Point</th>
+                            <th style="text-align: left;">Test Equipment</th>
+                        </tr>
+                        <tr *ngFor="let comp of selectedStage;let i=index">
+                            <td  style="text-align: left;">{{ i + 1 }}.</td>
+                            <td style="text-align: left;">{{ comp.stage }}</td>
+                            <td style="text-align: left;">{{ comp.sampling_point }}</td>
+                            <td style="text-align: left;"><span *ngFor="let equipment1 of comp['equipments']">{{ equipment1.name }}, </span></td>
+                        </tr>
+                        <tr *ngIf="selectedStage.length == 0">
+                            <td colspan="4">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                    </table>
+                </div>   
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" *ngIf="selectedResult['status'] == 'not available'">GENERATE Purchase Requisition FOR STORTAGE QTY</button>
+            <button class="btn btn-primary" *ngIf="selectedResult['status'] !== 'not available'  &&  selectedResult['shortage'] !== 'yes'" (click)="saveBatchPlan(batchForm)">SAVE & SEND FOR APPROVAL</button>
+            <div *ngIf="selectedResult['shortage'] == 'yes'" style="text-align: center;">
+                <h3 style="color: red;">Shortage Quantity!</h3>
+            </div>
+        </div>
+ </div>

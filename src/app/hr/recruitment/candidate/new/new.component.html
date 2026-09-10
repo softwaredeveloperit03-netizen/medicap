@@ -1,0 +1,1143 @@
+<div class="card" *ngIf="!isNew">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Candidate Registration Form</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" (click)="isNew=true" >New Candidate Registration</button>
+        <!-- <button class="btn btn-sm btn-primary" *ngIf="isuser == 'Yes'" 
+        routerLink="/hr/recruitment/candidate/interviewerChecklist" >Checklist</button> -->
+        <button class="btn btn-sm btn-danger" routerLink="/hr/recruitment" >
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+          <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>Candidate Name</clr-dg-column>
+          <clr-dg-column>Contact No</clr-dg-column>
+          <clr-dg-column>Email Id</clr-dg-column>
+          <clr-dg-column>Qualification</clr-dg-column>
+          <clr-dg-column>Department Applied For</clr-dg-column>
+          <clr-dg-column>Gender</clr-dg-column>
+          <clr-dg-column>D.O.B.</clr-dg-column>
+          <clr-dg-column>Resume</clr-dg-column>
+          <clr-dg-column>Schedule Interview</clr-dg-column>
+          <clr-dg-column>Interviewer Allocation</clr-dg-column>
+          <clr-dg-column>Primary Round HR</clr-dg-column>
+          <!-- <clr-dg-column>Technical Int. Details</clr-dg-column> -->
+  
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i+1}}</clr-dg-cell>
+            <clr-dg-cell><strong>{{ result.status | uppercase }}</strong></clr-dg-cell>
+            <clr-dg-cell>{{ result.firstname }} {{ result.lastname }}</clr-dg-cell>
+            <clr-dg-cell>{{ (result.contact_no  | canadianPhone)}}</clr-dg-cell>
+            <clr-dg-cell>{{ result.emp_email }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.qualification }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.department }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.gender }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.birthdate | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="viewResume(result.resume)">Resume</button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+                <button *ngIf="result.isInterviewSchedule == 'NO'" class="btn btn-sm btn-info" (click)="scheduleInterview(result)">Schedule Interview</button>
+                <button *ngIf="result.isInterviewSchedule == 'YES'" class="btn btn-sm btn-primary" (click)="scheduleInterview(result)">Schedule Details</button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+                <button *ngIf="result.isInterviewerAllocated == 'NO'" [disabled]="result.isInterviewSchedule == 'NO'" 
+                class="btn btn-sm btn-info" (click)="allocateInterviewer(result)">Interviewer Allocation</button>
+                <button *ngIf="result.isInterviewerAllocated == 'YES'"  class="btn btn-sm btn-primary"
+                 (click)="allocateInterviewer(result)">View Allocation Details</button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+                <button *ngIf="result.isPrimaryRoundHr == 'NO'"  [disabled]="result.isInterviewerAllocated == 'NO'" 
+                class="btn btn-sm btn-info" (click)="primaryRoundHr(result)">Primary Round</button>
+                <button *ngIf="result.isPrimaryRoundHr == 'YES'"  class="btn btn-sm btn-primary"
+                 (click)="primaryRoundHr(result)">View Primary Round Details</button>
+            </clr-dg-cell>
+            <!-- <clr-dg-cell>
+                <button [disabled]="result.isTechnicalRound == 'NO'" 
+                class="btn btn-sm btn-primary" (click)="viewTechnicalDetails(result)">View Tech. Int. Details</button>
+            </clr-dg-cell> -->
+          </clr-dg-row>
+        </clr-datagrid>
+
+      </div>
+ 
+    </div>
+  </div>
+
+</div>
+
+ 
+
+<div class="container-fluid" *ngIf="isNew">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">New Candidate Registration Form</div>
+          <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="isNew=false" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <form #candidateform="ngForm">
+            <div class="clr-row">
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>First Name: <sup style="color: red">*</sup></strong></label>
+                  <input type="text" name="firstname" [(ngModel)]="firstname" #firstName="ngModel" required>
+                  <div *ngIf="firstName.invalid && firstName.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="firstName.errors?.['required']">First Name is required.</div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Last Name : <sup style="color: red">*</sup></strong></label>
+                  <input type="text" name="lastname" [(ngModel)]="lastname" #lastName="ngModel" required>
+                  <div *ngIf="lastName.invalid && lastName.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="lastName.errors?.['required']">Last Name is required.</div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Contact No : <sup style="color: red">*</sup></strong></label>
+                  <input type="text" name="contact_no" [(ngModel)]="contact_no" #contactNo="ngModel" required
+                      [canadianPhone]="false"
+                      [placeholder]="contactPhoneHint()"
+                      maxlength="17" autocomplete="tel"
+                      (ngModelChange)="syncContactPhoneValidity()">
+                  <div *ngIf="contactNo.invalid && contactNo.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="contactNo.errors?.['required']">Contact No is required.</div>
+                      <div *ngIf="contactNo.errors?.['countryPhone']">
+                          Enter a valid phone number for {{ permanent_country || 'the selected country' }} (e.g. {{ contactPhoneExample() }}).
+                      </div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Email Id : <sup style="color: red">*</sup></strong></label>
+                  <input type="email" name="emp_email" [(ngModel)]="emp_email" #empEmail="ngModel" required
+                      pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                      placeholder="name@example.com" maxlength="100">
+                  <div *ngIf="empEmail.invalid && empEmail.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="empEmail.errors?.['required']">Email Id is required.</div>
+                      <div *ngIf="empEmail.errors?.['pattern']">Please enter a valid email address.</div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Qualification:</strong><span style="color: red;">*</span></label>
+                <input type="text" id="qualification" name="qualification" ngModel #qualificationCtrl="ngModel" required>
+                <div *ngIf="qualificationCtrl.invalid && qualificationCtrl.touched" style="color:red;font-size:13px;">
+                  <div *ngIf="qualificationCtrl.errors?.['required']">Qualification is required.</div>
+                </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Department Applied For : <sup style="color: red">*</sup></strong></label>
+                  <select name="department" ngModel #dept="ngModel"   required>
+                      <option></option>
+                      <option *ngFor="let dept of departments">{{ dept.department_name }}</option>
+                  </select>
+                  <div *ngIf="dept.invalid && dept.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="dept.errors?.['required']">Department is required.</div>
+                  </div>
+              </div>
+              
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Gender : <sup style="color: red">*</sup></strong></label>
+                  <select name="gender" [(ngModel)]="gender" #genderCtrl="ngModel" required>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                  </select>
+                  <div *ngIf="genderCtrl.invalid && genderCtrl.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="genderCtrl.errors?.['required']">Gender is required.</div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Date Of Birth :</strong></label>
+                <input type="date" name="birthdate" [(ngModel)]="birthdate" #birthDateCtrl="ngModel" [max]="today" (change)="calculateAge(birthdate)">
+                <div *ngIf="birthDateCtrl.invalid && birthDateCtrl.touched" style="color:red;font-size:13px;">
+                  <div *ngIf="birthDateCtrl.errors?.['max']">Date cannot be in the future.</div>
+                </div>
+                <!-- Show calculated age -->
+                <div *ngIf="age">
+                  <small>Age: {{ age }} years</small>
+                </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Nationality:</strong></label>
+                  <input type="text" name="nationality" ngModel>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Marital Status : </strong></label>
+                  <select name="marital_status" ngModel>
+                      <option></option>
+                      <option>Married</option>
+                      <option>Single</option>
+                      <option>Other</option>
+                      <option>NA</option>
+                  </select>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Upload Resume : <sup style="color: red">*</sup></strong></label>
+                  <input type="file" name="resume" [(ngModel)]="resume" #resumeCtrl="ngModel" (change)="onFileChanged3($event)" required>
+                  <div *ngIf="resumeCtrl.invalid && resumeCtrl.touched" style="color:red;font-size:13px;">
+                      <div *ngIf="resumeCtrl.errors?.['required']">Resume is required.</div>
+                  </div>
+              </div>
+           
+            </div>
+            <div class="clr-row">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <h3>Address :</h3>
+                    <div class="clr-row">
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>Address : <sup style="color: red">*</sup></strong></label>
+                            <input type="text" name="permanent_flat" [(ngModel)]="permanent_flat" #flatCtrl="ngModel" required>
+                            <div *ngIf="flatCtrl.invalid && flatCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="flatCtrl.errors?.['required']">Address is required.</div>
+                            </div>
+                        </div>
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>City : <sup style="color: red">*</sup></strong></label>
+                            <input type="text" name="permanent_city" [(ngModel)]="permanent_city" #cityCtrl="ngModel" required>
+                            <div *ngIf="cityCtrl.invalid && cityCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="cityCtrl.errors?.['required']">City is required.</div>
+                            </div>
+                        </div>
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>Postal Code : <sup style="color: red">*</sup></strong></label>
+                            <input type="text" name="permanent_pincode" [(ngModel)]="permanent_pincode" #pincodeCtrl="ngModel" required>
+                            <div *ngIf="pincodeCtrl.invalid && pincodeCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="pincodeCtrl.errors?.['required']">Postal Code is required.</div>
+                            </div>
+                        </div>
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>Country : <sup style="color: red">*</sup></strong></label>
+                            <select name="permanent_country" [(ngModel)]="permanent_country" #countryCtrl="ngModel" required (ngModelChange)="onCountryChange()">
+                                <option></option>
+                                <option *ngFor="let country of countries" [value]="country">{{ country }}</option>
+                            </select>
+                            <div *ngIf="countryCtrl.invalid && countryCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="countryCtrl.errors?.['required']">Country is required.</div>
+                            </div>
+                        </div>
+
+                        <div *ngIf="permanent_country != 'India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>Province : <sup style="color: red">*</sup></strong></label>
+                            <input type="text" name="permanent_state" [(ngModel)]="permanent_state" #stateCtrl="ngModel" required>
+                            <div *ngIf="stateCtrl.invalid && stateCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="stateCtrl.errors?.['required']">Province is required.</div>
+                            </div>
+                        </div>
+
+                        <div *ngIf="permanent_country == 'India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label><strong>Province : <sup style="color: red">*</sup></strong></label>
+                            <select name="permanent_state" [(ngModel)]="permanent_state" #stateSelectCtrl="ngModel" required>
+                                <option value=""></option>
+                                <option *ngFor="let s of states" [value]="s">{{ s }}</option>
+                            </select>
+                            <div *ngIf="stateSelectCtrl.invalid && stateSelectCtrl.touched" style="color:red;font-size:13px;">
+                                <div *ngIf="stateSelectCtrl.errors?.['required']">Province is required.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div style="padding: 15px;">
+        <button class="btn btn-primary" (click)="saveForm(candidateform)">{{'common.submit' | translate}}</button>
+        <button class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>
+ 
+<clr-modal [(clrModalOpen)]="isScheduleInterview" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Schedule Interview</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+        <table class="table table-border">
+          <tr>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">FirstName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">LastName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Qualification</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.department' | translate}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['firstname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['lastname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['qualification'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['department'] }} </td>
+          </tr>
+          <tr *ngIf="selectedCandidate['isInterviewSchedule'] == 'YES'">
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Date</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Time From - To</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Place / Venue</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.designation' | translate}}</td>
+          </tr>
+          <tr *ngIf="selectedCandidate['isInterviewSchedule'] == 'YES'">
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_date'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_time_from'] }} - {{ selectedCandidate['interview_time_to'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['venue'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['designation'] }} </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <form #scheduleForm="ngForm" >
+        <div class="clr-row" *ngIf="selectedCandidate['isInterviewSchedule'] == 'NO'">
+
+          <!-- Interview Date -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Interview Date : <span style="color: red;">*</span> </strong></label>
+            <input type="date"  [(ngModel)]="selectedInterViewDate"  name="interview_date"  [min]="today"  #interviewDateCtrl="ngModel"  required>
+            <div *ngIf="interviewDateCtrl.invalid && interviewDateCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="interviewDateCtrl.errors?.['required']">Interview Date is required.</div>
+            </div>
+          </div>
+
+          <!-- Interview Time From -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Interview Time (From):</strong><span style="color: red;">*</span></label>
+            <input type="time"  name="interview_time_from"  placeholder="10:00 AM onwards"  #interviewTimeFromCtrl="ngModel"  ngModel  required>
+            <div *ngIf="interviewTimeFromCtrl.invalid && interviewTimeFromCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="interviewTimeFromCtrl.errors?.['required']">Interview start time is required.</div>
+            </div>
+          </div>
+
+          <!-- Interview Time To -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Interview Time (To) : <span style="color: red;">*</span></strong></label>
+            <input type="time"  name="interview_time_to"  placeholder="10:00 AM onwards"  #interviewTimeToCtrl="ngModel"  ngModel  required>
+            <div *ngIf="interviewTimeToCtrl.invalid && interviewTimeToCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="interviewTimeToCtrl.errors?.['required']">Interview end time is required.</div>
+            </div>
+          </div>
+
+          <!-- Place / Venue -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Place / Venue : <span style="color: red;">*</span></strong></label>
+            <select name="venue" [(ngModel)]="venue" #venueCtrl="ngModel" required>
+              <option value="" disabled selected>Select venue</option>
+              <option>Factory</option>
+              <option>Corporate</option>
+              <option style="color: red;">Other</option>
+            </select>
+            <div *ngIf="venueCtrl.invalid && venueCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="venueCtrl.errors?.['required']">Venue is required.</div>
+            </div>
+          </div>
+
+          <!-- Place Name (only if Other) -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="venue=='Other'">
+            <label><strong>Place Name : <span style="color: red;">*</span></strong></label>
+            <input type="text" name="venue_other" #venueOtherCtrl="ngModel" ngModel required>
+            <div *ngIf="venueOtherCtrl.invalid && venueOtherCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="venueOtherCtrl.errors?.['required']">Please specify the place name.</div>
+            </div>
+          </div>
+
+          <!-- Department -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Requirement Department : <span style="color: red;">*</span></strong></label>
+            <select name="department"  [(ngModel)]="department"  #departmentCtrl="ngModel"  required  (ngModelChange)="getDesignation($event)">
+              <option value="" disabled selected>Select department</option>
+              <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+            </select>
+            <div *ngIf="departmentCtrl.invalid && departmentCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="departmentCtrl.errors?.['required']">Department is required.</div>
+            </div>
+          </div>
+
+          <!-- Designation -->
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Designation : <span style="color: red;">*</span></strong></label>
+            <select name="designation"  #designationCtrl="ngModel"  ngModel  required>
+              <option value="" disabled selected>Select designation</option>
+              <option *ngFor="let designation of designations" [value]="getDesignationLabel(designation)">{{ getDesignationLabel(designation) }}</option>
+            </select>
+            <div *ngIf="designationCtrl.invalid && designationCtrl.touched" style="color:red;font-size:13px;">
+              <div *ngIf="designationCtrl.errors?.['required']">Designation is required.</div>
+            </div>
+          </div>
+
+        </div>
+
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" *ngIf="selectedCandidate['isInterviewSchedule'] == 'NO'" 
+    class="btn btn-success" (click)="saveScheduleInterview(scheduleForm)">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isScheduleInterview=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+   
+ <clr-modal [(clrModalOpen)]="isInterviewAllocated" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Interviewers</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+        <table class="table table-border">
+          <tr>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">FirstName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">LastName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Qualification</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.department' | translate}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['firstname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['lastname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['qualification'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['department'] }} </td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Date</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Time From - To</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Place / Venue</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.designation' | translate}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_date'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_time_from'] }} - {{ selectedCandidate['interview_time_to'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['venue'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['designation'] }} </td>
+          </tr>
+        </table>
+        <table class="table table-border" *ngIf="selectedCandidate['isInterviewerAllocated'] != 'NO'">
+          <tr>
+            <td style="background-color:aquamarine;"><strong>{{'common.table.srNo' | translate}}</strong></td>
+            <td style="text-align:left;background-color:aquamarine;"><strong>{{'common.department' | translate}}</strong></td>
+            <td style="text-align:left;background-color:aquamarine;"><strong>{{'common.designation' | translate}}</strong></td>
+            <td style="text-align:left;background-color:aquamarine;"><strong>Employee</strong></td>
+          </tr>
+          <tr *ngFor="let intv of selectedCandidate['interviewers'];let i = index;">
+            <td ><strong>{{i+1}}</strong></td>
+            <td style="text-align:left;"><strong>{{ intv.interviewerDept || 'NA' }}</strong></td>
+            <td style="text-align:left;"><strong>{{ intv.interviewerDesignation || 'NA' }}</strong></td>
+            <td style="text-align:left;"><strong>{{ intv.interviewerName || 'NA' }}</strong></td>
+          </tr>
+        </table>
+      </div>
+
+    </div>
+  
+    <div class="clr-row" *ngIf="selectedCandidate['isInterviewerAllocated'] == 'NO'">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card">
+          <div class="card-header">Assign Interviewers</div>
+          <div class="card-block">
+              <form #interviewerForm="ngForm" class="clr-row">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <table class="table table-border">
+                    <tr>
+                      <td style="background-color:aquamarine;"><strong>{{'common.table.srNo' | translate}}</strong></td>
+                      <td style="text-align:left;background-color:aquamarine;"><strong>{{'common.department' | translate}}</strong></td>
+                      <td style="text-align:left;background-color:aquamarine;"><strong>{{'common.designation' | translate}}</strong></td>
+                      <td style="text-align:left;background-color:aquamarine;"><strong>Employee</strong></td>
+                      <td style="text-align:left;background-color:aquamarine;"><strong>{{'common.table.action' | translate}}</strong></td>
+                    </tr>
+                    <tr>
+                      <td><strong>0</strong></td>
+                      <td style="text-align:left;margine:0;padding:0;">
+                          <select name="interviewerDept" [(ngModel)]="interviewerDept" (ngModelChange)="onInterviewerDeptChange()" required>
+                            <option value=""></option>
+                            <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+                          </select>
+                      </td>
+                      <td style="text-align:left;margine:0;padding:0;">
+                          <select name="interviewerDesignation" [(ngModel)]="interviewerDesignation" (ngModelChange)="onInterviewerDesignationChange($event)">
+                            <option value="">All designations</option>
+                            <option *ngFor="let designation of designations" [value]="getDesignationLabel(designation)">{{ getDesignationLabel(designation) }}</option>
+                          </select>
+                      </td>
+                      <td style="text-align:left;margine:0;padding:0;">
+                          <select name="interviewerId" [(ngModel)]="interviewerId" required (ngModelChange)="getSelectedEmployee($event)">
+                            <option value=""></option>
+                            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} {{ employee.lastname }} - ( {{ employee.emp_id }} )</option>
+                          </select>
+                      </td>
+                      <td style="text-align:left;">
+                        <button class="btn btn-sm btn-success" (click)="addInterview(interviewerForm)">{{'common.add' | translate}}</button>
+                      </td>
+                    </tr>
+                    <tr *ngFor="let intv of interviewers;let i = index;">
+                      <td ><strong>{{i+1}}</strong></td>
+                      <td style="text-align:left;"><strong>{{ intv.interviewerDept || 'NA' }}</strong></td>
+                      <td style="text-align:left;"><strong>{{ intv.interviewerDesignation || 'NA' }}</strong></td>
+                      <td style="text-align:left;"><strong>{{ intv.interviewerName || 'NA' }}</strong></td>
+                      <td style="text-align:left;">
+                        <button class="btn btn-sm btn-danger" (click)="delInterviewer(i)">DEL</button>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-success" (click)="saveInterviewers()">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isInterviewAllocated=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+ <clr-modal [(clrModalOpen)]="isPrimaryRoundHr" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Candidate Details ( Primary Round HR )</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+        <table class="table table-border">
+          <tr>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">FirstName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">LastName</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Qualification</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.department' | translate}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['firstname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['lastname'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['qualification'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['department'] }} </td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Date</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Interview Time From - To</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">Place / Venue</td>
+            <td style="font-weight: bolder;background-color:darkcyan;color:white;">{{'common.designation' | translate}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_date'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['interview_time_from'] }} - {{ selectedCandidate['interview_time_to'] }}</td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['venue'] }} </td>
+            <td style="font-weight: bolder;color: blue;">{{ selectedCandidate['designation'] }} </td>
+          </tr>
+        </table>
+     
+      <table class="table table-border" *ngIf="selectedCandidate['isPrimaryRoundHr'] == 'YES'">
+          <tr>
+            <th colspan="3" style="text-align:center; font-size:15px;"><strong>Primary Round Checklist</strong></th>
+          </tr>
+          <tr>
+            <th style="width: 10%;">{{'common.table.srNo' | translate}}</th>
+            <th style="text-align:left;">Checklist Particular</th>
+            <th>Evaluation Comment</th>
+          </tr>
+          <tr *ngFor="let check of selectedCandidate['primaryRoundChecklist']; let i = index">
+            <td style="width: 10%;">{{ i + 1 }}</td>
+            <td style="text-align:left;">{{ check.checkPerticular }}</td>
+            <td style="text-align:left;color:blue;">{{ check.evalParameter || '-' }}</td>
+          </tr>
+          <tr >
+            <td style="width: 10%;"><strong>Remark :- </strong></td>
+            <td colspan="2" style="text-align:left; color:blue;">{{ selectedCandidate['primaryROundRemark'] || '-' }}</td>
+          </tr>
+      </table>
+      </div>
+
+    </div>
+    <form #pmFrom="ngForm"  class="card" *ngIf="selectedCandidate['isPrimaryRoundHr'] == 'NO'">
+      <div class="card-header">Primary Round Checklist</div>
+      <div class="card-block">
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <table class="compactTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 10%;">{{'common.table.srNo' | translate}}</th>
+                      <th style="width: 40%;text-align:left;">Checklist Particular</th>
+                      <th style="width: 40%;">Evaluation Rating</th>
+                      <th style="width: 10%;">{{'common.table.action' | translate}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let check of checklistData; let i = index">
+                      <td style="width: 10%;">{{ i + 1 }}</td>
+                      <td style="width: 40%; text-align:left;">{{ check.checkPerticular }}</td>
+                      <td style="width: 40%; margin:0;padding:0;">
+                        <select name="evalParameter{{ i }}" [(ngModel)]="check.evalParameter"  style="margin:0;">
+                            <option>Select</option>
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                      </td>
+                      <td style="width: 10%; margin:0;padding:0;">
+                        <clr-icon shape="trash" class="is-error" (click)="checklistData.splice(i, 1)"></clr-icon>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Remark : <span style="color:red;">*</span></strong></label>
+              <input type="text" name="primaryROundRemark" ngModel required >
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <button  class="btn btn-success" (click)="savePrimaryRoundInterView(pmFrom,'Primary_Round_Complete')">Proceed For Tecnical Interview</button>
+            </div>
+            <div class="clr-col-lg-1 clr-col-md-1 clr-col-sm-12 clr-col-xs-12">
+                <button  class="btn btn-danger" (click)="savePrimaryRoundInterView(pmFrom,'Rejected_In_Primary_Round')">{{'common.reject' | translate}}</button>
+            </div>
+            <!-- <div class="clr-col-lg-1 clr-col-md-1 clr-col-sm-12 clr-col-xs-12">
+                <button  class="btn btn-info" (click)="savePrimaryRoundInterView(pmFrom,'ON_HOLD')">ON HOLD</button>
+            </div> -->
+      
+          </div>
+      </div>
+    </form>
+    
+  </div>
+  <div class="modal-footer">
+      <button  class="btn btn-danger" (click)="isPrimaryRoundHr=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+ <clr-modal [(clrModalOpen)]="isTechnicalRound" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Candidate Details ( Technical Interview )</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          <table class="table table-border">
+              <tr>
+                <th style="text-align:left;">{{'common.table.remark' | translate}}</th>
+              </tr>
+              <tr *ngFor="let check of selectedCandidate['technicalRemarkData']; let i = index">
+                <td style="text-align:left;">{{check.technicalRemark}}</td>
+              </tr>
+          </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+      <button  class="btn btn-danger" (click)="isTechnicalRound=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
+
+  
+        <h3>Final Round Remark: </h3>
+        <form #remarkForm="ngForm">
+          <div class="clr-row">
+           
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Decision:</strong></label>
+              <select name="decision" [(ngModel)]="decision" required>
+                <option>Recommended</option>
+                <option>Not Recommended</option>
+                <option>Keep On Hold</option>
+              </select>
+            </div>
+       
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Experinced:</strong></label>
+              <select name="experinced" [(ngModel)]="experinced" (change)="checkexp($event.target.value)" required>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+
+            <div *ngIf="experinced == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Privious Company CTC:</strong></label>
+              <input type="number" name="privious_ctc1" [(ngModel)]="privious_ctc1" required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Replacement :</strong></label>
+              <select name="replacement" [(ngModel)]="replacement" (change)="cleareDate()" required>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+
+            <div *ngIf="replacement == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-4">
+              <label>Department:</label>
+              <select name="department" ngModel (change)="getEmployeesbyDept($event.target.value)" required>
+                <option></option>
+                <option *ngFor="let dept of departments">{{ dept.department_name }}</option>
+              </select>
+            </div>
+
+            <div *ngIf="replacement == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Replacement For:</strong></label>
+              <select name="rep_for" ngModel (change)="calculateSal($event.target.selectedIndex)">
+                <option></option>
+                <option *ngFor="let employee of employees1" [value]="employee.emp_id">{{ employee.firstname}} {{
+                  employee.lastname}} ( {{employee.emp_id}} )</option>
+              </select>
+            </div>
+
+            <div *ngIf="replacement == 'Yes' && experinced == 'Yes'"
+              class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Criteria:</strong></label>
+              <select name="criteria_sal" [(ngModel)]="criteria_sal" (change)="jadugar()" required>
+                <option></option>
+                <option value="10">10%</option>
+                <option value="25">25%</option>
+              </select>
+            </div>
+
+            <div *ngIf="replacement == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Replacement Annual CTC:</strong></label>
+              <input type="text" name="rep_ctc_annual" [(ngModel)]="rep_ctc_annual" readonly>
+            </div>
+
+            <div *ngIf="replacement == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Replacement Monthly CTC:</strong></label>
+              <input type="text" name="rep_total_ctc" [(ngModel)]="rep_total_ctc" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Expected Salary (Annually):</strong></label>
+              <input type="number" name="expected_salary" [(ngModel)]="expected_salary" required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Recommended Salary (Annually) :</strong></label>
+              <input type="number" name="recommended_salary" [(ngModel)]="recommended_salary" (input)="expectedSal($event.target.value)" required>
+              <label><Span style="color: red;">Do Not Exceed <b>{{print_sal_val}} / {{criteria_sal}} % </b></Span></label>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Offered Salary (Annually) :</strong></label>
+              <input type="number" name="offered_salary" [(ngModel)]="offered_salary" required>
+            </div>
+
+          </div>
+
+          <div class="card-footer">
+            <button *ngIf="!isbutton" class="btn btn-primary" (click)="saveRemarks('final',remarkForm)">{{'common.submit' | translate}}</button>
+            <button *ngIf="isbutton" class="btn btn-success" (click)="saveRemarks('final1',remarkForm)">Send For
+              Management Approval</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+
+</div> -->
+
+<!-- <div class="container-fluid" *ngIf="isDecision">
+  <div class="card">
+    <div class="card-header">Awaiting Decision Update</div>
+    <div class="card-block">
+      <div class="card-text">
+        <h3> Candidate Details:</h3>
+        <table class="table">
+          <tr>
+            <td style="text-align: left; width: 20%;">Candidate Name:</td>
+            <td style="text-align: left;">{{ selectedCandidate['candidate_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">Email Id:</td>
+            <td style="text-align: left;">{{ selectedCandidate['email_id']}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">Mobile No:</td>
+            <td style="text-align: left;">{{ (selectedCandidate['mobile_no'] | canadianPhone)}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;"> Qualification:</td>
+            <td style="text-align: left;">{{ selectedCandidate['qualification']}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;"> Applied Department:</td>
+            <td style="text-align: left;">{{ selectedCandidate['department']}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;"> Designation:</td>
+            <td style="text-align: left;">{{ selectedCandidate['designation']}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;"> Interview Date:</td>
+            <td style="text-align: left;">{{ selectedCandidate['interview_date'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;"> Interview Time:</td>
+            <td style="text-align: left;">{{ selectedCandidate['interview_time']}}</td>
+          </tr>
+        </table>
+        <br>
+        <h3> Interviewer Details:</h3>
+        <table class="table">
+          <tr>
+            <td>Interviewed By</td>
+            <td>{{ selectedCandidate['interviewed_by']}}</td>
+            <td>{{'common.remarks' | translate}}</td>
+            <td>{{ selectedCandidate['interviewer_remarks']}}</td>
+          </tr>
+        </table>
+
+        <table class="table">
+          <tr>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr. No.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Question</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.remark' | translate}}</th>
+          </tr>
+          <tr *ngFor="let remarkdata of selectedCandidate['interviewer_checklist'];let i=index">
+            <td style="text-align: left;">{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ remarkdata.check_point }}</td>
+            <td style="text-align: left;">{{ remarkdata.check }}</td>
+
+          </tr>
+        </table>
+
+        <h3> Primary Round Details:</h3>
+        <table class="table">
+          <tr>
+            <td>Primary Round HR</td>
+            <td>{{ selectedCandidate['interviewed_by']}}</td>
+            <td>{{'common.remarks' | translate}}</td>
+            <td>{{ selectedCandidate['primary_hr_comments']}}</td>
+          </tr>
+        </table>
+
+        <table class="table">
+          <tr>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Question</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.remark' | translate}}</th>
+          </tr>
+          <tr *ngFor="let remarkdata of selectedCandidate['primary_hr_checklist'] ;let i=index">
+            <td style="text-align: left;">{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ remarkdata.check_point }}</td>
+            <td style="text-align: left;">{{ remarkdata.check }}</td>
+
+          </tr>
+        </table>
+
+
+        <h3> Final Round Details:</h3>
+        <table class="table">
+          <tr>
+            <td style="text-align: left; font-weight: bold;">Final Round HR</td>
+            <td style="text-align: left;">{{ selectedCandidate['interviewed_by'] || '-' }}</td>
+            <td style="text-align: left;font-weight: bold;">{{'common.remarks' | translate}}</td>
+            <td style="text-align: left;" colspan="3">{{ selectedCandidate['primary_hr_comments'] || '-' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;font-weight: bold;">Replacement For</td>
+            <td style="text-align: left;">{{ selectedCandidate['rep_for'] || 'NA' }}</td>
+            <td style="text-align: left;font-weight: bold;">Replacement Annual Salary (INR)</td>
+            <td style="text-align: left;">{{ selectedCandidate['rep_ctc_annual'] || '0.00' }}</td>
+            <td style="text-align: left;font-weight: bold;">Salary Criteria</td>
+            <td style="text-align: left;">{{ selectedCandidate['criteria_sal'] || '0' }} %</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;font-weight: bold;">Experinced</td>
+            <td style="text-align: left;">{{ selectedCandidate['experinced'] || 'NA' }}</td>
+            <td> </td>
+            <td></td>
+            <td style="text-align: left;font-weight: bold;">Privious Salary Annually (INR) :</td>
+            <td style="text-align: left;">{{ selectedCandidate['privious_ctc1'] || '0.00' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;font-weight: bold;">Expected Salary (INR)</td>
+            <td style="text-align: left;">{{ selectedCandidate['expected_salary'] || '0.00' }}</td>
+            <td style="text-align: left;font-weight: bold;">Recommended Salary (INR)</td>
+            <td style="text-align: left;">{{ selectedCandidate['recommended_salary'] || '0.00' }}</td>
+            <td style="text-align: left;font-weight: bold;">Offered Salary (INR)</td>
+            <td style="text-align: left;">{{ selectedCandidate['offered_salary'] || '0.00' }}</td>
+          </tr>
+        </table>
+        <table class="table">
+          <tr>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;font-weight: bold;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;font-weight: bold;">Question
+            </th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;font-weight: bold;">Remark
+            </th>
+          </tr>
+          <tr *ngFor="let remarkdata of selectedCandidate['final_hr_checklist'] ;let i=index">
+            <td style="text-align: left;">{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ remarkdata. check_point}}</td>
+            <td style="text-align: left;">{{ remarkdata.check }}</td>
+          </tr>
+        </table>
+
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="clr-row">
+            <table class="table chkPoint ">
+              <tr>
+                <td style="text-align:left;padding: 10px !important;margin: 0px;">Performed By</td>
+                <td style="text-align:left;padding: 10px !important;margin: 0px;">{{selectedCandidate['final_hr']}}
+                </td>
+                <td style="text-align:left;padding: 10px !important;margin: 0px;">Performed On</td>
+                <td style="text-align:left;padding: 10px !important;margin: 0px;">
+                  {{selectedCandidate['finalHr_date']}}</td>
+              </tr>
+            </table>
+          </div>
+        </div><br>
+
+
+        <form #awaitingForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Status:</strong></label>
+              <select name="remark" ngModel="selected" required>
+                <option>selected</option>
+                <option>Call for final interview</option>
+                <option>Keep waiting</option>
+                <option>{{'common.rejected' | translate}}</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Department:</strong></label>
+              <select name="department" [(ngModel)]="department" required (ngModelChange)="getDesignation($event)">
+                <option value=""></option>
+                <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Designation:</strong></label>
+              <select name="designation" ngModel required>
+                <option></option>
+                <option *ngFor="let designation of designations" [value]="getDesignationLabel(designation)">{{ getDesignationLabel(designation) }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Joining Date:</strong></label>
+              <input type="date" ngModel name="joining_date">
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="saveDecision(awaitingForm)">{{'common.submit' | translate}}</button>
+      <button class="btn btn-danger" (click)="isDecision=false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div> -->
+
+<!-- <div class="container-fluid" *ngIf="isOfferletter">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Generate Offer Letter </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" (click)="isOfferletter=false" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon>{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <form #Form="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Offer letter:</label>
+              <select name="Offer_letter" [(ngModel)]="Offer_letter" required>
+                <option></option>
+                <option>With Annexure</option>
+                <option>Without Annexure</option>
+                <option></option>
+              </select>
+            </div>
+
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="Offer_letter=='With Annexure'">
+              <label>Employee Type<span style="color: red;">*</span> </label>
+              <select name="emp_type" [(ngModel)]="emp_type" (change)="editType($event.target.value)" required>
+                <option *ngFor="let data of salary_types">{{data.payroll_type}}</option>
+                <option style="color: red;">ADD NEW</option>
+              </select>
+
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-6 clr-col-xs-6">
+              <label>Medical Checkup</label><br>
+              <select name="checkup_type" ngModel required>
+                <option value="Pre Employeement">Pre Employeement</option>
+                <option value="Post Joining">Post Joining</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-4 clr-col-xs-4" *ngIf="Offer_letter==='With Annexure'">
+              <label>CTC (Monthly):</label>
+              <input type="number" name="gross_salary" [(ngModel)]="gross_salary"
+                [value]="gross_salary | number: '1.2-2'" (input)="calculateSalary()" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-4 clr-col-xs-4" *ngIf="Offer_letter!=='With Annexure'">
+              <label>CTC (Monthly):</label>
+              <input type="number" name="gross_salary" [(ngModel)]="gross_salary"
+                [value]="gross_salary | number: '1.2-2'" (input)="calculateSalary1()" required>
+            </div>
+
+
+          </div>
+          <div class="clr-row">
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+              <label>CTC Per Month:</label>
+              <input type="text" name="gross_salary" [(ngModel)]="gross_salary" readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+              <label>CTC Per Annum:</label>
+              <input type="text" name="ctc_annual" (blur)="validateSalary()" (focus)="onFocus()" [(ngModel)]="ctc_annual" (input)="calculateSalary()">
+            </div>
+          </div>
+          <table class="table" style="overflow-y: auto" *ngIf="Offer_letter=='With Annexure'">
+            <thead>
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Salary Head</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Calculation Type</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Value</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Per Month</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Per Annum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="height: 10px; background:aquamarine">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Company (Earnings)</strong></td>
+              </tr>
+              <tr *ngFor="let res of earnings_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+              <tr>
+                <td colspan="3" style="text-align: left; background-color: rgb(14, 67, 112); color: white;">
+                  <strong>Gross Salary</strong>
+                </td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_earn_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{ total_earn_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+
+              <tr style="height: 10px; background:cornflowerblue">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Company (Deduction)</strong></td>
+              </tr>
+              <tr *ngFor="let res of ctc_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+              <tr *ngIf="ctc_list>1">
+                 <td colspan="3" style="text-align: left;"><strong>Total CTC Deductions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_ctc_ded_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ total_ctc_ded_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+              <tr *ngIf="total_ctc>0">
+                <td colspan="3"
+                  style="text-align: left; font-weight: bolder;background-color: rgb(14, 67, 112); color: white; ">
+                  <strong>CTC Total </strong>
+                </td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{ total_ctc | number : '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ ctc_annual | number : '1.0-0'}}</td>
+              </tr>
+
+
+              <tr style="height: 10px; background:burlywood">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Employee (Deductions)</strong></td>
+              </tr>
+              <tr *ngFor="let res of detuctions_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+               <tr *ngIf="detuctions_list>1">
+                <td colspan="3" style="text-align: left;"><strong>Total Deductions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_ded_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ total_ded_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+
+              <tr>
+                <td colspan="3" style="text-align: left;background-color: rgb(14, 67, 112); color: white;"><strong>Net
+                    Salary (Take Home)</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{
+                  total_earn_month_amt-total_ded_month_amt | number : '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{
+                  total_earn_annum_amt-total_ded_annum_amt | number : '1.0-0'}}</td>
+              </tr>
+
+
+              <tr>
+                <td><button class="btn btn-sm" style="background-color: green; color:white;">CTC : {{gross_salary |
+                    number : '1.0-0'}}</button></td>
+                <td><button class="btn btn-sm">Gross Salary : {{total_earn_month_amt | number : '1.0-0'}}</button></td>
+                <td><button class="btn btn-sm">Company Deductions : {{total_earn_month_amt | number : '1.0-0'}}</button>
+                </td>
+                <td><button class="btn btn-sm">Employee Deductions: {{total_ded_month_amt | number : '1.0-0'}}</button>
+                </td>
+                <td><button class="btn btn-sm">Take Home Salary :{{
+                    total_earn_month_amt-total_ded_month_amt-deduct_binus | number : '1.0-0'}}</button></td>
+
+              </tr>
+
+            </tbody>
+          </table>
+
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="saveSalaryAnnexure(Form)">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isOfferletter = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>  -->

@@ -1,0 +1,316 @@
+﻿<div class="jobresp-page card" *ngIf="!isView && !isNew">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue; margin-top: -2px; text-align: left;">Job Responsibility Log</div>
+      <div class="clr-col-lg-6 jobresp-header-actions" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-primary" (click)="downloadLog()">Download</button>
+        <button class="btn btn-sm btn-success" (click)="openNewForm()">New</button>
+        <button class="btn btn-sm btn-danger" routerLink="/hr">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="jobresp-table-wrap">
+        <table class="jobresp-table jobresp-table--log">
+          <colgroup>
+            <col class="col-sr" />
+            <col class="col-empid" />
+            <col class="col-name" />
+            <col class="col-dept" />
+            <col class="col-desig" />
+            <col class="col-action" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-sr">Sr.</th>
+              <th>Emp ID</th>
+              <th>Employee Name</th>
+              <th>{{'common.department' | translate}}</th>
+              <th>{{'common.designation' | translate}}</th>
+              <th class="col-action">{{'common.table.action' | translate}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let data of employees; let i = index">
+              <td class="col-sr">{{ i + 1 }}</td>
+              <td>{{ data.emp_id }}</td>
+              <td>{{ data.emp_name || (data.firstname + ' ' + data.lastname) }}</td>
+              <td>{{ data.department }}</td>
+              <td>{{ data.designation }}</td>
+              <td class="col-action">
+                <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+              </td>
+            </tr>
+            <tr *ngIf="!employees?.length">
+              <td colspan="6" class="col-empty">No job responsibility records found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="jobresp-page container-fluid" *ngIf="isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-6" style="color: aliceblue; margin-top: -2px; text-align: left;">New Job Responsibility</div>
+        <div class="clr-col-lg-6 jobresp-header-actions" style="text-align: right; padding-right: 0; margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="closePanels()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row jobresp-form-grid">
+          <div class="jobresp-field">
+            <label>Employee <span style="color:red;">*</span></label>
+            <select name="selectedEmpId" [(ngModel)]="selectedEmpId" (ngModelChange)="onEmployeeSelect($event)" required>
+              <option value="">Select employee</option>
+              <option *ngFor="let emp of employeeOptions" [value]="emp.emp_id">
+                {{ emp.firstname }} {{ emp.lastname }} - {{ emp.emp_id }}
+              </option>
+            </select>
+          </div>
+          <div class="jobresp-field" *ngIf="selectedResult?.emp_id">
+            <label>{{'common.department' | translate}}</label>
+            <div class="jobresp-value">{{ selectedResult['department'] }}</div>
+          </div>
+          <div class="jobresp-field" *ngIf="selectedResult?.emp_id">
+            <label>{{'common.designation' | translate}}</label>
+            <div class="jobresp-value">{{ selectedResult['designation'] }}</div>
+          </div>
+        </div>
+
+        <p *ngIf="designationResponsibilities.length" class="jobresp-hint">
+          Master responsibilities found for this designation — select from dropdown or type manually.
+        </p>
+
+        <h3 class="jobresp-section-title">Primary Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--edit">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+              <col class="col-action" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+                <th class="col-action">{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['Primary_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-danger" (click)="delPrimary(i)">Del</button></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <select *ngIf="designationResponsibilities.length" name="primeSelect" [(ngModel)]="prime" style="width: 100%; margin-bottom: 6px;">
+                    <option value="">Select responsibility</option>
+                    <option *ngFor="let item of designationResponsibilities" [value]="item">{{ item }}</option>
+                  </select>
+                  <input type="text" name="prime" [(ngModel)]="prime" placeholder="Or type responsibility">
+                </td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-primary" (click)="addPrimary()">{{'common.add' | translate}}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="jobresp-section-title">Secondary Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--edit">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+              <col class="col-action" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+                <th class="col-action">{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['Secondary_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-danger" (click)="delSecondary(i)">Del</button></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <select *ngIf="designationResponsibilities.length" name="secondSelect" [(ngModel)]="second" style="width: 100%; margin-bottom: 6px;">
+                    <option value="">Select responsibility</option>
+                    <option *ngFor="let item of designationResponsibilities" [value]="item">{{ item }}</option>
+                  </select>
+                  <input type="text" name="second" [(ngModel)]="second" placeholder="Or type responsibility">
+                </td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-primary" (click)="addSecondary()">{{'common.add' | translate}}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="jobresp-section-title">QMS Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--edit">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+              <col class="col-action" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+                <th class="col-action">{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['QMS_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-danger" (click)="delQms(i)">Del</button></td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  <select *ngIf="designationResponsibilities.length" name="qmsSelect" [(ngModel)]="qms" style="width: 100%; margin-bottom: 6px;">
+                    <option value="">Select responsibility</option>
+                    <option *ngFor="let item of designationResponsibilities" [value]="item">{{ item }}</option>
+                  </select>
+                  <input type="text" name="qms" [(ngModel)]="qms" placeholder="Or type responsibility">
+                </td>
+                <td class="col-action"><button type="button" class="btn btn-sm btn-primary" (click)="addQms()">{{'common.add' | translate}}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="jobresp-footer">
+      <button type="button" class="btn btn-primary" (click)="onSubmit()">{{'common.save' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="closePanels()">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="jobresp-page container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-6" style="color: aliceblue; margin-top: -2px; text-align: left;">Job Responsibility</div>
+        <div class="clr-col-lg-6 jobresp-header-actions" style="text-align: right; padding-right: 0; margin-top: -7px;">
+          <button class="btn btn-sm btn-primary" (click)="downloadPDF()">Download</button>
+          <button class="btn btn-sm btn-danger" (click)="closePanels()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="jobresp-fields">
+          <div class="jobresp-field">
+            <label>Employee Code</label>
+            <div class="jobresp-value">{{ selectedResult['emp_id'] }}</div>
+          </div>
+          <div class="jobresp-field">
+            <label>Employee Name</label>
+            <div class="jobresp-value">{{ selectedResult['emp_name'] }}</div>
+          </div>
+          <div class="jobresp-field">
+            <label>Department</label>
+            <div class="jobresp-value">{{ selectedResult['department'] }}</div>
+          </div>
+          <div class="jobresp-field">
+            <label>Designation</label>
+            <div class="jobresp-value">{{ selectedResult['designation'] }}</div>
+          </div>
+        </div>
+
+        <h3 class="jobresp-section-title">Primary Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--resp">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['Primary_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+              </tr>
+              <tr *ngIf="!selectedResult['Primary_responsibilities']?.length">
+                <td colspan="2" class="col-empty">No records</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="jobresp-section-title">Secondary Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--resp">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['Secondary_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+              </tr>
+              <tr *ngIf="!selectedResult['Secondary_responsibilities']?.length">
+                <td colspan="2" class="col-empty">No records</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="jobresp-section-title">QMS Responsibilities</h3>
+        <div class="jobresp-table-wrap">
+          <table class="jobresp-table jobresp-table--resp">
+            <colgroup>
+              <col class="col-sr" />
+              <col class="col-resp" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-sr">Sr.</th>
+                <th>Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['QMS_responsibilities']; let i = index">
+                <td class="col-sr">{{ i + 1 }}</td>
+                <td>{{ result.responsibility }}</td>
+              </tr>
+              <tr *ngIf="!selectedResult['QMS_responsibilities']?.length">
+                <td colspan="2" class="col-empty">No records</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

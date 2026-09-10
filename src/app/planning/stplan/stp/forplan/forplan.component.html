@@ -1,0 +1,1096 @@
+<div class="card forplan-card">
+  <div class="card-header forplan-header">
+    <div class="forplan-header-bar">
+      <div class="header-title">Workorders For Line Booking</div>
+      <div class="header-actions">
+        <button class="btn btn-sm btn-close-main" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <clr-tabs>
+      <clr-tab>
+        <button clrTabLink (click)="setBookingLineMode('mfg')">MFG Line Booking</button>
+        <clr-tab-content *clrIfActive>
+          <ng-container *ngTemplateOutlet="bookingTable"></ng-container>
+        </clr-tab-content>
+      </clr-tab>
+      <ng-template #bookingTable>
+          <div class="search-container filter-bar">
+            <label for="tableSearchInput">Search PO/FO:</label>
+            <input
+              type="text"
+              id="tableSearchInput"
+              class="form-control"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="searchText"
+              (ngModelChange)="onSearchChange()">
+            <span class="lb-mode-badge">{{ bookingLineMode === 'packing' ? 'Packing Lines' : 'Manufacturing Lines' }}</span>
+            <span class="lb-page-label" *ngIf="!loading">
+              Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} –
+              {{ calculateStartSrNo() + (pendingpo?.length || 0) }} of {{ totalRecords }}
+            </span>
+          </div>
+          <div class="datagrid-wrapper vs-grid-wrap">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="160">Line No</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Area</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="96">Delivery Date</clr-dg-column>
+              <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+              <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="110">Forecast No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+              <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="130">Validation</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="150">Responsible Person</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Start Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="100">Start Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">End Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="100">End Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="70">Hours</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Action</clr-dg-column>
+
+              <clr-dg-row *ngFor="let wo of pendingpo; let i = index; trackBy: trackByWo"
+                class="lb-tint-row"
+                [ngStyle]="{ '--lb-row-bg': wo.bg_color || 'transparent' }">
+                <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <select class="form-control lb-fill-input"
+                    [(ngModel)]="wo._selectedLineId"
+                    [name]="'line_' + (wo.id || i)"
+                    (focus)="loadLineCandidatesForWo(wo)"
+                    (ngModelChange)="onInlineLineSelected(wo, $event)">
+                    <option value="">-- Select Line No --</option>
+                    <option *ngFor="let line of getLineMasterOptions(); trackBy: trackByLine"
+                      [value]="line.id">
+                      {{ line.line_no }}{{ line.line_name ? ' - ' + line.line_name : '' }}
+                    </option>
+                  </select>
+                  <button type="button" class="btn btn-link btn-sm lb-auto-btn" (click)="autoAllocateLine(wo)">Auto</button>
+                </clr-dg-cell>
+                <clr-dg-cell>{{ getSelectedLineArea(wo) }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.bfr_no ? ('From BFR ' + wo.bfr_no + ' RM qty') : 'From BFR / Unit Formula RM'">{{ getBomBatchSize(wo) }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planMonth || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.deliveryDate ? (wo.deliveryDate | date:'dd/MM/yyyy') : '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ wo.plan_qty ?? wo.batch_size ?? '0' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <span [class]="getValidationClass(wo)" [title]="getValidationTitle(wo)">
+                    {{ getValidationLabel(wo) }}
+                  </span>
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <select class="form-control lb-fill-input" [(ngModel)]="wo.responsible_person"
+                    [name]="'rp_' + (wo.id || i)">
+                    <option value="">--Select--</option>
+                    <option *ngFor="let emp of emps" [value]="emp.emp_name + ' - (' + emp.emp_id + ')'">{{ emp.emp_name }} - ({{ emp.emp_id }})</option>
+                  </select>
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <input type="date" class="form-control lb-fill-input"
+                    [(ngModel)]="wo.expected_production_start_date"
+                    [name]="'sd_' + (wo.id || i)"
+                    (ngModelChange)="onScheduleFieldChanged(wo)">
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <input type="time" class="form-control lb-fill-input"
+                    [(ngModel)]="wo.expected_production_start_time"
+                    [name]="'st_' + (wo.id || i)"
+                    (ngModelChange)="onScheduleFieldChanged(wo)">
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <input type="date" class="form-control lb-fill-input"
+                    [(ngModel)]="wo.expected_production_end_date"
+                    [name]="'ed_' + (wo.id || i)"
+                    (ngModelChange)="onScheduleFieldChanged(wo)">
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <input type="time" class="form-control lb-fill-input"
+                    [(ngModel)]="wo.expected_production_end_time"
+                    [name]="'et_' + (wo.id || i)"
+                    (ngModelChange)="onScheduleFieldChanged(wo)">
+                </clr-dg-cell>
+                <clr-dg-cell>{{ wo.no_of_hours_required || '0.00' }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button type="button" class="btn btn-success btn-sm vs-btn-compact" (click)="savePlanStpRow(wo)">Save</button>
+                  <button type="button" class="btn btn-info btn-sm vs-btn-compact" (click)="View2(wo)" *ngIf="getSelectedLineCountForMode(wo) > 0">View</button>
+                </clr-dg-cell>
+              </clr-dg-row>
+
+              <clr-dg-placeholder>No work orders available for line booking.</clr-dg-placeholder>
+
+              <clr-dg-footer *ngIf="totalRecords > 0">
+                <clr-dg-pagination
+                  #paginationBooking
+                  [clrDgPage]="currentPage"
+                  [clrDgPageSize]="pageSize"
+                  [clrDgTotalItems]="totalRecords"
+                  (clrDgPageChange)="onPageChange($event)"
+                  (clrDgPageSizeChange)="onPageSizeChange($event)">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                  {{ paginationBooking.firstItem + 1 }} - {{ paginationBooking.lastItem + 1 }} of {{ paginationBooking.totalItems }} work orders
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+      </ng-template>
+
+          <clr-modal
+            [clrModalOpen]="showStpPlanningModal"
+            (clrModalOpenChange)="onStpPlanningModalChange($event)"
+            clrModalSize="xl"
+            class="stp-planning-modal-xlarge full-modal">
+            <h3 class="modal-title stp-modal-title">Plan for STP — {{ selectedPlanningWo?.workorder_no }}</h3>
+            <div class="modal-body stp-modal-body" *ngIf="selectedPlanningWo">
+
+              <section class="stp-section">
+                <h4 class="stp-section-header">Product Details</h4>
+                <div class="stp-detail-cards">
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Plan Month</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.planMonth || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Group</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.mainGroupName || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Forcast No</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.order_no || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Work / Batch Order No</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.workorder_no || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Work / Batch Date</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.Wo_Generated_on | date:'dd-MM-yyyy' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Product Code</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.product_code || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Product Name</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.product_name || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Plan Qty</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.plan_qty || '-' }}</span>
+                  </div>
+                  <div class="stp-detail-card">
+                    <span class="stp-card-label">Unit</span>
+                    <span class="stp-card-value">{{ selectedPlanningWo.planUnit || '-' }}</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="stp-section">
+                <h4 class="stp-section-header">Fill Details</h4>
+                <form class="stp-form" #stpPlanForm="ngForm">
+                  <div class="stp-form-grid">
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_rp_' + selectedPlanningWo.id">Responsible Person</label>
+                      <select class="form-control" [id]="'stp_rp_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.responsible_person"
+                        [name]="'stp_rp_' + selectedPlanningWo.id"
+                        (ngModelChange)="onPlanningScheduleChange()">
+                        <option value="">--Select Employee--</option>
+                        <option *ngFor="let emp of emps" [value]="emp.emp_name + ' - (' + emp.emp_id + ')'">{{ emp.emp_name }} - ({{emp.emp_id}})</option>
+                      </select>
+                    </div>
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_sd_' + selectedPlanningWo.id">Expected Production Start Date</label>
+                      <input type="date" class="form-control" [id]="'stp_sd_' + selectedPlanningWo.id"
+                        [name]="'stp_sd_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.expected_production_start_date"
+                        (ngModelChange)="onPlanningScheduleChange()">
+                    </div>
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_st_' + selectedPlanningWo.id">Expected Production Start Time</label>
+                      <input type="time" class="form-control" [id]="'stp_st_' + selectedPlanningWo.id"
+                        [name]="'stp_st_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.expected_production_start_time"
+                        (ngModelChange)="onPlanningScheduleChange()">
+                    </div>
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_ed_' + selectedPlanningWo.id">Expected Production End Date</label>
+                      <input type="date" class="form-control" [id]="'stp_ed_' + selectedPlanningWo.id"
+                        [name]="'stp_ed_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.expected_production_end_date"
+                        (ngModelChange)="onPlanningScheduleChange()">
+                    </div>
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_et_' + selectedPlanningWo.id">Expected Production End Time</label>
+                      <input type="time" class="form-control" [id]="'stp_et_' + selectedPlanningWo.id"
+                        [name]="'stp_et_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.expected_production_end_time"
+                        (ngModelChange)="onPlanningScheduleChange()">
+                    </div>
+                    <div class="stp-form-group">
+                      <label class="stp-form-label" [attr.for]="'stp_hr_' + selectedPlanningWo.id">No of Hours Required</label>
+                      <input type="text" class="form-control" [id]="'stp_hr_' + selectedPlanningWo.id"
+                        [name]="'stp_hr_' + selectedPlanningWo.id"
+                        [(ngModel)]="selectedPlanningWo.no_of_hours_required" readonly>
+                    </div>
+                  </div>
+                </form>
+              </section>
+
+              <div class="stp-actions-bar">
+                <button class="btn btn-sm btn-primary" (click)="View2(selectedPlanningWo)" *ngIf="selectedPlanningWo.selectedLines != null">View Selected Lines</button>
+                <button class="btn btn-sm btn-primary" (click)="View(selectedPlanningWo)" *ngIf="selectedPlanningWo.selectedLines == null">Select Lines</button>
+                <button class="btn btn-sm btn-info" (click)="ViewEquip(selectedPlanningWo)" [disabled]="!selectedPlanningWo.selectedLines || selectedPlanningWo.selectedLines.length === 0">View Equipment</button>
+                <button class="btn btn-sm btn-warning" (click)="ViewMaterials(selectedPlanningWo)">View Materials</button>
+              </div>
+
+              <div class="modal-footer stp-planning-modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeStpPlanningModal()">Close</button>
+                <button type="button" class="btn btn-success btn-advance" (click)="proceedPlanStpFromModal()">Plan for STP</button>
+              </div>
+            </div>
+          </clr-modal>
+      <clr-tab>
+        <button id="stpCalendarTabBtn" clrTabLink (click)="initializeCalendar()">Calendar</button>
+        <clr-tab-content *clrIfActive>
+          <div class="calendar-wrap">
+            <div class="calendar-head">
+              <button class="btn btn-sm btn-outline-primary" (click)="selectMonth(-1)">Prev</button>
+              <strong>{{ calendarMonthLabel }}</strong>
+              <button class="btn btn-sm btn-outline-primary" (click)="selectMonth(1)">Next</button>
+              <select class="form-control lb-line-type-select" [(ngModel)]="calendarLineTypeFilter" (ngModelChange)="loadLineOccupancyCalendar()">
+                <option value="All">All Lines</option>
+                <option value="Manufacturing">Manufacturing / Filling</option>
+                <option value="Packing">Packing</option>
+              </select>
+            </div>
+
+            <div class="calendar-grid">
+              <div class="calendar-weekday">Sun</div>
+              <div class="calendar-weekday">Mon</div>
+              <div class="calendar-weekday">Tue</div>
+              <div class="calendar-weekday">Wed</div>
+              <div class="calendar-weekday">Thu</div>
+              <div class="calendar-weekday">Fri</div>
+              <div class="calendar-weekday">Sat</div>
+              <button
+                *ngFor="let day of calendarDays"
+                class="calendar-day"
+                [class.empty]="!day.inMonth"
+                [class.active]="day.inMonth && day.date === selectedCalendarDate"
+                [class.booked]="day.inMonth && day.bookedCount > 0"
+                (click)="onCalendarDayClick(day)">
+                <span *ngIf="day.inMonth">{{ day.day }}</span>
+                <small *ngIf="day.inMonth && day.bookedCount > 0">{{ day.bookedCount }} WO</small>
+                <small *ngIf="day.inMonth && day.occupiedLineCount > 0">{{ day.occupiedLineCount }} lines busy</small>
+              </button>
+            </div>
+
+            <div class="day-booking-list">
+              <h5>STP Planned WOs on {{ getSelectedDateDisplay() }}</h5>
+              <div class="panel-actions" style="margin-bottom: 8px;">
+                <button class="btn btn-sm btn-success" (click)="sendSelectedCalendarForLineApproval()" [disabled]="getSelectedCalendarSendCount() === 0">
+                  Send Selected for Line Approval ({{ getSelectedCalendarSendCount() }})
+                </button>
+              </div>
+              <div *ngIf="calendarLoading">Loading...</div>
+              <div class="datagrid-wrapper vs-grid-wrap" *ngIf="!calendarLoading && selectedDatePlannedWOs.length > 0">
+                <clr-datagrid [clrDgStickyHeader]="true" class="lb-queue-grid">
+                  <clr-dg-column [style.width.px]="70">Select</clr-dg-column>
+                  <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order</clr-dg-column>
+                  <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product</clr-dg-column>
+                  <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+                  <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+                  <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+                  <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+                  <clr-dg-column [style.min-width.px]="140">Start</clr-dg-column>
+                  <clr-dg-column [style.min-width.px]="140">End</clr-dg-column>
+                  <clr-dg-column [style.min-width.px]="150">Responsible</clr-dg-column>
+                  <clr-dg-row *clrDgItems="let b of selectedDatePlannedWOs"
+                    class="lb-tint-row"
+                    [ngStyle]="{ '--lb-row-bg': b.bg_color || 'transparent' }">
+                    <clr-dg-cell><input type="checkbox" [(ngModel)]="b.sendSelected"></clr-dg-cell>
+                    <clr-dg-cell>{{ b.workorder_no || '-' }}</clr-dg-cell>
+                    <clr-dg-cell [title]="b.product_name">{{ b.product_name || b.product_code || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-num">{{ b.plan_qty || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ b.planUnit || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ getBomBatchSize(b) }}</clr-dg-cell>
+                    <clr-dg-cell>{{ b.mainGroupName || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ b.expected_production_start_date || '-' }} {{ b.expected_production_start_time || '' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ b.expected_production_end_date || '-' }} {{ b.expected_production_end_time || '' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ b.responsible_person || '-' }}</clr-dg-cell>
+                  </clr-dg-row>
+                  <clr-dg-footer>
+                    <clr-dg-pagination #paginationCal [clrDgPageSize]="10">
+                      <clr-dg-page-size [clrPageSizeOptions]="[10, 25, 50]">Work orders per page</clr-dg-page-size>
+                      {{ paginationCal.firstItem + 1 }} - {{ paginationCal.lastItem + 1 }} of {{ paginationCal.totalItems }}
+                    </clr-dg-pagination>
+                  </clr-dg-footer>
+                </clr-datagrid>
+              </div>
+              <div *ngIf="!calendarLoading && selectedDatePlannedWOs.length === 0" class="wo-empty">
+                No STP planned work order for selected date.
+              </div>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="loadLineMaster()">Line Master</button>
+        <clr-tab-content *clrIfActive>
+          <div class="filter-bar">
+            <button class="btn btn-sm btn-outline-primary" routerLink="/master/linemaster">Open Line Master Module</button>
+          </div>
+          <div class="datagrid-wrapper vs-grid-wrap" *ngIf="!lineMasterLoading">
+            <clr-datagrid [clrDgLoading]="lineMasterLoading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [clrDgField]="'line_no'">Line No.</clr-dg-column>
+              <clr-dg-column [clrDgField]="'line_name'">Line Name</clr-dg-column>
+              <clr-dg-column [clrDgField]="'Section'">Section</clr-dg-column>
+              <clr-dg-column [clrDgField]="'lineType'">Line Type</clr-dg-column>
+              <clr-dg-column>Mfg Min Cap.</clr-dg-column>
+              <clr-dg-column>Mfg Max Cap.</clr-dg-column>
+              <clr-dg-column>Filling Min Cap.</clr-dg-column>
+              <clr-dg-column>Filling Max Cap.</clr-dg-column>
+              <clr-dg-column>Entry By</clr-dg-column>
+              <clr-dg-column>Entry On</clr-dg-column>
+              <clr-dg-row *clrDgItems="let line of lineMasterData">
+                <clr-dg-cell>{{ line.line_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.line_name || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.Section || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.lineType || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.MfgLineMinCapacity || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.MfgLineMaxCapacity || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.FillingLineMinCapacity || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.FillingLineMaxCapacity || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.enrty_by || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ line.entry_date ? (line.entry_date | date:'dd-MM-yyyy') : '—' }}</clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No line master records found</clr-dg-placeholder>
+              <clr-dg-footer>
+                <clr-dg-pagination #paginationLm [clrDgPageSize]="25">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Lines per page</clr-dg-page-size>
+                  {{ paginationLm.firstItem + 1 }} - {{ paginationLm.lastItem + 1 }} of {{ paginationLm.totalItems }}
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+          <div *ngIf="lineMasterLoading" class="vs-empty">Loading line master...</div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="startLiveBoardPolling(); loadDisplayBoardTokens()">Live Board</button>
+        <clr-tab-content *clrIfActive>
+          <div class="live-board-screen">
+            <header class="live-board-header">
+              <div class="live-board-header-inner">
+                <h2 class="live-board-title">Live Line Status Board</h2>
+                <p class="live-board-subtitle">Real-time line occupancy and production status</p>
+              </div>
+            </header>
+
+            <div class="live-board-body">
+              <div class="live-board-controls">
+                <div class="live-board-toolbar-row">
+                  <div class="live-board-filter-group">
+                    <label for="liveBoardLineType">Line Type</label>
+                    <select id="liveBoardLineType" class="form-control lb-line-type-select" [(ngModel)]="liveBoardLineType" (ngModelChange)="loadLiveBoard()">
+                      <option value="All">All Lines</option>
+                      <option value="Manufacturing">Manufacturing / Filling</option>
+                      <option value="Packing">Packing</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-primary" (click)="loadLiveBoard()">Refresh</button>
+                  </div>
+                  <div class="live-board-action-group">
+                    <button type="button" class="btn btn-sm btn-success" (click)="generateDisplayBoardLink()">Generate TV Link</button>
+                    <button type="button" class="btn btn-sm btn-info" (click)="copyDisplayBoardLink()" [disabled]="!displayBoardLink">Copy TV Link</button>
+                    <button type="button" class="btn btn-sm btn-warning" (click)="openDisplayBoardInNewTab()" [disabled]="!displayBoardLink">Open TV View</button>
+                  </div>
+                </div>
+                <div class="live-board-legend-row">
+                  <span class="live-board-legend-label">Legend</span>
+                  <span class="legend-chip legend-vacant">Green = Vacant</span>
+                  <span class="legend-chip legend-occupied">Red = Occupied</span>
+                  <span class="legend-chip legend-breakdown">Blue = Breakdown</span>
+                  <span class="legend-chip legend-maintenance">Brown = Under Maintenance</span>
+                </div>
+              </div>
+
+              <div class="live-board-content">
+                <div *ngIf="liveBoardLoading" class="vs-empty live-board-loading">Loading live board...</div>
+                <div class="line-board-grid" *ngIf="!liveBoardLoading">
+                  <div class="line-board-box"
+                    *ngFor="let line of liveBoardLines"
+                    [style.background-color]="getLiveBoardColor(line)"
+                    [style.color]="getLiveBoardTextColor(line)"
+                    [title]="getLiveBoardTooltip(line)">
+                    <div class="line-board-no">{{ line.line_no || '—' }}</div>
+                    <div class="line-board-name" *ngIf="line.line_name">{{ line.line_name }}</div>
+                    <div class="line-board-area">{{ line.area || line.Section || '—' }}</div>
+                    <div class="line-board-status">{{ line.status_label || (line.occupied ? 'Occupied' : 'Vacant') }}</div>
+                    <div class="line-board-meta">{{ line.lineType || line.line_type_category || '—' }}</div>
+                    <ng-container *ngIf="line.status_code === 'occupied'">
+                      <div class="line-board-product-name" *ngIf="line.active_product_name">{{ line.active_product_name }}</div>
+                      <div class="line-board-product-code" *ngIf="line.active_product_code">{{ line.active_product_code }}</div>
+                      <div class="line-board-batch" *ngIf="line.active_batch_no">Batch: {{ line.active_batch_no }}</div>
+                      <div class="line-board-wo" *ngIf="line.active_workorder_no">WO: {{ line.active_workorder_no }}</div>
+                    </ng-container>
+                  </div>
+                  <div *ngIf="liveBoardLines.length === 0" class="vs-empty line-board-empty">No lines configured</div>
+                </div>
+              </div>
+
+              <div class="display-link-box" *ngIf="displayBoardLink">
+                <label for="displayBoardLinkInput">Secure TV / Monitor Link</label>
+                <input id="displayBoardLinkInput" class="form-control" [value]="displayBoardLink" readonly>
+              </div>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="loadUpdatableBookings()">Update Line Booking</button>
+        <clr-tab-content *clrIfActive>
+          <div class="search-container filter-bar">
+            <label>Search:</label>
+            <input class="form-control" placeholder="Search work order..." [(ngModel)]="updateBookingSearch" (ngModelChange)="applyUpdateBookingFilter()">
+            <label>Line Type:</label>
+            <select class="form-control lb-line-type-select" [(ngModel)]="bookingLineMode" (ngModelChange)="setBookingLineMode(bookingLineMode)">
+              <option value="mfg">Manufacturing</option>
+              <option value="packing">Packing</option>
+            </select>
+            <span class="lb-page-label" *ngIf="!updateBookingLoading">
+              Showing {{ updateTotalRecords ? updateStartSrNo() + 1 : 0 }} –
+              {{ updateStartSrNo() + (updateBookingList?.length || 0) }} of {{ updateTotalRecords }}
+            </span>
+          </div>
+          <div class="datagrid-wrapper vs-grid-wrap">
+            <clr-datagrid [clrDgLoading]="updateBookingLoading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="160">Line No</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Area</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+              <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product</clr-dg-column>
+              <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="130">Validation</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="150">Responsible Person</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Start Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">End Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="80">Status</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Action</clr-dg-column>
+              <clr-dg-row *ngFor="let wo of updateBookingList; let i = index; trackBy: trackByWo"
+                class="lb-tint-row"
+                [ngStyle]="{ '--lb-row-bg': wo.bg_color || 'transparent' }">
+                <clr-dg-cell>{{ updateStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <select class="form-control lb-fill-input"
+                    [(ngModel)]="wo._selectedLineId"
+                    [disabled]="!wo.can_update"
+                    (focus)="loadLineCandidatesForWo(wo)"
+                    (ngModelChange)="onInlineLineSelected(wo, $event)">
+                    <option value="">-- Select Line No --</option>
+                    <option *ngFor="let line of getLineMasterOptions(); trackBy: trackByLine" [value]="line.id">
+                      {{ line.line_no }}{{ line.line_name ? ' - ' + line.line_name : '' }}
+                    </option>
+                  </select>
+                  <button type="button" class="btn btn-link btn-sm lb-auto-btn" (click)="autoAllocateLine(wo)" [disabled]="!wo.can_update">Auto</button>
+                </clr-dg-cell>
+                <clr-dg-cell>{{ getSelectedLineArea(wo) }}</clr-dg-cell>
+                <clr-dg-cell>{{ getBomBatchSize(wo) }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ wo.plan_qty ?? wo.batch_size ?? '0' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                <clr-dg-cell><span [class]="getValidationClass(wo)">{{ getValidationLabel(wo) }}</span></clr-dg-cell>
+                <clr-dg-cell>{{ wo.responsible_person || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_start_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_end_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.can_update ? 'Editable' : 'Locked' }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button class="btn btn-sm btn-success vs-btn-compact" (click)="saveUpdatedLineBooking(wo)" [disabled]="!wo.can_update">Save</button>
+                </clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No updatable line bookings found</clr-dg-placeholder>
+              <clr-dg-footer *ngIf="updateTotalRecords > 0">
+                <clr-dg-pagination
+                  #paginationUpdate
+                  [clrDgPage]="updateCurrentPage"
+                  [clrDgPageSize]="updatePageSize"
+                  [clrDgTotalItems]="updateTotalRecords"
+                  (clrDgPageChange)="onUpdatePageChange($event)"
+                  (clrDgPageSizeChange)="onUpdatePageSizeChange($event)">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                  {{ paginationUpdate.firstItem + 1 }} - {{ paginationUpdate.lastItem + 1 }} of {{ paginationUpdate.totalItems }} work orders
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="getLogData()">Log</button>
+        <clr-tab-content *clrIfActive>
+          <div class="search-container filter-bar">
+            <label for="logSearchInput">Search PO/FO:</label>
+            <input 
+              type="text" 
+              id="logSearchInput"
+              class="form-control"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="logSearchText"
+              (ngModelChange)="applyLogFilter()">
+            <span class="lb-page-label" *ngIf="!loading">
+              Showing {{ logTotalRecords ? logStartSrNo() + 1 : 0 }} –
+              {{ logStartSrNo() + (logData?.length || 0) }} of {{ logTotalRecords }}
+            </span>
+            <button class="btn btn-primary btn-print" (click)="printLog()">Print</button>
+          </div>
+          <div id="logTable" class="datagrid-wrapper vs-grid-wrap">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="lb-queue-grid">
+              <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Line No.</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Line Type</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">MFG Lines</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Packing Lines</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+              <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+              <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="110">Forecast No</clr-dg-column>
+              <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="120">Work Order No</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="92">WO Date</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+              <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+              <clr-dg-column class="cell-num" [style.min-width.px]="80">Plan Qty</clr-dg-column>
+              <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="56">Unit</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="110">Batch Size (KG)</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="80">Lines</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="150">Responsible Person</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Start Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">Start Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">End Date</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="90">End Time</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="70">Hours</clr-dg-column>
+              <clr-dg-column [style.min-width.px]="120">Status</clr-dg-column>
+              <clr-dg-row *ngFor="let wo of logData; let i = index; trackBy: trackByWo"
+                class="lb-tint-row"
+                [ngStyle]="{ '--lb-row-bg': wo.bg_color || 'transparent' }">
+                <clr-dg-cell>{{ logStartSrNo() + i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.line_numbers || getAllLineNumbersDisplay(wo) }}</clr-dg-cell>
+                <clr-dg-cell>{{ (wo.mfg_line_numbers ? 'MFG' : '') + (wo.mfg_line_numbers && wo.packing_line_numbers ? ' / ' : '') + (wo.packing_line_numbers ? 'Packing' : '') || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.mfg_line_numbers || getLineNumbersDisplay(wo, 'mfg') }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.packing_line_numbers || getLineNumbersDisplay(wo, 'packing') }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planMonth || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd-MM-yyyy') : '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                <clr-dg-cell [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ wo.plan_qty ?? '0' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ getBomBatchSize(wo) }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button type="button" class="btn btn-info btn-sm vs-btn-compact"
+                    (click)="View2(wo)" *ngIf="wo.selectedLines != null">View</button>
+                  <button type="button" class="btn btn-info btn-sm vs-btn-compact"
+                    (click)="View(wo)" *ngIf="wo.selectedLines == null">View</button>
+                </clr-dg-cell>
+                <clr-dg-cell>{{ wo.responsible_person || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_start_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_start_time || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_end_date || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.expected_production_end_time || '—' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.no_of_hours_required || '0.00' }}</clr-dg-cell>
+                <clr-dg-cell>{{ wo.log_status || '—' }}</clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No line booking log found</clr-dg-placeholder>
+              <clr-dg-footer *ngIf="logTotalRecords > 0">
+                <clr-dg-pagination
+                  #paginationLog
+                  [clrDgPage]="logCurrentPage"
+                  [clrDgPageSize]="logPageSize"
+                  [clrDgTotalItems]="logTotalRecords"
+                  (clrDgPageChange)="onLogPageChange($event)"
+                  (clrDgPageSizeChange)="onLogPageSizeChange($event)">
+                  <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                  {{ paginationLog.firstItem + 1 }} - {{ paginationLog.lastItem + 1 }} of {{ paginationLog.totalItems }} work orders
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+    </clr-tabs>
+  </div>
+</div>
+
+
+<div *ngIf="isView" class="fullpage-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5>Work Order: {{ selectedWo?.workorder_no }} — {{ bookingLineMode === 'packing' ? 'Packing' : 'Manufacturing' }} Lines</h5>
+      <div class="work-order-info" style="margin-top: 10px; font-size: 13px; color: #666;">
+        <span><strong>Product:</strong> {{ selectedWo?.product_name }} ({{ selectedWo?.product_code }})</span> | 
+        <span><strong>Plan Qty:</strong> {{ selectedWo?.batch_size }} {{ selectedWo?.planUnit }}</span> | 
+        <span><strong>Group:</strong> {{ selectedWo?.mainGroupName }}</span>
+      </div>
+    </div>
+    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead style="background-color: rgb(14, 67, 112); color: white; position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th style="text-align: left;">Line No.</th>
+            <th style="text-align: left;">Line Name</th>
+            <th style="text-align: left;">Section</th>
+            <th style="text-align: left;">Line Type</th>
+            <th style="text-align: left;">For Group</th>
+            <th style="text-align: left;">Equipments</th>
+            <th style="text-align: left;">Mfg Min Capacity</th>
+            <th style="text-align: left;">Mfg Max Capacity</th>
+            <th style="text-align: left;">Filling Min Capacity</th>
+            <th style="text-align: left;">Filling Max Capacity</th>
+            <th style="text-align: left;">Line Capacity</th>
+            <th style="text-align: left;">Batch Operations</th>
+            <th style="text-align: left;">Line Output</th>
+            <th style="text-align: left;">Stages</th>
+            <th style="text-align: center;">Action</th> 
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let config of selectedWo['Lines']; let j = index">
+            <td style="text-align: left;">{{ config.line_no || '-' }}</td>
+            <td style="text-align: left;">{{ config.line_name || '-' }}</td>
+            <td style="text-align: left;">{{ config.Section || '-' }}</td>
+            <td style="text-align: left;">{{ config.lineType || '-' }}</td>
+            <td style="text-align: left;">{{ config.group_name || '-' }}</td>
+            <td style="text-align: left;">
+              <button 
+                type="button" 
+                class="btn btn-sm btn-info" 
+                (click)="AddEqup(j)"
+                *ngIf="config.equipmentList && config.equipmentList.length > 0">
+                View ({{ config.equipmentList.length }})
+              </button>
+              <span *ngIf="!config.equipmentList || config.equipmentList.length === 0" style="color: #999;">No Equipment</span>
+            </td>
+            <td style="text-align: left;">{{ config.MfgLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.MfgLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.LineCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.batchOperations || '-' }}</td>
+            <td style="text-align: left;">{{ config.Output || '-' }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="config.stages && config.stages.length > 0" 
+                    [title]="getStagesDisplay(config.stages)">
+                {{ config.stages.length }} Stage(s)
+              </span>
+              <span *ngIf="!config.stages || config.stages.length === 0" style="color: #999;">-</span>
+            </td>
+            <td style="text-align: center;">
+              <div class="btn-group-vertical" style="display: flex; gap: 5px;">
+                <button 
+                  *ngIf="!isLineSelected(config)"
+                  type="button" 
+                  class="btn btn-sm btn-primary"
+                  (click)="proceedLinePlanning(config)"
+                  title="Select this line">
+                  Select
+                </button>
+                <button 
+                  *ngIf="isLineSelected(config)"
+                  type="button" 
+                  class="btn btn-sm btn-warning"
+                  (click)="removeLine(config)"
+                  title="Remove from selection">
+                  Remove
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!selectedWo['Lines'] || selectedWo['Lines'].length === 0">
+            <td colspan="15" style="text-align: center; padding: 20px; color: #999;">
+              No lines available for this product group
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+      <button class="btn btn-primary" (click)="SaveLine()" [disabled]="lineList.length === 0">
+        Save Selected Lines ({{ lineList.length }})
+      </button>
+      <button class="btn btn-secondary" (click)="isView = false; isUpdateBookingView = false">Close</button>
+    </div>
+  </div>
+</div>
+<div *ngIf="isView2" class="fullpage-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5>Work Order: {{ selectedWo?.workorder_no }} - Selected Lines</h5>
+      <div class="work-order-info" style="margin-top: 10px; font-size: 13px; color: #666;">
+        <span><strong>Product:</strong> {{ selectedWo?.product_name }} ({{ selectedWo?.product_code }})</span> | 
+        <span><strong>Plan Qty:</strong> {{ selectedWo?.batch_size }} {{ selectedWo?.planUnit }}</span> | 
+        <span><strong>Group:</strong> {{ selectedWo?.mainGroupName }}</span>
+      </div>
+    </div>
+    <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead style="background-color: rgb(14, 67, 112); color: white; position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th style="text-align: left;">Line No.</th>
+            <th style="text-align: left;">Line Name</th>
+            <th style="text-align: left;">Section</th>
+            <th style="text-align: left;">Line Type</th>
+            <th style="text-align: left;">For Group</th>
+            <th style="text-align: left;">Equipments</th>
+            <th style="text-align: left;">Mfg Min Capacity</th>
+            <th style="text-align: left;">Mfg Max Capacity</th>
+            <th style="text-align: left;">Filling Min Capacity</th>
+            <th style="text-align: left;">Filling Max Capacity</th>
+            <th style="text-align: left;">Line Capacity</th>
+            <th style="text-align: left;">Batch Operations</th>
+            <th style="text-align: left;">Line Output</th>
+            <th style="text-align: left;">Stages</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let config of selectedWo['selectedLines']; let j = index">
+            <td style="text-align: left;">{{ config.line_no || '-' }}</td>
+            <td style="text-align: left;">{{ config.line_name || '-' }}</td>
+            <td style="text-align: left;">{{ config.Section || '-' }}</td>
+            <td style="text-align: left;">{{ config.lineType || '-' }}</td>
+            <td style="text-align: left;">{{ config.group_name || '-' }}</td>
+            <td style="text-align: left;">
+              <button 
+                type="button" 
+                class="btn btn-sm btn-info" 
+                (click)="AddEqup2(j)"
+                *ngIf="config.equipmentList && config.equipmentList.length > 0">
+                View ({{ config.equipmentList.length }})
+              </button>
+              <span *ngIf="!config.equipmentList || config.equipmentList.length === 0" style="color: #999;">No Equipment</span>
+            </td>
+            <td style="text-align: left;">{{ config.MfgLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.MfgLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMinCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.FillingLineMaxCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.LineCapacity || '-' }}</td>
+            <td style="text-align: left;">{{ config.batchOperations || '-' }}</td>
+            <td style="text-align: left;">{{ config.Output || '-' }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="config.stages && config.stages.length > 0" 
+                    [title]="getStagesDisplay(config.stages)">
+                {{ config.stages.length }} Stage(s)
+              </span>
+              <span *ngIf="!config.stages || config.stages.length === 0" style="color: #999;">-</span>
+            </td>
+          </tr>
+          <tr *ngIf="!selectedWo['selectedLines'] || selectedWo['selectedLines'].length === 0">
+            <td colspan="14" style="text-align: center; padding: 20px; color: #999;">
+              No lines selected for this work order
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+      <button class="btn btn-secondary" (click)="isView2 = false">Close</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isequip" clrModalSize="xl" class="full-modal">
+  <h3 class="modal-title">Equipment:</h3>
+
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Sr. No.</th>
+            <th>Select Equipment</th>
+            <th>Code</th>
+            <th>Capacity</th>
+            <th>Min Capacity</th>
+            <th>Max Capacity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let term of equipmentList; let i = index">
+            <td>{{i + 1}}.</td>
+            <td>{{term.equipment_name}}</td>
+            <td>{{term.equipment_code}}</td>
+            <td>{{term.capacity}} {{term.unit}}</td>
+            <td>{{term.from_range}} {{term.unit}}</td>
+            <td>{{term.to_range}} {{term.unit}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
+
+ 
+</clr-modal>
+<clr-modal [(clrModalOpen)]="isEquips" clrModalSize="xl" class="full-modal">
+  <h3 class="modal-title">Equipment:</h3>
+
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Sr. No.</th>
+            <th>Select Equipment</th>
+            <th>Code</th>
+            <th>Capacity</th>
+            <th>Min Capacity</th>
+            <th>Max Capacity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let term of selectedEquips; let i = index">
+            <td>{{i + 1}}.</td>
+            <td>{{term.equipment_name}}</td>
+            <td>{{term.equipment_code}}</td>
+            <td>{{term.capacity}} {{term.unit}}</td>
+            <td>{{term.from_range}} {{term.unit}}</td>
+            <td>{{term.to_range}} {{term.unit}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
+
+ 
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isMaterials" clrModalSize="xl" class="full-modal">
+  <h3 class="modal-title">Work Order Materials: {{ selectedWo?.workorder_no }}</h3>
+
+  <div class="modal-body">
+    <div class="work-order-info" style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+      <div class="clr-row">
+        <div class="clr-col-md-4">
+          <strong>Product:</strong> {{ selectedWo?.product_name }} ({{ selectedWo?.product_code }})
+        </div>
+        <div class="clr-col-md-4">
+          <strong>Plan Qty:</strong> {{ selectedWo?.batch_size }} {{ selectedWo?.planUnit }}
+        </div>
+        <div class="clr-col-md-4">
+          <strong>Group:</strong> {{ selectedWo?.mainGroupName }}
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+      <table class="table table-bordered table-striped">
+        <thead style="background-color: rgb(14, 67, 112); color: white; position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th style="text-align: left;">Sr. No.</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">Material Type</th>
+            <th style="text-align: left;">Unit</th>
+            <th style="text-align: right;">Required Qty</th>
+            <th style="text-align: right;">Deducted from MC</th>
+            <th style="text-align: right;">Deducted from RM</th>
+            <th style="text-align: right;">Shortage</th>
+            <th style="text-align: left;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mat of selectedWo?.Deductions; let i = index">
+            <td style="text-align: left;">{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ mat.material_code || '-' }}</td>
+            <td style="text-align: left;">{{ mat.material_name || '-' }}</td>
+            <td style="text-align: left;">{{ mat.mat_type || '-' }}</td>
+            <td style="text-align: left;">{{ mat.unit || '-' }}</td>
+            <td style="text-align: right;">{{ mat.requiredQty || ((mat.deducted_from_MC || 0) + (mat.deducted_from_RM || 0) + (mat.shortage || 0)) | number:'1.2-2' }}</td>
+            <td style="text-align: right;">{{ mat.deducted_from_MC || '0.00' | number:'1.2-2' }}</td>
+            <td style="text-align: right;">{{ mat.deducted_from_RM || '0.00' | number:'1.2-2' }}</td>
+            <td style="text-align: right;">
+              <span [style.color]="(mat.shortage || 0) > 0 ? 'red' : 'green'">
+                {{ mat.shortage || '0.00' | number:'1.2-2' }}
+              </span>
+            </td>
+            <td style="text-align: left;">
+              <span *ngIf="(mat.shortage || 0) > 0" class="badge badge-danger">Shortage</span>
+              <span *ngIf="(mat.shortage || 0) <= 0" class="badge badge-success">Available</span>
+            </td>
+          </tr>
+          <tr *ngIf="!selectedWo?.Deductions || selectedWo?.Deductions.length === 0">
+            <td colspan="10" style="text-align: center; padding: 20px; color: #999;">
+              No materials found for this work order
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="isMaterials = false">Close</button>
+  </div>
+</clr-modal>
+
+<!-- Line Booking Modal -->
+<clr-modal [(clrModalOpen)]="isBookingModal" clrModalSize="xl" class="full-modal">
+  <h3 class="modal-title">Book Line for Work Order: {{ bookingData?.workorder_no }}</h3>
+
+  <div class="modal-body">
+    <form #bookingForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Line No:</label>
+            <input type="text" class="form-control" [value]="bookingData?.line_no" readonly>
+          </div>
+        </div>
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Product:</label>
+            <input type="text" class="form-control" [value]="bookingData?.product_name" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-row">
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Booking Start Date:</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              [value]="bookingData.booking_start_date"
+              (input)="onBookingDateChange('booking_start_date', $any($event.target).value)"
+              name="booking_start_date"
+              required>
+          </div>
+        </div>
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Booking Start Time:</label>
+            <input 
+              type="time" 
+              class="form-control" 
+              [value]="bookingData.booking_start_time"
+              (input)="onBookingDateChange('booking_start_time', $any($event.target).value)"
+              name="booking_start_time"
+              required>
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-row">
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Booking End Date:</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              [value]="bookingData.booking_end_date"
+              (input)="onBookingDateChange('booking_end_date', $any($event.target).value)"
+              name="booking_end_date"
+              required>
+          </div>
+        </div>
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Booking End Time:</label>
+            <input 
+              type="time" 
+              class="form-control" 
+              [value]="bookingData.booking_end_time"
+              (input)="onBookingDateChange('booking_end_time', $any($event.target).value)"
+              name="booking_end_time"
+              required>
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-row">
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Responsible Person:</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="bookingData.responsible_person"
+              name="responsible_person"
+              required>
+          </div>
+        </div>
+        <div class="clr-col-md-6">
+          <div class="form-group">
+            <label>Hours Required:</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              [(ngModel)]="bookingData.no_of_hours_required"
+              name="no_of_hours_required"
+              step="0.01"
+              readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Select Equipments:</label>
+        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+          <table class="table table-bordered table-sm">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Select</th>
+                <th>Equipment Name</th>
+                <th>Code</th>
+                <th>Capacity</th>
+                <th>Min Range</th>
+                <th>Max Range</th>
+                <th>Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let eq of selectedEquipmentsForBooking">
+                <td>
+                  <input 
+                    type="checkbox" 
+                    [(ngModel)]="eq.selected"
+                    [name]="'eq_' + eq.id">
+                </td>
+                <td>{{ eq.equipment_name }}</td>
+                <td>{{ eq.equipment_code }}</td>
+                <td>{{ eq.capacity }}</td>
+                <td>{{ eq.from_range }}</td>
+                <td>{{ eq.to_range }}</td>
+                <td>{{ eq.unit }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button 
+      type="button" 
+      class="btn btn-primary" 
+      (click)="bookLine()"
+      [disabled]="loading">
+      <span *ngIf="loading">Booking...</span>
+      <span *ngIf="!loading">Book Line</span>
+    </button>
+    <button type="button" class="btn btn-secondary" (click)="isBookingModal = false">Cancel</button>
+  </div>
+</clr-modal> 

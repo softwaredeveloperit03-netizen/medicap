@@ -1,0 +1,84 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-file-invoice"></i>
+      {{ pageTitle }}
+      <span class="eb-sub">{{ pageSub }}</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Type</span>
+      <select class="eb-select" [(ngModel)]="typeFilter" (ngModelChange)="load()" [disabled]="completedMode">
+        <option value="">All</option><option value="eBMR">eBMR</option><option value="eBPR">eBPR</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Status</span>
+      <select class="eb-select" [(ngModel)]="statusFilter" (ngModelChange)="load()" [disabled]="completedMode">
+        <option value="">All</option>
+        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+    <div class="eb-field eb-field-grow">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="Batch no, product, profile, plan, WO…" />
+    </div>
+    <button class="eb-btn eb-btn-outline" type="button" (click)="load()" [disabled]="loading">
+      <i class="fas fa-rotate" [class.fa-spin]="loading"></i> Refresh
+    </button>
+  </div>
+
+  <div class="eb-table-wrap">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th>Medicap Lot No</th>
+          <th>Type</th>
+          <th>Product</th>
+          <th>Profile</th>
+          <th>Batch size</th>
+          <th>Mfg date</th>
+          <th>Progress</th>
+          <th>Status</th>
+          <th style="width:120px">Report</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="loading">
+          <td colspan="9" class="eb-empty">Loading batch records…</td>
+        </tr>
+        <tr *ngIf="!loading && !filtered.length">
+          <td colspan="9" class="eb-empty">
+            {{ completedMode ? 'No completed (Released) BMRs found. Run seed_ebmrbpr_completed.php if needed.' : 'No batch records found.' }}
+          </td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td class="eb-strong">{{ r.batch_no || '—' }}</td>
+          <td><span class="eb-badge eb-badge-muted">{{ r.record_type || '—' }}</span></td>
+          <td>{{ r.product_name || r.product_code || '—' }}</td>
+          <td><span class="eb-badge eb-badge-type">{{ r.profile_code || '—' }}</span></td>
+          <td>{{ batchSizeLabel(r) }}</td>
+          <td>{{ r.mfg_date || '—' }}</td>
+          <td>
+            <div class="eb-prog" *ngIf="r.steps_total; else noProg">
+              <div class="eb-prog-bar"><span [style.width.%]="progressPct(r)"></span></div>
+              <span class="eb-prog-txt">{{ r.steps_checked }}/{{ r.steps_total }}</span>
+            </div>
+            <ng-template #noProg><span class="eb-hint">—</span></ng-template>
+          </td>
+          <td><span class="eb-badge" [ngClass]="statusClass(r.status)">{{ r.status || '—' }}</span></td>
+          <td>
+            <button class="eb-btn eb-btn-sm eb-btn-solid" type="button" (click)="openReport(r)">
+              <i class="fas fa-file-lines"></i> Open
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

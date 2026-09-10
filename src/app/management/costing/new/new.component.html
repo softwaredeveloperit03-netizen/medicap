@@ -1,0 +1,272 @@
+<div class="container-fluid">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Product Costing New Form</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button type="button" class="btn btn-sm" (click)="discardDraft()" *ngIf="draftRestored || draftSavedAt" style="margin-right: 8px; color: white;">
+              Discard draft
+            </button>
+            <button class="btn btn-sm" routerLink="/management/costing" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="draft-banner" *ngIf="draftRestored">
+            <span><i class="fas fa-info-circle"></i> Draft restored. You can continue editing or discard.</span>
+            <button type="button" class="btn btn-sm btn-link" (click)="discardDraft()" style="color: white;">Discard draft</button>
+          </div>
+          <form #newcosting="ngForm">
+            <div class="clr-row">
+              
+                <!-- <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Product Type:<span style="color:red;">*</span></label>
+                    <select name="product_type" ngModel="product_type" required
+                        (change)="getProductsByDosage($event.target.value)">
+                       <option *ngFor="let p of results" [value]="p.dosage_form_type">{{p.dosage_form_type}}</option>
+                       
+                      </select>
+                </div> -->
+                <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="product_for =='Export'">
+                   <label>Doller Value:</label>
+                    <input type="text" name="dollervalue" [(ngModel)]="doller_value" required>
+                </div>
+               
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Product Name:<span style="color:red;">*</span></label>
+                    <!-- <select name="product_code" ngModel required (change)="getProductDetails($event.target.selectedIndex)"> -->
+                    <select name="product_code" ngModel required (change)="get_Mfr($event)">
+                        <option *ngFor="let product of products; let i = index" [value]="product.product_code">{{
+                            product.product_name }} - {{ product.product_code }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>MFR : <span style="color:red;">*</span></label>
+                     <select name="mfr" ngModel required  (change)="get_mfrdetails($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let item of mfr; let i = index" [value]="item.mfr_no">{{
+                            item.mfr_no }} ( {{ item.mfr_description || 'NA'}} )</option>
+                    </select>
+                </div>
+
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" s>
+                    <label>Pack Size:</label>
+                    <select name="pack_size1" [(ngModel)]="pack_size1" required
+                        (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">{{ cnt.pack_size }}{{ cnt.unit }}
+                        </option>
+                    </select>
+
+                </div>
+
+                <!-- <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Pack Size:</label>
+ 
+                </div>
+                -->
+                <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                    <label>Batch Size:</label>
+                    <input type="number" name="batch_size" [(ngModel)]="batch_size">
+                   
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                    <label>Overages:</label>
+                    <input type="number" name="overages" [(ngModel)]="overages" (input)="calcOver()">                   
+                </div>
+           
+                <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Purchase Rate:<span style="color:red;">*</span></label>
+                    <select name="pur_rate" [(ngModel)]="pur_rate" required (change)="getRate()">
+                        <option value="minquationrate">Min. Quotation Rate</option>
+                        <option value="maxquationrate">Max. Quotation Rate</option>
+                        <option value="avgquationrate">Avg. Quotation Rate</option>
+                        <option value="lastpurrate">Last Purchase Rate</option>
+                        <option value="avgpurrate">Avg. Purchase Rate</option>
+                        <option value="manrate">Manual Rate Entry</option>
+                    </select>
+                   
+                </div>
+                <!-- <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Batch Size:</label>
+                    <select name="batch_size" [(ngModel)]="batch_size" required (change)="getMaterials($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let batch of selectedResult['batches']">{{ batch.batch_size }}</option>
+                    </select>
+                </div> -->
+                
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <h3>Product Details:</h3>
+                    <table class="table table-border">
+                        <tr>
+                            <td style="text-align: left;width: 15%;">Product Code:</td>
+                            <td style="text-align: left;">{{ selectedResult.product_code }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 15%;">Grade:</td>
+                            <td style="text-align: left;">{{ selectedResult.grade}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['generic_name']">
+                            <td style="text-align: left;width: 15%;">Generic Name:</td>
+                            <td style="text-align: left;">{{ selectedResult.generic_name}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['label_claim']">
+                            <td style="text-align: left;width: 15%;">Label Claim:</td>
+                            <td style="text-align: left;">{{ selectedResult.label_claim}}</td>
+                        </tr>
+                    </table>
+                </div> 
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <h3>Raw Materials:</h3>
+                    <table class="table table-border">
+                        <tr>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                             <th style="background-color: rgb(14, 67, 112); color: white;">Unit Qty</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Batch Qty</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Purchase Rate</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Avg Purchase Rate</th>
+                            <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Total Amount</th>
+                            <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Total Amount Avg</th>
+                        </tr>
+                        <!-- <tr *ngFor="let material of selectedBatch['materials']; let i = index"> -->
+                        <tr *ngFor="let material of rm_data; let i = index">
+                            <td style="text-align: left;">{{ i + 1 }}.</td>
+                            <td style="text-align: left;">{{ material.material_name }}</td>
+                            <td style="text-align: left;">{{ material.material_code }}</td>
+                            <td style="text-align: left;">{{ material.qty }} {{ material.unit }}</td>
+                            <td style="text-align: left;">{{ material.batch_size }} {{ material.b_unit }}</td>
+                            <td  *ngIf="pur_rate!='manrate'">{{ material.rate | number :'1.2-2' }}{{material.rate_unit}} </td>
+                            <td *ngIf="pur_rate=='manrate'">
+                                <input type="text" [name]="'rm_rate_' + i" [(ngModel)]="material.rate" (input)="cal_rates(i, material.rate)">
+                              </td>
+                              
+                             <td>{{material.avg_rate | number :'1.2-2'}} {{material.rate_unit}}</td>
+                             <td>{{material.purchase_rate | number :'1.2-2'}} {{material.rate_unit}}</td>
+                             <td>{{material.purchase_rate_avg | number :'1.2-2'}} {{material.rate_unit}}</td>
+                         </tr>
+                         <tr>
+                           <td colspan="7">Total Amt</td> 
+                            <td>{{Raw_total_amt | number :'1.2-2'}}</td>
+                           <td>{{Raw_total_amt_avg | number :'1.2-2'}}</td>
+                         </tr>
+                    </table>
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <h3>Packing Materials:</h3>
+                    <table class="table table-border">
+                        <tr>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                             <th style="background-color: rgb(14, 67, 112); color: white;">Unit Qty</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Batch Qty</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Purchase Rate</th>
+                            <th style="background-color: rgb(14, 67, 112); color: white;">Avg Purchase Rate</th>
+                            <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Total Amount</th>
+                            <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Total Amount Avg</th>
+                         </tr>
+                        <!-- <tr *ngFor="let material of selectedBatch['materials']; let i = index"> -->
+                        <tr *ngFor="let material of packingMaterials; let i = index">
+                            <td style="text-align: left;">{{ i + 1 }}.</td>
+                            <td style="text-align: left;">{{ material.material_name }}</td>
+                            <td style="text-align: left;">{{ material.material_code }}</td>
+                            <td style="text-align: left;">{{ material.qty }} {{ material.unit }}</td>
+                            <td style="text-align: left;">{{ material.batch_size }} {{ material.b_unit || material.unit }}</td>
+                            <td  *ngIf="pur_rate!='manrate'">{{ material.rate | number :'1.2-2' }} </td>
+                            <td *ngIf="pur_rate=='manrate'">
+                                <input type="text" [name]="'pm_rate_' + i" [(ngModel)]="material.rate" (input)="cal_rates1(i, material.rate)">
+                              </td>
+                              <td>{{material.avg_rate | number :'1.2-2'}} {{material.rate_unit}}</td>
+                             <td>{{material.purchase_rate | number :'1.2-2'}} {{material.rate_unit}}</td>
+                             <td>{{material.purchase_rate_avg | number :'1.2-2'}} {{material.rate_unit}}</td>
+                         </tr>
+                         <tr>
+                            <td colspan="7">Total Amt</td> 
+                            <td>{{Packing_total_amt | number :'1.2-2'}}</td>
+                            <td>{{Packing_total_amt_avg | number :'1.2-2'}}</td>
+                          </tr>
+                    </table>
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <table class="table table-border">
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Analytical Cost:</td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="analytical_cost" [(ngModel)]="analytical_cost" required style="margin: 0px; height: 33px;" (keyup)="calculate()">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;">CCPC:</td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="ccpc" [(ngModel)]="ccpc" required style="margin: 0px; height: 33px;" (keyup)="calculate()">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Fright:</td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="fright" [(ngModel)]="fright" required style="margin: 0px; height: 33px;" (keyup)="calculate()">
+                            </td>
+                        </tr>
+                       
+                        
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Other Cost:</td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="other_cost" [(ngModel)]="other_cost" required style="margin: 0px; height: 33px;" (keyup)="calculate()">
+                            </td>
+                        </tr>
+                    </table>
+
+                    <h3>Select Currency:</h3>
+                    <select name="currnecy" [(ngModel)]="currency" (change)="calc_Currency($event.target.value)">
+                        <option disabled> Select Currency</option>
+                        <option>USD</option>
+                        <option>EUR</option>
+                        <option>GBP</option>
+                        <option>INR</option>
+                    </select>
+                    <table class="table table-border">
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Particular</td>
+                            <td style="text-align: right;">{{'common.total' | translate}}</td>
+                            <td style="text-align: right;">Avg Total</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;">{{'common.total' | translate}}</td>
+                             <td style="text-align: right;"><b>{{ convertedAmounts | number :'1.2-2' }} -{{currency}}</b></td>
+                            <td style="text-align: right;"><b>{{ convertedAmounts_avg | number :'1.2-2' }} -{{currency}}</b></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Per Unit:</td>
+                            <td style="text-align: right;"><b>{{ per_unit  | number :'1.2-2'  }} -{{currency}}</b></td>
+                            <td style="text-align: right;"><b>{{ per_unit_avg  | number :'1.2-2'  }} -{{currency}}</b></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Per Pack:</td>
+                            <td style="text-align: right;"><b>{{ per_pack  | number :'1.2-2'  }} -{{currency}}</b></td>
+                            <td style="text-align: right;"><b>{{ per_pack_avg  | number :'1.2-2'  }} -{{currency}}</b></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <!-- <button class="btn btn-primary" (click)="saveCosting(newcosting)">{{'common.save' | translate}}</button> -->
+        <!-- <button type="button" class="btn btn-primary" (click)="saveCosting(newcosting); clicked = true" [disabled]=" clicked" >{{'common.submit' | translate}}</button> -->
+        <button type="button" class="btn btn-primary"
+        (click)='newcosting.form.valid && saveCosting(newcosting)'
+        [disabled]="newcosting.form.invalid">{{'common.submit' | translate}}</button>
+
+      </div>
+    </div>
+</div>
+
+<!-- costing_type, product_for, product_code, batch_size, doller_value, materials, analytical_cost, ccpc_cost, fright_cost, other_cost, batch_cost, unit_cost, pack_cost -->

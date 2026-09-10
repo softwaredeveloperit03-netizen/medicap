@@ -1,0 +1,153 @@
+<div class="tax-page">
+  <div class="tax-card card">
+    <div class="tax-card__header">
+      <div class="tax-card__title">
+        <span class="tax-card__icon" aria-hidden="true">%</span>
+        <div>
+          <h1 class="tax-card__heading">Tax master</h1>
+        </div>
+      </div>
+      <div class="tax-card__actions">
+        <button type="button" class="btn btn-sm tax-btn tax-btn--primary" (click)="openHeadingModal()">
+          Tax headings
+        </button>
+        <a class="btn btn-sm tax-btn tax-btn--ghost" routerLink="/master/commercial">Back to commercial</a>
+      </div>
+    </div>
+
+    <div class="tax-card__body">
+      <!-- Add GST row -->
+      <section class="tax-panel" aria-labelledby="tax-add-gst-title">
+        <h2 id="tax-add-gst-title" class="tax-panel__title">Add tax rate</h2>
+        <form #gstForm="ngForm" class="tax-form-row" novalidate (ngSubmit)="saveGst(gstForm)">
+          <div class="tax-field">
+            <label class="tax-label" for="tax-sel-heading">Tax heading <span class="tax-req">*</span></label>
+            <select
+              id="tax-sel-heading"
+              name="heading"
+              class="tax-control"
+              [(ngModel)]="gstDraft.heading"
+              required
+            >
+              <option [ngValue]="''">Select heading</option>
+              <option *ngFor="let h of tax_heading || []" [ngValue]="h.heading">{{ h.heading }}</option>
+            </select>
+          </div>
+          <div class="tax-field tax-field--narrow">
+            <label class="tax-label" for="tax-inp-gst">Tax % <span class="tax-req">*</span></label>
+            <input
+              id="tax-inp-gst"
+              type="number"
+              name="gst"
+              class="tax-control tax-control--number no-arrow-input"
+              [(ngModel)]="gstDraft.gst"
+              required
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="e.g. 18"
+              (keypress)="validateNumberInput($event)"
+            />
+          </div>
+          <div class="tax-field tax-field--action">
+            <span class="tax-label tax-label--placeholder" aria-hidden="true">&nbsp;</span>
+            <button type="submit" class="btn btn-sm tax-btn tax-btn--save" [disabled]="gstForm.invalid || savingGst">
+              {{ savingGst ? 'Saving…' : 'Save rate' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Tax rate log -->
+      <section class="tax-panel tax-panel--grid" aria-labelledby="tax-rate-log-title">
+        <h2 id="tax-rate-log-title" class="tax-panel__title">Tax Rate Log</h2>
+        <div class="tax-datagrid-wrap">
+          <clr-datagrid [clrDgLoading]="loading" class="tax-datagrid">
+            <clr-dg-column class="tax-col-num">#</clr-dg-column>
+            <clr-dg-column [clrDgField]="'heading'">Tax heading</clr-dg-column>
+            <clr-dg-column [clrDgField]="'gst'">Tax %</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let result of gst_list || []; let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.heading }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span class="tax-pill">{{ formatGst(result.gst) }}</span>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Rows per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} – {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} entries
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+      </section>
+    </div>
+
+    <div class="tax-card__footer">
+      <a class="btn btn-sm tax-btn tax-btn--outline" routerLink="/master">{{'common.close' | translate}}</a>
+    </div>
+  </div>
+</div>
+
+<!-- Tax heading log -->
+<clr-modal [(clrModalOpen)]="isHeading" clrModalSize="lg">
+  <h3 class="modal-title">Tax heading log</h3>
+  <div class="modal-body tax-modal-body">
+    <p class="tax-modal-hint">Add headings first; they appear in the dropdown when creating a GST rate.</p>
+
+    <div class="tax-table-wrap">
+      <table class="tax-table">
+        <thead>
+          <tr>
+            <th scope="col" class="tax-table__th">Tax heading</th>
+            <th scope="col" class="tax-table__th tax-table__th--action">{{'common.table.action' | translate}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let data of tax_heading || []; let i = index" class="tax-table__row">
+            <td class="tax-table__td">{{ data.heading }}</td>
+            <td class="tax-table__td tax-table__td--center">
+              <button
+                type="button"
+                class="btn btn-sm tax-btn tax-btn--danger-outline"
+                (click)="delete_tax_heading(data)"
+                [disabled]="data?.id == null"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="(tax_heading || []).length === 0" class="tax-table__row tax-table__row--empty">
+            <td colspan="2" class="tax-table__td tax-table__td--muted">No headings yet. Add one below.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <form #headingForm="ngForm" class="tax-heading-add" novalidate (ngSubmit)="save_heading(headingForm)">
+      <label class="tax-label" for="tax-new-heading">New tax heading <span class="tax-req">*</span></label>
+      <div class="tax-heading-add__row">
+        <input
+          id="tax-new-heading"
+          type="text"
+          name="heading"
+          class="tax-control"
+          ngModel
+          required
+          maxlength="120"
+          placeholder="e.g. CGST + SGST"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-sm tax-btn tax-btn--primary" [disabled]="headingForm.invalid || savingHeading">
+          {{ savingHeading ? 'Saving…' : 'Add heading' }}
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-sm tax-btn tax-btn--outline" (click)="closeHeadingModal()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

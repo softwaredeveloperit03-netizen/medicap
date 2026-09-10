@@ -1,0 +1,419 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Received Challan From Local
+        Purchase</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/godownStore/challan/approval">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Inward Date</th>
+          <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Inward No</th> -->
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+          <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Vendor Name</th> -->
+          <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Vendor Location</th> -->
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Packaging Slip</th>
+          <!-- <th style="text-align: left; background-color: rgb(0, 0, 0); color: white">Packaging Slip Date</th> -->
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Packaging Slip Date</th>
+          <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">Tax Invoice No</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Transport Name</th>
+          <!-- <th style="text-align: right; background-color: rgb(14, 67, 112); color: white">transport Freight</th> -->
+          <th style="background-color: rgb(14, 67, 112); color: white;">View</th>
+        </tr>
+        <tr *ngFor="let result of results; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ result.inward_date | date: 'dd-MM-yyyy'}}</td>
+          <!-- <td style="text-align: left;">{{ result.inward_no }}</td> -->
+          <td style="text-align: left;">{{ result.material_type }}</td>
+          <!-- <td style="text-align: left;">{{ result.vendor_name }}</td> -->
+          <!-- <td style="text-align: left;">{{ result.vendor_unit }}</td> -->
+          <td style="text-align: left;">{{ result.challan_no }}</td>
+          <td style="text-align: left;">{{ result.challan_date | date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{ result.tax_invoice }}</td>
+          <td style="text-align: left;">{{ result.transport }}</td>
+          <!-- <td style="text-align: left;">{{ result.transport_frieght }}</td> -->
+          <td>
+            <button style="text-align: center;" class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+          </td>
+        </tr>
+        <tr *ngIf="results?.length == 0">
+          <td colspan="12">No. Records Found!</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">Challan Details</div>
+  <div class="card-block">
+    <div class="card-text">
+      <h3>Vendor Details:</h3>
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor Reg.: </td>
+          <td style="text-align: left; ">
+            <select name="vendor_reg" [(ngModel)]="vendor_reg" style="margin: 0px;height: 33px;" required>
+              <option></option>
+              <option>Registration</option>
+              <option>Non-Registration</option>
+            </select>
+          
+          </td>
+
+          <td style="text-align: left; width: 20%;" *ngIf="vendor_reg=='Registration'">Vendor Name:</td>
+          <td style="text-align: left; width: 20%;" *ngIf="vendor_reg=='Registration'">               
+            <select name="vendor_no" [(ngModel)]="vendor_no" (change)="vendorName($event.target.value)" required  >
+              <option></option>
+              <option *ngFor="let v of vendors" [value]="v.vendor_no">{{v.vendor_name }}</option>
+            </select>
+          
+          </td>
+
+          <td style="text-align: left; width: 20%;" *ngIf=" vendor_reg=='Non-Registration'">Non Reg Manufacturer Name:</td>
+          <td style="text-align: left; " *ngIf=" vendor_reg=='Non-Registration'">                
+            <select name="vendor_no" [(ngModel)]="vendor_no" required  (change)="add_ven($event.target.value)">
+            <option></option>
+            <option *ngFor="let v of nonvendors" [value]="v.vendor_no">{{v.reg_vendor}}</option>
+            <option  style="color:red">Add New </option>
+            </select>
+          </td>
+
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor No. :</td>
+          <td style="text-align: left; ">{{ vendor_no }}</td>
+          <td style="text-align: left; width: 20%;">Vendor Name :</td>
+          <td style="text-align: left; ">{{ vendor_name }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Inward No.:</td>
+          <td style="text-align: left; ">{{ selectedResult['inward_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Inward Date:</td>
+          <td style="text-align: left; ">{{ selectedResult['inward_date'] | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+
+        <tr>
+          <td style="text-align: left; width: 20%;">Tax Invoice No:</td>
+          <td style="text-align: left;">{{ selectedResult['tax_invoice'] }}</td>
+          <td style="text-align: left; width: 20%;">Transport:</td>
+          <td style="text-align: left;" colspan="3">{{ selectedResult['transport'] }}</td>
+        </tr>
+        <!-- <tr>
+            <td style="text-align: left; width: 20%;">Vendor Location:</td>
+            <td colspan="3" style="text-align: left;"colspan="3">{{ selectedResult['vendor_unit'] }}</td>
+          </tr> -->
+      </table>
+
+      <div *ngIf="selectedLocation?.length != 0">
+        <h3>Location Details:</h3>
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;width: 15%;">GST Type:</td>
+            <td style="text-align: left;width: 35%;">{{ selectedLocation['gst_type'] }}</td>
+            <td style="text-align: left;width: 15%;">GST No.:</td>
+            <td style="text-align: left;">{{ selectedLocation['gst_no'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 15%;">Address:</td>
+            <td style="text-align: left;" colspan="3">{{ selectedLocation['address'] }}</td>
+          </tr>
+        </table>
+      </div>
+
+
+      <form #Di_form="ngForm">
+      <div class="card">
+        <div class="card-block" style="background-color:burlywood;">
+          <h4>Materials List:</h4>
+          <form #addmaterial="ngForm">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 ">
+                <label>Material Type:<span style="color:red;">*</span></label>
+                <select name="material_subtype" ngModel required (change)="getGeneralMaterials($event.target.value)"
+                  style="margin: 0px; height: 33px;" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                  <option></option>
+                  <option *ngFor="let type of types">{{type.material_subtype}}</option>
+                </select>
+                <select name="material_subtype" ngModel required (change)="getGeneralMaterials($event.target.value)"
+                  style="margin: 0px; height: 33px;" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                  <option></option>
+                  <option *ngFor="let type of packtypes">{{type.material_subtype}}</option>
+                </select>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 " style="margin-top: -1%;">
+                <label>Material Name:<span style="color:red;">*</span></label>
+                <p-dropdown [options]="materials" name="material_code" [(ngModel)]="selectedMaterial"
+                  optionLabel="material_name" [filter]="true" filterBy="material_name" [showClear]="true"
+                  placeholder="Select Material Name">
+                  <ng-template pTemplate="selectedItem" style="margin: 0px;">
+                    <div class="country-item country-item-value" *ngIf="selectedMaterial">
+                      <div>{{selectedMaterial.material_name }}</div>
+                    </div>
+                  </ng-template>
+                  <ng-template let-country pTemplate="item">
+                    <div class="country-item">
+                      <div>{{country.material_name }}</div>
+                    </div>
+                  </ng-template>
+                </p-dropdown>
+              </div>
+              <!-- <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 ">
+                <label>Po Qty:</label>
+                <input type="number" name="qty" [(ngModel)]="qty" min="0"
+                  style="margin: 0px; height: 33px;">
+                  
+              </div> -->
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 ">
+                <label>Challan Qty:<span style="color:red;">*</span></label>
+                <input type="number" name="challan_qty" [(ngModel)]="challan_qty" min="0" (keyup)="calculation()"
+                  style="margin: 0px; height: 33px;" required>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-2 ">
+                <label>Unit:<span style="color:red;">*</span></label>
+                <select name="unit" [(ngModel)]="unit" style="margin: 0px;height: 33px;" required>
+                  <option></option>
+                  <option>kg</option>
+                  <option>ltr</option>
+                  <option>Nos</option>
+                </select>
+              </div>
+
+              <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 ">
+                <label>Vendor Type:<span style="color:red;">*</span></label>
+                <select name="vendor_type" [(ngModel)]="vendor_type" style="margin: 0px;height: 33px;"
+                  (change)="getVendorType()" required>
+                  <option></option>
+                  <option>Manufacturer</option>
+                  <option>Supplier</option>
+                  <option>Non Reg</option>
+                </select>
+              </div> -->
+              <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 ">
+                <label>Vendor Reg.:<span style="color:red;">*</span></label>
+                 <select name="vendor_reg" [(ngModel)]="vendor_reg" style="margin: 0px;height: 33px;" 
+                (change)="non_registration($event.target.value)" required>  
+                <select name="vendor_reg" [(ngModel)]="vendor_reg" style="margin: 0px;height: 33px;" required>
+                  <option></option>
+                  <option>Registration</option>
+                  <option>Non-Registration</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 " style="margin-top: -1%;" *ngIf="vendor_reg=='Registration'">
+                <label>Vendor Name:<span style="color:red;">*</span></label>
+               
+                <select name="vendor_no" [(ngModel)]="vendor_no" required >
+                  <option></option>
+                <option *ngFor="let v of vendors">{{
+                v.vendor_name }}</option>
+                </select>
+
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3" *ngIf=" vendor_reg=='Non-Registration'">
+                <label>Non Reg Manufacturer Name:<span style="color:red;">*</span></label>
+                
+                <select name="vendor_no" [(ngModel)]="vendor_no" required  (change)="add_ven($event.target.value)">
+                  <option></option>
+                <option *ngFor="let v of nonvendors" >{{v.reg_vendor	 }}</option>
+                <option  style="color:red">Add New </option>
+                </select>
+              </div> -->
+              
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Quotation Rate:<span style="color:red;">*</span></label>
+                  <input style="margin: 0px; height: 33px;" type="number" name="rate" min="0" [(ngModel)]="rate" (keyup)="calculation()">
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>GST Per:<span style="color:red;">*</span></label>
+                  <select style="margin: 0px; height: 33px;" name="gst" [(ngModel)]="gst" (change)="calculation()" required>
+                    <option>0</option>
+                    <option *ngFor="let gst1 of gsts" [value]="gst1.gst">{{gst1.gst}}</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Gross Total:</label>
+                  <input style="margin: 0px; height: 33px;" type="text" name="gross_total" [(ngModel)]="gross_total" readonly>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Tax Total:</label>
+                  <input style="margin: 0px; height: 33px;" type="text" name="tax_total" [(ngModel)]="tax_total" readonly>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label> Net Total:</label>
+                  <input style="margin: 0px; height: 33px;" type="text" name="net_total" [(ngModel)]="net_total" readonly>
+                </div>
+              
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 " style="margin-top: 15px;">
+                <button class="btn btn-primary" (click)="add(addmaterial)" style="padding: 0px;" [disabled]="addmaterial.invalid">{{'common.add' | translate}}</button>
+              </div>
+            </div>
+          </form>
+          <!-- <table class="table table-border">
+            <tr>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Po Qty</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Challan Qty</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Quotation Rate</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">GST</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.unit' | translate}}</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Type</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+              <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Manufacturer Name</td>
+              <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Gross Total</td>
+              <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Tax Total</td>
+              <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Net Total</td>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr *ngFor="let mat of materialList;let i=index">
+              <td>{{mat.material_subtype}}</td>
+              <td>{{mat.material_name}}</td>
+              <td>{{mat.qty}}</td>
+              <td>{{mat.challan_qty}}</td>
+              <td *ngIf="mat.rate!==0">{{mat.rate}}</td>
+              <td *ngIf="mat.rate==0">NA</td>
+              <td>{{mat.gst}}</td>
+              <td>{{mat.unit}}</td>
+              <td>{{mat.vendor_type}}</td>
+              <td>{{mat.vendor_name}}</td>
+              <td>{{mat.manufacturer_name}}</td>
+              <td *ngIf="mat.gross_total!==0">{{mat.gross_total}}</td>
+              <td *ngIf="mat.gross_total==0">NA</td>
+              <td *ngIf="mat.tax_total!==0">{{mat.tax_total}}</td>
+              <td *ngIf="mat.tax_total==0">NA</td>
+              <td *ngIf="mat.net_total!==0">{{mat.net_total}}</td>
+              <td *ngIf="mat.tax_total==0">NA</td>
+              <td>
+                <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+              </td>
+            </tr>
+          </table> -->
+        </div>
+      
+      </div>
+      <table class="table table-border">
+        <tr>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Po Qty</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Challan Qty</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Quotation Rate</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">GST</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.unit' | translate}}</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Type</th>
+          <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Supplier Name</th> -->
+          <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Manufacturer Name</td>
+          <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Gross Total</td>
+          <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Tax Total</td>
+          <td style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Net Total</td>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+        </tr>
+        <tr *ngFor="let mat of materialList;let i=index">
+          <td>{{mat.material_subtype}}</td>
+          <td>{{mat.material_name}}</td>
+          <td>{{mat.qty}}</td>
+          <td>{{mat.challan_qty}}</td>
+          <td *ngIf="mat.rate!==0">{{mat.rate}}</td>
+          <td *ngIf="mat.rate==0">NA</td>
+          <td>{{mat.gst}}</td>
+          <td>{{mat.unit}}</td>
+          <td>{{mat.vendor_type}}</td>
+          <!-- <td *ngIf="mat.vendor_no!=''">{{mat.vendor_no}}</td>
+          <td *ngIf="mat.vendor_no==''">N/A</td> -->
+          <td>{{mat.vendor_name}}</td>
+          <td *ngIf="mat.gross_total!==0">{{mat.gross_total}}</td>
+          <td *ngIf="mat.gross_total==0">NA</td>
+          <td *ngIf="mat.tax_total!==0">{{mat.tax_total}}</td>
+          <td *ngIf="mat.tax_total==0">NA</td>
+          <td *ngIf="mat.net_total!==0">{{mat.net_total}}</td>
+          <td *ngIf="mat.tax_total==0">NA</td>
+          <td>
+            <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+          </td>
+        </tr>
+      </table>
+    </form>
+      <br>
+      <div class="clr-row">
+        <!-- <div class="clr-col-lg-3">
+          <label>Upload Challan:</label>
+          <input type="file" name="challan_file" (change)="onFileChanged($event)" accept="application/pdf" ngModel>
+    </div> -->
+    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+      <label>Upload Challan (if any):</label>
+      <input type="file" name="challan_file" ngModel (change)="onFileChanged($event)" >
+    </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Weighing Procedure:<span style="color: red;">*</span></label>
+          <select name="weighing_procedure" [(ngModel)]="weighing_procedure" required>
+            <option value="Inhouse-Weighing">Inhouse-Weighing</option>
+            <option value="Weigh Bridge">Weigh Bridge</option>
+            <option value="Weigh Bridge">Weigh Bridge - Tanker</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Remark:</label>
+          <input type="text" name="remark" [(ngModel)]="remark"/>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    
+    <!-- <button class="btn btn-primary" (click)="save('approve')">VERIFY</button> -->
+    <!-- <button class="btn btn-danger" (click)="save('reject')">{{'common.reject' | translate}}</button> -->
+    <!-- //<button class="btn btn-primary" (click)="save(Di_form)">{{'common.save' | translate}}</button> -->
+    <button style="background-color: green" class="btn btn-primary" (click)="save('waiting_for_checking')">VERIFY</button>
+    <button class="btn btn-primary" (click)="save('hold')">Keep On Hold</button>  
+    <button class="btn btn-danger" (click)="save('reject')">{{'common.reject' | translate}}</button>
+     <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+
+</div>
+
+
+
+<form #venForm="ngForm">
+<clr-modal [(clrModalOpen)]="Non_registration" clrModalClosable="false">
+  <h3 class="modal-title">Non-Registration </h3>
+    <div class="modal-body">
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Vendor Name:<span style="color: red">*</span></label>
+              <input type="text" name="reg_vendor" [(ngModel)]="reg_vendor" required>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Address:<span style="color: red">*</span></label>
+              <input type="text" name="reg_address" [(ngModel)]="reg_address" required>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Gst No:<span style="color: red">*</span></label>
+              <input type="text" name="reg_gst" [(ngModel)]="reg_gst">
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Pan No:<span style="color: red">*</span></label>
+              <input type="text" name="reg_pan" [(ngModel)]="reg_pan" required>
+          </div>
+        </div>
+    </div>
+
+  
+  <div class="modal-footer">
+      <button type="button" class="btn btn-primary" (click)="saveregistration(venForm)">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>
+</form>

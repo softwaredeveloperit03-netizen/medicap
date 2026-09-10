@@ -1,0 +1,432 @@
+﻿<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h1 class="mef-panel-header__title">Damage Container Inspection In IPQA</h1>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/qa/damage">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Total Containers</clr-dg-column>
+          <clr-dg-column>Damage Containers</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.receiving_date | date:'dd-MM-yyyy'}}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_subtype }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.containers }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.outer_damage }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.damage | titlecase }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+  
+<div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+      <h1 class="mef-panel-header__title">Damage Container Inspection In IPQA</h1>
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </header>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table table-border unique-table recv-kv-table">
+            <tr>
+            <th>Material Name</th>
+            <td colspan="3">{{ selectedReport['material_name'] }}</td>
+            </tr>
+            <tr>
+            <th>Vendor Name</th>
+            <td colspan="3">{{ selectedReport['vendor_name'] }}</td>
+            </tr>
+            <tr>
+            <th>Packaging Slip</th>
+            <td>{{ selectedReport['challan_no'] }}</td>
+            <th>Packaging Slip Date</th>
+            <td>{{ selectedReport['challan_date'] }}</td>
+            </tr>
+            <tr>
+            <th>PO No.</th>
+            <td>{{ selectedReport['po_no'] }}</td>
+            <th>PO Date</th>
+            <td>{{ selectedReport['po_date'] |date:'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr>
+            <th>Material Type</th>
+            <td>{{ selectedReport['material_type'] }}</td>
+            <th>Material Subtype</th>
+            <td>{{ selectedReport['material_subtype'] }}</td>
+            </tr>
+            <tr>
+            <th>Material Code</th>
+            <td>{{ selectedReport['material_code'] }}</td>
+            <th>Material Grade</th>
+            <td>{{ selectedReport['grade'] }}</td>
+            </tr>
+            <tr>
+            <th>PO Qty</th>
+            <td colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+            </tr>
+          </table>
+          <h3>Receiving Details:</h3>
+          <table class="table table-border unique-table recv-data-table">
+            <thead>
+            <tr>
+              <th>Total Container</th>
+              <th>Damage Container</th>
+              <th>Damage Container Qty.</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>{{ selectedReport['containers'] }}</td>
+                <td>{{ selectedReport['outer_damage'] }}</td>
+                <td>{{ selectedReport['hold_qty'] }} {{ selectedReport['unit'] }}</td>
+            </tr>
+            </tbody>
+          </table>
+          <form #damageForm="ngForm">
+        <h3>Labeling Details:</h3>
+        <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Medicap Lot No:</label>
+            <input type="text" name="batch_no" [ngModel]="getLotNumber()" readonly tabindex="-1">
+            </div>
+            <div class="clr-col-3"><br>
+              <button type="button" [disabled]="selectedReport['damaeImg1'] == 'NA'" class="btn btn-primary" (click)="viewFile(selectedReport['damaeImg1'])">{{'common.view' | translate}}</button>
+            </div>
+            <div class="clr-col-3"><br>
+              <button type="button" [disabled]="selectedReport['damaeImg2'] == 'NA'" class="btn btn-primary" (click)="viewFile(selectedReport['damaeImg2'])">{{'common.view' | translate}}</button>
+            </div>
+        </div>
+        <h3>Damage Containers Details:</h3>
+      
+       
+        <table class="table table-border unique-table recv-data-table">
+          <thead>
+          <tr>
+              <th colspan="3">Store Remark</th>
+              <th colspan="3">IPQA Remark</th>
+          </tr>
+          <tr>
+              <th>Container No.</th>
+              <th>Condition</th>
+              <th>{{'common.table.remark' | translate}}</th>
+              <th>Container No.</th>
+              <th>Condition</th>
+              <th>{{'common.table.remark' | translate}}</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let damage of damages; let i = index">
+              <td>{{ damage.container_no }}</td>
+              <td>{{ damage.status }}</td>
+              <td>{{ damage.remark }}</td>
+              <td>{{ damage.container_no }}</td>
+              <td style="padding: 0px;">
+                  <select name="status{{i}}" [(ngModel)]="damage.ipqa_status" required style="margin:0px; height: 33px;">
+                      <option></option>
+                      <option>Outer Damage</option>
+                      <option>Inner Damage</option>
+                  </select>
+              </td>
+              <td style="padding: 0px;">
+                  <input type="text" name="remark" [(ngModel)]="damage.ipqa_remark"  required style="margin: 0px;height: 33px;">
+              </td>
+          </tr>
+          </tbody>
+      </table>
+
+        <div class="clr-row action-fields-row">
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+            <label>IPQA Remark: <span class="required-mark">*</span></label>
+            <select name="ipqaRemark" [(ngModel)]="ipqaRemark" required>
+              <option></option>
+              <option>Approve</option>
+              <option>Saparate Sampling/Testing</option>
+              <option>Reject All Damage Containers</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+            <label>Raise NCR / LIR:</label>
+            <select name="raiseFormSelection" [(ngModel)]="raiseFormSelection" (ngModelChange)="onRaiseFormChange()">
+              <option value=""></option>
+              <option value="NCR">Raise NCR</option>
+              <option value="LIR">Raise LIR</option>
+            </select>
+          </div>
+        </div>
+    </form>
+
+    <div *ngIf="isNcrForm" class="raise-form-panel">
+      <p class="saved-form-hint" *ngIf="hasSavedNcr()">Saved NCR details loaded. You can review and update below.</p>
+      <form #ncrForm="ngForm">
+        <table class="table table-border">
+          <tr style="background-color: #d9d9d9;">
+            <td colspan="4" style="text-align: center; font-weight: bold;">To Be Filled by Initiating Department</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 25%; vertical-align: top;"><b>Classification of Deviation:</b></td>
+            <td colspan="3" style="text-align: left;">
+              <label style="margin-right: 20px; font-weight: normal;">
+                <input type="radio" name="deviation_classification" value="Critical"
+                  [(ngModel)]="ncrFormModel.deviation_classification" required> Critical
+              </label>
+              <label style="margin-right: 20px; font-weight: normal;">
+                <input type="radio" name="deviation_classification" value="Major"
+                  [(ngModel)]="ncrFormModel.deviation_classification" required> Major
+              </label>
+              <label style="font-weight: normal;">
+                <input type="radio" name="deviation_classification" value="Minor"
+                  [(ngModel)]="ncrFormModel.deviation_classification" required> Minor
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left; vertical-align: top;"><b>Category:</b></td>
+            <td colspan="3" style="text-align: left;">
+              <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_facility" [(ngModel)]="ncrFormModel.category_facility"> Facility</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_equipment" [(ngModel)]="ncrFormModel.category_equipment"> Equipment</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_material" [(ngModel)]="ncrFormModel.category_material"> Material</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_product" [(ngModel)]="ncrFormModel.category_product"> Product</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_process" [(ngModel)]="ncrFormModel.category_process"> Process</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_analytical" [(ngModel)]="ncrFormModel.category_analytical"> Analytical</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_document_handling" [(ngModel)]="ncrFormModel.category_document_handling"> Document Handling</label>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                  <label style="font-weight: normal;"><input type="checkbox" name="category_sops" [(ngModel)]="ncrFormModel.category_sops"> SOPs</label>
+                </div>
+                <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: normal;">
+                    <input type="checkbox" name="category_other" [(ngModel)]="ncrFormModel.category_other"> Other (specify):
+                  </label>
+                  <input type="text" name="category_other_specify" [(ngModel)]="ncrFormModel.category_other_specify"
+                    [required]="ncrFormModel.category_other" style="margin-left: 8px; width: calc(100% - 140px); display: inline-block;">
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Date/Time of observation:</b></td>
+            <td colspan="3" style="text-align: left; padding: 0;">
+              <input type="datetime-local" name="observation_datetime" [(ngModel)]="ncrFormModel.observation_datetime" required
+                style="margin: 0; width: 100%; border: none; height: 33px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Product / Document / Equipment Name:</b></td>
+            <td colspan="3" style="text-align: left; padding: 0;">
+              <input type="text" name="product_document_equipment" [(ngModel)]="ncrFormModel.product_document_equipment" required readonly
+                style="margin: 0; width: 100%; border: none; height: 33px; background-color: #f5f5f5;">
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Lot number:</b></td>
+            <td colspan="3" style="text-align: left; padding: 0;">
+              <input type="text" name="lot_number" [(ngModel)]="ncrFormModel.lot_number" required readonly
+                style="margin: 0; width: 100%; border: none; height: 33px; background-color: #f5f5f5;">
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Area/Room# or Department Name:</b></td>
+            <td colspan="3" style="text-align: left; padding: 0;">
+              <input type="text" name="area_department" [(ngModel)]="ncrFormModel.area_department" required
+                style="margin: 0; width: 100%; border: none; height: 33px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: left; vertical-align: top;"><b>Details of Non-Conformance:</b></td>
+            <td colspan="3" style="text-align: left; padding: 0;">
+              <textarea rows="5" name="non_conformance_details" [(ngModel)]="ncrFormModel.non_conformance_details" required
+                style="margin: 0; width: 100%; border: none; resize: vertical;"></textarea>
+            </td>
+          </tr>
+        </table>
+        <div style="margin-top: 10px;">
+          <button type="button" class="btn btn-primary" (click)="saveNcr(ncrForm)">{{ hasSavedNcr() ? 'Update NCR' : 'Save NCR' }}</button>
+          <button type="button" class="btn btn-danger" (click)="closeRaiseForm()">{{'common.close' | translate}}</button>
+        </div>
+      </form>
+    </div>
+
+    <div *ngIf="isLirForm" class="raise-form-panel">
+      <p class="saved-form-hint" *ngIf="hasSavedLir()">Saved LIR details loaded. You can review and update below.</p>
+      <form #lirForm="ngForm">
+        <table class="table table-border lir-form-table">
+          <tr class="form-title-row">
+            <td colspan="4" style="text-align: center; font-weight: bold;">LABORATORY INVESTIGATION REPORT</td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Incident Category:</b></td>
+            <td colspan="3" class="lir-value-cell">
+              <label class="inline-check"><input type="checkbox" name="incident_oos" [(ngModel)]="lirFormModel.incident_oos"> OOS Result</label>
+              <label class="inline-check"><input type="checkbox" name="incident_oot" [(ngModel)]="lirFormModel.incident_oot"> OOT/Atypical Result</label>
+              <label class="inline-check"><input type="checkbox" name="incident_analytical_deviation" [(ngModel)]="lirFormModel.incident_analytical_deviation"> Analytical Testing Deviation</label>
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Date of Incident:</b></td>
+            <td class="lir-input-cell">
+              <input type="date" name="date_of_incident" [(ngModel)]="lirFormModel.date_of_incident" required class="lir-input">
+            </td>
+            <td class="lir-label-cell"><b>Date of discovery:</b></td>
+            <td class="lir-input-cell">
+              <input type="date" name="date_of_discovery" [(ngModel)]="lirFormModel.date_of_discovery" required class="lir-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Product/ Material Code:</b></td>
+            <td colspan="3" class="lir-input-cell">
+              <input type="text" name="product_material_code" [(ngModel)]="lirFormModel.product_material_code" required readonly class="lir-input lir-readonly">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Product/Material Name:</b></td>
+            <td colspan="3" class="lir-input-cell">
+              <input type="text" name="product_material_name" [(ngModel)]="lirFormModel.product_material_name" required readonly class="lir-input lir-readonly">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Lot Number:</b></td>
+            <td class="lir-input-cell">
+              <input type="text" name="lir_lot_number" [(ngModel)]="lirFormModel.lot_number" required readonly class="lir-input lir-readonly">
+            </td>
+            <td class="lir-label-cell"><b>Expiry/Retest/Bulk hold time date:</b></td>
+            <td class="lir-input-cell">
+              <input type="date" name="expiry_retest_bulk_hold_date" [(ngModel)]="lirFormModel.expiry_retest_bulk_hold_date" class="lir-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Supplier/ Manufacturer Name:</b></td>
+            <td class="lir-input-cell">
+              <input type="text" name="supplier_manufacturer_name" [(ngModel)]="lirFormModel.supplier_manufacturer_name" required readonly class="lir-input lir-readonly">
+            </td>
+            <td class="lir-label-cell"><b>Supplier/ Manufacturer Lot #:</b></td>
+            <td class="lir-input-cell">
+              <input type="text" name="supplier_manufacturer_lot" [(ngModel)]="lirFormModel.supplier_manufacturer_lot" class="lir-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell" style="vertical-align: top;"><b>Sample Type:</b></td>
+            <td colspan="3" class="lir-value-cell">
+              <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_api" [(ngModel)]="lirFormModel.sample_api"> API</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_excipient" [(ngModel)]="lirFormModel.sample_excipient"> Excipient</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_in_process" [(ngModel)]="lirFormModel.sample_in_process"> In-Process Product</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_finished" [(ngModel)]="lirFormModel.sample_finished"> Finished Product</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_stability" [(ngModel)]="lirFormModel.sample_stability"> Stability</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_product_development" [(ngModel)]="lirFormModel.sample_product_development"> Product Development</label></div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6"><label class="inline-check"><input type="checkbox" name="sample_packaging_component" [(ngModel)]="lirFormModel.sample_packaging_component"> Packaging Component</label></div>
+                <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12">
+                  <label class="inline-check"><input type="checkbox" name="sample_other" [(ngModel)]="lirFormModel.sample_other"> Other:</label>
+                  <input type="text" name="sample_other_specify" [(ngModel)]="lirFormModel.sample_other_specify" [required]="lirFormModel.sample_other" class="lir-inline-text">
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell" colspan="4"><b>For stability samples, provide additional detail:</b></td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Time Point:</b></td>
+            <td colspan="3" class="lir-value-cell">
+              <label class="inline-check"><input type="checkbox" name="stability_time_1m" [(ngModel)]="lirFormModel.stability_time_1m"> 1M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_2m" [(ngModel)]="lirFormModel.stability_time_2m"> 2M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_3m" [(ngModel)]="lirFormModel.stability_time_3m"> 3M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_6m" [(ngModel)]="lirFormModel.stability_time_6m"> 6M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_9m" [(ngModel)]="lirFormModel.stability_time_9m"> 9M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_12m" [(ngModel)]="lirFormModel.stability_time_12m"> 12M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_18m" [(ngModel)]="lirFormModel.stability_time_18m"> 18M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_24m" [(ngModel)]="lirFormModel.stability_time_24m"> 24M</label>
+              <label class="inline-check"><input type="checkbox" name="stability_time_36m" [(ngModel)]="lirFormModel.stability_time_36m"> 36M</label>
+              <input type="text" name="stability_time_other" [(ngModel)]="lirFormModel.stability_time_other" placeholder="__ M" class="lir-inline-text lir-short-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Storage Condition:</b></td>
+            <td colspan="3" class="lir-value-cell">
+              <label class="inline-check"><input type="checkbox" name="storage_long_term" [(ngModel)]="lirFormModel.storage_long_term"> Long Term</label>
+              <label class="inline-check"><input type="checkbox" name="storage_intermediate" [(ngModel)]="lirFormModel.storage_intermediate"> Intermediate</label>
+              <label class="inline-check"><input type="checkbox" name="storage_accelerated" [(ngModel)]="lirFormModel.storage_accelerated"> Accelerated</label>
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Test Performed:</b></td>
+            <td class="lir-input-cell">
+              <input type="text" name="test_performed" [(ngModel)]="lirFormModel.test_performed" class="lir-input">
+            </td>
+            <td class="lir-label-cell"><b>Test Method No.:</b></td>
+            <td class="lir-input-cell">
+              <input type="text" name="test_method_no" [(ngModel)]="lirFormModel.test_method_no" class="lir-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell"><b>Test Method Title:</b></td>
+            <td colspan="3" class="lir-input-cell">
+              <input type="text" name="test_method_title" [(ngModel)]="lirFormModel.test_method_title" class="lir-input">
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell" style="vertical-align: top;"><b>Description of Occurrence:<br><span class="lir-hint">(List details of incident)</span></b></td>
+            <td colspan="3" class="lir-input-cell">
+              <textarea rows="5" name="description_of_occurrence" [(ngModel)]="lirFormModel.description_of_occurrence" required class="lir-textarea"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell" style="vertical-align: top;"><b>Other Impacted Lots:<br><span class="lir-hint">(Report all individual results, attach results if the space is insufficient)</span></b></td>
+            <td colspan="3" class="lir-input-cell">
+              <textarea rows="4" name="other_impacted_lots" [(ngModel)]="lirFormModel.other_impacted_lots" class="lir-textarea"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td class="lir-label-cell" style="vertical-align: top;"><b>Specification or Limits:</b></td>
+            <td colspan="3" class="lir-input-cell">
+              <textarea rows="4" name="specification_or_limits" [(ngModel)]="lirFormModel.specification_or_limits" class="lir-textarea"></textarea>
+            </td>
+          </tr>
+        </table>
+        <div style="margin-top: 10px;">
+          <button type="button" class="btn btn-primary" (click)="saveLir(lirForm)">{{ hasSavedLir() ? 'Update LIR' : 'Save LIR' }}</button>
+          <button type="button" class="btn btn-danger" (click)="closeRaiseForm()">{{'common.close' | translate}}</button>
+        </div>
+      </form>
+    </div>
+     
+        </div>
+      </div>
+      <div class="card-footer">
+        <button *ngIf="ipqaRemark == 'Saparate Sampling/Testing'" class="btn btn-primary" (click)="update(damageForm,'DONE')">{{'common.approve' | translate}}</button>
+        <button *ngIf="ipqaRemark == 'Approve'" class="btn btn-success" (click)="update(damageForm,'DONE')">{{'common.approve' | translate}}</button>
+         <button *ngIf="ipqaRemark == 'Reject All Damage Containers'" class="btn btn-danger" (click)="update(damageForm,'Rejected')">{{'common.reject' | translate}}</button>
+         <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+
+      </div>
+</div>

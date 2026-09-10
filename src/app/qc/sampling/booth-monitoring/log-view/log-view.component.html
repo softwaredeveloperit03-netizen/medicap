@@ -1,0 +1,108 @@
+<div class="card" *ngIf="!loading && sheet">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-8" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Sampling Booth Monitoring &mdash; Magnehelic Gauges, HEPA Filters and Air Velocity (View)
+      </div>
+      <div class="clr-col-4" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+        <button class="btn btn-sm btn-danger" routerLink="/qc/sampling/booth-monitoring/log">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row meta-row">
+      <div class="clr-col-lg-3"><strong>Sheet No.:</strong> {{ sheet.sheet_no }}</div>
+      <div class="clr-col-lg-3"><strong>Log Date:</strong> {{ sheet.log_date | date:'dd-MM-yyyy' }}</div>
+      <div class="clr-col-lg-3">
+        <strong>Status:</strong>
+        <span [class.status-reviewed]="isReviewed()">
+          {{ sheet.status | uppercase }}
+          <i *ngIf="isReviewed()" class="fas fa-check-circle reviewed-tick" title="Reviewed"></i>
+        </span>
+      </div>
+      <div class="clr-col-lg-3"><strong>Entry By:</strong> {{ sheet.entry_by_name || sheet.entry_by }}</div>
+      <div class="clr-col-lg-3" *ngIf="isReviewed()">
+        <strong>Reviewed By:</strong>
+        <span class="reviewed-label">{{ sheet.reviewed_by_name || sheet.reviewed_by }}</span>
+      </div>
+    </div>
+
+    <div class="log-table-wrap">
+      <table class="booth-monitoring-log-table">
+        <colgroup>
+          <col class="w-date" />
+          <col class="w-instrument" />
+          <col class="w-cal-due" />
+          <col class="w-velocity" />
+          <col class="w-gauge" />
+          <col class="w-gauge" />
+          <col class="w-gauge" />
+          <col class="w-sign" />
+          <col class="w-sign" />
+        </colgroup>
+        <thead>
+          <tr class="header-main">
+            <th rowspan="2">Date</th>
+            <th rowspan="2">Instrument ID</th>
+            <th rowspan="2">Calibration Due</th>
+            <th rowspan="2">Air Velocity*<br><span class="limit-text">(72&ndash;108 ft/min)</span></th>
+            <th colspan="3">Magnehelic Gauge Reading<br><span class="limit-text">Limit: NLT 0.02" WC</span></th>
+            <th rowspan="2">Performed By</th>
+            <th rowspan="2">Reviewed By</th>
+          </tr>
+          <tr class="header-sub">
+            <th>#1</th>
+            <th>#2</th>
+            <th>#3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of entries">
+            <td>{{ row.entry_date | date:'dd-MM-yyyy' }}</td>
+            <td>{{ formatInstrumentDisplay(row) }}</td>
+            <td>{{ row.calibration_due | date:'dd-MM-yyyy' }}</td>
+            <td>{{ row.air_velocity }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_1 }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_2 }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_3 }}</td>
+            <td>{{ row.performed_by }}</td>
+            <td class="reviewed-by-cell">
+              <span *ngIf="isRowReviewed(row)" class="reviewed-wrap">
+                <i class="fas fa-check-circle reviewed-tick" title="Reviewed"></i>
+                {{ getReviewedByDisplay(row) }}
+              </span>
+              <button
+                *ngIf="!isRowReviewed(row) && !isReviewed()"
+                type="button"
+                class="btn btn-sm btn-success btn-review-row"
+                (click)="reviewRow(row)"
+                [disabled]="row.reviewing">
+                {{ row.reviewing ? '...' : 'Review' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footnotes">
+      <p>* Air Velocity acceptable range: 72&ndash;108 ft/min.</p>
+      <p>Magnehelic gauge readings must be not less than (NLT) 0.02" WC.</p>
+    </div>
+
+    <div class="sheet-no-footer">
+      <strong>Sheet No.:</strong> {{ sheet.sheet_no }}
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-info" (click)="downloadPdf()">Download PDF</button>
+    <button class="btn btn-danger" routerLink="/qc/sampling/booth-monitoring/log">Close</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading">
+  <div class="card-block">Loading...</div>
+</div>

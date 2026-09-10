@@ -1,0 +1,23 @@
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+
+  isUser = false;
+  isChecker = false;
+  isApprover = false;
+
+  constructor() {
+    // this.isUser = Boolean(JSON.parse(localStorage.getItem('user')));
+    // this.isChecker = Boolean(JSON.parse(localStorage.getItem('checker')));
+    // this.isApprover = Boolean(JSON.parse(localStorage.getItem('approver')));
+  }
+
+  ngOnInit() {
+  }
+
+}

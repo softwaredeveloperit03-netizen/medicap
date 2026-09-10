@@ -1,0 +1,168 @@
+<div class="container-fluid qc-master-page">
+<div class="card test-master-card qc-master-dashboard-card">
+  <div class="card-header">
+    <div class="test-header-row">
+      <div class="test-header-title">Test Master Log</div>
+      <div class="test-header-actions">
+        <app-master-excel-provision
+          configId="TEST"
+          buttonClass="btn btn-sm btn-primary"
+          (uploaded)="getTests()"
+        ></app-master-excel-provision>
+        <button type="button" class="btn btn-sm btn-primary" routerLink="new">NEW TEST</button>
+        <button type="button" class="btn btn-sm btn-info revision-btn" routerLink="revision">Revision</button>
+        <button type="button" *ngIf="isapprover == 'Yes'" class="btn btn-sm btn-success" routerLink="approval">Approval</button>
+        <button type="button" class="btn btn-sm btn-warning test-btn-header-inactive" routerLink="inactive">In-Active</button>
+        <button type="button" class="btn btn-sm btn-danger test-btn-obsolete" routerLink="obsolete">Obsolete</button>
+        <button type="button" class="btn btn-sm btn-secondary test-btn-seed" *ngIf="isuser == 'Yes'" (click)="seedStandardTests()" [disabled]="seedingStandards">
+          {{ seedingStandards ? 'Loading…' : 'Standard Tests' }}
+        </button>
+        <button type="button" class="btn btn-sm btn-danger test-btn-close" routerLink="/master">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="mat-toolbar-row">
+        <div class="mat-toolbar-field mat-toolbar-field--search">
+          <label for="dashboard-search">Search</label>
+          <div class="mat-toolbar-input-wrap">
+            <clr-icon shape="search" class="mat-toolbar-icon" aria-hidden="true"></clr-icon>
+            <input id="dashboard-search" class="mat-toolbar-control mat-toolbar-control--with-icon" type="text" placeholder="Search..." [(ngModel)]="searchQuery" (ngModelChange)="onFilterChange()" aria-label="Search tests">
+          </div>
+        </div>
+        <div class="mat-toolbar-field mat-toolbar-field--total">
+          <label>Total Entries</label>
+          <div class="mat-total-chip">{{ totalEntries }}</div>
+        </div>
+        <div class="mat-toolbar-field mat-toolbar-field--pagesize">
+          <label for="test-page-size">Page Size</label>
+          <select class="mat-toolbar-control" id="test-page-size" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </div>
+        <div class="mat-toolbar-field mat-toolbar-field--pageno">
+          <label for="test-page-no">Page No</label>
+          <select class="mat-toolbar-control" id="test-page-no" [ngModel]="currentPage" (ngModelChange)="onPageNoChange($event)">
+            <option *ngFor="let p of pageNumbers" [ngValue]="p">{{ p }}</option>
+          </select>
+        </div>
+        <div class="mat-toolbar-field mat-toolbar-field--range">
+          <label>Showing</label>
+          <div class="mat-total-chip mat-range-chip">{{ paginationStart }}–{{ paginationEnd }}</div>
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+          <clr-dg-column class="test-col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Test Code</clr-dg-column>
+          <clr-dg-column>Test Type</clr-dg-column>
+          <clr-dg-column>Test Name</clr-dg-column>
+          <clr-dg-column>Prepared By/On</clr-dg-column>
+          <clr-dg-column>Approve By/On</clr-dg-column>
+          <clr-dg-column class="mat-col-center">{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column class="mat-col-center">Test Status</clr-dg-column>
+          <clr-dg-column class="mat-col-center">{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-column class="mat-col-center">Status Change</clr-dg-column>
+          <clr-dg-column class="mat-col-center" *ngIf="showAddMethodOnTestMaster">Method</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of pagedMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell class="test-col-sr">{{ paginationStart + i }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.test_method_no || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.test_type || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.test || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ displayEntryBy(result) }} / {{ (result.entry_date | date:'dd-MM-yyyy') || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span *ngIf="getTestStatus(result) != 'Active'">- / -</span>
+              <span *ngIf="getTestStatus(result) == 'Active'">{{ displayApproveBy(result) }} / {{ (result.approve_date | date:'dd-MM-yyyy') || '-' }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell class="status-cell mat-cell-center">
+              <span *ngIf="getTestStatus(result) != 'Active'" class="test-badge test-badge-pending"><b>{{ result.status || 'Pending' }}</b></span>
+              <span *ngIf="getTestStatus(result) == 'Active'" class="test-badge test-badge-active"><b>Active</b></span>
+            </clr-dg-cell>
+            <clr-dg-cell class="test-status-cell mat-cell-center">
+              <span class="test-status-active" *ngIf="getTestStatus(result) == 'Active'">Active</span>
+              <span class="test-status-inactive" *ngIf="getTestStatus(result) == 'In-Active'">In Active</span>
+              <span class="test-status-obsolete" *ngIf="getTestStatus(result) == 'Absolute'">Obsolete</span>
+              <span *ngIf="getTestStatus(result) != 'Active' && getTestStatus(result) != 'In-Active' && getTestStatus(result) != 'Absolute'">{{ result.status || 'NA' }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell class="mat-cell-center">
+              <button type="button" class="btn btn-sm test-btn-view" (click)="viewTest(result)" title="View"><clr-icon shape="eye"></clr-icon></button>
+            </clr-dg-cell>
+            <clr-dg-cell class="status-change-cell mat-cell-center">
+              <div class="test-status-change-btns">
+                <button type="button" class="btn btn-sm test-btn-inactive" *ngIf="getTestStatus(result) == 'Active'" (click)="openStatusAuthModal(result.id, 'In-Active')">Inactive</button>
+                <button type="button" class="btn btn-sm test-btn-active" *ngIf="getTestStatus(result) == 'In-Active'" (click)="openStatusAuthModal(result.id, 'Active')">Active</button>
+                <button type="button" class="btn btn-sm test-btn-obsolete" *ngIf="getTestStatus(result) != 'Absolute'" (click)="changeStatus(result.id, 'Absolute')">Obsolete</button>
+              </div>
+            </clr-dg-cell>
+            <clr-dg-cell class="mat-cell-center" *ngIf="showAddMethodOnTestMaster">
+              <button type="button" class="btn btn-sm btn-info btn-icon" (click)="addmethod(result['id'])">Add Method</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isStatusPasswordModal" [clrModalClosable]="true">
+  <h3 class="modal-title">Password Authentication</h3>
+  <div class="modal-body">
+    <p>Enter your password or 4-digit authorization PIN to confirm <strong>{{ pendingStatusActionLabel }}</strong>.</p>
+    <form #statusAuthForm="ngForm">
+      <label for="status-auth-pin">Password / PIN <span style="color: red;">*</span></label>
+      <input id="status-auth-pin" type="password" name="statusAuthPassword" [(ngModel)]="statusAuthPassword" required placeholder="Enter password or PIN" autocomplete="off" aria-label="Password or PIN">
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitStatusAuth(statusAuthForm)">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeStatusAuthModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isView" [clrModalClosable]="true" clrModalSize="xl">
+  <h3 class="modal-title">Test Master</h3>
+  <div class="modal-body test-view-modal">
+    <div class="clr-row test-view-fields">
+      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+        <label>Test Type</label>
+        <input type="text" name="test_type" [(ngModel)]="selectedResult['test_type']" readonly>
+      </div>
+      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+        <label>Test</label>
+        <input type="text" name="test" [(ngModel)]="selectedResult['test']" readonly>
+      </div>
+      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+        <label>Test Code</label>
+        <input type="text" name="testCode" [(ngModel)]="selectedResult['test_method_no']" readonly>
+      </div>
+      <div class="clr-col-lg-12">
+        <table class="test-subtest-table">
+          <thead>
+            <tr>
+              <th>{{'common.table.srNo' | translate}}</th>
+              <th>Subtest</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let data of (selectedResult['subtests'] || []); let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ data.subtest }}</td>
+            </tr>
+            <tr *ngIf="!(selectedResult['subtests'] || []).length">
+              <td colspan="2" class="test-empty-row">No subtests recorded.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

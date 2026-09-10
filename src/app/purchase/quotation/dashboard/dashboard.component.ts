@@ -1,0 +1,139 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Chart, LineController, LineElement, PointElement, LinearScale, Title, registerables } from 'chart.js';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'ischecker_or_approver';
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    Chart.register(...registerables);
+  }
+
+  selectedResult: any[] = [];
+  rights: any;
+  righ: any;
+  ischecker = 'No';
+  isapprover = 'No';
+
+  public colorArray: any = ['#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6',
+    '#E6B333', '#3366E6', '#999966', '#99FF99', '#B34D4D',
+    '#80B300', '#809900', '#E6B3B3', '#6680B3', '#FF99E6', '#CCFF1A', '#FF1A66', '#E6331A', '#33FFCC',
+    '#66664D', '#991AFF', '#E666FF', '#4DB3FF', '#1AB399',
+    '#E666B3', '#33991A', '#CC9999', '#B3B31A', '#00E680',
+    '#4D8066', '#809980', '#E6FF80', '#1AFF33', '#999933',
+    '#FF3380', '#CCCC00', '#66E64D', '#4D80CC', '#9900B3',
+    '#E64D66', '#4DB380', '#FF4D4D', '#99E6E6', '#6666FF'];
+  public QuatationAmtChart: any;
+  public results: any[] = [];
+  public materialPurchase: any = [];
+
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  categories: string[] = ['All'];
+  filteredCards: DeptCard[] = [];
+
+  private allCards: DeptCard[] = [
+    { id: 'approval', title: 'Quotation for Approval', description: 'Approve quotations', route: 'approval', icon: 'fa-check-circle', category: 'Quotation', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', showWhen: 'ischecker_or_approver' },
+    { id: 'log', title: 'Quotation Management', description: 'View quotations log', route: 'log', icon: 'fa-clipboard-list', category: 'Quotation', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'correction', title: 'Correction', description: 'Quotation correction', route: 'correction', icon: 'fa-pencil-alt', category: 'Quotation', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  ngOnInit() {
+    this.getQuotationLog();
+    this.get_rights();
+    this.categories = ['All', ...Array.from(new Set(this.allCards.map(c => c.category)))];
+    this.updateFilteredCards();
+    const savedPalette = localStorage.getItem('purchase_quotation_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  get_rights() {
+    this.service.get('hr/employee.php?type=getrights&module_name=Quotation&department1=Purchase&form_type=user&form_name=New Quotation&user_access=Grant&emp_id=' + localStorage.getItem('emp_id')).subscribe((response: any) => {
+      this.rights = response;
+      this.righ = this.rights[0].isuser;
+      this.ischecker = this.rights[0].ischecker;
+      this.isapprover = this.rights[0].isapprover;
+      this.updateFilteredCards();
+      this.cdr.markForCheck();
+    });
+  }
+
+  getQuotationLog() {
+    this.service.get('purchase/quotation.php?type=getQuotationLog').subscribe((response: any) => {
+      this.results = response;
+      this.cdr.markForCheck();
+    });
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      if (c.showWhen === 'ischecker_or_approver' && this.ischecker !== 'Yes' && this.isapprover !== 'Yes') return false;
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('purchase_quotation_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

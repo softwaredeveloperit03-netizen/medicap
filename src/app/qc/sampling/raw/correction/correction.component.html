@@ -1,0 +1,282 @@
+<div class="container-fluid" *ngIf="!isView">
+
+<div class="card"  >
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Rejected Sampling</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/qc/sampling/raw"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getRejectedSamplings()"  >
+                  <option></option>
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                    <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Sampling No.</clr-dg-column>
+                    <clr-dg-column>Material Name</clr-dg-column>
+                    <clr-dg-column>Material Code</clr-dg-column>
+                    
+                    <clr-dg-column>Receiving no/ Dt.</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Samp. By/On</clr-dg-column>
+                    <clr-dg-column>Check. By/On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            
+                    <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.sampling_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_name || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_code || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.grn_no }} / {{ result.grn_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell style="color: red;"><strong>{{ result.status | uppercase }}</strong> </clr-dg-cell>
+                        <clr-dg-cell>{{ result.sampledBy || result.samplngPersonName || '-' }} / {{ result.sampledOn | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell>{{ result.check_by || '-' }} / {{ result.check_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell >
+                          <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadRejectedSamplings()">{{'common.download' | translate}}</button>
+    <button class="btn btn-danger"routerLink="/qc/sampling/raw">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Rejected Sampling</div>
+                <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isView = false" style="background-color: red;color: white;">
+                    CLOSE
+                  </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #checkingForm="ngForm">
+          
+                    <h3>Material Details:</h3>
+
+                    <div class="clr-row">
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table">
+                                <tr>
+                                    <td colspan="4" style="text-align: center;font-size: 15px;"><strong>{{material_type | uppercase}} SAMPLING & INSPECTION CHECKLIST</strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">1. ITEM:</td>
+                                    <td colspan="3" style="text-align: left;color: blue;" > {{ selectedSampling['material_name'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">2. Receiving no:</td>
+                                    <td style="text-align: left;color: blue;"> {{ selectedSampling['grn_no'] }}</td>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">3. Medicap Lot No:</td>
+                                    <td style="text-align: left;color: blue;">{{ selectedSampling['ar_no'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">4. Date of receipt:</td>
+                                    <td style="text-align: left;color: blue;"> {{ selectedSampling['grn_date'] }}</td>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">5. Qty. received:</td>
+                                    <td style="text-align: left;color: blue;"> {{ selectedSampling['received_qty'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">6. Lot No./Medicap Lot No.:</td>
+                                    <td colspan="3" style="text-align: left;color: blue;"> {{ selectedSampling['batch_no'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">7. Manufacturer Name:</td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['manuNAme'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">8. Supplier Name:</td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['supplierNAme'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">9. Mfg Date:</td>
+                                    <td style="text-align: left;color: blue;">{{ selectedSampling['mfg_date'] | date:'dd-MM-yyyy'}}</td>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">10. Exp. Date:</td>
+                                    <td style="text-align: left;color: blue;"> {{ selectedSampling['exp_date'] | date:'dd-MM-yyyy' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">10. Storage Condition:</td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['storage_condition'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">11. Physical observations :</td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['physicalObservation'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">    i) Appearance : </td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['appearance'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">    ii) Presence of foreign particles : </td>
+                                    <td colspan="3" style="text-align: left;color: blue;">{{ selectedSampling['presenceOfForeignParticles'] || '-' }}</td>
+                                </tr>
+                        
+
+                                <tr *ngIf="selectedSampling['material_subtype']?.includes('Perfume')">
+                                    <td style="text-align: left;font-weight: bolder; width:20%">    iii) Perfume verification :</td>
+                                    <td colspan="3" style="text-align: left;color: blue;"> {{ selectedSampling['perfumeOderVerification'] || '-' }}</td>
+                                </tr>
+                                <tr *ngIf="selectedSampling['material_subtype']?.includes('Perfume')">
+                                    <td style="text-align: left;font-weight: bolder; width:20%">    Odor verification :</td>
+                                    <td colspan="3" style="text-align: left;margin:0;padding:0;">
+                                        <table class="table table-border">
+                                            <tr>
+                                                <td style="background-color: #0a539c;color:white;"><strong>Cont. No.</strong></td>
+                                                <td style="background-color: #0a539c;color:white;"><strong>Observation</strong></td>
+                                            </tr>
+                                            <tr *ngFor="let cont of selectedSampling['sampling_details']">
+                                                <td>{{ cont.container_no }}</td>
+                                                <td style="text-align:left;color:blue;">{{ cont.odorObservation }}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">12. No. of Containers / Pallets / Boxes received:</td>
+                                    <td colspan="3" style="text-align: left;color:blue;"> {{ selectedSampling['containers'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">13. No. of Containers / Pallets / Boxes Sampled: <span style="color: red;">*</span></td>
+                                    <td colspan="3" style="text-align: left;color:blue;"> {{ selectedSampling['sampledContainers'] || '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">14. Sample Quantity : {{ selectedSampling['sample_unit'] }} <span style="color: red;">*</span></td>
+                                    <td style="text-align: left;color:blue;"> {{ selectedSampling['sample_qty'] || '-' }}</td>
+                                    <td style="text-align: left;"> Qty. Converted To Base Unit {{selectedSampling['baseUnit']}} :- </td>
+                                    <td style="text-align: left;color:blue;"> {{ selectedSampling['convertedQtyToBaseUnit'] || '-' }} </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%"> Remark : <span style="color: red;">*</span></td>
+                                    <td colspan="3" style="text-align: left;color:blue;"> {{ selectedSampling['samplingRemark'] || '-' }} </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;font-weight: bolder; width:20%">Sampling Equipment : <span style="color: red;">*</span></td>
+                                    <td colspan="3" style="text-align: left;color:blue;"> {{ selectedSampling['samplerId'] || '-' }} </td>
+                                </tr>
+                        
+                            </table>
+                        </div>
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table table-border">
+                                <tr>
+                                    <td style="background-color: #0a539c;color:white;"><strong>Cont. No. / Boxes</strong></td>
+                                    <td style="background-color: #0a539c;color:white;"><strong>Sample Qty.</strong></td>
+                                    <td style="background-color: #0a539c;color:white;"><strong>Remark / Observation</strong></td>
+                                    <td style="background-color: #0a539c;color:white;"><strong>{{'common.table.action' | translate}}</strong></td>
+                                </tr>
+                                <tr *ngFor="let cont of selectedSampling['sampling_details']">
+                                    <td>{{ cont.container_no }}</td>
+                                    <td style="color:blue;">{{ cont.sample_qty }} {{selectedSampling['sample_unit']}}</td>
+                                    <td style="color:blue;">{{ cont.remark || 'NA' }}</td>
+                                    <td style="color:blue;">{{ cont.status }}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+
+                            <div class="card" >
+                                <div class="card-header" style="text-align: center">
+                                    <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Activity Log </div>
+                                    <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                                    </div>
+                                </div>
+                                <div class="card-block">
+                                    <div class="card-text">
+                                        <div class="clr-row">
+                                         
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>Start Time <span style="color: red;">*</span></strong> </label>
+                                                <input type="datetime-local" name="start_time" [(ngModel)]="selectedSampling['start_time']" required readonly >
+                                            </div>
+
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>End Time <span style="color: red;">*</span></strong> </label>
+                                                <input type="datetime-local" name="end_time" [(ngModel)]="selectedSampling['end_time']" required readonly >
+                                            </div>
+
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>LAF Start Time <span style="color: red;">*</span></strong></label><br>
+                                                <input type="datetime-local" name="LAF_start_date" [(ngModel)]="selectedSampling['LAF_start_date']" required  readonly>
+                                            </div>
+
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label><strong>Stop LAF  </strong> &nbsp;&nbsp; </label>
+                                                <input type="datetime-local" name="LAF_stop_date" [(ngModel)]="selectedSampling['LAF_stop_date']"   readonly>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table table-border">
+                                <tr>
+                                    <td style="background-color: #0a539c;color:white;text-align: left;"><strong>Checking / Rejection Remark : <span style="color: red;">*</span></strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;color:blue"> {{selectedSampling['checkingRemark']}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #0a539c;color:white;text-align: left;"><strong>Approval / Rejection Remark : <span style="color: red;">*</span></strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;color:blue"> {{selectedSampling['approvalRemark']}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="background-color: #0a539c;color:white;text-align: left;"><strong>Remark If Any : <span style="color: red;">*</span></strong></td>
+                                </tr>
+                                <tr>
+                                    <td style="margin:0; padding:0;">
+                                        <input type="text" name="rejectRemark" ngModel required style="margin:0;" >
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                    </div>
+        
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-success"  (click)="updateSampling(checkingForm,'Balance_Cleaning_Done')" >Send For Re-Sampling</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

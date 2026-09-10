@@ -1,0 +1,132 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i [class]="icon"></i>
+      {{ title }}
+      <span class="eb-sub">{{ sub }}</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-tabs">
+    <button class="eb-tab" [class.active]="category==='line_clearance'" (click)="switchCategory('line_clearance')">Line Clearance</button>
+    <button class="eb-tab" [class.active]="category==='department'" (click)="switchCategory('department')">Department</button>
+    <button class="eb-tab" [class.active]="category==='qa'" (click)="switchCategory('qa')">QA</button>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Dosage form</span>
+      <select class="eb-select" [(ngModel)]="dosageFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="Text, stage, responsibility…" />
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-solid" (click)="newRow()"><i class="fas fa-plus"></i> New Checkpoint</button>
+  </div>
+
+  <div class="eb-table-wrap">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th style="width:50px">#</th>
+          <th>Code</th>
+          <th>Checkpoint</th>
+          <th>Stage</th>
+          <th>Response</th>
+          <th>Responsibility</th>
+          <th>Critical</th>
+          <th style="width:90px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!filtered.length">
+          <td colspan="8" class="eb-empty">No checkpoints defined for this category.</td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td class="eb-num">{{ r.seq_no }}</td>
+          <td><span class="eb-badge eb-badge-muted">{{ r.checkpoint_code }}</span></td>
+          <td>{{ r.checkpoint_text }}</td>
+          <td>{{ r.stage_ref || '—' }}</td>
+          <td><span class="eb-badge eb-badge-type">{{ r.expected_response }}</span></td>
+          <td>{{ r.responsibility || '—' }}</td>
+          <td>
+            <span class="eb-badge" [ngClass]="r.is_critical === 'Yes' ? 'eb-badge-crit' : 'eb-badge-muted'">
+              {{ r.is_critical === 'Yes' ? 'Critical' : 'Normal' }}
+            </span>
+          </td>
+          <td>
+            <div class="eb-row-actions">
+              <button class="eb-icon-btn" (click)="editRow(r)" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="eb-icon-btn danger" (click)="remove(r)" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="eb-modal-backdrop" *ngIf="modalOpen" (click)="modalOpen=false">
+  <div class="eb-modal" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>{{ editing ? 'Edit' : 'New' }} {{ title }}</h3>
+      <button class="eb-modal-close" (click)="modalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Checkpoint text *</span>
+          <textarea class="eb-textarea" [(ngModel)]="form.checkpoint_text" placeholder="e.g. Ensure previous product / batch records removed from the area"></textarea>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Dosage form</span>
+          <select class="eb-select" [(ngModel)]="form.dosage_form">
+            <option value="">— Generic / All —</option>
+            <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Stage reference</span>
+          <input class="eb-input" [(ngModel)]="form.stage_ref" placeholder="e.g. Filling" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Expected response</span>
+          <select class="eb-select" [(ngModel)]="form.expected_response">
+            <option *ngFor="let t of responseTypes" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Responsibility</span>
+          <input class="eb-input" [(ngModel)]="form.responsibility" placeholder="e.g. Production / QA" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Sequence no.</span>
+          <input class="eb-input" type="number" [(ngModel)]="form.seq_no" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Critical?</span>
+          <select class="eb-select" [(ngModel)]="form.is_critical">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Remarks</span>
+          <textarea class="eb-textarea" [(ngModel)]="form.remarks"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="modalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="save()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>

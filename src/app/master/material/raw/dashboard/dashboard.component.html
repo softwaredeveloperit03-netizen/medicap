@@ -1,0 +1,410 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header">
+    <div class="clr-row mat-list-header-row">
+      <div class="clr-col-3 mat-list-header-title">Raw/Packing Material List</div>
+      <div class="clr-col-lg-9 mat-list-header-actions">
+        <app-master-excel-provision
+          *ngIf="isuser == 'Yes'"
+          configId="MATERIAL_RM_PM"
+          buttonClass="btn btn-sm btn-primary"
+          (uploaded)="getMaterialsLog()"
+        ></app-master-excel-provision>
+        <button class="btn btn-sm btn-primary" routerLink="new" *ngIf="isuser == 'Yes'">
+          <clr-icon shape="plus" aria-hidden="true"></clr-icon>
+          <span>NEW MATERIAL</span>
+        </button>
+<button class="btn btn-sm btn-success" routerLink="approval" *ngIf="isapprover == 'Yes'">
+          <clr-icon shape="check" aria-hidden="true"></clr-icon>
+          <span>APPROVAL</span>
+        </button>
+        <button class="btn btn-sm btn-warning" routerLink="inactive">
+          <clr-icon shape="ban" aria-hidden="true"></clr-icon>
+          <span>In-Active</span>
+        </button>
+        <button class="btn btn-sm btn-danger mat-btn-obsolete" routerLink="absolute">
+          <clr-icon shape="times-circle" aria-hidden="true"></clr-icon>
+          <span>Obsolete</span>
+        </button>
+        <button type="button" class="btn btn-sm mat-btn-coding" (click)="showCodingPattern = true">Coding Pattern</button>
+        <button class="btn btn-sm btn-danger" routerLink="/master">
+          <clr-icon shape="times" aria-hidden="true"></clr-icon>
+          <span>{{'common.close' | translate}}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="mat-toolbar-row">
+      <div class="mat-toolbar-field mat-toolbar-field--type">
+        <label for="mat-type-select">Material Type:<span style="color: red">*</span></label>
+        <select class="mat-toolbar-control" id="mat-type-select" name="material_type" [(ngModel)]="material_type" required (change)="getMaterialsLog()">
+          <option></option>
+          <option>Raw Material</option>
+          <option>Packing Material</option>
+        </select>
+      </div>
+      <div class="mat-toolbar-field mat-toolbar-field--search">
+        <label for="mat-search-input">Search</label>
+        <div class="mat-toolbar-input-wrap">
+          <clr-icon shape="search" class="mat-toolbar-icon" aria-hidden="true"></clr-icon>
+          <input class="mat-toolbar-control mat-toolbar-control--with-icon" id="mat-search-input" type="text" placeholder="Search..." [(ngModel)]="searchQuery" (ngModelChange)="onFilterChange()">
+        </div>
+      </div>
+      <div class="mat-toolbar-field mat-toolbar-field--total">
+        <label>Total Entries</label>
+        <div class="mat-total-chip">{{ totalEntries }}</div>
+      </div>
+      <div class="mat-toolbar-field mat-toolbar-field--pagesize">
+        <label for="mat-page-size">Page Size</label>
+        <select class="mat-toolbar-control" id="mat-page-size" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+      </div>
+      <div class="mat-toolbar-field mat-toolbar-field--pageno">
+        <label for="mat-page-no">Page No</label>
+        <select class="mat-toolbar-control" id="mat-page-no" [ngModel]="currentPage" (ngModelChange)="onPageNoChange($event)">
+          <option *ngFor="let p of pageNumbers" [ngValue]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="mat-toolbar-field mat-download-wrap">
+        <label class="mat-toolbar-label-spacer">&nbsp;</label>
+        <button type="button" class="btn btn-sm btn-primary mat-download-btn" (click)="downloadReport()">
+          <clr-icon shape="download" aria-hidden="true"></clr-icon>
+          <span>Download Excel</span>
+        </button>
+      </div>
+    </div>
+    <div class="datagrid-wrapper">
+      <clr-datagrid [clrDgLoading]="loading">
+
+        <clr-dg-column>Entry Date</clr-dg-column>
+        <clr-dg-column>Material Group/Type</clr-dg-column>
+        <clr-dg-column>Material Code</clr-dg-column>
+        <clr-dg-column>Material Name</clr-dg-column>
+        <clr-dg-column>Grade</clr-dg-column>
+        <clr-dg-column>Nature of Material</clr-dg-column>
+        <clr-dg-column>UOM</clr-dg-column>
+        <clr-dg-column class="mat-col-center">{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>Entry By</clr-dg-column>
+        <clr-dg-column class="mat-col-center">{{'common.table.action' | translate}}</clr-dg-column>
+        <clr-dg-column class="mat-col-center">Status Change</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let result of pagedMaterials; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ formatEntryDate(result.entry_date || result.created_date) }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.material_subtype || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.material_code || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.material_name || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.grade || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.material_nature || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.uom || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell class="mat-cell-center">
+            <span class="mat-status-approved" *ngIf="result.status == 'Approved'"><b>APPROVED</b></span>
+            <span class="mat-status-inactive" *ngIf="result.status == 'In-Active'"><b>IN-ACTIVE</b></span>
+            <span class="mat-status-obsolete" *ngIf="result.status == 'Absolute'"><b>OBSOLETE</b></span>
+            <span *ngIf="result.status && result.status != 'Approved' && result.status != 'In-Active' && result.status != 'Absolute'"><b>{{ result.status | uppercase }}</b></span>
+          </clr-dg-cell>
+          <clr-dg-cell>{{ getEntryByDisplay(result) }}</clr-dg-cell>
+          <clr-dg-cell class="mat-cell-center">
+            <button class="btn btn-sm mat-btn-view" (click)="view(result)" title="View"><clr-icon shape="eye"></clr-icon></button>
+              <button type="button" class="btn btn-sm mat-btn-edit" (click)="edit(result)" title="Edit"><clr-icon shape="pencil"></clr-icon></button>
+          </clr-dg-cell>
+          <clr-dg-cell class="mat-cell-center">
+            <div class="mat-status-change-btns">
+              <button class="btn btn-sm mat-btn-inactive" *ngIf="result.status == 'Approved'" (click)="openStatusAuthModal(result.id,'In-Active')">Inactive</button>
+              <button class="btn btn-sm mat-btn-active" *ngIf="result.status == 'In-Active'" (click)="openStatusAuthModal(result.id,'Approved')">Active</button>
+              <button class="btn btn-sm mat-btn-obsolete" *ngIf="result.status != 'Absolute'" (click)="changeStatus(result.id,'Absolute')">Obsolete</button>
+            </div>
+          </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+
+    </div>
+  </div>
+</div>
+
+<!-- Password authentication modal for Inactive / Active actions -->
+<clr-modal [(clrModalOpen)]="isStatusPasswordModal" [clrModalClosable]="true">
+  <h3 class="modal-title">Password Authentication</h3>
+  <div class="modal-body">
+    <p>Enter your password or 4-digit authorization PIN to confirm <strong>{{ pendingStatusActionLabel }}</strong>.</p>
+    <form #statusAuthForm="ngForm">
+      <label>Password / PIN <span style="color: red;">*</span></label>
+      <input type="password" name="statusAuthPassword" [(ngModel)]="statusAuthPassword" required placeholder="Enter password or PIN" autocomplete="off">
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitStatusAuth(statusAuthForm)">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeStatusAuthModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">{{material_type}} Approval</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+  
+        <form #materialForm="ngForm">
+          <div class="clr-row">
+        
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Group/Type:<span style="color: red">*</span></label>
+              <input type="text" name="material_type" [(ngModel)]="selectedResult['material_type']" readonly required  >
+            </div>
+ 
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Sub Group/Type:<span style="color: red">*</span></label>
+              <input type="text" name="material_subtype" [(ngModel)]="selectedResult['material_subtype']" readonly required  >
+            </div>
+   
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+              <label>Nature Of Material:<span style="color: red">*</span></label>
+              <input type="text" name="material_nature" [(ngModel)]="selectedResult['material_nature']" readonly required  >
+            </div>
+ 
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"  *ngIf="selectedResult['material_type'] == 'Raw Material'">
+              <label>Category:<span style="color: red">*</span></label>
+              <input type="text" name="category" [(ngModel)]="selectedResult['category']" readonly required  >
+            </div>
+    
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12 mat-field-inline">
+              <label class="mat-inline-label">Material name <span style="color: red">*</span></label>
+              <input
+                type="text"
+                class="mat-inline-input"
+                name="material_name"
+                [(ngModel)]="selectedResult['material_name']"
+                readonly
+                required
+              />
+            </div>
+
+            <div
+              class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12 mat-field-inline"
+              *ngIf="selectedResult['material_type'] == 'Packing Material'"
+            >
+              <label class="mat-inline-label">Material name (report)</label>
+              <input
+                type="text"
+                class="mat-inline-input"
+                name="material_name_report"
+                [(ngModel)]="selectedResult['material_name_report']"
+                readonly
+              />
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Grade :  <span style="color:red">*</span></label>
+              <input type="text" name="grade" [(ngModel)]="selectedResult['grade']" readonly required >
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Item Unit :  <span style="color:red">*</span></label>
+              <input type="text" name="uom" [(ngModel)]="selectedResult['uom']" readonly  required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Billing Unit :  <span style="color:red">*</span></label>
+              <input type="text" name="alternate_uom" [(ngModel)]="selectedResult['alternate_uom']" readonly  required>
+            </div>
+      
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Type : </label>
+              <input type="text" name="type" [(ngModel)]="selectedResult['type']" readonly  >
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Size/Specification :  <span style="color:red">*</span></label>
+              <input type="text" name="pack_size" [(ngModel)]="selectedResult['pack_size']" readonly  required>
+            </div>
+  
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Color : </label>
+              <input type="text" name="color_index" [(ngModel)]="selectedResult['color_index']" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Dimension : </label>
+              <input type="text" name="dimension" [(ngModel)]="selectedResult['dimension']" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Material Made of : </label>
+              <input type="text" name="madeOf" [(ngModel)]="selectedResult['madeOf']" readonly >
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>HSN : </label>
+              <input type="text" name="hsn" [(ngModel)]="selectedResult['hsn']" readonly  >
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Tax :  <span style="color:red">*</span></label>
+              <input type="text" name="gst" [(ngModel)]="selectedResult['gst']" readonly  required>
+            </div>
+ 
+
+            <div class="clr-col-lg-6 clr-col-md-6  clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['equivalancy_applicable']=='Yes'">
+              <label>Equivalant To </label>
+                <table class="table table-border remove-side-arrow-container">
+                  <tr>
+                    <td style="background-color:aquamarine ; font-weight: bold;">Material Name</td>
+                    <td style="background-color:aquamarine ; font-weight: bold;">Equivalancy Factor</td>
+                  </tr>
+                  <tr *ngFor="let item of selectedResult['equivalent_to']; let i = index;">
+                    <td>{{item.equivalency}}</td>
+                    <td>{{item.equivalancy_factor}}</td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Sub Type <span style="color:red">*</span></label>
+              <input type="text" name="sub_type" [(ngModel)]="selectedResult['sub_type']" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['sub_type'] == 'Printed'">
+              <label>Sub Type <span style="color:red">*</span></label>
+              <input type="text" name="artwork" [(ngModel)]="selectedResult['artwork']" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['sub_type'] == 'Printed'">
+              <label>Product <span style="color:red">*</span></label>
+              <input type="text" name="product_n" [(ngModel)]="selectedResult['product_n']" readonly required>
+            </div>
+  
+          </div>
+
+          <div class="clr-row">
+            <div class="card">
+              <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Other Information</div>
+                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                </div>
+              </div>
+              <div class="card-block">
+                <div class="row container-fluid">
+                  <div class="clr-row">
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container"
+                      *ngIf="selectedResult['material_nature'] == 'LIQUID'">
+                      <label>Density (G/Ml) :</label>
+                      <input type="number" name="density" [(ngModel)]="selectedResult['density']" readonly min="0" max="9999">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 ">
+                      <label>Storage Condition :</label>
+                      <input type="text" name="storage_condition" [(ngModel)]="selectedResult['storage_condition']" readonly >
+                    </div>
+
+              
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                      <label>Min. Inventory Level :</label>
+                      <input type="number" name="inventory" [(ngModel)]="selectedResult['inventory']" readonly min="0" max="9999">
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                      <label>Max. Inventory Level :</label>
+                      <input type="number" name="maxInventory" [(ngModel)]="selectedResult['maxInventory']" readonly  >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                      <label>Specific Gravity :</label>
+                      <input type="text" name="specificGravity" [(ngModel)]="selectedResult['specificGravity']" readonly  >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                      <label>Texture :</label>
+                      <input type="text" name="texture" [(ngModel)]="selectedResult['texture']" readonly  >
+                    </div>
+
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>MOQ : </label>
+                      <input type="text" name="moq" [(ngModel)]="selectedResult['moq']" readonly   >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Plastic Type : </label>
+                      <input type="text" name="plasticType" [(ngModel)]="selectedResult['plasticType']" readonly  >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Inventory Value Max : </label>
+                      <input type="text" name="inventoryValueMax" [(ngModel)]="selectedResult['inventoryValueMax']" readonly  >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Premix Item : </label>
+                      <input type="text" name="premixItem" [(ngModel)]="selectedResult['premixItem']" readonly  >
+                    </div>
+
+
+ 
+                    <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"  
+                    *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                      <label>MSDS Upload / Product Specification :</label> <br>
+                      <button [disabled]="selectedResult['m_photo'] == 'NA'" 
+                      class="btn  btn-info" (click)="viewMsds(selectedResult['m_photo'])">VIEW FILE</button>
+                    </div> -->
+  
+            
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12 remove-side-arrow-container">
+                      <label>QC Lead Time(Days)</label>
+                      <input type="number" min="0" name="lead_time" [(ngModel)]="selectedResult['lead_time']" readonly >
+                    </div>
+
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Description :</label>
+                      <input type="text" name="description" [(ngModel)]="selectedResult['description']" readonly   >
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Safety :</label>
+                      <input type="text" name="safety" [(ngModel)]="selectedResult['safety']" readonly   >
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+      </div>
+    </div>
+    <div class="card-footer">
+         <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="showCodingPattern" clrModalSize="lg" class="mn-cp-modal">
+  <h3 class="modal-title mn-cp-modal__title">Material Code — Coding Pattern</h3>
+  <div class="modal-body mn-cp-modal__body">
+    <p class="mn-cp__intro">
+      The material code is generated automatically when a new material is saved. It is built from four parts:
+    </p>
+    <div class="mn-cp__formula">
+      <span class="mn-cp__chip mn-cp__chip--xx">XX</span><span class="mn-cp__plus">+</span>
+      <span class="mn-cp__chip mn-cp__chip--y">Y</span><span class="mn-cp__plus">+</span>
+      <span class="mn-cp__chip mn-cp__chip--z">Z</span><span class="mn-cp__plus">+</span>
+      <span class="mn-cp__chip mn-cp__chip--n">0001</span>
+    </div>
+    <p class="mn-cp__note">Note: every selected grade must have a code configured in Grade Master.</p>
+  </div>
+  <div class="modal-footer mn-cp-modal__footer">
+    <button type="button" class="btn btn-sm btn-primary" (click)="showCodingPattern = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

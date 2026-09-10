@@ -1,0 +1,396 @@
+<div class="lab-log-shell" *ngIf="!isView">
+    <div class="card lab-log-card lab-log-card--list">
+        <div class="lab-log-toolbar">
+            <input
+                type="search"
+                class="lab-log-search"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="onSearchChange()"
+                placeholder="Search lab name, contact, email, address, status…"
+                aria-label="Search lab log"
+            />
+            <span class="lab-log-meta">{{ totalFiltered }} record(s)</span>
+        </div>
+        <div class="lab-log-table-wrap lab-log-table-wrap--list">
+            <table class="lab-log-table lab-log-table--list" *ngIf="pagedLabs.length > 0">
+                <thead>
+                    <tr>
+                        <th>Sr</th>
+                        <th>Lab No</th>
+                        <th>Lab Name</th>
+                        <th>Branches</th>
+                        <th>Contact No</th>
+                        <th>{{'common.email' | translate}}</th>
+                        <th>Contact Person</th>
+                        <th>{{'common.address' | translate}}</th>
+                        <th>{{'common.status' | translate}}</th>
+                        <th>{{'common.table.action' | translate}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of pagedLabs; let i = index">
+                        <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                        <td>{{ item.lab_no }}</td>
+                        <td>{{ item.lab_name }}</td>
+                        <td>{{ branchCount(item) }}</td>
+                        <td>{{ (item.contact_no  | canadianPhone)}}</td>
+                        <td>{{ item.email }}</td>
+                        <td>{{ item.contact_person }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-info" (click)="view(item)">{{'common.view' | translate}}</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="lab-log-empty" *ngIf="totalFiltered === 0 && !loading">
+                {{ searchTerm ? 'No labs match your search.' : ('common.noRecords' | translate) }}
+            </div>
+        </div>
+        <div class="lab-log-pager lab-log-pager--full" *ngIf="totalFiltered > 0">
+            <div class="lab-log-pager__row">
+                <div class="btn-group lab-log-pager__size">
+                    <label class="lab-log-meta" for="labPageSize">Rows per page</label>
+                    <select id="labPageSize" class="lab-log-page-size" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                        <option [ngValue]="10">10</option>
+                        <option [ngValue]="25">25</option>
+                        <option [ngValue]="50">50</option>
+                    </select>
+                </div>
+                <span class="lab-log-pager__range">{{ (currentPage - 1) * pageSize + 1 }}–{{ lastIndexOnPage }} of {{ totalFiltered }}</span>
+            </div>
+            <div class="lab-log-pager__row lab-log-pager__nav">
+                <button type="button" class="btn btn-sm" [disabled]="currentPage <= 1" (click)="goFirst()">First</button>
+                <button type="button" class="btn btn-sm" [disabled]="currentPage <= 1" (click)="goPrev()">Previous</button>
+                <div class="lab-log-page-btns" role="navigation" aria-label="Pagination">
+                    <button
+                        type="button"
+                        class="btn btn-sm lab-log-page-btn"
+                        *ngFor="let p of pageWindow"
+                        [class.lab-log-page-btn--active]="p === currentPage"
+                        (click)="goToPage(p)"
+                    >
+                        {{ p }}
+                    </button>
+                </div>
+                <button type="button" class="btn btn-sm" [disabled]="currentPage >= totalPages" (click)="goNext()">Next</button>
+                <button type="button" class="btn btn-sm" [disabled]="currentPage >= totalPages" (click)="goLast()">Last</button>
+            </div>
+        </div>
+        <div class="card-footer" style="border-top: 1px solid #e2e8f0; margin: 0;">
+            <button type="button" class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+        </div>
+    </div>
+</div>
+
+<div class="lab-log-shell" *ngIf="isView">
+    <div class="card lab-log-card">
+        <div class="lab-log-head">
+            <h2 class="lab-log-title">Master Lab — {{ selectresult['lab_no'] }} {{ selectresult['lab_name'] }}</h2>
+        </div>
+        <div class="card-block lab-view-section">
+            <form novalidate>
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Lab name</label>
+                    <input type="text" name="v_ln" [ngModel]="selectresult['lab_name']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>FDA approved</label>
+                    <input type="text" name="v_fda" [ngModel]="selectresult['fda_approved']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Contact NO</label>
+                    <input type="text" name="v_cno" [ngModel]="selectresult['contact_no']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Contact person</label>
+                    <input type="text" name="v_cp" [ngModel]="selectresult['contact_person']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>{{'common.email' | translate}}</label>
+                    <input type="email" name="v_em" [ngModel]="selectresult['email']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Country / State / City</label>
+                    <input type="text" [value]="(selectresult['country'] || '') + ' / ' + (selectresult['permanent_state'] || '') + ' / ' + (selectresult['city'] || '')" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>PIN / ZIP</label>
+                    <input type="text" name="v_pin" [ngModel]="selectresult['pincode']" readonly tabindex="-1" />
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label>Address</label>
+                    <textarea rows="2" name="v_ad" [ngModel]="selectresult['address']" readonly tabindex="-1"></textarea>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="margin-top: 8px;">
+                    <button type="button" class="btn btn-sm btn-info" (click)="viewCertifidate()">View Certificate</button>
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12" *ngIf="selectresult['fda_approved']=='Yes'">
+                    <table class="table">
+                        <tr>
+                            <td>FDA Lic. No.</td>
+                            <td>
+                                <input type="text" name="v_fdano" [(ngModel)]="selectresult['fda_lic_no']" readonly style="margin:0px; height: 33px;" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Upload Lic.</td>
+                            <td style="padding: 0px;">
+                                <button type="button" class="btn btn-sm btn-info" (click)="viewLic()">View Lic</button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            </form>
+
+            <h3>Laboratory Branch</h3>
+            <div class="lab-log-table-wrap lab-log-table-wrap--branch">
+                <table class="lab-log-table lab-log-table--branch">
+                    <thead>
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Branch Name</th>
+                            <th>Contact Person</th>
+                            <th>Contact No.</th>
+                            <th>{{'common.email' | translate}}</th>
+                            <th>City / State</th>
+                            <th>PIN</th>
+                            <th>GST</th>
+                            <th>{{'common.address' | translate}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let br of branchRows; let i = index">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ br.branch_name }}</td>
+                            <td>{{ br.contact_person || '—' }}</td>
+                            <td>{{ (br.contact_no  | canadianPhone)}}</td>
+                            <td>{{ br.email }}</td>
+                            <td>{{ br.city || '—' }} / {{ br.permanent_state || '—' }}</td>
+                            <td>{{ br.pincode || '—' }}</td>
+                            <td>{{ br.gst_applicable || '—' }} {{ br.tax ? ('(' + br.tax + '%)') : '' }}</td>
+                            <td>{{ br.address }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="lab-log-empty" *ngIf="branchRows.length === 0">{{'common.noRecords' | translate}}</div>
+            </div>
+        </div>
+        <div class="card-footer lab-view-footer">
+            <button type="button" class="btn btn-danger" (click)="closeView()">{{'common.close' | translate}}</button>
+            <button type="button" class="btn btn-primary" (click)="openAddBranchModal()">Add Branch</button>
+            <button type="button" class="btn btn-success" (click)="openUpdateLaboratory()">Update Laboratory</button>
+        </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isAddBranchModal" [clrModalSize]="'lg'" [clrModalClosable]="true">
+    <h3 class="modal-title">Add branch</h3>
+    <div class="modal-body log-branch-modal">
+        <form novalidate>
+        <div class="clr-row">
+            <div class="clr-col-12">
+                <p class="text-muted">Same detail level as New Lab branch. Requires digital signature confirmation.</p>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Branch name *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.branch_name" name="lb_name" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Contact person *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.contact_person" name="lb_cp" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Contact no. *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.contact_no" name="lb_cno" maxlength="15" (input)="onLogBranchContact($event)" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Email *</label>
+                <input type="email" [(ngModel)]="logBranchDraft.email" name="lb_em" />
+            </div>
+            <div class="clr-col-12">
+                <label>Address *</label>
+                <textarea rows="2" [(ngModel)]="logBranchDraft.address" name="lb_ad"></textarea>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Country *</label>
+                <select [(ngModel)]="logBranchDraft.country" name="lb_ct">
+                    <option value="">Select…</option>
+                    <option value="INDIA">INDIA</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="logBranchDraft.country === 'Other'">
+                <label>Other country *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.ocountry" name="lb_oc" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="logBranchDraft.country && logBranchDraft.country !== 'INDIA'">
+                <label>Province / state *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.permanent_state" name="lb_st_o" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="logBranchDraft.country === 'INDIA'">
+                <label>State *</label>
+                <select [(ngModel)]="logBranchDraft.permanent_state" name="lb_st">
+                    <option value="">Select…</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Telangana">Telangana</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="West Bengal">West Bengal</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>City *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.city" name="lb_city" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>PIN / ZIP *</label>
+                <input type="text" [(ngModel)]="logBranchDraft.pincode" name="lb_pin" (input)="onLogBranchPin($event)" [attr.maxlength]="logBranchDraft.country === 'INDIA' ? 6 : 12" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>GST / TAX *</label>
+                <select [(ngModel)]="logBranchDraft.gst_applicable" name="lb_gst">
+                    <option value="Not Applicable">Not Applicable</option>
+                    <option value="Applicable">Applicable</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="logBranchDraft.gst_applicable === 'Applicable'">
+                <label>Tax % *</label>
+                <select [(ngModel)]="logBranchDraft.tax" name="lb_tax">
+                    <option value="">Select…</option>
+                    <option *ngFor="let unit of gsts" [value]="unit.gst">{{ unit.gst }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="digital-signature-block">
+            <h4>Digital signature</h4>
+            <div class="clr-row dig-sig-grid">
+                <div class="clr-col-lg-6 clr-col-12"><strong>User ID:</strong> {{ empId }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>Date &amp; time:</strong> {{ signatureNow }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>Department:</strong> {{ department }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>User name:</strong> {{ userDisplayName }}</div>
+            </div>
+            <label class="dig-sig-check">
+                <input type="checkbox" [(ngModel)]="addBranchDigitalAck" name="lb_ack" />
+                <span>I confirm this entry — electronic signature</span>
+                <span class="dig-sig-tick" aria-hidden="true">✓</span>
+            </label>
+        </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="isAddBranchModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="submitAddBranch()">Save branch</button>
+    </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isUpdateModal" [clrModalSize]="'xl'" [clrModalClosable]="true">
+    <h3 class="modal-title">Update laboratory</h3>
+    <div class="modal-body log-update-modal">
+        <form novalidate>
+        <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Lab name *</label>
+                <input type="text" [(ngModel)]="editLab.lab_name" name="eu_name" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>FDA approved *</label>
+                <select [(ngModel)]="editLab.fda_approved" name="eu_fda">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Contact no. *</label>
+                <input type="text" [(ngModel)]="editLab.contact_no" name="eu_cno" maxlength="10" (input)="onEditContact($event)" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Contact person *</label>
+                <input type="text" [(ngModel)]="editLab.contact_person" name="eu_cp" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Email *</label>
+                <input type="email" [(ngModel)]="editLab.email" name="eu_em" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>Country *</label>
+                <select [(ngModel)]="editLab.country" name="eu_ct">
+                    <option value="INDIA">INDIA</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="editLab.country === 'Other'">
+                <label>Country name *</label>
+                <input type="text" [(ngModel)]="editLab.ocountry" name="eu_oc" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="editLab.country === 'INDIA'">
+                <label>State *</label>
+                <input type="text" [(ngModel)]="editLab.permanent_state" name="eu_st" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="editLab.country !== 'INDIA'">
+                <label>Province / state *</label>
+                <input type="text" [(ngModel)]="editLab.permanent_state" name="eu_st2" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>City *</label>
+                <input type="text" [(ngModel)]="editLab.city" name="eu_city" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>PIN / ZIP *</label>
+                <input type="text" [(ngModel)]="editLab.pincode" name="eu_pin" (input)="onEditPin($event)" [attr.maxlength]="editLab.country === 'INDIA' ? 6 : 12" />
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>GST / TAX *</label>
+                <select [(ngModel)]="editLab.gst_applicable" name="eu_gst">
+                    <option value="Not Applicable">Not Applicable</option>
+                    <option value="Applicable">Applicable</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12" *ngIf="editLab.gst_applicable === 'Applicable'">
+                <label>Tax % *</label>
+                <select [(ngModel)]="editLab.tax" name="eu_tax">
+                    <option value="">Select…</option>
+                    <option *ngFor="let unit of gsts" [value]="unit.gst">{{ unit.gst }}</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-4 clr-col-12">
+                <label>FDA licence no.</label>
+                <input type="text" [(ngModel)]="editLab.fda_lic_no" name="eu_fdano" />
+            </div>
+            <div class="clr-col-12">
+                <label>Address *</label>
+                <textarea rows="2" [(ngModel)]="editLab.address" name="eu_ad"></textarea>
+            </div>
+            <div class="clr-col-12">
+                <label>Replace certificate (PDF, optional)</label>
+                <input type="file" accept="application/pdf" #updateCertRef />
+            </div>
+        </div>
+        <div class="digital-signature-block">
+            <h4>Digital signature (update)</h4>
+            <div class="clr-row dig-sig-grid">
+                <div class="clr-col-lg-6 clr-col-12"><strong>User ID:</strong> {{ empId }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>Date &amp; time:</strong> {{ signatureNow }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>Department:</strong> {{ department }}</div>
+                <div class="clr-col-lg-6 clr-col-12"><strong>User name:</strong> {{ userDisplayName }}</div>
+            </div>
+            <label class="dig-sig-check">
+                <input type="checkbox" [(ngModel)]="updateDigitalAck" name="eu_ack" />
+                <span>I confirm this update — electronic signature</span>
+                <span class="dig-sig-tick" aria-hidden="true">✓</span>
+            </label>
+        </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="isUpdateModal = false">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="submitUpdateLaboratory(updateCertRef)">Save update</button>
+    </div>
+</clr-modal>

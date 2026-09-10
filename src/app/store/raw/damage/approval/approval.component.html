@@ -1,0 +1,147 @@
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Damage Container Inspection For Checking</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw/damage">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="datagrid-wrapper">
+        <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading">
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Total Containers</clr-dg-column>
+          <clr-dg-column>Damage Containers</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_subtype }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.containers }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.outer_damage }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.damage | titlecase }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Damage Container Inspection For Checking</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border unique-table recv-kv-table">
+        <tr>
+          <th>Material Name</th>
+          <td colspan="3">{{ selectedReport['material_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Vendor Name</th>
+          <td colspan="3">{{ selectedReport['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Payment Slip</th>
+          <td>{{ selectedReport['challan_no'] }}</td>
+          <th>Payment Slip Date</th>
+          <td>{{ selectedReport['challan_date'] }}</td>
+        </tr>
+        <tr>
+          <th>PO No.</th>
+          <td>{{ selectedReport['po_no'] }}</td>
+          <th>PO Date</th>
+          <td>{{ selectedReport['po_date'] | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <th>Material Type</th>
+          <td>{{ selectedReport['material_type'] }}</td>
+          <th>Material Subtype</th>
+          <td>{{ selectedReport['material_subtype'] }}</td>
+        </tr>
+        <tr>
+          <th>Material Code</th>
+          <td>{{ selectedReport['material_code'] }}</td>
+          <th>Material Grade</th>
+          <td>{{ selectedReport['grade'] }}</td>
+        </tr>
+        <tr>
+          <th>PO Qty</th>
+          <td colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+        </tr>
+      </table>
+
+      <form #damageForm="ngForm">
+        <h3>Labeling Details:</h3>
+        <div class="clr-row">
+          <div class="clr-col-4">
+            <label>Medicap Lot No:</label>
+            <input type="text" name="batch_no" [ngModel]="selectedReport['batch_no']" readonly tabindex="-1">
+          </div>
+          <div class="clr-col-2"><br>
+            <button type="button" [disabled]="selectedReport['damaeImg1'] == 'NA'" class="btn btn-primary btn-sm" (click)="viewFile(selectedReport['damaeImg1'])">{{'common.view' | translate}}</button>
+          </div>
+          <div class="clr-col-2"><br>
+            <button type="button" [disabled]="selectedReport['damaeImg2'] == 'NA'" class="btn btn-primary btn-sm" (click)="viewFile(selectedReport['damaeImg2'])">{{'common.view' | translate}}</button>
+          </div>
+        </div>
+
+        <h3>Damage Containers Details:</h3>
+        <table class="table table-border unique-table recv-data-table">
+          <thead>
+            <tr>
+              <th>Container No.</th>
+              <th>Condition</th>
+              <th>{{'common.table.remark' | translate}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let damage of selectedReport['damage_details']; let i = index">
+              <td>{{ damage.container_no }}</td>
+              <td>{{ damage.status }}</td>
+              <td>{{ damage.remark }}</td>
+            </tr>
+            <tr *ngIf="selectedReport['damage_details']?.length==0">
+              <td colspan="3">No Record Found!</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Damage Containers Checklist:</h3>
+        <table class="table table-border unique-table recv-data-table">
+          <thead>
+            <tr>
+              <th>{{'common.table.srNo' | translate}}</th>
+              <th>Parameters</th>
+              <th>{{'common.remarks' | translate}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hr of selectedReport['damageChecklist']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{ hr.check_point }}</td>
+              <td>{{ hr.check }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button type="button" class="btn btn-primary" (click)="save(damageForm)">{{'common.approve' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

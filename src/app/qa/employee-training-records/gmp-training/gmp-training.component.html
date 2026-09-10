@@ -1,0 +1,147 @@
+<div class="card etr-form" *ngIf="!isLog">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">GMP Training ({{ formNo }})</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/employee-training-records/gmp/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/employee-training-records" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <form #gmpForm="ngForm">
+      <table class="etr-form__sheet-table">
+        <tr>
+          <td class="etr-form__label-cell">TITLE:</td>
+          <td colspan="3" class="etr-form__title-cell">GMP TRAINING</td>
+        </tr>
+        <tr>
+          <td class="etr-form__label-cell">FORM NO.:</td>
+          <td class="etr-form__value-cell">{{ formNo }}</td>
+          <td class="etr-form__label-cell">REVISION NO.:</td>
+          <td class="etr-form__value-cell">{{ revisionNo }}</td>
+        </tr>
+        <tr>
+          <td class="etr-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="etr-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+          <td class="etr-form__label-cell">PAGE NO.:</td>
+          <td class="etr-form__value-cell">1 OF 1</td>
+        </tr>
+      </table>
+
+      <table class="etr-form__sheet-table">
+        <tr>
+          <td class="etr-form__label-cell">Trainer <span class="etr-form__required">*</span></td>
+          <td class="etr-form__value-cell"><input class="etr-form__input" type="text" name="trainer" [(ngModel)]="trainer" required /></td>
+          <td class="etr-form__label-cell">Date</td>
+          <td class="etr-form__value-cell"><input class="etr-form__input" type="date" name="training_date" [(ngModel)]="trainingDate" /></td>
+        </tr>
+        <tr>
+          <td class="etr-form__label-cell">Aids Used</td>
+          <td colspan="3" class="etr-form__value-cell"><textarea class="etr-form__textarea" name="aids_used" rows="2" [(ngModel)]="aidsUsed"></textarea></td>
+        </tr>
+      </table>
+
+      <table class="etr-form__sheet-table">
+        <tr>
+          <th>Employee Name</th>
+          <th>Signature</th>
+          <th>Date</th>
+          <th>Comments</th>
+          <th style="width:5%"></th>
+        </tr>
+        <tr *ngFor="let row of attendanceRows; let i = index">
+          <td><input class="etr-form__input" type="text" [name]="'emp_' + i" [(ngModel)]="row.employee_name" /></td>
+          <td><span class="etr-form__note">From Log</span></td>
+          <td><span class="etr-form__note">From Log</span></td>
+          <td><input class="etr-form__input" type="text" [name]="'cmt_' + i" [(ngModel)]="row.comments" /></td>
+          <td><button type="button" class="btn btn-sm btn-danger" (click)="removeRow(i)" *ngIf="attendanceRows.length > 1">×</button></td>
+        </tr>
+      </table>
+      <button type="button" class="btn btn-sm btn-secondary" (click)="addRow()">+ Add Row</button>
+    </form>
+  </div>
+
+  <div class="card-footer"><button class="btn btn-primary" (click)="save(gmpForm)">{{ 'common.submit' | translate }}</button></div>
+</div>
+
+<div class="card etr-form" *ngIf="isLog && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">GMP Training Log ({{ formNo }})</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/employee-training-records/gmp/new">New</button>
+        <button class="btn btn-sm" routerLink="/qa/employee-training-records" style="background-color: red; color: white; margin-left: 0.35rem">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="clr-row etr-form__filters">
+      <div class="clr-col-lg-3"><label>From Date</label><input type="date" class="etr-form__readonly" [(ngModel)]="fromDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3"><label>To Date</label><input type="date" class="etr-form__readonly" [(ngModel)]="toDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" (click)="getLog()">{{ 'common.search' | translate }}</button></div>
+    </div>
+    <clr-datagrid>
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>Date</clr-dg-column>
+      <clr-dg-column>Trainer</clr-dg-column>
+      <clr-dg-column>Training Date</clr-dg-column>
+      <clr-dg-column>Entry By</clr-dg-column>
+      <clr-dg-column>Action</clr-dg-column>
+      <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.trainer }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.training_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_by }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button class="btn btn-sm btn-primary" (click)="downloadForm(row.id)">{{ 'common.download' | translate }}</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+  </div>
+</div>
+
+<div class="card etr-form" *ngIf="isLog && isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">GMP Training View</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="isView = false" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm btn-success" routerLink="/qa/employee-training-records/gmp/new" style="margin-right: 0.35rem">New</button>
+        <button class="btn btn-sm" routerLink="/qa/employee-training-records" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <table class="etr-form__sheet-table">
+      <tr>
+        <td class="etr-form__label-cell">Trainer</td><td class="etr-form__value-cell">{{ selectedRecord?.trainer }}</td>
+        <td class="etr-form__label-cell">Date</td><td class="etr-form__value-cell">{{ selectedRecord?.training_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr><td class="etr-form__label-cell">Aids Used</td><td colspan="3" class="etr-form__value-cell">{{ selectedRecord?.aids_used }}</td></tr>
+    </table>
+    <table class="etr-form__sheet-table">
+      <tr><th>Employee Name</th><th>Signature</th><th>Date</th><th>Comments</th></tr>
+      <tr *ngFor="let row of selectedRecord?.attendance_rows; let i = index">
+        <td>{{ row.employee_name }}</td>
+        <td>
+          <span *ngIf="hasStamp(row.signature)">{{ row.signature }}</span>
+          <button *ngIf="!hasStamp(row.signature)" class="btn btn-sm btn-success etr-form__stamp-btn"
+            [disabled]="stamping === selectedRecord.id + '-' + i" (click)="stampRow(selectedRecord, i)">Sign</button>
+        </td>
+        <td>{{ row.attendance_date | date: 'dd-MM-yyyy' }}</td>
+        <td>{{ row.comments }}</td>
+      </tr>
+    </table>
+  </div>
+  <div class="card-footer"><button class="btn btn-primary" (click)="downloadForm(selectedRecord?.id)">{{ 'common.download' | translate }}</button></div>
+</div>

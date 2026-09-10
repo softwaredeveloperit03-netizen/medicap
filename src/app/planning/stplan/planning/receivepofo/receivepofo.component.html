@@ -1,0 +1,332 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Receive FO/PO
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-success" routerLink="/planning/Receivepofolog" [queryParamsHandling]="'preserve'">log</button>
+        <button class="btn btn-sm btn-danger" type="button" (click)="closePage()">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="tableSearchInput">Search PO/FO:</label>
+          <input type="text" id="tableSearchInput"
+            placeholder="Type to filter items..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <div class="rpfo-legend" *ngIf="!loading" aria-hidden="true">
+        <span class="rpfo-legend-label">Row type</span>
+        <span class="rpfo-legend-item rpfo-legend-item--normal"><i></i> Standard</span>
+        <span class="rpfo-legend-item rpfo-legend-item--combi"><i></i> Combi</span>
+        <span class="rpfo-legend-item rpfo-legend-item--child"><i></i> Combi line (SFG)</span>
+      </div>
+
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" class="rpfo-po-grid">
+          <clr-dg-column class="col-head-select">
+            <input type="checkbox"
+              [ngModel]="allVisibleSelected"
+              (ngModelChange)="toggleSelectAll($event)"
+              title="Select all visible rows" />
+          </clr-dg-column>
+          <clr-dg-column>Group</clr-dg-column>
+          <clr-dg-column>Entry No</clr-dg-column>
+          <clr-dg-column>Forecast No</clr-dg-column>
+          <clr-dg-column>Forecast Date</clr-dg-column>
+          <clr-dg-column>Delivery Date</clr-dg-column>
+          <clr-dg-column>Plan Month</clr-dg-column>
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Plan Qty</clr-dg-column>
+          <clr-dg-column>Workorder Qty</clr-dg-column>
+          <clr-dg-column>Workorder Count</clr-dg-column>
+          <clr-dg-column>Balance</clr-dg-column>
+          <clr-dg-column>Unit</clr-dg-column>
+          <clr-dg-column>Entry By</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>Actions</clr-dg-column>
+
+          <ng-container *ngFor="let po of pendingpo; let i = index">
+
+            <!-- Standard FO -->
+            <clr-dg-row *ngIf="!po.products?.length" class="rpfo-row rpfo-row--normal">
+              <clr-dg-cell class="cell-center">
+                <input type="checkbox" [(ngModel)]="po.selected" (ngModelChange)="onRowSelectionChange()" />
+              </clr-dg-cell>
+              <clr-dg-cell>{{ po.mainGroupName || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.doc_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.order_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span *ngIf="po.deliveryDate; else noDeliveryPo" class="po-expected-delivery">
+                  {{ po.deliveryDate | date:'dd/MM/yyyy' }}
+                </span>
+                <ng-template #noDeliveryPo>-</ng-template>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ formatPlanMonth(po.planMonth) }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.product_code || '-' }}</clr-dg-cell>
+              <clr-dg-cell class="cell-product" [title]="po.product_name || ''">{{ po.product_name || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.plan_qty || po.planQty || '0' }}</clr-dg-cell>
+              <clr-dg-cell>{{ getWorkOrderQty(po) }}</clr-dg-cell>
+              <clr-dg-cell>{{ formatBatchSummary(po.batches, po.planUnit) }}</clr-dg-cell>
+              <clr-dg-cell>{{ getBalance(po) }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.planUnit || '-' }}</clr-dg-cell>
+              <clr-dg-cell [title]="entryUserDisplay(po)">{{ entryUserDisplay(po) }}</clr-dg-cell>
+              <clr-dg-cell>Ready to receive</clr-dg-cell>
+              <clr-dg-cell class="cell-actions">
+                <button class="btn btn-success btn-sm" (click)="openSplit(po)">Split &amp; Plan</button>
+                <button class="btn btn-danger btn-sm" (click)="updatePendingPOs('Rejected', po)">Cancel</button>
+                <button class="btn btn-info btn-sm" (click)="updatePendingPOs('Hold', po)">On Hold</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <!-- Combi parent (header only — actions on SFG lines) -->
+            <clr-dg-row *ngIf="po.products?.length" class="rpfo-row rpfo-row--combi">
+              <clr-dg-cell class="cell-center"></clr-dg-cell>
+              <clr-dg-cell>{{ po.mainGroupName || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.doc_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.order_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</clr-dg-cell>
+              <clr-dg-cell>-</clr-dg-cell>
+              <clr-dg-cell>{{ formatPlanMonth(po.planMonth) }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.product_code || '-' }}</clr-dg-cell>
+              <clr-dg-cell class="cell-product" [title]="po.product_name || ''">
+                <span class="rpfo-tag rpfo-tag--combi">Combi</span>
+                {{ po.product_name || '-' }}
+              </clr-dg-cell>
+              <clr-dg-cell>{{ po.plan_qty || '0' }}</clr-dg-cell>
+              <clr-dg-cell>-</clr-dg-cell>
+              <clr-dg-cell><span class="rpfo-line-count">{{ po.products?.length || 0 }} lines</span></clr-dg-cell>
+              <clr-dg-cell>-</clr-dg-cell>
+              <clr-dg-cell>{{ po.planUnit || '-' }}</clr-dg-cell>
+              <clr-dg-cell [title]="entryUserDisplay(po)">{{ entryUserDisplay(po) }}</clr-dg-cell>
+              <clr-dg-cell class="rpfo-muted">See lines</clr-dg-cell>
+              <clr-dg-cell></clr-dg-cell>
+            </clr-dg-row>
+
+            <!-- Combi SFG / FG lines -->
+            <clr-dg-row *ngFor="let item of po.products; let j = index" class="rpfo-row rpfo-row--child">
+              <clr-dg-cell class="cell-center">
+                <input type="checkbox" [(ngModel)]="item.selected" (ngModelChange)="onRowSelectionChange()" />
+              </clr-dg-cell>
+              <clr-dg-cell>{{ item.mainGroupName || po.mainGroupName || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ item.doc_no || po.doc_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ item.order_no || '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd/MM/yyyy') : '-' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span *ngIf="item.deliveryDate; else noDeliveryItem" class="po-expected-delivery">
+                  {{ item.deliveryDate | date:'dd/MM/yyyy' }}
+                </span>
+                <ng-template #noDeliveryItem>-</ng-template>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ formatPlanMonth(item.planMonth) }}</clr-dg-cell>
+              <clr-dg-cell>{{ item.product_code || '-' }}</clr-dg-cell>
+              <clr-dg-cell class="cell-product" [title]="item.product_name || ''">
+                <span class="rpfo-tag rpfo-tag--line">Line</span>
+                {{ item.product_name || '-' }}
+              </clr-dg-cell>
+              <clr-dg-cell>{{ item.planQty || '0' }}</clr-dg-cell>
+              <clr-dg-cell>{{ getWorkOrderQty(item) }}</clr-dg-cell>
+              <clr-dg-cell>{{ formatBatchSummary(item.batches, item.planUnit || po.planUnit) }}</clr-dg-cell>
+              <clr-dg-cell>{{ getBalance(item) }}</clr-dg-cell>
+              <clr-dg-cell>{{ item.planUnit || po.planUnit || '-' }}</clr-dg-cell>
+              <clr-dg-cell [title]="entryUserDisplay(item, po)">{{ entryUserDisplay(item, po) }}</clr-dg-cell>
+              <clr-dg-cell>Ready to receive</clr-dg-cell>
+              <clr-dg-cell class="cell-actions">
+                <button class="btn btn-success btn-sm" (click)="openSplit(item)">Split &amp; Plan</button>
+                <button class="btn btn-danger btn-sm" (click)="updatePendingPOs('Rejected At Receving of PO/FO', item)">Cancel</button>
+                <button class="btn btn-info btn-sm" (click)="updatePendingPOs('Hold At Receving of PO/FO', item)">On Hold</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+          </ng-container>
+
+          <clr-dg-placeholder>No PO/FO records to receive.</clr-dg-placeholder>
+        </clr-datagrid>
+      </div>
+
+    </div>
+    <div class="card-footer rpfo-footer-actions">
+      <span class="rpfo-selection-hint" *ngIf="selectedVisibleCount">
+        {{ selectedVisibleCount }} selected
+      </span>
+      <button type="button" class="btn btn-sm btn-outline" (click)="toggleSelectAll(true)" [disabled]="!pendingpo?.length">Select All</button>
+      <button type="button" class="btn btn-sm btn-outline" (click)="toggleSelectAll(false)" [disabled]="!selectedVisibleCount">Clear All</button>
+      <button class="btn btn-primary" (click)="submitApproval()">Receive &amp; Generate WO</button>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Generated Workorders
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView=false;">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="rpfo-table-scroll">
+        <table class="table table-bordered table-sm rpfo-view-table">
+          <thead>
+            <tr>
+              <th>Sr.No.</th>
+              <th>Work/batch order No</th>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>Plan Qty</th>
+              <th>WO Qty</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let wo of Worders; let i = index">
+              <td class="cell-center">{{ i + 1 }}</td>
+              <td>{{ wo.workorder_no || '-' }}</td>
+              <td>{{ wo.product_code || '-' }}</td>
+              <td>{{ wo.product_name || '-' }}</td>
+              <td class="cell-num">{{ wo.work_order_planned_qty || '0' }}</td>
+              <td class="cell-num">{{ wo.batch_size || '-' }}</td>
+              <td>Approved</td>
+            </tr>
+            <tr *ngIf="!Worders?.length">
+              <td colspan="7" class="cell-empty">No work orders found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="splitModalOpen" [clrModalSize]="'xl'">
+  <h3 class="modal-title os-title">Order splitting</h3>
+  <div class="modal-body os-modal" *ngIf="splitSource">
+
+    <!-- Plan entire qty in single month -->
+    <div class="os-panel os-panel--blue">
+      <label class="os-check">
+        <input type="checkbox" [(ngModel)]="planEntireSingleMonth" name="osEntire">
+        Plan Entire Qty in Single Month
+      </label>
+      <div class="os-entire-controls">
+        <span class="os-inline-label">Year</span>
+        <select [(ngModel)]="entireYear" name="osEntireYear" [disabled]="!planEntireSingleMonth"
+          (ngModelChange)="onEntireYearChange()">
+          <option value="">Select year</option>
+          <option *ngFor="let y of yearOptions">{{ y }}</option>
+        </select>
+        <span class="os-inline-label">Month</span>
+        <select [(ngModel)]="entireMonth" name="osEntireMonth" [disabled]="!planEntireSingleMonth || !entireYear">
+          <option value="">Select month</option>
+          <option *ngFor="let m of monthsForYear(entireYear)">{{ m }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="os-panel os-panel--gray">
+      <div class="os-stat-row">
+        <span>Order Qty: <b class="os-blue">{{ splitOrderQty }}</b></span>
+        <span>Available FG Stock: <b class="os-blue">{{ splitFgStock }}</b></span>
+        <span>Remaining for split: <b class="os-green os-big">{{ splitRemainingForSplit | number }}</b> Kg</span>
+      </div>
+      <div class="os-stat-row os-stat-row--sub">
+        <span class="os-muted">Unallocated (splits): {{ splitRemainingToAllocate | number }} · In-process: {{ splitInProcessing }} &rarr; cap for next row = {{ splitCapForNextRow | number }}</span>
+        <span>Total qty in processing: <b class="os-blue">{{ splitInProcessing }} Kg</b></span>
+        <span>Delivery Date: <b class="os-green">{{ (splitDeliveryDate | date:'yyyy-MM-dd') || '-' }}</b></span>
+      </div>
+    </div>
+
+    <!-- FG stock / WIP options -->
+    <div class="os-panel os-panel--outline">
+      <div class="os-check-row">
+        <label class="os-check">
+          <input type="checkbox" [(ngModel)]="useFgStock" name="osFg">
+          Use available FG stock <span class="os-blue">({{ splitFgStock }})</span>
+        </label>
+        <label class="os-check">
+          <input type="checkbox" [(ngModel)]="subtractInProcess" name="osWip" [disabled]="!useFgStock">
+          Subtract in-process from <b>remaining for split</b> (requires FG stock option above)
+          <span class="os-blue">({{ splitInProcessing }} Kg)</span>
+        </label>
+      </div>
+      <p class="os-note">
+        <b>No subtraction</b> of in-process unless <b>both</b> boxes are checked. If either is unchecked,
+        remaining for split uses full unallocated qty. When both are on, WIP is applied <b>once</b> against
+        current unallocated qty (not again on each new row).
+      </p>
+    </div>
+
+    <!-- Allocation summary -->
+    <div class="os-alloc">
+      Order Qty: <b>{{ splitOrderQty | number }}</b>
+      <span class="os-alloc-sep">Planned (splits): <b>{{ splitPlanned | number }}</b></span>
+      <span class="os-alloc-sep">Remaining to allocate: <b>{{ splitRemainingToAllocate | number }}</b></span>
+    </div>
+
+    <!-- Splits table -->
+    <div class="os-table-scroll">
+      <table class="table table-bordered os-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Inhouse mfg qty</th>
+            <th>Outsource qty</th>
+            <th>Qty to produce</th>
+            <th>Year</th>
+            <th>Month</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of splitRows; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ s.inhouse }}</td>
+            <td>{{ s.outsource }}</td>
+            <td>{{ s.produce }}</td>
+            <td>{{ s.year }}</td>
+            <td>{{ s.month }}</td>
+            <td><button type="button" class="btn btn-sm btn-danger" (click)="removeSplitRow(i)">Remove</button></td>
+          </tr>
+          <tr class="os-new-row" [class.os-new-row--disabled]="planEntireSingleMonth">
+            <td class="os-new-label">New</td>
+            <td><input type="number" [(ngModel)]="newInhouse" name="osNewIn" min="0" [disabled]="planEntireSingleMonth"></td>
+            <td><input type="number" [(ngModel)]="newOutsource" name="osNewOut" min="0" [disabled]="planEntireSingleMonth"></td>
+            <td><input type="number" [value]="newProduceQty" class="os-readonly" readonly></td>
+            <td>
+              <select [(ngModel)]="newYear" name="osNewYear" [disabled]="planEntireSingleMonth"
+                (ngModelChange)="onNewYearChange()">
+                <option value="">Select Year</option>
+                <option *ngFor="let y of yearOptions">{{ y }}</option>
+              </select>
+            </td>
+            <td>
+              <select [(ngModel)]="newMonth" name="osNewMonth" [disabled]="planEntireSingleMonth || !newYear">
+                <option value="">Select Month</option>
+                <option *ngFor="let m of monthsForYear(newYear)">{{ m }}</option>
+              </select>
+            </td>
+            <td><button type="button" class="btn btn-sm btn-success os-add-btn" (click)="addSplitRow()" [disabled]="planEntireSingleMonth">+</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="saveAndSendSplit()">SAVE &amp; SEND</button>
+    <button type="button" class="btn btn-outline" (click)="splitModalOpen = false">CANCEL</button>
+  </div>
+</clr-modal>

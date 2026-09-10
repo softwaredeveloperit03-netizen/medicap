@@ -1,0 +1,265 @@
+﻿<div class="card">
+  <div class="card-header rights-log-card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-3" style="color: aliceblue; margin-top: -2px; text-align: left;">User Rights Log</div>
+      <div class="clr-col-lg-9" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/hr/user" style="color: white; border: 1px solid red;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-block">
+      <div class="filter-header-panel">
+        <div class="filter-item">
+          <label class="filter-label"><strong>Select Department</strong></label>
+          <select name="search_department" [(ngModel)]="search_department" (change)="getRights()" class="form-control filter-select">
+            <option value="ALL EMP">ALL EMP</option>
+            <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label"><strong>Search</strong></label>
+          <div class="search-input-wrapper">
+            <input
+              type="text"
+              class="form-control search-input"
+              placeholder="Search by Emp ID, Name, Department, or Designation..."
+              [(ngModel)]="searchText"
+              (input)="onSearchChange()"
+              name="universalSearch">
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary clear-btn"
+              (click)="clearSearch()"
+              *ngIf="searchText"
+              title="Clear Search">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="filter-item count-item">
+          <label class="filter-label"><strong>Count</strong></label>
+          <div class="count-display">
+            <strong>{{ displayCount }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <form #rightForm="ngForm">
+        <div class="datagrid-wrapper">
+          <clr-datagrid>
+            <clr-dg-column>S.No</clr-dg-column>
+            <clr-dg-column>Emp Id</clr-dg-column>
+            <clr-dg-column>{{'common.name' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+            <clr-dg-column>Position</clr-dg-column>
+            <clr-dg-column>User Rights</clr-dg-column>
+            <clr-dg-column>Main Rights</clr-dg-column>
+            <clr-dg-column>Additional Rights</clr-dg-column>
+            <clr-dg-column>Allocated By</clr-dg-column>
+            <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+            <clr-dg-column>View Additional</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let user of results; let i = index; trackBy: trackByEmpId" [clrDgItem]="user">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.emp_id }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.firstname }} {{ user.lastname }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.department || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.designation || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.isuser || 'No' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-primary" type="button" (click)="viewMainRights(user)" title="View Main Rights Details">
+                  View
+                </button>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <span *ngIf="loadingAdditionalRights[user.emp_id]">...</span>
+                <span *ngIf="!loadingAdditionalRights[user.emp_id]">{{ user.additionalRightsCount || 0 }}</span>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ getAllocatedBy(user) }}</clr-dg-cell>
+              <clr-dg-cell>{{ getAllocatedDate(user) }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button
+                  class="btn btn-sm btn-info"
+                  type="button"
+                  (click)="viewAdditionalRights(user)"
+                  [disabled]="loadingAdditionalRights[user.emp_id] || !user.hasAdditionalRights"
+                  [title]="user.hasAdditionalRights ? 'View Additional Rights' : 'No Additional Rights'">
+                  View
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+            <clr-dg-placeholder>
+              <span *ngIf="searchText">No results found for "{{ searchText }}"</span>
+              <span *ngIf="!searchText">No data available</span>
+            </clr-dg-placeholder>
+          </clr-datagrid>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-primary" (click)="exportToExcel()">
+            <i class="fas fa-file-excel"></i> Export to Excel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- View Main Rights Modal -->
+<clr-modal [(clrModalOpen)]="isViewMain" clrModalSize="lg">
+  <div class="modal-header main-modal-header">
+    <button type="button" class="btn-close-modal" (click)="closeMainModal()" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="modal-body view-modal-body" *ngIf="selectedEmployeeForMainView">
+    <div class="main-title-section">
+      <h3 class="main-title">Main User Rights</h3>
+    </div>
+    <div class="employee-info-panel-view">
+      <div class="employee-info-header-view">
+        <div class="info-item-view">
+          <span class="info-label-view">Employee Name:</span>
+          <span class="info-value-view">{{ selectedEmployeeForMainView.firstname }} {{ selectedEmployeeForMainView.lastname }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Employee ID:</span>
+          <span class="info-value-view">{{ selectedEmployeeForMainView.emp_id }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Department:</span>
+          <span class="info-value-view">{{ selectedEmployeeForMainView.department || 'N/A' }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Designation:</span>
+          <span class="info-value-view">{{ selectedEmployeeForMainView.designation || 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="main-rights-section-view">
+      <h5 class="subsection-title-view">Main Department Rights</h5>
+      <div class="rights-table-wrapper-view">
+        <table class="rights-table-view main-rights-table-view">
+          <thead>
+            <tr>
+              <th class="rights-header-view">User Rights</th>
+              <th class="rights-header-view">Checker Rights</th>
+              <th class="rights-header-view">Approver Rights</th>
+              <th class="rights-header-view">QMS Approver</th>
+              <th class="rights-header-view">Training Cordinator</th>
+              <th class="rights-header-view">Auditor</th>
+              <th class="rights-header-view">Dept Head</th>
+              <th class="rights-header-view">Shift Management</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="rights-row-view">
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.isuser === 'Yes'" [class.no]="selectedEmployeeForMainView.isuser !== 'Yes'">
+                {{ selectedEmployeeForMainView.isuser || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.ischecker === 'Yes'" [class.no]="selectedEmployeeForMainView.ischecker !== 'Yes'">
+                {{ selectedEmployeeForMainView.ischecker || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.isapprover === 'Yes'" [class.no]="selectedEmployeeForMainView.isapprover !== 'Yes'">
+                {{ selectedEmployeeForMainView.isapprover || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.qms_approver === 'Yes'" [class.no]="selectedEmployeeForMainView.qms_approver !== 'Yes'">
+                {{ selectedEmployeeForMainView.qms_approver || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.trainig_cordinator === 'Yes'" [class.no]="selectedEmployeeForMainView.trainig_cordinator !== 'Yes'">
+                {{ selectedEmployeeForMainView.trainig_cordinator || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.isauditor === 'Yes'" [class.no]="selectedEmployeeForMainView.isauditor !== 'Yes'">
+                {{ selectedEmployeeForMainView.isauditor || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.dept_head === 'Yes'" [class.no]="selectedEmployeeForMainView.dept_head !== 'Yes'">
+                {{ selectedEmployeeForMainView.dept_head || 'No' }}
+              </td>
+              <td class="rights-cell-view" [class.yes]="selectedEmployeeForMainView.shift_allocator && selectedEmployeeForMainView.shift_allocator !== 'No'" [class.no]="!selectedEmployeeForMainView.shift_allocator || selectedEmployeeForMainView.shift_allocator === 'No'">
+                {{ selectedEmployeeForMainView.shift_allocator || 'No' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="closeMainModal()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<!-- View Additional Rights Modal -->
+<clr-modal [(clrModalOpen)]="isViewAdditional" clrModalSize="xl">
+  <div class="modal-header additional-modal-header">
+    <button type="button" class="btn-close-modal" (click)="closeAdditionalModal()" title="Close">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="modal-body view-modal-body" *ngIf="selectedEmployeeForView">
+    <div class="additional-title-section">
+      <h3 class="additional-title">Additional Department Rights</h3>
+    </div>
+    <div class="employee-info-panel-view">
+      <div class="employee-info-header-view">
+        <div class="info-item-view">
+          <span class="info-label-view">Employee Name:</span>
+          <span class="info-value-view">{{ selectedEmployeeForView.firstname }} {{ selectedEmployeeForView.lastname }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Employee ID:</span>
+          <span class="info-value-view">{{ selectedEmployeeForView.emp_id }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Department:</span>
+          <span class="info-value-view">{{ selectedEmployeeForView.department || 'N/A' }}</span>
+        </div>
+        <div class="info-item-view">
+          <span class="info-label-view">Designation:</span>
+          <span class="info-value-view">{{ selectedEmployeeForView.designation || 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="additional-rights-section-view">
+      <h5 class="subsection-title-view">Additional Department Rights</h5>
+      <div class="rights-table-wrapper-view">
+        <table class="rights-table-view">
+          <thead>
+            <tr>
+              <th class="dept-header-view">{{'common.department' | translate}}</th>
+              <th class="rights-header-view">User</th>
+              <th class="rights-header-view">Checker</th>
+              <th class="rights-header-view">Approver</th>
+              <th class="rights-header-view">QMS Approver</th>
+              <th class="rights-header-view">Training Cordinator</th>
+              <th class="rights-header-view">Auditor</th>
+              <th class="rights-header-view">Dept Head</th>
+              <th class="rights-header-view">Shift Management</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!selectedEmployeeForView.emp_id || !additionalRightsCache[selectedEmployeeForView.emp_id] || additionalRightsCache[selectedEmployeeForView.emp_id].length === 0" class="no-data-row-view">
+              <td colspan="9" class="no-data-cell-view">
+                <strong>No additional department rights allocated</strong>
+              </td>
+            </tr>
+            <tr *ngFor="let dept of (additionalRightsCache[selectedEmployeeForView.emp_id] || []); let i = index" class="rights-row-view">
+              <td class="dept-cell-view">{{ dept.department || 'N/A' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.isuser === 'Yes'" [class.no]="dept.isuser !== 'Yes'">{{ dept.isuser || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.ischecker === 'Yes'" [class.no]="dept.ischecker !== 'Yes'">{{ dept.ischecker || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.isapprover === 'Yes'" [class.no]="dept.isapprover !== 'Yes'">{{ dept.isapprover || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.qms_approver === 'Yes'" [class.no]="dept.qms_approver !== 'Yes'">{{ dept.qms_approver || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.trainig_cordinator === 'Yes'" [class.no]="dept.trainig_cordinator !== 'Yes'">{{ dept.trainig_cordinator || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.isauditor === 'Yes'" [class.no]="dept.isauditor !== 'Yes'">{{ dept.isauditor || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.dept_head === 'Yes'" [class.no]="dept.dept_head !== 'Yes'">{{ dept.dept_head || 'No' }}</td>
+              <td class="rights-cell-view" [class.yes]="dept.shift_allocator && dept.shift_allocator !== 'No'" [class.no]="!dept.shift_allocator || dept.shift_allocator === 'No'">{{ dept.shift_allocator || 'No' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="closeAdditionalModal()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

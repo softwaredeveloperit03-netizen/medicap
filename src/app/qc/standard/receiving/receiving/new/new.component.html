@@ -1,0 +1,216 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Awaiting Receiving Material</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" routerLink="/qc/standard/receiving/receiving" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <th>Sr.</th>
+                <th style="text-align: left;">Standard Name</th>
+                <th>PO No</th>
+                <th>PO Date</th>
+                <th style="text-align: left;">Vendor Name</th>
+                <th style="text-align: left;">Packaging Slip</th>
+                <th>Packaging Slip Date</th>
+                <th>{{'common.table.action' | translate}}</th>
+              </tr>
+              <tr *ngFor="let user of results; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td style="text-align: left;">{{user.standard_name}}</td>
+                <td>{{user.po_no}}</td>
+                <td>{{user.po_date | date: 'dd-MM-yyyy'}}</td>
+                <td style="text-align: left;">{{user.vendor_name}}</td>
+                <td style="text-align: left;">{{user.challan_no}}</td>
+                <td>{{user.challan_date | date: 'dd-MM-yyyy'}}</td>
+                <td>
+                  <button class="btn btn-sm btn-info" (click)="viewResult(i)">receive</button>
+                </td>
+              </tr>
+              <tr *ngIf="results?.length == 0">
+                <td colspan="9">{{'common.noRecords' | translate}}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+    </div>
+  </div>
+  
+  <div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header">Awaiting of Raw Materials</div>
+      <div class="card-block">
+        <div class="card-text"> 
+          <table class="table table-border" >
+            <tr>
+              <td style="text-align: left;border: 1px solid;"><b>Standard Name:</b></td>
+              <td style="text-align: left;border: 1px solid;">{{ selectedPO['standard_name'] }}</td>
+              <td style="text-align: left;border: 1px solid;"><b>Vendor Name:</b></td>
+              <td  style="text-align: left;border: 1px solid;">{{ selectedPO['vendor_name'] }}</td>
+            </tr>
+           
+            <tr>
+              <td style="text-align: left;"><b>Packaging Slip:</b></td>
+              <td style="text-align: left;border-right: 1px solid black;">{{ selectedPO['challan_no'] }}</td>
+              <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+              <td style="text-align: left;">{{ selectedPO['challan_date'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>PO No.:</b></td>
+              <td style="text-align: left;border-right: 1px solid black;">{{ selectedPO['po_no'] }}</td>
+              <td style="text-align: left;"><b>PO Date:</b></td>
+              <td style="text-align: left;">{{ selectedPO['po_date'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>PO Qty:</b></td>
+              <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedPO['qty'] }} {{ selectedPO['unit'] }}</td>
+            </tr>
+          </table>
+         
+          <h3>Labeling Details:</h3>
+          <form #labelform="ngForm">
+            <table class="table table-border">
+              <tr>
+                <th>Sr.</th>
+                <th>Medicap Lot No</th>
+                <th>Qty</th>
+                <th>No Of Containers</th>
+                <th>Mfg Date</th>
+                <th>Exp Date</th>
+                <th>{{'common.table.action' | translate}}</th>
+              </tr>
+              <tr>
+                  <td>1.</td>
+                  <td style="padding:0px;"> <input type="text" name="batch_no" ngModel required style="margin:0px;"></td>
+                  <td style="padding:0px;"> <input type="text" name="qty_received" ngModel required style="margin:0px;"> </td>
+                  <td style="padding: 0px;"> <input type="number" OnlyNumber="true" name="total_containers" [(ngModel)]="total_containers" required style="margin: 0px;"></td>
+                  <td style="padding:0px;"><input type="month" name="mfg_date" ngModel required style="margin:0px;"></td>
+                  <td style="padding:0px;"> <input type="month" name="exp_date" ngModel required style="margin:0px;"></td>
+                  <td> <button class="btn btn-sm btn-info" (click)="addlabel(labelform)">{{'common.add' | translate}}</button></td>
+              </tr>
+              <tr *ngFor="let list of labelList;let i=index">
+                <td>{{i+1}}</td>
+                <td>{{list.batch_no}}</td>
+                <td>{{list.qty_received}}</td>
+                <td>{{list.total_containers}}</td>
+                <td>{{list.mfg_date | date: 'dd-MM-yyyy'}}</td>
+                <td>{{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+                <td>
+                  <button class="btn btn-sm btn-info" (click)="deleteLabel(i)">{{'common.delete' | translate}}</button>
+                </td>
+              </tr>
+              <tr *ngIf="labelList?.length == 0">
+                  <td colspan="5">No Record Found!</td>
+              </tr>
+            </table>
+          </form>
+          
+          
+          <form #receivingForm="ngForm" style="margin-top:20px;">
+            <div class="clr-row">
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6 clr-col-xs-12">
+                <label>Total Received Qty: {{ selectedPO['unit'] }}</label>
+                <input type="text" OnlyNumdigit="true" name="received_qty" [(ngModel)]="qtyReceived" required readonly tabindex="-1">
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Total No.of Containers:</label>
+                <input type="text" name="containerTotal" [(ngModel)]="containerTotal" required readonly tabindex="-1">
+              </div>
+             
+            </div>
+            <div class="clr-row">
+              
+              <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Pack Size:</label>
+                <input type="text" OnlyNumber="true" name="pack_size" ngModel required>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Challan Qty: {{ selectedPO['unit'] }}</label>
+                <input type="text" OnlyNumdigit="true" name="challan_qty" (keypress)="number($event.target.value)" ngModel required>
+              </div> 
+              <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Received Qty: {{ selectedPO['unit'] }}</label>
+                <input type="text" OnlyNumdigit="true" name="qty_received" (keypress)="number($event.target.value)" (change)="checkqtn($event.target.value)" [(ngModel)]="qty_received" required>
+              </div>  -->
+              <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Received Qty: {{ selectedPO['unit'] }}</label>
+                <input type="text" OnlyNumdigit="true" name="qty_received" (keypress)="number($event.target.value)"  [(ngModel)]="qty_received" required>
+              </div> -->
+            
+              
+             
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-xs-12" *ngIf="isDamage">
+                <label>Remark (if Any):</label>
+                <textarea rows="2" name="remark" ngModel required></textarea>
+              </div>
+            </div>
+            <h3>Packing Details:</h3>
+            <div class="clr-row">
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                <label>Packing Intactness / Condition:</label>
+                <select name="packing_condition" ngModel required>
+                  <option>OK</option>
+                  <option>NOT OK</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                <label>Outer Packing:</label>
+                <select id="outer_packing" name="outer_packing" ngModel required>
+                  <option>Sealed</option>
+                  <option>Unsealed</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12">
+                <label>Container type:</label>
+                <select name="container_type" ngModel (change)="checkContainerType($event.target.value)" required>
+                  <option>Drum</option>
+                  <option>Bag</option>
+                  <option>Boxes</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isDrum">
+                <label>Drum:</label>
+                <select name="container_subtype" ngModel required>
+                  <option>Plastic</option>
+                  <option>HDPE Drum</option>
+                  <option>Fiber Board Drum</option>
+                  <option>Aluminium Container</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBag">
+                <label>Bag:</label>
+                <select name="container_subtype" ngModel required>
+                  <option>Polyethylene Bag</option>
+                  <option>Pollinated Bag</option>
+                  <option>Gunny Bag</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-xs-12" *ngIf="isBox">
+                <label>Boxes:</label>
+                <select name="container_subtype" ngModel required>
+                  <option>Corrugated Boxes</option>
+                  <option>Cartons</option>
+                </select>
+              </div>
+            </div>
+           
+  
+            
+           
+            
+            
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="receiveMaterial(receivingForm)">{{'common.submit' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>

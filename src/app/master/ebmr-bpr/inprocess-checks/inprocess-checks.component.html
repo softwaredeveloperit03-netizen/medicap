@@ -1,0 +1,240 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-sliders-h"></i>
+      In-Process Checks Master
+      <span class="eb-sub">Dynamic variable-limit designer for IPC parameters</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Dosage form</span>
+      <select class="eb-select" [(ngModel)]="dosageFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="Code, name, stage, UOM…" />
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-solid" (click)="newRow()"><i class="fas fa-plus"></i> New Check</button>
+  </div>
+
+  <div class="eb-table-wrap">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Check name</th>
+          <th>Type</th>
+          <th>Limit design</th>
+          <th>Stage</th>
+          <th>Frequency</th>
+          <th>Role</th>
+          <th>Critical</th>
+          <th style="width:90px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!filtered.length">
+          <td colspan="9" class="eb-empty">No in-process checks defined yet.</td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td><span class="eb-badge eb-badge-muted">{{ r.check_code }}</span></td>
+          <td>{{ r.check_name }}</td>
+          <td><span class="eb-badge eb-badge-type">{{ typeLabel(r.check_type) }}</span></td>
+          <td>{{ limitSummary(r) }}</td>
+          <td>{{ r.stage_ref || '—' }}</td>
+          <td>{{ r.frequency || '—' }}</td>
+          <td><span class="eb-badge eb-badge-type">{{ r.responsibility || 'Production' }}</span></td>
+          <td>
+            <span class="eb-badge" [ngClass]="r.is_critical === 'Yes' ? 'eb-badge-crit' : 'eb-badge-muted'">
+              {{ r.is_critical === 'Yes' ? 'Critical' : 'Normal' }}
+            </span>
+          </td>
+          <td>
+            <div class="eb-row-actions">
+              <button class="eb-icon-btn" (click)="editRow(r)" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="eb-icon-btn danger" (click)="remove(r)" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="eb-modal-backdrop" *ngIf="modalOpen" (click)="modalOpen=false">
+  <div class="eb-modal lg" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>{{ editing ? 'Edit In-Process Check' : 'New In-Process Check' }}</h3>
+      <button class="eb-modal-close" (click)="modalOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Check name *</span>
+          <input class="eb-input" [(ngModel)]="form.check_name" placeholder="e.g. pH of bulk solution" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Dosage form</span>
+          <select class="eb-select" [(ngModel)]="form.dosage_form">
+            <option value="">— Generic / All —</option>
+            <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Stage reference</span>
+          <input class="eb-input" [(ngModel)]="form.stage_ref" placeholder="e.g. Compounding" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Check type *</span>
+          <select class="eb-select" [(ngModel)]="form.check_type">
+            <option *ngFor="let t of checkTypes" [value]="t.value">{{ t.label }}</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">UOM</span>
+          <input class="eb-input" [(ngModel)]="form.uom" placeholder="e.g. pH, %, mg, NTU" />
+        </div>
+      </div>
+
+      <!-- dynamic limit designer -->
+      <div class="eb-section-title">Limit design</div>
+      <div class="eb-limit-box">
+        <ng-container [ngSwitch]="form.check_type">
+          <div *ngSwitchCase="'numeric'" class="eb-grid-3">
+            <div class="eb-field">
+              <span class="eb-field-label">Target value</span>
+              <input class="eb-input" [(ngModel)]="form.target_value" placeholder="e.g. 7.0" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">Tolerance (±)</span>
+              <input class="eb-input" [(ngModel)]="form.tolerance" placeholder="e.g. 0.2" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">UOM</span>
+              <input class="eb-input" [(ngModel)]="form.uom" />
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'range'" class="eb-grid-3">
+            <div class="eb-field">
+              <span class="eb-field-label">Min limit</span>
+              <input class="eb-input" [(ngModel)]="form.min_limit" placeholder="e.g. 6.8" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">Max limit</span>
+              <input class="eb-input" [(ngModel)]="form.max_limit" placeholder="e.g. 7.2" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">UOM</span>
+              <input class="eb-input" [(ngModel)]="form.uom" />
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'min'" class="eb-grid">
+            <div class="eb-field">
+              <span class="eb-field-label">Minimum (Not Less Than)</span>
+              <input class="eb-input" [(ngModel)]="form.min_limit" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">UOM</span>
+              <input class="eb-input" [(ngModel)]="form.uom" />
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'max'" class="eb-grid">
+            <div class="eb-field">
+              <span class="eb-field-label">Maximum (Not More Than)</span>
+              <input class="eb-input" [(ngModel)]="form.max_limit" />
+            </div>
+            <div class="eb-field">
+              <span class="eb-field-label">UOM</span>
+              <input class="eb-input" [(ngModel)]="form.uom" />
+            </div>
+          </div>
+
+          <div *ngSwitchCase="'selection'">
+            <span class="eb-field-label">Selectable options</span>
+            <div class="eb-option-row" *ngFor="let opt of form.options; let i = index; trackBy: trackByIndex">
+              <input class="eb-input" [(ngModel)]="form.options[i]" placeholder="Option {{ i + 1 }}" />
+              <button class="eb-icon-btn danger" (click)="removeOption(i)"><i class="fas fa-times"></i></button>
+            </div>
+            <button class="eb-btn eb-btn-sm eb-btn-outline" (click)="addOption()"><i class="fas fa-plus"></i> Add option</button>
+          </div>
+
+          <div *ngSwitchCase="'boolean'" class="eb-hint">
+            Operator will record <strong>Pass / Fail</strong> (Yes / No) at execution time.
+          </div>
+
+          <div *ngSwitchDefault class="eb-hint">
+            Operator will enter a free-text / descriptive observation at execution time.
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="eb-section-title">Sampling &amp; acceptance</div>
+      <div class="eb-grid">
+        <div class="eb-field">
+          <span class="eb-field-label">Frequency <span class="eb-req">*</span></span>
+          <input class="eb-input" list="ipc-freq-list" [(ngModel)]="form.frequency" placeholder="e.g. Every 30 min / Start &amp; End" />
+          <datalist id="ipc-freq-list">
+            <option value="At start of operation"></option>
+            <option value="At start &amp; end of operation"></option>
+            <option value="Every 15 minutes"></option>
+            <option value="Every 30 minutes"></option>
+            <option value="Hourly"></option>
+            <option value="Every 2 hours"></option>
+            <option value="Once per shift"></option>
+            <option value="Every batch"></option>
+            <option value="Beginning, middle &amp; end"></option>
+            <option value="Continuous / 100%"></option>
+          </datalist>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Performed by (role) <span class="eb-req">*</span></span>
+          <select class="eb-select" [(ngModel)]="form.responsibility">
+            <option value="Production">Production</option>
+            <option value="QA">QA</option>
+            <option value="QA/Production Alternate">QA / Production Alternate</option>
+            <option value="Both">Both (Production &amp; QA)</option>
+          </select>
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Sampling plan</span>
+          <input class="eb-input" [(ngModel)]="form.sampling_plan" placeholder="e.g. 5 units per interval" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Instrument</span>
+          <input class="eb-input" [(ngModel)]="form.instrument" placeholder="e.g. Calibrated pH meter" />
+        </div>
+        <div class="eb-field">
+          <span class="eb-field-label">Critical parameter?</span>
+          <select class="eb-select" [(ngModel)]="form.is_critical">
+            <option value="No">No</option>
+            <option value="Yes">Yes — CPP / CQA</option>
+          </select>
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Acceptance criteria (text)</span>
+          <textarea class="eb-textarea" [(ngModel)]="form.acceptance_criteria" placeholder="Narrative acceptance criteria, if any"></textarea>
+        </div>
+        <div class="eb-field eb-col-full">
+          <span class="eb-field-label">Remarks</span>
+          <textarea class="eb-textarea" [(ngModel)]="form.remarks"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-outline" (click)="modalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="save()"><i class="fas fa-save"></i> Save Check</button>
+    </div>
+  </div>
+</div>

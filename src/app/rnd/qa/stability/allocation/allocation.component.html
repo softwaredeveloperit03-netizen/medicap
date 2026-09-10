@@ -1,0 +1,166 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Stability Allocation</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/rnd/qa/stability" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table table-border">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Stability No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Dosage Form</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Product</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">No. of Batches</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Date of Initiate</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Initated By</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">View Protocol</th>
+                    </tr>
+                    <tr *ngFor="let result of results; let i = index">
+                        <td style="text-align: left;">{{ i + 1 }}</td>
+                        <td style="text-align: left;">{{ result.dosage_form }}</td>
+                        <td style="text-align: left;">{{ result.product_name }}</td>
+                        <td style="text-align: left;">{{ result.batches.length }}</td>
+                        <td style="text-align: left;">{{ result.entry_date | date : 'dd-MM-yyyy'}}</td>
+                        <td style="text-align: left;">{{ result.entry_by }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" (click)="viewProtocol(i)">view Protocol</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Stability Allocation</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Product Code:</td>
+                        <td style="text-align: left;">{{ selectedStability['product_code'] }}</td>
+                        <td style="text-align: left;width: 20%;">Grade:</td>
+                        <td style="text-align: left;">{{ selectedStability['grade'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Name of Product:</td>
+                        <td style="text-align: left;">{{ selectedStability['product_name'] }}</td>
+                        <td style="text-align: left;width: 20%;">Generic Name:</td>
+                        <td style="text-align: left;">{{ selectedStability['generic_name'] }}</td>
+                    </tr>
+                </table>
+                <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Sample Qty.:</label>
+                        <input type="text" name="packing" ngModel="{{ selectedStability['sample_qty']  }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Unit:</label>
+                        <input type="text" name="market" ngModel="{{ selectedStability['unit'] }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>No. of Batches to be charged:</label>
+                        <input type="number" name="batch" ngModel="{{ selectedStability['batches'].length }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Batch Type:</label>
+                        <input type="text" name="batch_type" ngModel="{{ selectedStability['batch_type'] }}" readonly tabindex="-1">
+                    </div>
+                    
+                </div>
+
+                <h4>Conditions:</h4>
+                <div *ngFor="let user of selectedStability['conditions']; let i = index">
+                    <h6>{{ i + 1 }}. {{ user.condition }}</h6>
+                    <table class="table table-vertical table-border">
+                        <tr>
+                            <th rowspan="2" style="vertical-align: middle; text-align: center;width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                            <th rowspan="2" style="vertical-align: middle; text-align: center;border-right: 1px solid grey; background-color: rgb(14, 67, 112); color: white;">Interval Date</th>
+                            <th [attr.colspan]="selectedStability['batches'].length" style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Batches</th>
+                        </tr>
+                        <tr>
+                            <th *ngFor="let batch of selectedStability['batches'];" style="text-align: center;border-right: 1px solid grey;">{{ batch.batch_no }}</th>
+                        </tr>
+                        <tr  *ngFor="let interval of user['interval']; let j = index">
+                            <td style="text-align: center;">{{ j + 1 }}.</td>
+                            <td style="text-align: center;">{{ interval.date | date: 'dd-MM-yyyy'}}</td>
+                            <td *ngIf="interval['status'] == 'today'" [attr.colspan]="selectedStability['batches'].length" style="text-align: center;">
+                                <button class="btn btn-sm btn-info" (click)="viewPersons(j, i)">WITHDRAW SAMPLES FROM CHEMBER</button>
+                            </td>
+                            <td *ngIf="interval['status'] == 'pending'" [attr.colspan]="selectedStability['batches'].length" style="text-align: center;">{{'common.pending' | translate}}</td>
+                            <td *ngIf="interval['status'] == 'allocate'" [attr.colspan]="selectedStability['batches'].length" style="text-align: center;">Sample Withdrawal Person Allocated</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isAllocate" [clrModalSize]="'xl'">
+    <h3 class="modal-title">WITHDRAW SAMPLES FROM CHEMBER</h3>
+    <div class="modal-body">
+        <form #personForm="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-12">
+                    <label>Interval Date:</label>
+                    <input type="text" name="interval_date" [ngModel]="interval['date']" readonly tabindex="-1">
+                </div>
+            </div>
+            <table class="table">
+                <tr>
+                    <th rowspan="2" style="vertical-align: middle;">Medicap Lot No</th>
+                    <th rowspan="2" style="vertical-align: middle;">Sample Qty</th>
+                    <th rowspan="2" style="vertical-align: middle;">Chember</th>
+                    <th colspan="3">Chember Opening</th>
+                    <th colspan="3">Chember Closing</th>
+                </tr>
+                <tr>
+                    <th>Time</th>
+                    <th>Temp.</th>
+                    <th>Humidity</th>
+                    <th>Time</th>
+                    <th>Temp.</th>
+                    <th>Humidity</th>
+                </tr>
+                <tr *ngFor="let batch of interval['batches']; let i = index">
+                    <td>{{ batch.batch_no }}</td>
+                    <td>{{ interval.singal_analysis }}</td>
+                    <td>{{ batch.chember }}</td>
+                    <td style="padding: 0px;">
+                        <input type="time" name="open_time" (ngModel)="batch.open_time" required style="margin: 0px;height: 33px;">
+                    </td>
+                    <td style="padding: 0px;">
+                        <input type="text" name="open_temp" (ngModel)="batch.open_temp" required style="margin: 0px;height: 33px;">
+                    </td>
+                    <td style="padding: 0px;">
+                        <input type="text" name="open_humidity" (ngModel)="batch.open_humidity" required style="margin: 0px;height: 33px;">
+                    </td>
+                    <td style="padding: 0px;">
+                        <input type="time" name="close_time" (ngModel)="batch.close_time" required style="margin: 0px;height: 33px;">
+                    </td>
+                    <td style="padding: 0px;">
+                        <input type="text" name="close_temp" (ngModel)="batch.close_temp" required style="margin: 0px;height: 33px;">
+                    </td>
+                    <td style="padding: 0px;">
+                        <input type="text" name="close_humidity" (ngModel)="batch.close_humidity" required style="margin: 0px;height: 33px;">
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="allocateInterval(personForm)">WITHDRAW</button>
+        <button type="button" class="btn btn-danger" (click)="isAllocate = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>

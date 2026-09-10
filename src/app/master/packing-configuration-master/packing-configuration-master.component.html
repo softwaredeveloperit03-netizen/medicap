@@ -1,0 +1,257 @@
+<div class="pcm-page">
+  <div class="pcm-hero">
+    <div class="pcm-hero__text">
+      <h1>Packing configuration master</h1>
+      <p>Define reusable packing templates by dosage presentation. Formulation products can pick a template to pre-fill packing fields.</p>
+    </div>
+    <div class="pcm-hero__actions">
+      <button type="button" class="btn btn-primary" (click)="openNew()">
+        <clr-icon shape="plus"></clr-icon> New configuration
+      </button>
+      <a class="btn btn-success" routerLink="/master/product/new-formulation">
+        Use in New Product
+      </a>
+      <a class="btn btn-outline" routerLink="/master">Close</a>
+    </div>
+  </div>
+
+  <div class="pcm-pattern card">
+    <div class="card-block">
+      <h3 class="pcm-subtitle">Title &amp; pattern guide</h3>
+      <p class="pcm-muted">{{ patternGuide }}</p>
+      <ul class="pcm-bullets">
+        <li><strong>Configuration title</strong> — short name shown in product master (required).</li>
+        <li><strong>Dosage nature</strong> — aligns template with typical pharma presentations.</li>
+        <li><strong>Combination title</strong> — optional second line for combo kits / co-packs.</li>
+        <li><strong>Pattern hint</strong> — free-text guidance; also copied into product pack notes when applied.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="pcm-log card">
+    <div class="card-header pcm-log__head">
+      <span class="pcm-log__title">Configuration log</span>
+      <input
+        type="search"
+        class="pcm-search"
+        [(ngModel)]="searchQuery"
+        placeholder="Filter by title, dosage, combination…"
+        aria-label="Filter log"
+      />
+    </div>
+    <div class="card-block pcm-log__body">
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column class="pcm-col-id">#</clr-dg-column>
+        <clr-dg-column>Configuration title</clr-dg-column>
+        <clr-dg-column>Dosage nature</clr-dg-column>
+        <clr-dg-column>Combination title</clr-dg-column>
+        <clr-dg-column>Entry by</clr-dg-column>
+        <clr-dg-column>Entry date</clr-dg-column>
+        <clr-dg-column>Status</clr-dg-column>
+        <clr-dg-column class="pcm-col-action">Action</clr-dg-column>
+
+        <clr-dg-row *ngFor="let row of filteredLog; let i = index" [clrDgItem]="row">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.configuration_title }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.dosage_nature || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.combination_title || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.entry_by || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.entry_date || '—' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span class="pcm-badge" [class.pcm-badge--active]="row.is_active == 1" [class.pcm-badge--inactive]="row.is_active != 1">
+              {{ row.is_active == 1 ? 'Active' : 'Inactive' }}
+            </span>
+          </clr-dg-cell>
+          <clr-dg-cell>
+            <button
+              type="button"
+              class="btn btn-sm btn-info"
+              (click)="openView(row)"
+              style="margin-right: 4px;"
+            >
+              View
+            </button>
+            <button
+              *ngIf="row.is_active == 1"
+              type="button"
+              class="btn btn-sm btn-warning-outline"
+              (click)="deactivate(row)"
+            >
+              Deactivate
+            </button>
+            <span *ngIf="row.is_active != 1" class="pcm-muted"></span>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-footer *ngIf="filteredLog.length === 0 && !loading">
+          <span class="pcm-empty">No templates yet. Use <strong>New configuration</strong>.</span>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="showFormModal" [clrModalSize]="'lg'" (clrModalAlternateClose)="closeForm()">
+  <h3 class="modal-title">New packing configuration</h3>
+  <div class="modal-body pcm-modal-body">
+    <div class="pcm-grid">
+      <div class="pcm-field pcm-field--full">
+        <label>Configuration title <span class="req">*</span></label>
+        <input type="text" [(ngModel)]="configuration_title" placeholder="e.g. Alu-Alu blister – PVC mono – shipper" />
+      </div>
+      <div class="pcm-field">
+        <label>Dosage / presentation</label>
+        <select [(ngModel)]="dosage_nature">
+          <option *ngFor="let o of dosageNatureOptions" [value]="o.v">{{ o.l }}</option>
+        </select>
+      </div>
+      <div class="pcm-field">
+        <label>Combination / kit title (optional)</label>
+        <input type="text" [(ngModel)]="combination_title" placeholder="e.g. Combikit A + B" />
+      </div>
+      <div class="pcm-field pcm-field--full">
+        <label>Pattern hint &amp; notes (optional)</label>
+        <textarea rows="3" [(ngModel)]="pattern_hint" placeholder="Guidance for QA / production…"></textarea>
+      </div>
+      <div class="pcm-field">
+        <label>Primary packing (preset)</label>
+        <select [(ngModel)]="primary_packing">
+          <option value="">Select…</option>
+          <option *ngFor="let p of primaryPackingPresets" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="pcm-field">
+        <label>Primary subtype / material</label>
+        <input type="text" [(ngModel)]="primary_subtype" placeholder="e.g. Alu-Alu, HDPE, Glass" />
+      </div>
+      <div class="pcm-field">
+        <label>Unit (count)</label>
+        <select [(ngModel)]="unit">
+          <option value="">—</option>
+          <option value="Nos">Nos</option>
+          <option value="Kg">Kg</option>
+          <option value="ml">ml</option>
+          <option value="Liter">Liter</option>
+          <option value="mg">mg</option>
+        </select>
+      </div>
+      <div class="pcm-field">
+        <label>Mono carton</label>
+        <select [(ngModel)]="ismono">
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div class="pcm-field">
+        <label>Outer carton</label>
+        <select [(ngModel)]="isouter">
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div class="pcm-field">
+        <label>Qty / primary pack</label>
+        <input type="text" [(ngModel)]="primary_qty" />
+      </div>
+      <div class="pcm-field">
+        <label>Mono qty</label>
+        <input type="text" [(ngModel)]="mono_qty" />
+      </div>
+      <div class="pcm-field">
+        <label>Outer qty</label>
+        <input type="text" [(ngModel)]="outer_qty" />
+      </div>
+      <div class="pcm-field">
+        <label>Shipper qty</label>
+        <input type="text" [(ngModel)]="shipper_qty" />
+      </div>
+      <div class="pcm-field pcm-field--full">
+        <label>Combination pack text (maps to product Combination)</label>
+        <input type="text" [(ngModel)]="combination_pack" placeholder="Optional combo description stored on product" />
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeForm()">Cancel</button>
+    <button type="button" class="btn btn-primary" [disabled]="saving" (click)="saveTemplate()">Save to database</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="showViewModal" [clrModalSize]="'lg'" (clrModalAlternateClose)="closeView()">
+  <h3 class="modal-title">View packing configuration</h3>
+  <div class="modal-body pcm-modal-body">
+    <div class="pcm-grid">
+      <div class="pcm-field pcm-field--full">
+        <label>Configuration title</label>
+        <input type="text" [ngModel]="configuration_title" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Dosage / presentation</label>
+        <input type="text" [ngModel]="dosageNatureLabel(dosage_nature)" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Combination / kit title</label>
+        <input type="text" [ngModel]="combination_title" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field pcm-field--full">
+        <label>Pattern hint &amp; notes</label>
+        <textarea rows="3" [ngModel]="pattern_hint" [ngModelOptions]="{standalone: true}" readonly tabindex="-1"></textarea>
+      </div>
+      <div class="pcm-field">
+        <label>Primary packing</label>
+        <input type="text" [ngModel]="primary_packing" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Primary subtype / material</label>
+        <input type="text" [ngModel]="primary_subtype" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Unit (count)</label>
+        <input type="text" [ngModel]="unit" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Mono carton</label>
+        <input type="text" [ngModel]="ismono" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Outer carton</label>
+        <input type="text" [ngModel]="isouter" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Qty / primary pack</label>
+        <input type="text" [ngModel]="primary_qty" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Mono qty</label>
+        <input type="text" [ngModel]="mono_qty" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Outer qty</label>
+        <input type="text" [ngModel]="outer_qty" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Shipper qty</label>
+        <input type="text" [ngModel]="shipper_qty" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field pcm-field--full">
+        <label>Combination pack text</label>
+        <input type="text" [ngModel]="combination_pack" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Entry by</label>
+        <input type="text" [ngModel]="viewMeta.entry_by" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Entry date</label>
+        <input type="text" [ngModel]="viewMeta.entry_date" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+      <div class="pcm-field">
+        <label>Status</label>
+        <input type="text" [ngModel]="viewMeta.is_active == 1 ? 'Active' : 'Inactive'" [ngModelOptions]="{standalone: true}" readonly tabindex="-1" />
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="closeView()">Close</button>
+  </div>
+</clr-modal>

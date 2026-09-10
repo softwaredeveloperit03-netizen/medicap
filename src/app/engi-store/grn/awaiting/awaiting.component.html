@@ -1,0 +1,269 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Goods Receipt Notes</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/engi-store/grn"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getPendingGRNGeneralMaterial()"  >
+                    <option></option>
+                    <option>Engg Store Mech</option>
+                    <option>Engg Store Elect</option>
+                    <option>Stationary</option>
+                    <option>Housekeeping</option>
+                    <option>Canteen</option>
+                    <option>Building Material</option>
+                    <option>Machine Spares (Dedicated)</option>
+                    <option>Machine Spares (Common)</option>
+                    <option>QC Materials</option>
+                    <option>IT Materials</option>
+                    <option>Others</option>
+                    <option>Equipment</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+              <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                  <clr-dg-column>Material Type</clr-dg-column>
+                  <clr-dg-column>PO No./Dt.</clr-dg-column>
+                  <clr-dg-column>Packaging Slip/Dt.</clr-dg-column>
+                  <clr-dg-column>Vendor Name</clr-dg-column>
+                  <clr-dg-column>Material's With Status</clr-dg-column>
+                  <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          
+                  <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.po_no}} / {{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.ch_no}} / {{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                      <clr-dg-cell style="margin:0;padding:0;">
+                          <table class="tableCompact">
+                            <tr>
+                              <td style="text-align:left;"><strong>Material</strong></td>
+                              <td><strong>Receiving</strong></td>
+                              <td><strong>Weighing</strong></td>
+                              <td ><strong>Billing Qty.</strong></td>
+                              <td ><strong>Short. Qty.</strong></td>
+                              <td ><strong>Damage Qty.</strong></td>
+                              <td ><strong>Received Qty.</strong></td>
+                            </tr>
+                            <tr *ngFor="let mat of result.DisplayMatStatus">
+                              <td style="color:green;text-align:left;"><strong>{{mat.material_name}}</strong></td>
+                              <td [ngStyle]="{'color': (mat.receiving || '').toLowerCase() === 'approve' ? '#28a745' : '#dc3545'}"><strong>{{mat.receiving | uppercase}}</strong></td>
+                              <td [ngStyle]="{'color': (mat.weighing || '').toLowerCase() === 'approved' ? '#28a745' : '#dc3545'}"><strong>{{mat.weighing | uppercase}}</strong></td>
+                              <td style="font-weight: bolder;color: green;">{{ mat.qty }}  {{ mat.unit }}</td>
+                              <td style="font-weight: bolder;color: green;">{{ mat.short_qty || 0}}  {{ mat.unit }}</td>
+                              <td style="font-weight: bolder;color: green;">{{ mat.hold_qty || 0}}  {{ mat.unit }}</td>
+                              <td style="font-weight: bolder;color: green;">{{ mat.received_qty || 0}}  {{ mat.unit }}</td>
+                            </tr>
+                          </table>
+                      </clr-dg-cell>
+                      <clr-dg-cell>
+                            <button class="btn btn-sm btn-info" (click)="viewResult(result)">{{'common.view' | translate}}</button>
+                      </clr-dg-cell>
+                  </clr-dg-row>
+
+              </clr-datagrid>
+            </div>
+ 
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger"routerLink="/engi-store/grn">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Goods Receipt Note</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView = false"> {{'common.close' | translate}} </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <h3>Challan Details:</h3>
+        <table class="table table-border" style="border: 1px solid black;">
+        
+   
+          <tr >
+            <td style="text-align: left;"><b>Vendor No. :</b></td>
+            <td style="text-align: left;">{{ selectedResult['vendor_no'] }}</td>
+            <td style="text-align: left;"><b>Vendor Name :</b></td>
+            <td style="text-align: left;">{{ selectedResult['vendor_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_type'] }}</td>
+          </tr>
+          <tr>
+            <td style="margin:0;padding:0;" colspan="4">
+                <table class="tableCompact">
+                  <tr>
+                    <td style="background-color:aquamarine; text-align:left;"><strong>Material</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Receiving</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Weighing</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Billing Qty.</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Short. Qty.</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Damage Qty.</strong></td>
+                    <td style="background-color:aquamarine; "><strong>Received Qty.</strong></td>
+                  </tr>
+                  <tr *ngFor="let mat of selectedResult['DisplayMatStatus']">
+                    <td style="color:green;text-align:left;"><strong>{{mat.material_name}}</strong></td>
+                    <td [ngStyle]="{'color': (mat.receiving || '').toLowerCase() === 'approve' ? '#28a745' : '#dc3545'}"><strong>{{mat.receiving | uppercase}}</strong></td>
+                    <td [ngStyle]="{'color': (mat.weighing || '').toLowerCase() === 'approved' ? '#28a745' : '#dc3545'}"><strong>{{mat.weighing | uppercase}}</strong></td>
+                    <td style="font-weight: bolder;color: blue;">{{ mat.qty }}  {{ mat.unit }}</td>
+                    <td style="font-weight: bolder;color: blue;">{{ mat.short_qty || 0}}  {{ mat.unit }}</td>
+                    <td style="font-weight: bolder;color: blue;">{{ mat.hold_qty || 0}}  {{ mat.unit }}</td>
+                    <td style="font-weight: bolder;color: blue;">{{ mat.received_qty || 0}}  {{ mat.unit }}</td>
+                  </tr>
+                </table>
+            </td>
+            <td colspan="2"></td>
+          </tr>
+ 
+        </table>
+    
+        <form #grnForm="ngForm">
+          <div class="clr-row">
+
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"> </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Date : <span style="color:red;">*</span></strong></label>
+                <input type="date" name="grnDate" ngModel required>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Remark (if Any) : </strong></label>
+                <input type="text" name="remark" ngModel>
+              </div>
+
+          </div>
+
+          <h3>Labeling Details:</h3>
+          <div class="clr-row">
+              <table class="table table-border" >
+                <tr>
+                  <td style="font-weight:bolder; background-color:aqua;">Material Type</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Material Code</td>
+                  <td style="font-weight:bolder; background-color:aqua;text-align:left;">Material Name</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Medicap Lot No</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Batch Qty</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Pack Size</td>
+                  <td style="font-weight:bolder; background-color:aqua;">{{'common.unit' | translate}}</td>
+                  <td style="font-weight:bolder; background-color:aqua;">No Of Containers</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Mfg / Exp Date</td>
+                  <td style="font-weight:bolder; background-color:aqua;">Action:</td>
+                </tr>
+                <tr *ngFor="let list of selectedResult['batches'] ;let i=index">
+                  <td style="font-weight: bolder;color: blue;">{{list.material_type}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.material_code}}</td>
+                  <td style="font-weight: bolder;color: blue;text-align:left;">{{list.material_name}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.batch_no}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.qty_received}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.pack_size || 'NA'}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.unit}}</td>
+                  <td style="font-weight: bolder;color: blue;">{{ list.total_containers }}</td>
+                  <td style="font-weight: bolder;color: blue;">{{list.mfg_date | date: 'dd-MM-yyyy'}} / {{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+
+                  <td style="font-weight: bolder;color: blue;" >
+                      <button class="btn btn-info btn-sm" [disabled]="list.coa_files === ''"  (click)="viewCoafile(list.coa_files)">{{'common.view' | translate}}</button>  
+                  </td>
+                </tr>
+              </table>
+          </div>
+
+          <h3>Checklist:</h3>
+          <div class="clr-row">
+            <table class="table table-border">
+              <tr>
+                <th style=" background-color: aquamarine; "><strong>{{'common.table.srNo' | translate}}</strong></th>
+                <th style=" background-color: aquamarine; text-align: left; "><strong>Parameters</strong></th>
+                <th style=" background-color: aquamarine; "><strong>Remarks <span style="color: red;">*</span></strong></th>
+              </tr>
+              <tr *ngFor="let hr of checkPointData;let i = index" >
+                <td ><strong>{{i+1.}}</strong></td>
+                <td style="text-align:left;">{{hr.check_point}}</td>
+                <td style="margin: 0;padding: 0;">
+                        <input *ngIf="hr.evl_pr=='1'"  type="text" min="0" name="check{{i}}" [(ngModel)]="hr.check" style="margin: 0;">
+                        <select  name="check{{i}}" [(ngModel)]="hr.check" required style="margin: 0;" *ngIf="hr.evl_pr!='1'">
+                          <option ></option>
+                          <option *ngIf="hr.evl_pr=='2'">Yes</option>
+                          <option *ngIf="hr.evl_pr=='2'">No</option>
+                          <option *ngIf="hr.evl_pr=='3'">OK</option>
+                          <option *ngIf="hr.evl_pr=='3'">Not Ok</option>
+                          <option *ngIf="hr.evl_pr=='4'" >Satisfactory</option>
+                          <option *ngIf="hr.evl_pr=='4'" >Not Satisfactory</option>
+                          <option *ngIf="hr.evl_pr=='5'">Applicable</option>
+                          <option *ngIf="hr.evl_pr=='5'">Not Applicable</option>
+                          <option *ngIf="hr.evl_pr=='6'">Cleaned</option>
+                          <option *ngIf="hr.evl_pr=='6'">Not Cleaned</option>
+                          <option *ngIf="hr.evl_pr=='7'">Sealed </option>
+                          <option *ngIf="hr.evl_pr=='7'">Unsealed</option>
+                          <option *ngIf="hr.evl_pr=='8'">Verified</option>
+                          <option *ngIf="hr.evl_pr=='8'">Not Verfied</option>
+                          <option *ngIf="hr.evl_pr=='9'">Covered</option>
+                          <option *ngIf="hr.evl_pr=='9'">Uncovered</option>
+                          <option>NA</option>
+                      </select>
+                </td>
+              </tr>
+
+            </table>
+          </div> 
+
+        </form>
+
+      
+     
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="prepareGRN(grnForm)">GENERATE GRN</button>
+      <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+
+  
+    <!-- <div class="card">
+      <div class="card-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+            <h5><b>Material Wise Monthly purchase Chart</b></h5>
+            <canvas id="MaterialWiseMonthlyChart">{{ rawMaterialmonthly }} </canvas>
+          </div>
+  
+        </div>
+      </div>
+    </div> -->
+  
+</div>
+
+
+ 

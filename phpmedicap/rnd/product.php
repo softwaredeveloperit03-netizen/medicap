@@ -1,0 +1,198 @@
+<?php
+    require '../db.php';
+    require '../token.php';
+    header('Access-Control-Allow-Origin: *');
+    date_default_timezone_set("Asia/Kolkata");
+    
+//  ini_set('display_errors', 1);
+//  error_reporting(E_ALL);
+ 
+    $token = $_GET["token"];
+    $timestamp = time();
+    $entry_date = date("Y-m-d h:i:s", $timestamp);
+    $input = json_decode(file_get_contents('php://input'),true);
+
+    $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+    $result = $conn->query($sql);
+    $_GET["emp_id"] = "";
+    $_GET["department"] = "";
+    if($result->num_rows > 0){
+    while($row = $result->fetch_assoc()){
+	    $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+	    $string = explode("$",$string);
+	    $_GET["emp_id"] = $string[0];
+	    $_GET["department"] = $string[1];
+	    break;
+    }
+
+    $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "'.$_GET["type"].'", "actiontime": "'.$entry_date.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'"}';
+    $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+    
+    if ($_GET["type"] == "saveProduct") {
+        $sql = "INSERT INTO product_dev (user_no, Product_details,Product_list,product_type,product_name,generic_name,Strength, dev_nature, c_brand, c_strength, c_dosage_form, c_color, c_primary,
+        c_secondary, c_details, e_brand, e_strength, e_dosage_form, e_color, e_primary, e_secondary, e_details, dev_requirement,
+        dev_details, dev_project, dev_study, dev_analytical, dev_package, estimate_time, country,other,entry_by, entry_date)
+        VALUES ('".$_GET["user_no"]."', '".$input["product_details"]."','".$input["product_list"]."','".$input["product_type"]."','".$input["product_name"]."',
+        '".$input["generic_name"]."','".$input["Strength"]."','".$input["dev_nature"]."', '".$input["c_brand"]."',
+        '".$input["c_strength"]."', '".$input["c_dosage_form"]."', '".$input["c_color"]."', '".$input["c_primary"]."', 
+        '".$input["c_secondary"]."', '".$input["c_details"]."', '".$input["e_brand"]."', '".$input["e_strength"]."',
+        '".$input["e_dosage_form"]."', '".$input["e_color"]."', '".$input["e_primary"]."', '".$input["e_secondary"]."',
+        '".$input["e_details"]."', '".$input["dev_requirement"]."', '".$input["dev_details"]."', '".$input["dev_project"]."',
+        '".$input["dev_study"]."', '".$input["dev_analytical"]."', '".$input["dev_package"]."', '".$input["estimate_time"]."',
+        '".$input["country"]."',  '".$input["other"]."', '".$_GET["emp_id"]."', '$entry_date')";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getPendingProducts") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE user_no='".$_GET["user_no"]."' AND status='pending' order by 1 desc";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "updateProduct") {
+        $sql = "UPDATE product_dev SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getProductsLog") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE user_no='".$_GET["user_no"]."' AND  status='pending'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "getPendingRequirements") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE user_no='".$_GET["user_no"]."' AND status='approve' AND requirement='pending'  order by 1 desc";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getApprovedRequirements") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE requirements_list=''  AND status='approve' AND requirement='pending'  order by 1 desc";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "saveRequirement") {
+        $sql = "UPDATE product_dev SET raws='".json_encode($input["raws"])."', equipments='".json_encode($input["equipments"])."', staff='".json_encode($input["staff"])."', books='".json_encode($input["books"])."', requirement_by='".$_GET["emp_id"]."', requirement_date='$entry_date', requirement='inprocess' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } else if ($_GET["type"] == "getInprocessRequirements") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE requirement='inprocess'  order by 1 desc";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["raws"] = json_decode($row["raws"]);
+                $row["equipments"] = json_decode($row["equipments"]);
+                $row["staff"] = json_decode($row["staff"]);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET["type"] == "updateInprocessRequirement") {
+        $sql = "UPDATE product_dev SET requirement='".$_GET["status"]."' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "updatRequirementList") {
+          
+        $id = $input["id"];
+        $data = json_encode($input["list"]);
+        //echo $data;
+        $sql = "UPDATE product_dev SET requirements_list='".$data."' WHERE id='".$id."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "getRequirementsLog") {
+        $output = array();
+        $sql = "SELECT * FROM product_dev WHERE requirement IN ('approve', 'reject')  order by 1 desc";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["raws"] = json_decode($row["raws"]);
+                $row["equipments"] = json_decode($row["equipments"]);
+                $row["staff"] = json_decode($row["staff"]);
+                $row["books"] = json_decode($row["books"]);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+    else if($_GET['type'] == 'PDRpdf'){
+        $_GET['filename'] = 'PRODUCT DEVELOPMENT REQUEST'; $_GET['pdftype'] = 'headfoot'; include("../pdfimp.php");
+        $html.='
+            <table>
+                <tr>
+                    <td rowspan="2" style="width:5%">1.</td>
+                    <td rowspan="2" style="width:15%">Initiated by</td>
+                    <td style="width:80%">Name :</td>
+                </tr>
+                <tr>
+                    <td>Sign & Date:</td>
+                </tr>
+                <tr>
+                    <td>2.</td>
+                    <td style="width:95%"><b>Product Details :</b></td>
+                </tr>
+                <tr>
+                    <td rowspan="4">3.</td>
+                    <td><b>Nature of Development :</b></td>
+                </tr>
+                <tr>
+                    <td>Current Product for improving formulation</td>
+                    <td>New Product</td>
+                </tr>
+                <tr>
+                    <td>Change in Excipients</td>
+                    <td>Cost Saving</td>
+                </tr>
+                <tr>
+                    <td style="width:95%;">To match the product with competitor Brand’s Profile</td>
+                </tr>
+                <tr>
+                    <td>4.</td>
+                    <td>Competitor’s Brand Name & Details :</td>
+                </tr>
+            </table>
+        ';
+        EOD;
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('', 'I');
+    }
+} else {
+    echo "{\"status\":\"invalid\"}";
+}
+
+$conn->close();
+?>

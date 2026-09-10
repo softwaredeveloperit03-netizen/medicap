@@ -1,0 +1,130 @@
+<div class="so-page-wrap" *ngIf="!loading && order">
+  <div class="card so-form-card">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">{{ formId }} — Shipping Order (View)</div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+          <button class="btn btn-sm btn-danger" routerLink="/qc/shipping-order/log">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="meta-bar">
+        <span><strong>Order No.:</strong> {{ order.order_no }}</span>
+        <span><strong>Status:</strong> {{ statusLabel(order.status) }}</span>
+        <span *ngIf="order.quotation_ref"><strong>Quotation:</strong> {{ order.quotation_ref }}</span>
+      </div>
+
+      <div class="form-title">SHIPPING ORDER FORM</div>
+
+      <div class="address-grid">
+        <div class="address-block">
+          <div class="addr-row">
+            <label>Ship To</label>
+            <span>{{ order.ship_to }}</span>
+            <label class="po-label">P.O.#</label>
+            <span>{{ order.po_number }}</span>
+          </div>
+          <label>Address</label>
+          <div class="readonly-text">{{ order.ship_to_address }}</div>
+        </div>
+        <div class="address-block">
+          <div class="addr-row">
+            <label>From</label>
+            <span class="from-company">{{ fromInfo.company }}</span>
+          </div>
+          <label>Address</label>
+          <div class="from-address">
+            <div>{{ fromInfo.line1 }}</div>
+            <div>{{ fromInfo.line2 }}</div>
+            <div>Tel: {{ order.from_tel || '—' }} &nbsp; Fax: {{ order.from_fax || '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-block" *ngIf="order.tests_required">
+        <label>Tests Required</label>
+        <div class="readonly-text">{{ order.tests_required }}</div>
+      </div>
+
+      <div class="sample-table-wrap">
+        <table class="so-sample-table">
+          <thead>
+            <tr>
+              <th>Lab sample #</th>
+              <th>Quantity</th>
+              <th>Lot/Batch#</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of order.lines">
+              <td>{{ row.lab_sample_no }}</td>
+              <td>{{ row.quantity }}</td>
+              <td>{{ row.lot_batch_no }}</td>
+              <td>{{ row.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="signoff-section">
+        <h4>Sign-off</h4>
+        <div class="sign-grid">
+          <div class="sign-block">
+            <label>Packaged By</label>
+            <div class="sign-value">{{ order.packaged_by_name || order.packaged_by || '—' }}</div>
+            <label>Date</label>
+            <div>{{ order.packaged_date | date:'dd-MM-yyyy' }}</div>
+          </div>
+          <div class="sign-block checked-block">
+            <app-checked-by-panel
+              label="Checked By"
+              [byName]="order.checked_by_name || order.checked_by"
+              [byDate]="order.checked_date"
+              [canCheck]="canCheck()"
+              [checking]="processing"
+              checkLabel="Sign Check"
+              (check)="checkOrder()">
+            </app-checked-by-panel>
+          </div>
+        </div>
+      </div>
+
+      <div class="workflow-section" *ngIf="order.status !== 'draft' && order.status !== 'pending_check'">
+        <h4>Shipping &amp; Results (Procedure §1.3–1.4)</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-4" *ngIf="order.shipped_by || order.shipped_date">
+            <strong>Shipped By:</strong> {{ order.shipped_by_name || order.shipped_by }} |
+            {{ order.shipped_date | date:'dd-MM-yyyy' }}
+            <div *ngIf="order.shipping_vendor"><strong>Vendor:</strong> {{ order.shipping_vendor }}</div>
+          </div>
+          <div class="clr-col-lg-4" *ngIf="order.results_reviewed_by">
+            <strong>QC Results Reviewed By:</strong> {{ order.results_reviewed_by_name || order.results_reviewed_by }} |
+            {{ order.results_reviewed_date | date:'dd-MM-yyyy' }}
+          </div>
+        </div>
+        <div *ngIf="order.results_notes" class="readonly-text">{{ order.results_notes }}</div>
+      </div>
+
+      <div class="action-section" *ngIf="canMarkShipped() || canMarkResultsReceived() || canReviewResults()">
+        <div *ngIf="canMarkShipped()">
+          <button class="btn btn-primary" (click)="markShipped()" [disabled]="processing">Mark Shipped (§1.3)</button>
+        </div>
+        <div *ngIf="canMarkResultsReceived()">
+          <button class="btn btn-secondary" (click)="markResultsReceived()" [disabled]="processing">Results Received from Contract Lab</button>
+        </div>
+        <div *ngIf="canReviewResults()" class="results-review-block">
+          <label>QC Review Notes (§1.4.1)</label>
+          <textarea rows="3" [(ngModel)]="resultsNotes" placeholder="Review and approval notes"></textarea>
+          <button class="btn btn-success" (click)="reviewResults()" [disabled]="processing">Approve QC Results Review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading"><div class="card-block">Loading...</div></div>
+<div class="card" *ngIf="!loading && !order"><div class="card-block">Record not found.</div></div>

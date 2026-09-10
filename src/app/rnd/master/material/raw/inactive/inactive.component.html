@@ -1,0 +1,274 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">In-Active Raw/Packing Material</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/master/material/">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+  
+    <div class="card-block">
+      <div class="clr-row">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Material Type:<span style="color: red">*</span></label>
+          <select name="material_type" [(ngModel)]="material_type" required (change)="getMaterialsLog()">
+            <option></option>
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+  
+          <clr-dg-column>Material Group/Type</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Nature of Material</clr-dg-column>
+           <clr-dg-column>UOM</clr-dg-column>
+           <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>Entry Date</clr-dg-column>
+          <clr-dg-column>Entry By</clr-dg-column>
+          <clr-dg-column>In Active Date</clr-dg-column>
+          <clr-dg-column>InActivated By</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials" [clrDgItem]="result">
+            <clr-dg-cell>{{ result.material_subtype || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_nature || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.uom || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span style="color: green;" *ngIf="result.status == 'approve'"><b>{{'common.approved' | translate}}</b></span>
+              <span style="color: rgb(156, 156, 7);" *ngIf="result.status == 'Pending'"><b>{{'common.pending' | translate}}</b></span>
+              <span style="color: red;" *ngIf="result.status == 'In-Active'"><b>In-Active</b></span>
+              <span style="color: red;" *ngIf="result.status == 'Absolute'"><b>Obsolete</b></span>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ formatEntryDate(result.entry_date || result.created_date) }}</clr-dg-cell>
+            <clr-dg-cell>{{ getEntryByDisplay(result) }}</clr-dg-cell>
+            <clr-dg-cell>{{ formatEntryDate(result.in_active_date || result.inactive_date) }}</clr-dg-cell>
+            <clr-dg-cell>{{ getInactivatedByDisplay(result) }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm mat-btn-view" (click)="view(result.id)" title="View"><clr-icon shape="eye"></clr-icon></button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+  
+      </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" routerLink="/master/material/">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+  
+  
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">In-Active {{material_type}} Approval</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+  
+       <form #materialForm="ngForm">
+          <div class="clr-row">
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Group/Type:<span style="color: red">*</span></label>
+              <input type="text" name="material_type" [ngModel]="getDisplayVal(selectedResult['material_type'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Sub Group/Type:<span style="color: red">*</span></label>
+              <input type="text" name="material_subtype" [ngModel]="getDisplayVal(selectedResult['material_subtype'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+              <label>Nature Of Material:<span style="color: red">*</span></label>
+              <input type="text" name="material_nature" [ngModel]="getDisplayVal(selectedResult['material_nature'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+              <label>Category:<span style="color: red">*</span></label>
+              <input type="text" name="category" [ngModel]="getDisplayVal(selectedResult['category'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:<span style="color: red">*</span></label>
+              <input type="text" name="material_name" [ngModel]="getDisplayVal(selectedResult['material_name'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Material Name Report :</label>
+              <input type="text" name="material_name_report" [ngModel]="getDisplayVal(selectedResult['material_name_report'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Grade : <span style="color:red">*</span></label>
+              <input type="text" name="grade" [ngModel]="getDisplayVal(selectedResult['grade'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Item Unit : <span style="color:red">*</span></label>
+              <input type="text" name="uom" [ngModel]="getDisplayVal(selectedResult['uom'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Billing Unit : <span style="color:red">*</span></label>
+              <input type="text" name="alternate_uom" [ngModel]="getDisplayVal(selectedResult['alternate_uom'])" readonly required>
+            </div>
+
+            <!-- Type & Size/Specification hidden per request (inactive list)
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Type :</label>
+              <input type="text" name="type" [ngModel]="getDisplayVal(selectedResult['type'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Size/Specification : <span style="color:red">*</span></label>
+              <input type="text" name="pack_size" [ngModel]="getDisplayVal(selectedResult['pack_size'])" readonly required>
+            </div>
+            -->
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Color :</label>
+              <input type="text" name="color_index" [ngModel]="getDisplayVal(selectedResult['color_index'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Dimension :</label>
+              <input type="text" name="dimension" [ngModel]="getDisplayVal(selectedResult['dimension'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Material Made of :</label>
+              <input type="text" name="madeOf" [ngModel]="getDisplayVal(selectedResult['madeOf'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>HSN :</label>
+              <input type="text" name="hsn" [ngModel]="getDisplayVal(selectedResult['hsn'])" readonly>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Tax : <span style="color:red">*</span></label>
+              <input type="text" name="gst" [ngModel]="getDisplayVal(selectedResult['gst'])" readonly required>
+            </div>
+ 
+
+            <div class="clr-col-lg-6 clr-col-md-6  clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['equivalancy_applicable']=='Yes'">
+              <label>Equivalant To</label>
+              <table class="table table-border remove-side-arrow-container">
+                <tr>
+                  <td style="background-color:aquamarine ; font-weight: bold;">Material Name</td>
+                  <td style="background-color:aquamarine ; font-weight: bold;">Equivalancy Factor</td>
+                </tr>
+                <tr *ngFor="let item of (selectedResult['equivalent_to'] || []); let i = index;">
+                  <td>{{ getDisplayVal(item?.equivalency) }}</td>
+                  <td>{{ getDisplayVal(item?.equivalancy_factor) }}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+              <label>Sub Type <span style="color:red">*</span></label>
+              <input type="text" name="sub_type" [ngModel]="getDisplayVal(selectedResult['sub_type'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['sub_type'] == 'Printed'">
+              <label>Sub Type <span style="color:red">*</span></label>
+              <input type="text" name="artwork" [ngModel]="getDisplayVal(selectedResult['artwork'])" readonly required>
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['sub_type'] == 'Printed'">
+              <label>Product <span style="color:red">*</span></label>
+              <input type="text" name="product_n" [ngModel]="getDisplayVal(selectedResult['product_n'])" readonly required>
+            </div>
+  
+          </div>
+
+          <div class="clr-row">
+            <div class="card">
+              <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Other Information</div>
+                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                </div>
+              </div>
+              <div class="card-block">
+                <div class="row container-fluid">
+                  <div class="clr-row">
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container"
+                      *ngIf="selectedResult['material_nature'] == 'LIQUID'">
+                      <label>Density (G/Ml) :</label>
+                      <input type="text" name="density" [ngModel]="getDisplayVal(selectedResult['density'])" readonly>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Storage Condition :</label>
+                      <input type="text" name="storage_condition" [ngModel]="getDisplayVal(selectedResult['storage_condition'])" readonly>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                      <label>Min. Inventory Level :</label>
+                      <input type="text" name="inventory" [ngModel]="getDisplayVal(selectedResult['inventory'])" readonly>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                      <label>Specific Gravity :</label>
+                      <input type="text" name="specificGravity" [ngModel]="getDisplayVal(selectedResult['specificGravity'])" readonly>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                      <label>Texture :</label>
+                      <input type="text" name="texture" [ngModel]="getDisplayVal(selectedResult['texture'])" readonly>
+                    </div>
+
+ 
+                    <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"  
+                    *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                      <label>MSDS Upload / Product Specification :</label> <br>
+                      <button [disabled]="selectedResult['m_photo'] == 'NA'" 
+                      class="btn  btn-info" (click)="viewMsds(selectedResult['m_photo'])">VIEW FILE</button>
+                    </div> -->
+  
+            
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12 remove-side-arrow-container">
+                      <label>QC Lead Time(Days)</label>
+                      <input type="text" name="lead_time" [ngModel]="getDisplayVal(selectedResult['lead_time'])" readonly>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Description :</label>
+                      <input type="text" name="description" [ngModel]="getDisplayVal(selectedResult['description'])" readonly>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Safety :</label>
+                      <input type="text" name="safety" [ngModel]="getDisplayVal(selectedResult['safety'])" readonly>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form> 
+      </div>
+    </div>
+    <div class="card-footer">
+         <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+</div>

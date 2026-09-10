@@ -1,0 +1,343 @@
+﻿<div class="hr-clr-dashboard">
+<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-3" style="color: aliceblue; margin-top: -2px; text-align: left;">Additional User Rights</div>
+      <div class="clr-col-lg-9" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" [routerLink]="returnTo" style="color: white; border: 1px solid red;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-block">
+      <div class="filter-header-panel">
+        <div class="filter-item">
+          <label class="filter-label"><strong>Select Department</strong></label>
+          <select name="search_department" [(ngModel)]="search_department" (change)="getRights()" class="form-control filter-select">
+            <option value="ALL EMP">ALL EMP</option>
+            <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label"><strong>Search</strong></label>
+          <div class="search-input-wrapper">
+            <input
+              type="text"
+              class="form-control search-input"
+              placeholder="Search by Emp ID, Name, Department, or Designation..."
+              [(ngModel)]="searchText"
+              (input)="onSearchChange()"
+              name="universalSearch">
+            <button type="button" class="btn btn-sm btn-secondary clear-btn" (click)="clearSearch()" *ngIf="searchText" title="Clear Search">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="filter-item count-item">
+          <label class="filter-label"><strong>Count</strong></label>
+          <div class="count-display">
+            <strong>{{ displayCount }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <form #rightForm="ngForm">
+        <div class="card-text unique-table-wrapper" style="overflow-x: auto;">
+          <table class="table table-border unique-table" style="white-space: nowrap;">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white; width: 50px;">S.No</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Emp Id</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.name' | translate}}</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.department' | translate}}</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Position</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Additional Rights</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr *ngIf="results.length === 0">
+              <td colspan="7" style="text-align: center; padding: 20px;">
+                <strong *ngIf="searchText">No results found for "{{ searchText }}"</strong>
+                <strong *ngIf="!searchText">No data available</strong>
+              </td>
+            </tr>
+            <tr *ngFor="let user of results; let i = index; trackBy: trackByEmpId">
+              <td style="text-align: center; font-weight: bold;">{{ i + 1 }}</td>
+              <td style="text-align: center;">{{ user.emp_id }}</td>
+              <td style="text-align: left;">{{ user.firstname }} {{ user.lastname }}</td>
+              <td style="text-align: left;">{{ user.department }}</td>
+              <td style="text-align: left;">{{ user.designation }}</td>
+              <td style="text-align: center">
+                <button type="button" class="btn btn-sm btn-info" (click)="viewAdditionalRights(i)">{{'common.view' | translate}}</button>
+              </td>
+              <td style="text-align: center">
+                <button type="button" class="btn btn-sm btn-danger" (click)="addDep(i)">Add Department</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div class="card-footer">
+          <button type="button" class="btn btn-primary" (click)="exportToExcel()">Export to Excel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Allocate Additional Department Modal -->
+<clr-modal [(clrModalOpen)]="isAllocation" clrModalSize="xl">
+  <h3 class="modal-title allocation-title">Allocate Additional Department</h3>
+  <div class="modal-body allocate-modal-body">
+    <div class="employee-info-panel">
+      <div class="employee-info-header">
+        <div class="info-item">
+          <span class="info-label">Employee Name:</span>
+          <span class="info-value">{{ firstname }} {{ lastname }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Employee ID:</span>
+          <span class="info-value">{{ emp_id }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Department:</span>
+          <span class="info-value">{{ primaryDepartment || 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Designation:</span>
+          <span class="info-value">{{ designation || 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+    <form #adddepForm="ngForm">
+      <div class="existing-rights-section" *ngIf="adddepartments.length > 0">
+        <h5 class="subsection-title">Existing Additional Department Rights</h5>
+        <p class="allocation-hint">To change a <strong>No</strong> to <strong>Yes</strong>, click <strong>Edit</strong> on that department row, update the dropdowns below, then SUBMIT.</p>
+        <div class="existing-table-wrapper">
+          <table class="existing-rights-table">
+            <thead>
+              <tr>
+                <th class="existing-dept-header">{{'common.department' | translate}}</th>
+                <th class="existing-rights-header">User</th>
+                <th class="existing-rights-header">Checker</th>
+                <th class="existing-rights-header">Approver</th>
+                <th class="existing-rights-header">QMS Approver</th>
+                <th class="existing-rights-header">Training Cordinator</th>
+                <th class="existing-rights-header">Auditor</th>
+                <th class="existing-rights-header">Dept Head</th>
+                <th class="existing-rights-header">Shift Management</th>
+                <th class="existing-rights-header">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of adddepartments; let i = index" class="existing-row">
+                <td class="existing-dept-cell">{{ user.department || 'N/A' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.isuser === 'Yes'" [class.no]="user.isuser !== 'Yes'">{{ user.isuser || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.ischecker === 'Yes'" [class.no]="user.ischecker !== 'Yes'">{{ user.ischecker || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.isapprover === 'Yes'" [class.no]="user.isapprover !== 'Yes'">{{ user.isapprover || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.qms_approver === 'Yes'" [class.no]="user.qms_approver !== 'Yes'">{{ user.qms_approver || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.trainig_cordinator === 'Yes'" [class.no]="user.trainig_cordinator !== 'Yes'">{{ user.trainig_cordinator || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.isauditor === 'Yes'" [class.no]="user.isauditor !== 'Yes'">{{ user.isauditor || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.dept_head === 'Yes'" [class.no]="user.dept_head !== 'Yes'">{{ user.dept_head || 'No' }}</td>
+                <td class="existing-rights-cell" [class.yes]="user.shift_allocator && user.shift_allocator !== 'No'" [class.no]="!user.shift_allocator || user.shift_allocator === 'No'">{{ user.shift_allocator || 'No' }}</td>
+                <td class="existing-rights-cell">
+                  <button type="button" class="btn btn-sm btn-primary" (click)="editExistingDeptRights(user)">Edit</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="new-allocation-section">
+        <h5 class="subsection-title">Allocate or Update Department Rights</h5>
+        <div class="allocation-form-wrapper">
+          <table class="allocation-form-table">
+            <thead>
+              <tr>
+                <th class="form-header">{{'common.department' | translate}}</th>
+                <th class="form-header">User Rights</th>
+                <th class="form-header">Checker Rights</th>
+                <th class="form-header">Approver Rights</th>
+                <th class="form-header">QMS Approver</th>
+                <th class="form-header">Training Cordinator</th>
+                <th class="form-header">Auditor</th>
+                <th class="form-header">Dept Head</th>
+                <th class="form-header">Shift Management</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="form-row">
+                <td class="form-dept-cell">
+                  <select name="allocateDepartment" [(ngModel)]="allocateDepartment" required class="form-select-control">
+                    <option value="">Select Department</option>
+                    <option *ngFor="let dept of departments" [value]="dept.department_name">
+                      {{ dept.department_name }}<span *ngIf="isDepartmentAlreadyAllocated(dept.department_name)"> (update existing)</span>
+                    </option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="isuser" [(ngModel)]="isuser" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="ischecker" [(ngModel)]="ischecker" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="isapprover" [(ngModel)]="isapprover" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="qms_approver" [(ngModel)]="qms_approver" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="trainig_cordinator" [(ngModel)]="trainig_cordinator" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="isauditor" [(ngModel)]="isauditor" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="dept_head" [(ngModel)]="dept_head" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </td>
+                <td class="form-rights-cell">
+                  <select name="shift_allocator" [(ngModel)]="shift_allocator" required class="form-select-control">
+                    <option value="No">No</option>
+                    <option value="Allocator">Allocator</option>
+                    <option value="Reviewer">Reviewer</option>
+                    <option value="Both">Both</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="allocation-actions">
+        <button type="button" class="btn btn-primary btn-submit" (click)="allocateRights(adddepForm)">
+          <i class="fas fa-check"></i> SUBMIT
+        </button>
+        <button type="button" class="btn btn-danger btn-cancel" (click)="isAllocation = false">
+          <i class="fas fa-times"></i> CANCEL
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="isAllocation = false">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<!-- View Additional Department Rights Modal -->
+<clr-modal [(clrModalOpen)]="isViewAdditional" clrModalSize="xl">
+  <div class="modal-title" style="text-align: center;"><strong>Additional Department Rights</strong></div>
+  <div class="modal-body">
+    <div class="card-block">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left; width: 20%; border: 1px solid black"><strong>Employee Name:</strong></td>
+          <td style="text-align: left; border: 1px solid black">{{ firstname }} {{ lastname }}</td>
+          <td style="text-align: left; width: 20%; border: 1px solid black"><strong>Employee ID:</strong></td>
+          <td style="text-align: left; border: 1px solid black">{{ emp_id1 }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%; border: 1px solid black"><strong>Primary Department:</strong></td>
+          <td style="text-align: left; border: 1px solid black">{{ primaryDepartment }}</td>
+          <td style="text-align: left; width: 20%; border: 1px solid black"><strong>Designation:</strong></td>
+          <td style="text-align: left; border: 1px solid black">{{ designation }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="main-rights-section">
+      <h4 class="section-title"><strong>Main User Rights</strong></h4>
+      <div class="main-rights-table-wrapper">
+        <table class="main-rights-table">
+          <thead>
+            <tr>
+              <th class="main-rights-header">User Rights</th>
+              <th class="main-rights-header">Checker Rights</th>
+              <th class="main-rights-header">Approver Rights</th>
+              <th class="main-rights-header">QMS Approver</th>
+              <th class="main-rights-header">Training Cordinator</th>
+              <th class="main-rights-header">Auditor</th>
+              <th class="main-rights-header">Dept Head</th>
+              <th class="main-rights-header">Shift Management</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.isuser === 'Yes'" [class.no]="mainUserRights.isuser !== 'Yes'">{{ mainUserRights.isuser || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.ischecker === 'Yes'" [class.no]="mainUserRights.ischecker !== 'Yes'">{{ mainUserRights.ischecker || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.isapprover === 'Yes'" [class.no]="mainUserRights.isapprover !== 'Yes'">{{ mainUserRights.isapprover || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.qms_approver === 'Yes'" [class.no]="mainUserRights.qms_approver !== 'Yes'">{{ mainUserRights.qms_approver || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.trainig_cordinator === 'Yes'" [class.no]="mainUserRights.trainig_cordinator !== 'Yes'">{{ mainUserRights.trainig_cordinator || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.isauditor === 'Yes'" [class.no]="mainUserRights.isauditor !== 'Yes'">{{ mainUserRights.isauditor || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.dept_head === 'Yes'" [class.no]="mainUserRights.dept_head !== 'Yes'">{{ mainUserRights.dept_head || 'No' }}</td>
+              <td class="main-rights-cell" [class.yes]="mainUserRights.shift_allocator && mainUserRights.shift_allocator !== 'No'" [class.no]="!mainUserRights.shift_allocator || mainUserRights.shift_allocator === 'No'">{{ mainUserRights.shift_allocator || 'No' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="additional-rights-section">
+      <h4 class="section-title"><strong>Additional Department Rights</strong></h4>
+      <div class="rights-table-wrapper">
+        <table class="rights-table">
+          <thead>
+            <tr>
+              <th class="dept-header">{{'common.department' | translate}}</th>
+              <th class="rights-header">User Rights</th>
+              <th class="rights-header">Checker Rights</th>
+              <th class="rights-header">Approver Rights</th>
+              <th class="rights-header">QMS Approver</th>
+              <th class="rights-header">Training Cordinator</th>
+              <th class="rights-header">Auditor</th>
+              <th class="rights-header">Dept Head</th>
+              <th class="rights-header">Shift Management</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="adddepartments.length === 0" class="no-data-row">
+              <td colspan="9" class="no-data-cell">
+                <strong>No additional department rights allocated</strong>
+              </td>
+            </tr>
+            <tr *ngFor="let user of adddepartments; let i = index" class="rights-row">
+              <td class="dept-cell">{{ user.department || 'N/A' }}</td>
+              <td class="rights-cell" [class.yes]="user.isuser === 'Yes'" [class.no]="user.isuser !== 'Yes'">{{ user.isuser || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.ischecker === 'Yes'" [class.no]="user.ischecker !== 'Yes'">{{ user.ischecker || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.isapprover === 'Yes'" [class.no]="user.isapprover !== 'Yes'">{{ user.isapprover || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.qms_approver === 'Yes'" [class.no]="user.qms_approver !== 'Yes'">{{ user.qms_approver || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.trainig_cordinator === 'Yes'" [class.no]="user.trainig_cordinator !== 'Yes'">{{ user.trainig_cordinator || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.isauditor === 'Yes'" [class.no]="user.isauditor !== 'Yes'">{{ user.isauditor || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.dept_head === 'Yes'" [class.no]="user.dept_head !== 'Yes'">{{ user.dept_head || 'No' }}</td>
+              <td class="rights-cell" [class.yes]="user.shift_allocator && user.shift_allocator !== 'No'" [class.no]="!user.shift_allocator || user.shift_allocator === 'No'">{{ user.shift_allocator || 'No' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isViewAdditional = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

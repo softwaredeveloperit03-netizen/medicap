@@ -1,0 +1,197 @@
+<div class="component store-legacy-dash">
+  <div class="subsection">
+    <div class="purchase-block">
+      <div style="text-align:end" class="exit-section">
+        <div class="header-block" style="margin:10px 0px">
+          <h3>Track Material</h3>
+        <div routerLink="/store/wms" class="name-board2"><i class="fas fa-times"></i>
+        </div>
+      </div>
+
+      <div class="main-section" style="margin: 0px 10px 10px 10px !important;">
+        <div class="card">
+          <div class="card-block">
+            <div class="clr-row" style="margin-bottom: 20px;">
+              <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Scan Material Barcode (Tracking ID):</strong></label>
+                <input 
+                  type="text" 
+                  #barcodeInputField
+                  [(ngModel)]="barcodeInput"
+                  (keyup.enter)="onBarcodeScan($event)"
+                  class="form-control"
+                  style="font-size: 18px; padding: 10px;"
+                  placeholder="Scan barcode or enter manually and press Enter"
+                  autofocus>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="padding-top: 25px;">
+                <button class="btn btn-primary" (click)="trackMaterial(barcodeInput)">{{'common.search' | translate}}</button>
+                <button class="btn btn-secondary" (click)="clearSearch()">{{'common.clear' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="loading">
+          <div class="card-block">
+            <div style="text-align: center; padding: 20px;">
+              <span class="spinner spinner-inline"></span>
+              <span>Loading material details...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="materialData && !loading">
+          <div class="card-header" style="background-color: #0f4c75; color: white;">
+            <h4>Material Details</h4>
+          </div>
+          <div class="card-block">
+            <div class="clr-row">
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <h5>Basic Information</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Tracking ID:</strong></td>
+                    <td><strong style="color: #0f4c75;">{{ materialData.tracking_id || 'N/A' }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Material Code:</strong></td>
+                    <td>{{ materialData.material_code || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Material Name:</strong></td>
+                    <td>{{ materialData.material_name || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Medicap Lot No:</strong></td>
+                    <td>{{ materialData.batch_no || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Vendor:</strong></td>
+                    <td>{{ materialData.vendor_name || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Quantity:</strong></td>
+                    <td>{{ materialData.qty || 'N/A' }} {{ materialData.unit || '' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Total Stock Qty:</strong></td>
+                    <td><strong>{{ materialData.total_stock_qty || 0 }} {{ materialData.unit || '' }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Available Qty:</strong></td>
+                    <td><strong style="color: #28a745;">{{ materialData.available_qty || 0 }} {{ materialData.unit || '' }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>
+                      <span [style.background-color]="getStatusColor(materialData.stock_status)" 
+                            [style.color]="materialData.stock_status === 'Approved' ? 'white' : 'black'"
+                            style="padding: 5px 10px; border-radius: 3px; font-weight: bold;">
+                        {{ materialData.stock_status || 'N/A' }}
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <h5>Batch Details</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Mfg Date:</strong></td>
+                    <td>{{ materialData.mfg_date | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Exp Date:</strong></td>
+                    <td>{{ materialData.exp_date | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Total Containers:</strong></td>
+                    <td>{{ materialData.total_containers || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Pack Size:</strong></td>
+                    <td>{{ materialData.pack_size || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Packaging Slip:</strong></td>
+                    <td>{{ materialData.challan_no || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Receiving no:</strong></td>
+                    <td>{{ materialData.grn_no || 'N/A' }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <h5>Processing Details</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Receiving No:</strong></td>
+                    <td>{{ materialData.receiving_no || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Received By:</strong></td>
+                    <td>{{ materialData.received_by || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Receiving Date:</strong></td>
+                    <td>{{ materialData.receiving_date | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Weighing No:</strong></td>
+                    <td>{{ materialData.weighing_no || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Weighing By:</strong></td>
+                    <td>{{ materialData.weighing_by || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Weighing Date:</strong></td>
+                    <td>{{ materialData.weighing_date | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>GRN By:</strong></td>
+                    <td>{{ materialData.grn_by || materialData.grnReceiveBy || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Date:</strong></td>
+                    <td>{{ (materialData.grn_date || materialData.grnReceiveOn) | date:'dd-MM-yyyy' }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="materialData.location_hierarchy">
+              <div class="clr-col-12">
+                <h4 style="margin-top: 20px; color: #0f4c75;">Location Hierarchy</h4>
+                <div class="breadcrumb" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                  <span *ngIf="materialData.location_hierarchy.laneNO" style="font-size: 16px;">
+                    <i class="fas fa-road"></i> <strong>Lane:</strong> {{ materialData.location_hierarchy.laneNO }}
+                  </span>
+                  <span *ngIf="materialData.location_hierarchy.rack_no" style="margin-left: 15px; font-size: 16px;">
+                    <i class="fas fa-warehouse"></i> <strong>Rack:</strong> {{ materialData.location_hierarchy.rack_no }}
+                  </span>
+                  <span *ngIf="materialData.location_hierarchy.locationNo" style="margin-left: 15px; font-size: 16px;">
+                    <i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ materialData.location_hierarchy.locationNo }}
+                  </span>
+                  <span *ngIf="materialData.location_hierarchy.palate_barcode" style="margin-left: 15px; font-size: 16px;">
+                    <i class="fas fa-pallet"></i> <strong>Palate:</strong> {{ materialData.location_hierarchy.palate_barcode }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="!materialData.location_hierarchy || !materialData.location_hierarchy.palate_barcode">
+              <div class="clr-col-12">
+                <div class="alert alert-warning" style="margin-top: 20px;">
+                  <i class="fas fa-exclamation-triangle"></i> Material is not yet mapped to a palate.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

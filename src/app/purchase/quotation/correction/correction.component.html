@@ -1,0 +1,128 @@
+<div class="qquot" *ngIf="!isView">
+  <div class="card qquot__card">
+    <div class="card-header qquot__header">
+      <div class="qquot__header-row">
+        <div class="qquot__title">Quotation For Correction</div>
+        <div class="qquot__actions">
+          <button type="button" class="btn btn-sm qquot__btn qquot__btn--close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <clr-datagrid class="qquot__datagrid">
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Quotation Date</clr-dg-column>
+          <clr-dg-column>Quotation No.</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>Materials</clr-dg-column>
+          <clr-dg-column>View</clr-dg-column>
+          <clr-dg-row *ngFor="let result of results; let i = index">
+            <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.quotation_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }}</clr-dg-cell>
+            <clr-dg-cell>
+              <ul class="qquot__mat-list">
+                <li *ngFor="let item of result.materials; let j = index">{{ item.material_name }},</li>
+              </ul>
+            </clr-dg-cell>
+            <clr-dg-cell><button type="button" class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">{{'common.view' | translate}}</button></clr-dg-cell>
+          </clr-dg-row>
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="qquot qquot--detail" *ngIf="isView">
+  <div class="card qquot__card">
+    <div class="card-header qquot__header">
+      <div class="qquot__title">Quotation For Correction</div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <h4 class="qquot-subtitle">Vendor Details Table:</h4>
+        <table class="qquot-info-table table table-border">
+          <tr>
+            <td class="qquot-table-label">Vendor Name:</td>
+            <td class="qquot-table-value">{{ selectedResult['vendor_name'] }}</td>
+            <td class="qquot-table-label">Vendor No:</td>
+            <td class="qquot-table-value">{{ selectedResult['materials'][0].vendor_no }}</td>
+          </tr>
+          <tr>
+            <td class="qquot-table-label">Email Id:</td>
+            <td class="qquot-table-value">{{ selectedResult['email'] }}</td>
+          </tr>
+        </table>
+        <h3 class="qquot-subtitle">Materials:</h3>
+        <div class="qquot-table-wrap">
+          <table class="qquot-table table table-border">
+            <thead>
+              <tr>
+                <th>Material Type</th>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>Quotation Amount</th>
+                <!-- <th>Quotation Per</th> -->
+                <th>Currency</th>
+                <th>Tax Type</th>
+                <th>Tax</th>
+                <th>Pack Size</th>
+                <th>Pack Size Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['materials']; let i = index">
+                <td>{{ result.material_type }} - {{ result.material_subtype }}</td>
+                <td>{{ result.material_code }}</td>
+                <td>{{ result.material_name }}</td>
+                <td><input type="text" class="qquot-input" name="quotation_amt{{ i }}" [(ngModel)]="result.quotation_amt" required aria-label="Quotation amount row {{ i + 1 }}" title="Quotation amount"></td>
+                <!-- <td><input type="text" class="qquot-input" name="quotation_per{{ i }}" [(ngModel)]="result.quotation_per" required aria-label="Quotation per row {{ i + 1 }}" title="Quotation per"></td> -->
+                <td>
+                  <select class="qquot-select" name="currency{{ i }}" [(ngModel)]="result.currency" aria-label="Currency row {{ i + 1 }}" title="Currency">
+                    <option value="" disabled></option>
+                    <option *ngFor="let curr of currency" [value]="curr.code">{{ curr.name }}</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="qquot-select" name="tax_type{{ i }}" [(ngModel)]="result.tax_type" aria-label="Tax type row {{ i + 1 }}" title="Tax type">
+                    <option value="" disabled></option>
+                    <option *ngIf="result.tax_type=='Local' || result.tax_type=='Local /Import'">Local</option>
+                    <option *ngIf="result.tax_type=='Import' || result.tax_type=='Local /Import'">Import</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="qquot-select" name="gst_per" [(ngModel)]="result.gst_per" required aria-label="GST percent row {{ i + 1 }}" title="GST percent">
+                    <option value=""></option>
+                    <option *ngFor="let unit of result.gsts" [value]="unit.gst">{{ unit.gst }}</option>
+                  </select>
+                </td>
+                <td><input type="text" class="qquot-input" name="pack_size" [(ngModel)]="result.pack_size" aria-label="Pack size row {{ i + 1 }}" title="Pack size"></td>
+                <td>
+                  <select class="qquot-select" name="pack_unit" [(ngModel)]="result.pack_unit" required aria-label="Pack unit row {{ i + 1 }}" title="Pack unit">
+                    <option value=""></option>
+                    <option *ngFor="let unit of units" [value]="unit.unit">{{ unit.unit }}</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 class="qquot-subtitle">Rejection Remarks</h3>
+        <textarea rows="4" name="Reject_remark" [(ngModel)]="selectedResult['Reject_remark']" readonly class="qquot__textarea" aria-label="Rejection remarks" title="Rejection remarks"></textarea>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-primary" (click)="updateQuotation('Pending')">{{'common.submit' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,454 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: right;">Received Challan From PO
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <span style="background-color: aquamarine;font-weight: bolder;color: aquamarine;">...</span>
+            <span style="font-weight: bolder;color: white;"> Open PO</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/store/challan/approval">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Material Type :  </label>
+                <select name="searchQuery" [(ngModel)]="searchQuery" >
+                <option>Raw Material</option>
+                <option>Packing Material</option>
+                <option>Engg Store Mech</option>
+                <option>Engg Store Elect</option>
+                <option>Stationary</option>
+                <option>Housekeeping</option>
+                <option>Canteen</option>
+                <option>Building Material</option>
+                <option>Machine Spares (Dedicated)</option>
+                <option>Machine Spares (Common)</option>
+                <option>QC Materials</option>
+                <option>IT Materials</option>
+                <option>Others</option>
+                <option>Service</option>
+                <option>Equipment</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-5">
+                <label>Search </label>
+                <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+            </div>
+            </div>
+            <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                <clr-dg-column>Material Type.</clr-dg-column>
+                <clr-dg-column>PO No.</clr-dg-column>
+                <clr-dg-column>Po Dt.</clr-dg-column>
+                <clr-dg-column>Packaging Slip</clr-dg-column>
+                <clr-dg-column>Packaging Slip Dt.</clr-dg-column>
+                <clr-dg-column>Vendor Name</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        
+                <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result" [ngClass]="getClass(result)">
+                <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.po_no}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.ch_no}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                <clr-dg-cell>{{ result.status  | uppercase}}</clr-dg-cell>
+                <clr-dg-cell>
+                    <button class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+                </clr-dg-cell>
+                </clr-dg-row>
+            </clr-datagrid>
+
+            </div>
+ 
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">
+    <div class="clr-row"  >
+      <div class="clr-col-lg-6" style="text-align: right;"><b>Challan Details</b></div>
+      <div class="clr-col-lg-6" style="text-align: right;"> 
+        <span class="blink" *ngIf="selectedResult['isOpenPo'] == 'OPEN'" style="color: white;"><b>Open PO</b></span>
+      </div>
+   </div>
+   </div>
+  <div class="card-block">
+    <div class="card-text">
+      <h3>Vendor Details:</h3>
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor No.:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Vendor Name:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+          <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">PO No./Date:</td>
+          <td style="text-align: left;"> {{ selectedResult['po_no'] }} </td>
+          <td style="text-align: left; width: 20%;">PO Date:</td>
+          <td style="text-align: left;"> {{ selectedResult['po_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+      </table>
+
+ 
+
+      <h3>Materials:</h3>
+      <table class="table table-border">
+        <tr>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Select</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Code</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Invoice No./Dt.</th>
+          <th style="background-color: rgb(14, 67, 112); color: white; ">Invoice Rate</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;" *ngIf="selectedResult['coaReceived'] == 'Under Deviation'">COA Rece.</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+          <td style="padding: 0;margin: 0;">
+            <input type="checkbox" name="selected{{ i }}" [(ngModel)]="comp.selected" style="margin: 0;">
+          </td>
+          <td style="text-align: left;">{{ comp.material_type }} - {{ comp.material_subtype }}</td>
+          <td style="text-align: left;">{{ comp.material_code ||'NA' }}</td>
+          <td style="text-align: left;">{{ comp.material_name ||'NA' }}</td>
+          <td>{{ comp.grade ||'NA' }}</td>
+          <td>
+            <span>{{ comp.qty }} {{ comp.unit }}</span>
+            <span *ngIf="comp.openQty !='NO'"  style="color: green;font-weight: bold;"><br>{{ comp.openQty }} {{ comp.unit }}</span>
+          </td>
+          <td>{{ comp.rate ||'NA'}}</td>
+          <td style="padding: 0;margin: 0;">
+            <input type="text" name="tax_invoice{{i}}" [(ngModel)]="comp.tax_invoice" required style="margin: 0;" placeholder="Enter Tax-Invoice No. And Date Below">
+            <input type="date" name="tax_invoice_date{{i}}" [(ngModel)]="comp.tax_invoice_date" required style="margin: 0;">
+          </td>
+          <td style="padding: 0;margin: 0;">
+            <input type="text" name="recevied_rate" [(ngModel)]="comp['received_rate']" required onkeypress='return event.charCode >= 48 && event.charCode <= 57'
+              (keyup)="calculation(i)" style="background-color: rgb(243, 228, 24); margin: 0;">
+          </td>
+          <td>{{ comp.gst }}</td>
+          <td>{{ comp.gross_total }}</td>
+          <td>{{ comp.gst_total }}</td>
+          <td>{{ comp.net_total }}</td>
+          <td>{{ comp.diff || '0'}}</td>
+          <td style="padding: 0;margin: 0;" *ngIf="selectedResult['coaReceived'] == 'Under Deviation'">
+              <select name="coaReceived{{i}}" [(ngModel)]="comp.coaReceived" required (change)="isCoaChange(comp)">
+                  <option></option>
+                  <option>YES</option>
+                  <option>Under Deviation</option>
+              </select>
+          </td>
+    
+        </tr>
+        <tr *ngIf="selectedResult['materials'].length == 0">
+          <td colspan="13">{{'common.noRecords' | translate}}</td>
+        </tr>
+
+      </table>
+   
+      <h3  *ngIf="selectedResult['isOpenPo'] == 'NA'">Upload Challan:</h3>
+      <form #docUploadForm="ngForm">
+        <table class="table table-border" *ngIf="selectedResult['isOpenPo'] == 'NA'">
+            <tr>
+              <td style="font-weight: bold; background-color:aquamarine;">Document Name</td>
+              <td style="font-weight: bold; background-color:aquamarine;">Receiving no</td>
+              <td style="font-weight: bold; background-color:aquamarine;">Select / Capture Doc.</td>
+              <td style="font-weight: bold; background-color:aquamarine;">{{'common.table.action' | translate}}</td>
+            </tr>
+            <tr>
+              <td style="margin: 0; padding: 0;">
+                  <input type="text" name="docName" ngModel required style="margin: 0;">
+              </td>
+              <td style="margin: 0; padding: 0;">
+                  <input type="text" name="docNo" ngModel required style="margin: 0;">
+              </td>
+              <td style="margin: 0; padding: 0;">
+                  <!-- 📸 Capture from Camera -->
+                  <label for="cameraInput" class="btn btn-sm btn-primary" style="margin-bottom: 3px;">📸 Capture</label>
+                  <input id="cameraInput" type="file" accept="image/*" capture="environment" (change)="onFileChangedpsb($event)" style="display: none;">
+                  <!-- 🖼 Upload from Files -->
+                  <label for="fileInput" class="btn btn-sm btn-secondary" style="margin-bottom: 3px;">🖼 Choose File</label>
+                  <input id="fileInput" type="file" accept=".pdf,image/*" (change)="onFileChangedpsb($event)" style="display: none;">  
+                  <!-- 👁️ Preview -->
+                  <div *ngIf="previewUrl" style="margin-top: 5px;">
+                      <img [src]="previewUrl" alt="Preview" style="width: 100px; border-radius: 5px; border: 1px solid #ccc;">
+                  </div>
+              </td>
+              <td>
+                  <button type="button" class="btn btn-success btn-sm" [disabled]="isUploadingChallanDoc" (click)="uploadFile(docUploadForm)">{{'common.add' | translate}}</button>
+              </td>
+            </tr>
+            <tr *ngFor="let inv of uploadedFileNames; let i = index;">
+                <td>{{inv.docName}}</td>
+                <td>{{inv.docNo}}</td>
+                <td style="margin: 0; padding: 0;">
+                    <button class="btn btn-primary btn-sm" (click)="viewFile(inv.file)">{{'common.view' | translate}}</button>
+                </td>
+                <td>#</td>
+            </tr>
+        </table>
+      </form>
+
+      <form #test="ngForm">
+        <div class="clr-row">
+   
+          <div  class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Eway Bill No. : <span style="color: red;">*</span></label>
+            <input type="text" name="eway_bill_no" ngModel required>
+          </div>
+
+          <div  class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Eway Bill Dt. : <span style="color: red;">*</span></label>
+            <input type="date" name="e_way" ngModel required>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark:</label>
+            <input type="text" name="remark" [(ngModel)]="remark" >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"><br>
+            <button class="btn btn-primary" (click)="isDocChecklist = !isDocChecklist">{{selectedResult['material_type'] | uppercase}} DOCUMENT CHECK LIST</button>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="plant_id == '181' || plant_id == '182' || plant_id == '183'"><br>
+            <button class="btn btn-primary" (click)="isVehicleInspCheck = !isVehicleInspCheck">Vehicle inspection Check List</button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button style="background-color: green" class="btn btn-primary" (click)="updateChallan(test,'waiting_for_checking')">VERIFY</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+
+ <clr-modal [(clrModalOpen)]="isVehicleInspCheck" [clrModalSize]="'xl'">
+  <h3 class="modal-title"><strong>Vehicle inspection Check List</strong></h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          <table class="table table-border">
+              <tr>
+                <td style="font-size:17px;" colspan="3"><strong>Vehicle inspection Check List</strong></td>
+              </tr>
+              <tr *ngFor="let check of vehicleChecklist; let i = index">
+                <td  style="text-align:left;" > <strong>{{check.item}}</strong></td>
+                <td  style="padding:0;margin:0;" >
+                    <select name="value{{i}}" [(ngModel)]="check.value" style="margin:0;" *ngIf="check.options != 'textArea'">
+                      <option></option>
+                      <option *ngIf="check.options == 'Good/Not Good'">Good</option>
+                      <option *ngIf="check.options == 'Good/Not Good'">Not Good</option>
+                      <option *ngIf="check.options == 'OK/Not OK'">OK</option>
+                      <option *ngIf="check.options == 'OK/Not OK'">Not </option>
+                      <option *ngIf="check.options == 'Spillage Found/No Spillage'">Spillage Found</option>
+                      <option *ngIf="check.options == 'Spillage Found/No Spillage'">No Spillage </option>
+                      <option *ngIf="check.options == 'Yes/No'">Yes</option>
+                      <option *ngIf="check.options == 'Yes/No'">No</option>
+                      <option>NA</option>
+                    </select>
+                    <textarea *ngIf="check.options == 'textArea'" rows="5" name="value{{i}}" [(ngModel)]="check.value" style="margin:0;" placeholder="Enter Remark......"></textarea>
+                </td>
+              </tr>
+          </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+      <button  class="btn btn-success" (click)="isVehicleInspCheck=false">{{'common.submit' | translate}}</button>
+      <button  class="btn btn-danger" (click)="isVehicleInspCheck=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+ <clr-modal [(clrModalOpen)]="isDocChecklist" [clrModalSize]="'xl'">
+  <h3 class="modal-title"><strong>{{selectedResult['material_type'] | uppercase}} DOCUMENT CHECK LIST</strong></h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          <table class="table table-border">
+              <tr>
+                <td style="font-size:17px;" colspan="3"><strong>{{selectedResult['material_type'] | uppercase}} DOCUMENT CHECK LIST</strong></td>
+              </tr>
+              <tr *ngFor="let check of documentsChecklist; let i = index">
+                <td *ngIf="check.type == 'Header'" style="font-size:15px;" ><strong>{{check.field}}</strong></td>
+                <td *ngIf="check.type == 'Header'" style="font-size:12px;" ><strong>{{check.details_to_check}}</strong></td>
+                <td *ngIf="check.type == 'Header'" style="font-size:12px;" ><strong>{{check.remark}}</strong></td>
+
+                <td *ngIf="check.type != 'Header'" style="text-align:left;" ><strong>{{check.field}}</strong></td>
+                <td *ngIf="check.type != 'Header'" style="padding:0;margin:0;" >
+                    <select name="detCheckAns{{i}}" [(ngModel)]="check.detCheckAns" style="margin:0;" *ngIf="check.details_to_check == 'YES/NO'" >
+                      <option></option>
+                      <option>YES</option>
+                      <option>NO</option>
+                      <option>NA</option>
+                    </select>
+                    <input type="text" name="detCheckAns{{i}}" [(ngModel)]="check.detCheckAns" style="margin:0;" *ngIf="check.details_to_check != 'YES/NO'" placeholder="Enter Detalis to Check">
+                </td>
+                <td *ngIf="check.type != 'Header'" style="padding:0;margin:0;" >
+                    <input type="text" name="remark{{i}}" [(ngModel)]="check.remark" style="margin:0;" placeholder="Please Enter Remark">
+                </td>
+              </tr>
+          </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+      <button  class="btn btn-success" (click)="isDocChecklist=false">{{'common.submit' | translate}}</button>
+      <button  class="btn btn-danger" (click)="isDocChecklist=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+<clr-modal [(clrModalOpen)]="isDeviation" clrModalSize="xl" >
+  <div class="modal-body">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Deviation Details:(For Non Receipt Of Material COA)</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+         </div>
+      </div>
+    </div>
+    <div class="card-block">
+         <div class="card-text">
+            <form #deviation="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-12">
+                        <table class="table table-border">
+                                <tr>
+                                <td style="text-align: left;font-weight: bolder;">Initiating Department.</td>
+                                <td style="text-align: left;margin: 0;padding: 0;" colspan="3"> 
+                                    <input type="text" name="initiateDepartment" [(ngModel)]="department_name" readonly>
+                                </td>
+                            </tr>
+                                <tr>
+                                <td style="text-align: left;font-weight: bolder;">Deviation No</td>
+                                <td style="text-align: center;margin: 0;padding: 20px;font-size: large;font-weight: bolder;">
+                                   Auto Generate
+                                </td>
+                                <td style="text-align: left;font-weight: bolder;">{{'common.date' | translate}}</td>
+                                <td style="text-align: left;margin: 0;padding: 0;">
+                               <input type="date"  name="initiateDate" [(ngModel)]="initiateDate"     >
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: bolder;">Material Name</td>
+                                <td style="text-align: left;margin: 0;padding: 0;">{{selectedMat['material_name']}} {{selectedMat['material_code']}}
+                                </td>
+                                <td style="text-align: left;font-weight: bolder;">Medicap Lot No</td>
+                                <td style="text-align: left;margin: 0;padding: 0;">
+                                    <input type="text" name="batch_no" ngModel required>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="text-align: left;font-weight: bolder;">MFG Date</td>
+                                <td   style="text-align: left;margin: 0;padding: 0;">
+                                    <input type="date" name="mfg_date" ngModel required>
+                                </td>
+                                <td style="text-align: left;font-weight: bolder;">Exp Date</td>
+                                <td   style="text-align: left;margin: 0;padding: 0;">
+                                    <input type="date" name="exp_date" ngModel required>
+                                </td>
+                            </tr>
+                        </table>
+                        <div></div>
+                        <table class="table table-border">
+                            <tr>
+                                <td style="text-align: left;font-weight: bolder;width:30%" >
+                                    1.Type of Deviation<br>
+                                </td>
+                                <td style="text-align: left;font-weight: bolder;width:70%">
+                                    <label style="margin-right: 15px;">
+                                        <input type="checkbox" name="isMajor" ngModel> Major
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="isMinor" ngModel> Minor
+                                    </label>
+                                </td>
+                               
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: bolder;" colspan="2">2.Actual Process<br>
+                                <textarea name="actualProcedure" ngModel rows="3" style="width:100%" required></textarea>
+                                </td>
+                               
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: bolder;" colspan="2">3.Deviation Observed<br>
+                                <textarea name="deviationObserved" ngModel rows="3" style="width:100%" required></textarea>
+                                </td>
+                               
+                            </tr>
+                         
+                            <tr>
+                                <td  style="width: 70%; text-align: left;"> <b> 4.Root Cause, if Observed</b> <br>
+                                    <textarea name="rootCauses" ngModel  rows="5"  required ></textarea>
+                                </td> 
+                                <td  style="width: 30%; text-align: left;"> 
+                                    <input type="file" name="rootCauseFile" (change)="onFileChanged($event)"  ngModel>
+                                </td> 
+                            </tr>
+                            <tr>
+                                <td  colspan="2"  style=" text-align: left;"> <b> 5.Risk Assessment</b><br>
+                                    <textarea name="RiskAssessment" ngModel  rows="3"   ></textarea>
+                                </td> 
+                                 
+                            </tr>
+                            <tr>
+                                <td  colspan="2"  style=" text-align: left;"> <b> 6.Action Taken/ To Be taken</b><br>
+                                    <textarea name="ActionTaken" ngModel  rows="3"   ></textarea>
+                                </td> 
+                                 
+                            </tr>
+                        </table>
+                     </div>
+                </div>
+            </form>
+        </div>
+        <div class="card-block">
+            <button   class="btn btn-primary" (click)="saveDeviation(deviation)">{{'common.save' | translate}}</button>
+            <button class="btn  btn-danger" (click)="isDeviation = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+  </div>
+</clr-modal>
+
+<div
+  class="frompo-upload-overlay"
+  *ngIf="isUploadingChallanDoc"
+  aria-live="polite"
+  aria-busy="true">
+  <div class="frompo-upload-overlay__panel">
+    <clr-spinner>{{'common.loading' | translate}}</clr-spinner>
+    <p class="frompo-upload-overlay__text">Uploading document, please wait…</p>
+  </div>
+</div>

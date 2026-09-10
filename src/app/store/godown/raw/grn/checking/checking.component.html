@@ -1,0 +1,221 @@
+<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Goods Receipt Notes Checking</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/store/godown/raw/grn" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+
+            <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_name"[(ngModel)]="material_name" required>
+                  <option></option>
+                  <option *ngFor="let employee of materials" [value]="employee.material_name">{{ employee.material_name}}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Receiving Date:</label>
+              <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <button class="btn btn-danger" (click)="getQuotationLog()" style="margin-top:30px;">{{'common.search' | translate}}</button>
+            </div>
+          </div>
+          <table class="table table-border">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Receiving Date</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Receiving no./date</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+              <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">No Of Batches</th>
+              <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Containers</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">view</th>
+            </tr>
+            <tr *ngFor="let result of results; let i = index">
+              <td>{{ i+1 }}.</td>
+              <td style="text-align: left;">{{ result.receiving_date | date:'dd-MM-yyyy'}}</td>
+              <td style="text-align: left;">{{ result.grn_no}} / {{ result.grn_date | date: 'dd-MM-yyyy'}}</td>
+              <td>{{ result.material_type}}</td>
+              <td style="text-align: left;">{{ result.material_name }}</td>
+              <td>{{ result.material_code }}</td>
+              <td style="text-align: left;">{{ result.grade }}</td>
+              <td style="text-align:left;">{{ result['batches']?.length }}</td>
+              <td style="text-align:left;">{{ result.containers }}</td>
+              <td>{{ result.grn }}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+              </td>
+            </tr>
+            <tr *ngIf="results?.length == 0">
+              <td colspan="12">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Goods Receipt Notes Checking</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="isView = false" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <h3>Challan Details:</h3>
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;"><b>Material Name:</b></td>
+              <td style="text-align: left;">{{ selectedReport['material_name'] }}</td>
+              <td *ngIf="selectedReport['coa_received'] == 'Yes'">
+                <button class="btn btn-info btn-sm"
+                  (click)="viewfile(selectedReport['receiving_details'].coa_file)">VIEW COA</button>
+              </td>
+              <td *ngIf="selectedReport['coa_received'] == 'No'">{{ selectedReport['deviation_no'] }}</td>
+              <td>
+                <button class="btn btn-info btn-sm"
+                  (click)="viewChallan(selectedReport['challan_file'])">VIEW Challan</button>
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Vendor Name:</b></td>
+              <td colspan="4" style="text-align: left;">{{ selectedReport['vendor_name'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;"><b>Vendor Type:</b></td>
+              <td style="text-align: left;">{{ selectedReport['vendor_type'] }}</td>
+              <td style="text-align: left;"><b>Manufacturer:</b></td>
+              <td style="text-align: left;">{{ selectedReport['manufacturer_name'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_date'] | date: 'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedReport['grade'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO Qty:</b></td>
+            <td style="text-align: left;" colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+            </tr>
+          </table>
+          <br>
+          <h3>Labeling Details:</h3>
+          <table class="table table-border">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+              <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">Qty</th>
+              <th style="text-align: right; background-color: rgb(14, 67, 112); color: white;">No Of Containers</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Mfg Date</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Exp Date</th>
+            </tr>
+            <tr *ngFor="let list of selectedReport['batches'];let i=index">
+              <td>{{i+1}}</td>
+              <td>{{list.batch_no}}</td>
+              <td style="text-align:right;" >{{list.qty_received}}</td>
+              <td style="text-align:right;">{{list.total_containers}}</td>
+              <td>{{list.mfg_date | date: 'MMM-yyyy' | uppercase}}</td>
+              <td>{{list.exp_date | date: 'MMM-yyyy' | uppercase}}</td>
+            </tr>
+            <tr *ngIf="selectedReport['batches']?.length == 0">
+                <td colspan="5">No Record Found!</td>
+            </tr>
+          </table>
+          <br>
+          <!-- <h3>Batch Details:</h3>
+          <table class="table table-border">
+            <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Received Qty</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Container</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">MFG date</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Exp Date</th>
+            </tr>
+            <tr *ngFor="let bat of selectedReport['batches'];let i=index">
+                <td>{{i+1}}</td>
+                <td>{{bat.batch_no}}</td>
+                <td>{{bat.qty_received}}</td>
+                <td>{{bat.total_containers}}</td>
+                <td>{{bat.mfg_date | date: 'MMM-yyyy' | uppercase}}</td>
+                <td>{{bat.exp_date | date: 'MMM-yyyy' | uppercase}}</td>
+            </tr>
+          </table> -->
+          <br>
+          <!-- <h3>Product / Material Details:</h3>
+          <div style="overflow-x:auto; overflow-y: hidden;">
+            <table class="table table-border">
+              <thead>
+                <tr>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Containers</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Received Qty</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Short Receipt Qty</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Accepted Qty</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Rejected Qty</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Mfg. Date</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Expiry Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ selectedReport['material_name'] }}</td>
+                  <td>{{ selectedReport['grade'] }}</td>
+                  <td>{{ selectedReport['batch_no'] }}</td>
+                  <td>{{ selectedReport['containers'] }}</td>
+                  <td>{{ selectedReport['received_qty'] }} {{ selectedReport['unit'] }}</td>
+                  <td>{{ selectedReport['short_qty'] }} {{ selectedReport['unit'] }}</td>
+                  <td>{{ selectedReport['accept_qty'] }} {{ selectedReport['unit'] }}</td>
+                  <td>{{ selectedReport['reject_qty'] }} {{ selectedReport['unit'] }}</td>
+                  <td>{{ selectedReport['mfg_date'] }}</td>
+                  <td>{{ selectedReport['exp_date'] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div> -->
+
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-success" (click)="update('On Hold')">on hold</button>
+        <button class="btn btn-primary" (click)="update('approve')">{{'common.approve' | translate}}</button>
+        <button class="btn btn-danger" (click)="update('reject')">{{'common.reject' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>

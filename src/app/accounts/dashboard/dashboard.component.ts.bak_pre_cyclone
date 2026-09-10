@@ -1,0 +1,107 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DashCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  searchQuery = '';
+  selectedCategory = 'All';
+  managementCards: DashCard[] = [
+    { id: 'materialApproval', title: 'Material Approval', description: 'Approve material requests', route: 'materialApproval', icon: 'fa-clipboard-check', category: 'Accounts', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhen: 'isapprover' },
+    { id: 'poPayLog', title: 'PO Log', description: 'Purchase order log', route: 'poPayLog', icon: 'fa-clipboard-check', category: 'Accounts', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'fgProductApproval', title: 'Finished Product Approval', description: 'Approve finished product', route: 'fgProductApproval', icon: 'fa-clipboard-check', category: 'Accounts', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', showWhen: 'isapprover' },
+    // { id: 'matRate', title: 'Material Rates', description: 'Material rate management', route: 'matRate', icon: 'fa-file-invoice-dollar', category: 'Accounts', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    // { id: 'costCenter', title: 'Cost Center', description: 'Cost center management', route: 'costCenter', icon: 'fa-file-invoice-dollar', category: 'Accounts', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'prc', title: 'Purchase Rate Contract', description: 'Purchase rate contract', route: 'prc', icon: 'fa-file-invoice-dollar', category: 'Accounts', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' }
+  ];
+
+  get categories(): string[] {
+    return ['All', ...Array.from(new Set(this.managementCards.map(c => c.category)))];
+  }
+  get filteredCards(): DashCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.managementCards.filter((c) => {
+      if (c.showWhen === 'isapprover' && this.isapprover !== 'Yes') return false;
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+      return matchCategory && matchSearch;
+    });
+  }
+  trackByCardId(_index: number, card: DashCard): string {
+    return card.id;
+  }
+
+  paletteOptions: { name: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+  showPalette = false;
+  togglePalette(): void { this.showPalette = !this.showPalette; }
+  setPalette(palette: { name: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try { localStorage.setItem('accounts_dashboard_palette', palette.name); } catch { }
+  }
+
+  constructor(private service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit() {
+    this.get_rights();
+    const savedPalette = localStorage.getItem('accounts_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights: any;
+  loggedInDept: string | null = null;
+  trainig_cordinator = 'No';
+
+  get_rights() {
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' + encodeURIComponent(localStorage.getItem('emp_id') || '') +
+      '&dep_name=' + encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      if (Array.isArray(response) && response[0]) {
+        this.isuser = response[0].isuser || 'No';
+        this.ischecker = response[0].ischecker || 'No';
+        this.isapprover = response[0].isapprover || 'No';
+        this.qms_approver = response[0].qms_approver || 'No';
+        this.dept_head = response[0].dept_head || 'No';
+        this.isauditor = response[0].isauditor || 'No';
+        this.plant_head = response[0].plant_head || 'No';
+        this.shift_allocator = response[0].shift_allocator || 'No';
+        this.trainig_cordinator = response[0].trainig_cordinator || 'No';
+      }
+    });
+  }
+}

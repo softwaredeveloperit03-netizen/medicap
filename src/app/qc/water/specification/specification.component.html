@@ -1,0 +1,360 @@
+<div class="container-fluid" *ngIf="!isNew && !isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Water Specification</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" routerLink="/qc/water" style="background-color: red;color: white;">
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+              <button class="btn btn-sm btn-info" (click)="new()">NEW WATER SPECIFICATION</button>
+              <table class="table">
+                  <tr>
+                      <th>Water Type</th>
+                      <th>Grade</th>
+                      <th>Version No.</th>
+                      <th>Sample Qty</th>
+                      <th>Status</th>
+                      <th>Prepared By</th>
+                      <th>Prepared Date</th>
+                      <th>View</th>
+                  </tr>
+                  <tr *ngFor="let result of results; let i = index">
+                      <td>{{ result.water_type }}</td>
+                      <td>{{ result.grade }}</td>
+                      <td>{{ result.version_no }}</td>
+                      <td>{{ result.sample_qty }}</td>
+                      <td>{{ result.status }}</td>
+                      <td>{{ result.entry_by }}</td>
+                      <td>{{ result.entry_date }}</td>
+                      <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">View</button>
+                      </td>
+                  </tr>
+                  <tr *ngIf="results?.length == 0">
+                      <td colspan="7">No Records Found!</td>
+                  </tr>
+              </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-primary" (click)="downloadReport()">DOWNLOAD</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isNew">
+    <div class="card">
+        <div class="card-header">New Water Specification</div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #waterForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-8">
+                            <label>Water Type:</label>
+                            <!-- <input type="text" id="water_type" name="water_type" ngModel required> -->
+                            <select id="water_type" name="water_type" ngModel required>
+                                <option>Non-Potable Water</option>
+                                <option>Potable Water</option>
+                                <option>Purified Water</option>
+                                <option>RO Water</option>
+                                <option>Raw Water</option>
+                                <option>Water For Injection</option>
+                                <option>Sterile Water For Injection</option>
+                                <option>Bacteriostatic Water For Injection</option>
+                                <option>Sterile Water For Irrigation</option>
+                                <option>Boiled Feed Water</option>
+                                <option>Soft Water</option>
+                                <option>Pure Steam Water</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-4">
+                            <label>Grade:</label>
+                            <select name="grade" ngModel required>
+                                <option></option>
+                                <option *ngFor="let grade of grades">{{ grade.grade }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-4">
+                            <label>Version No: </label>
+                            <input type="text" name="version_no" ngModel placeholder="00">
+                        </div>
+                        <div class="clr-col-4">
+                            <label>Supersede No: </label>
+                            <input type="text" name="supersede_no" ngModel required>
+                        </div>
+                        <div class="clr-col-4">
+                            <label>Storage:</label>
+                            <input type="text" name="storage" ngModel required>
+                        </div>
+                        <div class="clr-col-4">
+                          <label>Next Review Date: (From Effective Date)</label>
+                          <select name="review_date" ngModel required>
+                            <option value="12">12 Months</option>
+                            <option value="18">18 Months</option>
+                            <option value="24">24 Months</option>
+                            <option value="36">36 Months</option>
+                          </select>
+                        </div>
+                        <div class="clr-col-4">
+                            <label>Sample Qty:</label>
+                            <input type="text" name="sample_qty" ngModel required>
+                        </div>
+                    </div>
+                </form>
+                <div class="card">
+                    <div class="card-block">
+                        <div class="card-title">Tests:</div>
+                        <div class="card-text">
+                            <form #testForm="ngForm">
+                                <div class="clr-row">
+                                    <div class="clr-col-3">
+                                        <label>Test:</label>
+                                        <select name="test" ngModel required (change)="getSubtests($event.target.selectedIndex)">
+                                            <option></option>
+                                            <option *ngFor="let test of tests">{{ test.test }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="clr-col-3">
+                                        <label>Subtest:</label>
+                                        <select name="subtest" ngModel required>
+                                            <option></option>
+                                            <option *ngFor="let test of subtests">{{ test.subtest }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="clr-col-2">
+                                        <label>Limit:</label>
+                                        <select name="limit" ngModel="Limits" (change)="checkLimits($event.target.value)" required>
+                                          <option>Limits</option>
+                                          <option>LessThan</option>
+                                          <option>MoreThan</option>
+                                          <option>Compliances</option>
+                                        </select>
+                                    </div>
+                                      <div class="clr-col-2" *ngIf="isLimit">
+                                        <label>Lower Limit:</label>
+                                        <input type="text" OnlyNumdigit="true" name="lower_limit" ngModel required>
+                                    </div>
+                                      <div class="clr-col-2" *ngIf="isLimit">
+                                        <label>Upper Limit:</label>
+                                        <input type="text" OnlyNumdigit="true" name="upper_limit" ngModel required>
+                                    </div>
+                                      <div class="clr-col-2" *ngIf="isLessthan">
+                                        <label>Less Than:</label>
+                                        <input type="text" OnlyNumdigit="true" name="lower_limit" ngModel required>
+                                    </div>
+                                      <div class="clr-col-2" *ngIf="isMorethan">
+                                        <label>More Than:</label>
+                                        <input type="text" OnlyNumdigit="true" name="upper_limit" ngModel required>
+                                    </div>
+                                    <div class="clr-col-12">
+                                        <label>Description:</label>
+                                        <textarea rows="2" name="description" ngModel required></textarea>
+                                    </div>
+                                    <div class="clr-col-12">
+                                        <button type="button" class="btn btn-primary" (click)="addTest(testForm)">ADD</button>
+                                      </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <table class="table">
+                                <tr>
+                                  <th>Test</th>
+                                  <th>Sub Test</th>
+                                  <th>Limit</th>
+                                  <th>Description</th>
+                                  <th style="width: 10px;">Action</th>
+                                </tr>
+                                <tr *ngFor="let comp of testsList; let i = index">
+                                  <td>{{comp.test}}</td>
+                                  <td *ngIf="comp.subtest !== ''">{{comp.subtest}}</td>
+                                  <td *ngIf="comp.subtest == ''">NA</td>
+                                  <td>{{comp.limit}}</td>
+                                  <td>{{comp.description}}</td>
+                                  <td style="text-align: center;">
+                                    <clr-icon shape="trash" class="is-error" (click)="deleteTest(i)"></clr-icon>
+                                  </td>
+                                </tr>
+                                <tr *ngIf="testsList.length === 0">
+                                  <td colspan="5" style="height: 40px;">No Record found</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-block">
+                      <div class="card-title">Revision History</div>
+                      <div class="card-text">
+                        <form #revisionForm="ngForm">
+                          <div class="clr-row">
+                            <div class="clr-col-2">
+                              <label>Specification No:</label>
+                              <input type="text" id="spec_no" name="spec_no" ngModel required>
+                            </div>
+                            <div class="clr-col-2">
+                              <label>Version No</label>
+                              <input type="text" name="ver_no" ngModel required>
+                            </div>
+                            <div class="clr-col-2">
+                              <label>Change Mode</label>
+                              <input type="text" name="change_mode" ngModel Required>
+                            </div>
+                            <div class="clr-col-3">
+                              <label>Reason for change</label>
+                              <input type="text" name="change_reason" ngModel required>
+                            </div>
+                            <div class="clr-col-3">
+                              <label>Effective Date:</label>
+                              <input type="date" name="effective_date" ngModel required>
+                            </div>
+                            <div class="clr-col-12">
+                                <button type="button" class="btn btn-primary" (click)="addRevision(revisionForm)">ADD</button>
+                            </div>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                    <div class="card-block">
+                      <div class="card-text">
+                        <table class="table">
+                          <tr>
+                            <th>Sr</th>
+                            <th>Specification No</th>
+                            <th>Version No</th>
+                            <th>Change Mode</th>
+                            <th>Reason for change</th>
+                            <th>Effective Date</th>
+                            <th>Action</th>
+                          </tr>
+                          <tr *ngFor="let user of revisionList; let i = index">
+                            <td>{{ i+1 }}</td>
+                            <td>{{user.spec_no}}</td>
+                            <td>{{user.ver_no}}</td>
+                            <td>{{user.change_mode}}</td>
+                            <td>{{user.change_reason}}</td>
+                            <td>{{user.effective_date}}</td>
+                            <td style="text-align: center;">
+                              <clr-icon shape="trash" class="is-error" (click)="deleteRevision(i)"></clr-icon>
+                            </td>
+                          </tr>
+                          <tr *ngIf="revisionList.length === 0">
+                            <td colspan="6" style="height: 40px;">No Record found</td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="saveSpecification(waterForm)">SAVE</button>
+            <button class="btn btn-danger" (click)="isNew = false">CLOSE</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+      <div class="card-header">Water Specification</div>
+      <div class="card-block">
+          <div class="card-text">
+              <form #waterForm="ngForm">
+                <div class="clr-row">
+                  <div class="clr-col-8">
+                    <label>Water Type:</label>
+                    <input type="text" name="water_type" ngModel="{{ selectedSpecification['water_type'] }}" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                      <label>Grade:</label>
+                      <input type="text" name="grade" ngModel="{{ selectedSpecification['grade'] }}" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                      <label>Version No: </label>
+                      <input type="text" name="version_no" ngModel="{{ selectedSpecification['version_no'] }}" placeholder="00" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                      <label>Supersede No: </label>
+                      <input type="text" name="supersede_no" ngModel="{{ selectedSpecification['supersede_no'] }}" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                      <label>Storage:</label>
+                      <input type="text" name="storage" ngModel="{{ selectedSpecification['storage'] }}" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Next Review Date: (From Effective Date)</label>
+                    <input type="text" name="review_date" ngModel="{{ selectedSpecification['review_date'] }}" readonly>
+                  </div>
+                  <div class="clr-col-4">
+                    <label>Sample Qty:</label>
+                    <input type="text" name="sample_qty" ngModel="{{ selectedSpecification['sample_qty'] }}" readonly>
+                  </div>
+                </div>
+              </form>
+              <div class="card">
+                  <div class="card-block">
+                      <div class="card-title">Tests:</div>
+                      <div class="card-text">
+                          <table class="table">
+                              <tr>
+                                <th>Test</th>
+                                <th>Sub Test</th>
+                                <th>Limit</th>
+                                <th>Description</th>
+                              </tr>
+                              <tr *ngFor="let comp of selectedSpecification['tests']; let i = index">
+                                <td>{{comp.test}}</td>
+                                <td *ngIf="comp.subtest !== ''">{{comp.subtest}}</td>
+                                <td *ngIf="comp.subtest == ''">NA</td>
+                                <td>{{comp.limit}}</td>
+                                <td>{{comp.description}}</td>
+                              </tr>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-block">
+                    <div class="card-title">Revision History</div>
+                    <div class="card-text">
+                      <table class="table">
+                        <tr>
+                          <th>Sr</th>
+                          <th>Specification No</th>
+                          <th>Version No</th>
+                          <th>Change Mode</th>
+                          <th>Reason for change</th>
+                          <th>Effective Date</th>
+                          <th>Action</th>
+                        </tr>
+                        <tr *ngFor="let user of selectedSpecification['revisions']; let i = index">
+                          <td>{{ i+1 }}</td>
+                          <td>{{user.spec_no}}</td>
+                          <td>{{user.ver_no}}</td>
+                          <td>{{user.change_mode}}</td>
+                          <td>{{user.change_reason}}</td>
+                          <td>{{user.effective_date}}</td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <div class="card-footer">
+          <button class="btn btn-primary" (click)="downloadPDF(selectedSpecification['id'], 'manual')">Manual Sign PDF</button>
+          <button class="btn btn-success" (click)="downloadPDF(selectedSpecification['id'], 'digital')">Digital Sign PDF</button>
+          <button class="btn btn-danger" (click)="isView = false">CLOSE</button>
+      </div>
+  </div>
+</div>

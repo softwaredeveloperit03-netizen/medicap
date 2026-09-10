@@ -1,0 +1,133 @@
+<div class="dashboard-shell dashboard-shell--pro" [style.background]="selectedPalette.background">
+  <ng-container *ngIf="getFilteredCards() as cards">
+    <div class="compact-layout">
+      <aside class="compact-sidebar">
+        <div class="compact-sidebar__head">
+          <span class="compact-sidebar__title">Master Modules</span>
+          <span class="compact-sidebar__count">{{ cards.length }}</span>
+        </div>
+        <nav class="compact-sidebar__tabs" aria-label="Master modules">
+          <button
+            type="button"
+            class="compact-nav-item compact-nav-item--all compact-nav-item--menu"
+            [class.active]="selectedDepartmentId === 'all'"
+            (click)="showAllTabs()"
+          >
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span>All Tabs</span>
+          </button>
+
+          <button
+            type="button"
+            *ngFor="let dept of visibleDepartments; trackBy: trackByDeptId"
+            class="compact-nav-item compact-nav-item--menu"
+            [class.active]="dept.id === selectedDepartmentId"
+            (click)="selectDepartment(dept.id)"
+          >
+            <i class="fas" [ngClass]="dept.icon" aria-hidden="true"></i>
+            <span>{{ dept.name }}</span>
+          </button>
+          <a class="compact-nav-item" routerLink="/master/fg-sampling-checklist" title="Sampling Checklist Master">
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <span>Sampling Checklist Master</span>
+          </a>
+        </nav>
+      </aside>
+
+      <div class="compact-main">
+        <div class="dash-header dash-header--single-line">
+          <div class="title-block">
+            <h2>Master Department</h2>
+          </div>
+          <div class="header-actions-row">
+            <div class="search-box dash-header__search">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                placeholder="Search by name or category"
+                aria-label="Search modules"
+              />
+            </div>
+            <app-floating-docs-popup
+              class="dash-header__docs"
+              [showSoftwareFlow]="false"
+              [showOperationGuide]="false"
+            ></app-floating-docs-popup>
+            <div class="quick-links">
+              <a class="quick-link-btn" routerLink="/indend/raw">Purchase Requisition</a>
+              <a class="quick-link-btn" routerLink="/qa/qms">QMS</a>
+              <a class="quick-link-btn" routerLink="/breakdown">Breakdown</a>
+            </div>
+            <a class="close-btn" [routerLink]="closeLink" (click)="onLeaveMasterHub()" aria-label="Close">
+              <i class="fas fa-times"></i>
+              Close
+            </a>
+          </div>
+        </div>
+
+        <h3 class="section-label">{{ selectedDepartmentId === 'all' ? 'Master Section' : (currentDepartment?.name || 'Master Section') }}</h3>
+
+        <ng-container *ngIf="getGroupedSections() as sections">
+          <div
+            class="grade-section"
+            *ngFor="let section of sections; trackBy: trackBySectionId"
+            [attr.id]="'grade-' + section.department.id"
+          >
+            <div
+              class="grade-section__head"
+              *ngIf="selectedDepartmentId === 'all'"
+            >
+              <span class="grade-section__icon">
+                <i class="fas" [ngClass]="section.department.icon" aria-hidden="true"></i>
+              </span>
+              <span class="grade-section__title">{{ section.department.name }}</span>
+              <span class="grade-section__count">{{ section.cards.length }}</span>
+            </div>
+
+            <div class="tiles-grid tiles-grid--compact">
+              <a
+                *ngFor="let card of section.cards; trackBy: trackByCardId"
+                class="tile-card tile-card--compact"
+                [routerLink]="card.route"
+                (click)="registerMasterReturn(card.departmentId)"
+                [ngStyle]="{ 'box-shadow': selectedPalette.cardShadow }"
+              >
+                <div class="icon-wrap icon-wrap--compact" [style.background]="card.gradient">
+                  <i class="fas" [ngClass]="card.icon"></i>
+                </div>
+                <div class="tile-body">
+                  <div class="tile-title tile-title--full">{{ card.title }}</div>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <div class="empty-state" *ngIf="sections.length === 0 || cards.length === 0">
+            <i class="fas fa-search"></i>
+            <p>No modules match your search. Try another keyword or category.</p>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </ng-container>
+
+  <button class="palette-fab" type="button" (click)="togglePalette()" title="Change theme" aria-label="Change theme">
+    <i class="fas fa-palette"></i>
+  </button>
+
+  <div class="palette-drawer" *ngIf="showPalette">
+    <button
+      *ngFor="let palette of paletteOptions"
+      type="button"
+      class="palette-chip"
+      [class.active]="palette === selectedPalette"
+      [style.background]="palette.swatch"
+      [title]="palette.name"
+      (click)="setPalette(palette)"
+      [attr.aria-label]="'Theme ' + palette.name"
+    >
+      <span class="sr-only">{{ palette.name }}</span>
+    </button>
+  </div>
+</div>

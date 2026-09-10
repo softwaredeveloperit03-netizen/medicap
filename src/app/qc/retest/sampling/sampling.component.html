@@ -1,0 +1,297 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Retest Sampling</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/qc/retest">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>{{'common.table.srNo' | translate}}</th>
+                    <th>Material Type</th>
+                    <th>{{'common.category' | translate}}</th>
+                    <th>Material Code</th>
+                    <th>Material Name</th>
+                    <th>Medicap lot no.</th>
+                    <th>Receiving no.</th>
+                    <th>Date</th>
+                    <th>Release Date</th>
+                    <th>Retest Date</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let res of results;let i=index">
+                    <td>{{i+1}}</td>
+                    <td>{{res.material_type}}</td>
+                    <td>{{res.material_subtype}}</td>
+                    <td>{{res.material_code}}</td>
+                    <td>{{res.material_name}}</td>
+                    <td>{{res.batch_no || res.ar_no}}</td>
+                    <td>{{res.receiving_no || res.old_grn || res.grn_no}}</td>
+                    <td>{{res.grn_date | date:'dd-MM-yyyy'}}</td>
+                    <td>{{res.release_date | date:'dd-MM-yyyy' }}</td>
+                    <td>{{res.retest_date | date:'dd-MM-yyyy'}}</td>
+                    <td><button class="btn btn-info btn-sm" (click)="view(i)">{{'common.view' | translate}}</button></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <!-- <div class="card-footer"><button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button></div> -->
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Retest Sampling</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                <tr>
+                    <td style="text-align: left;">Material Type</td>
+                    <td style="text-align: left;">{{selectedResult.material_type}}</td>
+                    <td style="text-align: left;">{{'common.category' | translate}}</td>
+                    <td style="text-align: left;">{{selectedResult.material_subtype}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Material Code</td>
+                    <td style="text-align: left;">{{selectedResult.material_code}}</td>
+                    <td style="text-align: left;">Material Name</td>
+                    <td style="text-align: left;">{{selectedResult.material_name}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Medicap lot no.</td>
+                    <td style="text-align: left;">{{selectedResult.batch_no || selectedResult.ar_no}}</td>
+                    <td style="text-align: left;">Receiving no.</td>
+                    <td style="text-align: left;">{{selectedResult.receiving_no || selectedResult.old_grn || selectedResult.grn_no}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Date</td>
+                    <td style="text-align: left;">{{selectedResult.grn_date | date:'dd-MM-yyyy'}}</td>
+                    <td style="text-align: left;">Release Date</td>
+                    <td style="text-align: left;">{{selectedResult.release_date | date:'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Retest Date</td>
+                    <td style="text-align: left;" colspan="3">{{selectedResult.retest_date | date:'dd-MM-yyyy'}}</td>
+                </tr>
+            </table>
+
+            <form #areaForm="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <h3>Balance Verification:</h3>
+                        <div class="clr-row">
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>Balance ID:</label>
+                                <select name="equipment_code" ngModel required
+                                    (change)="selectBalance($event.target.selectedIndex)">
+                                    <option></option>
+                                    <option *ngFor="let balance of balances" [value]="balance.equipment_code">{{
+                                        balance.equipment_code }} - {{ balance.equipment_name }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <table class="table" style="margin-top: 0px;">
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Calibration Status</td>
+                                <td style="text-align: left;">{{ selectedBalance['status'] }} <button
+                                        class="btn btn-sm btn-info" *ngIf="selectedBalance['status'] == 'pending'"
+                                        (click)="isBalance = true">Perform Calibration</button></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Date of Calibration</td>
+                                <td style="text-align: left;">{{ selectedBalance['calibration_date'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Calibration Done By</td>
+                                <td style="text-align: left;">{{ selectedBalance['calibration_by'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Calibration Check By</td>
+                                <td style="text-align: left;">{{ selectedBalance['calibration_check_by'] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <h3>LAF Status:</h3>
+                        <div class="clr-row">
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>LAF ID:</label>
+                                <select name="equipment_code" ngModel required
+                                    (change)="selectLAF($event.target.selectedIndex)">
+                                    <option></option>
+                                    <option *ngFor="let equipment of lafs" [value]="equipment.equipment_code">{{
+                                        equipment.equipment_code }} - {{ equipment.equipment_name }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <table class="table" style="margin-top: 0px;">
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">LAF Cleaning Status</td>
+                                <td style="text-align: left;">{{ selectedLAF['status'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Date of Cleaning</td>
+                                <td style="text-align: left;">{{ selectedLAF['entry_date'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Cleaning Done By</td>
+                                <td style="text-align: left;">{{ selectedLAF['entry_by'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;font-weight: 600;">Cleaning Check By</td>
+                                <td style="text-align: left;">{{ selectedLAF['check_by'] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <br>
+
+                <!-- <h3>Temperature & Humidity Record:</h3> -->
+                <div class="clr-row">
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Cleaning status of area:</label>
+                        <select name="cleaning_status" ngModel="Satisfactory" required>
+                            <option>Satisfactory</option>
+                            <option>Not Satisfactory</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Temp.:(℃)</label>
+                        <input type="text" name="temp" pattern="[0-9]+" ngModel required>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Relative Humidity (%):</label>
+                        <input type="text" name="humidity" ngModel required>
+                    </div>
+                </div>
+                <hr>
+
+                <h3>Start LAF:</h3>
+                <br>
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Start Time:<br></label>
+                        <button class="btn btn-primary" (click)="getCurrentTime()">START</button>
+                        <input type="time" style="margin: 0px;height: 33px;width: 80%;" name="laf_start_date"
+                            [(ngModel)]="start_time" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Pressure Differential Reading
+                            <!--  (After 15 Min.) -->:
+                        </label>
+                        <input type="text" name="pressure_reading" [(ngModel)]="pressure_reading" required>
+                    </div>
+                </div>
+                <form #addData="ngForm">
+                    <table class="table">
+                        <tr>
+                            <th>No. of Containers Received</th>
+                            <th>No. of containers Sampled</th>
+                            <th>Sample Qty withdrawal from Every Container</th>
+                            <th>Reserve Sample Qty</th>
+                            <th>{{'common.unit' | translate}}</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0px;">
+                                <input type="text" name="containers" [(ngModel)]="containers" required
+                                    style="margin: 0px; height: 33px;">
+                            </td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="sampling_containers" [(ngModel)]="sampling_containers" required
+                                    (keyup)="calculation()" style="margin: 0px; height: 33px;">
+                            </td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="sample_qty" [(ngModel)]="sample_qty" required
+                                    (keyup)="calculation()" style="margin: 0px; height: 33px;">
+                            </td>
+                            <td style="padding: 0px;">
+                                <input type="text" name="reserve_qty" [(ngModel)]="reserve_qty" required
+                                    (keyup)="calculation()" style="margin: 0px; height: 33px;">
+                            </td>
+                            <td style="padding: 0px;">
+                                <select name="sample_unit" [(ngModel)]="sample_unit" required (change)="calculation()"
+                                    style="margin: 0px;height: 33px;">
+                                    <option></option>
+                                    <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+                <table class="table" style="margin-top: 0.5rem;">
+                    <tr>
+                        <th>Container No.</th>
+                        <th>Sample Qty</th>
+                        <th>Reserve Qty</th>
+                        <th>Total Qty</th>
+                        <th>UOM</th>
+
+                    </tr>
+                    <tr *ngFor="let container of  container_details; let i = index">
+                        <td>{{ i+1 }}</td>
+                        <td>{{ container.sample_qty }}</td>
+                        <td>{{ container.reserve_qty }}</td>
+                        <td>{{ container.total_qty }}</td>
+                        <td>{{ container.unit }}</td>
+                    </tr>
+                </table>
+                <br>
+
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Proper consignment label affixed</label>
+                        <select name="label_affixed" ngModel required>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Condition of Containers</label>
+                        <select name="container_condition" ngModel required>
+                            <option>Intact</option>
+                            <option>Damaged Unacceptable</option>
+                            <option>Partially Damage But Acceptable</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="clr-row">
+                    <div class="clr-col-6">
+                        <label>Start SAMPLING</label>
+                        <input type="time" name="start_sampling" ngModel required>
+                    </div>
+                    <div class="clr-col-6">
+                        <label>STOP SAMPLING</label>
+                        <input type="time" name="stop_sampling" ngModel required>
+                    </div>
+
+                </div>
+                <div class="clr-row">
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <h4>Sampling Start & Stop Time:</h4>
+                        <div class="clr-row">
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <label>Start Time:</label>
+                                <input type="time" name="start_time" ngModel readonly tabindex="-1">
+                            </div>
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <label>End Time:</label>
+                                <input type="time" name="stop_date" ngModel>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer"><button class="btn btn-primary" (click)="saveSampling(areaForm)">{{'common.save' | translate}}</button></div>
+</div>

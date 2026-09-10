@@ -1,0 +1,386 @@
+<section class="ptm-page" aria-label="Process type master">
+  <header class="ptm-header ptm-no-print">
+    <div class="ptm-header__titles">
+      <h1 class="ptm-title">Process type master</h1>
+ 
+    </div>
+    <div class="ptm-header__tools">
+      <button type="button" class="btn btn-sm btn-danger" (click)="closePage()">Close</button>
+    </div>
+  </header>
+
+ 
+
+  <div class="ptm-form ptm-no-print">
+    <fieldset class="ptm-fieldset ptm-fieldset--labels">
+ 
+      <div class="ptm-grid ptm-grid--labels">
+        <div class="ptm-field">
+          <label for="ptm-lbl-stage">Level 1 label</label>
+          <input
+            id="ptm-lbl-stage"
+            type="text"
+            name="labelStage"
+            [(ngModel)]="labelStage"
+            (ngModelChange)="persistLevelLabels()"
+            placeholder="e.g. Stage, Phase"
+          />
+        </div>
+        <div class="ptm-field">
+          <label for="ptm-lbl-step">Level 2 label</label>
+          <input
+            id="ptm-lbl-step"
+            type="text"
+            name="labelStep"
+            [(ngModel)]="labelStep"
+            (ngModelChange)="persistLevelLabels()"
+            placeholder="e.g. Step, Operation"
+          />
+        </div>
+        <div class="ptm-field">
+          <label for="ptm-lbl-sub">Level 3 label</label>
+          <input
+            id="ptm-lbl-sub"
+            type="text"
+            name="labelSubstep"
+            [(ngModel)]="labelSubstep"
+            (ngModelChange)="persistLevelLabels()"
+            placeholder="e.g. Substep, Task"
+          />
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="ptm-fieldset">
+      <legend class="ptm-legend">Add next row</legend>
+      <div class="ptm-entry-mode">
+        <span class="ptm-muted-heading">What are you adding?</span>
+        <label class="ptm-radio ptm-radio--inline">
+          <input type="radio" name="entryMode" value="stage" [(ngModel)]="entryMode" (ngModelChange)="onEntryModeChange()" />
+          {{ labelStage }}
+        </label>
+        <label class="ptm-radio ptm-radio--inline">
+          <input type="radio" name="entryMode" value="step" [(ngModel)]="entryMode" (ngModelChange)="onEntryModeChange()" />
+          {{ labelStep }}
+        </label>
+        <label class="ptm-radio ptm-radio--inline">
+          <input type="radio" name="entryMode" value="substep" [(ngModel)]="entryMode" (ngModelChange)="onEntryModeChange()" />
+          {{ labelSubstep }}
+        </label>
+      </div>
+
+      <div class="ptm-field ptm-parent-pick" *ngIf="entryMode === 'step'">
+        <label for="ptm-pick-stage">Parent {{ labelStage }} <abbr>*</abbr></label>
+        <select id="ptm-pick-stage" name="selectedParentStagePath" [(ngModel)]="selectedParentStagePath">
+          <option value="">— Select —</option>
+          <option *ngFor="let s of stageRows()" [value]="s.sequence_path">
+            {{ s.sequence_path }} — {{ s.stage_no }} {{ s.stage_title }} ({{ s.dosage_form }})
+          </option>
+        </select>
+      </div>
+
+      <div class="ptm-field ptm-parent-pick" *ngIf="entryMode === 'substep'">
+        <label for="ptm-pick-stg2">Parent {{ labelStage }} <abbr>*</abbr></label>
+        <select
+          id="ptm-pick-stg2"
+          name="selectedParentStagePathSub"
+          [(ngModel)]="selectedParentStagePath"
+          (ngModelChange)="selectedParentStepPath = ''"
+        >
+          <option value="">— Select —</option>
+          <option *ngFor="let s of stageRows()" [value]="s.sequence_path">{{ s.sequence_path }} — {{ s.stage_title }}</option>
+        </select>
+      </div>
+      <div class="ptm-field ptm-parent-pick" *ngIf="entryMode === 'substep'">
+        <label for="ptm-pick-step">Parent {{ labelStep }} <abbr>*</abbr></label>
+        <select id="ptm-pick-step" name="selectedParentStepPath" [(ngModel)]="selectedParentStepPath">
+          <option value="">— Select —</option>
+          <option *ngFor="let st of stepRowsForDropdown()" [value]="st.sequence_path">
+            {{ st.sequence_path }} — {{ st.step_no }} {{ st.step_title }}
+          </option>
+        </select>
+      </div>
+
+      <ng-container *ngIf="entryMode === 'stage'">
+        <div class="ptm-grid">
+          <div class="ptm-field">
+            <label for="ptm-dosage">Dosage form <abbr title="required">*</abbr></label>
+            <select
+              id="ptm-dosage"
+              name="dosageForm"
+              [(ngModel)]="dosageForm"
+              [disabled]="loadingDosages"
+              required
+            >
+              <option value="">{{ loadingDosages ? 'Loading…' : 'Select dosage form' }}</option>
+              <option *ngFor="let d of dosageOptions" [value]="d.dosage_form">{{ d.dosage_form }}</option>
+            </select>
+          </div>
+          <div class="ptm-field ptm-field--span2">
+            <label for="ptm-process-title">Process type <abbr title="required">*</abbr></label>
+            <input
+              id="ptm-process-title"
+              type="text"
+              name="processTitle"
+              [(ngModel)]="processTitle"
+              autocomplete="off"
+              placeholder="e.g. Tablet compression"
+            />
+            <p class="ptm-field-hint">
+              One process type can have multiple {{ labelStage | lowercase }}s. Enter the process type once, then add each
+              {{ labelStage | lowercase }} with a new number and title.
+            </p>
+            <p class="ptm-field-hint ptm-field-hint--accent" *ngIf="stagesForProcessType(dosageForm, processTitle).length as n">
+              {{ n }} {{ labelStage | lowercase }}{{ n === 1 ? '' : 's' }} already in this batch for this process type.
+            </p>
+          </div>
+          <div class="ptm-field">
+            <label for="ptm-stage-no">{{ labelStage }} no. <abbr title="required">*</abbr></label>
+            <input
+              id="ptm-stage-no"
+              type="text"
+              name="stageNumber"
+              [(ngModel)]="stageNumber"
+              inputmode="decimal"
+              placeholder="e.g. 1"
+            />
+          </div>
+          <div class="ptm-field">
+            <label for="ptm-stage-title">{{ labelStage }} title <abbr title="required">*</abbr></label>
+            <input
+              id="ptm-stage-title"
+              type="text"
+              name="stageTitle"
+              [(ngModel)]="stageTitle"
+              autocomplete="off"
+              placeholder=" e.g. Blending"
+            />
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="entryMode === 'step'">
+        <div class="ptm-grid ptm-grid--narrow">
+          <div class="ptm-field">
+            <label for="ptm-step-no">{{ labelStep }} no. <abbr>*</abbr></label>
+            <input id="ptm-step-no" type="text" name="stepNumber" [(ngModel)]="stepNumber" placeholder=" e.g. 1" />
+          </div>
+          <div class="ptm-field">
+            <label for="ptm-step-title">{{ labelStep }} title <abbr>*</abbr></label>
+            <input id="ptm-step-title" type="text" name="stepTitle" [(ngModel)]="stepTitle" placeholder=" e.g. Dispensing" />
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="entryMode === 'substep'">
+        <div class="ptm-grid ptm-grid--narrow">
+          <div class="ptm-field">
+            <label for="ptm-sub-no">{{ labelSubstep }} no. <abbr>*</abbr></label>
+            <input id="ptm-sub-no" type="text" name="substepNumber" [(ngModel)]="substepNumber" placeholder=" e.g. 1" />
+          </div>
+          <div class="ptm-field">
+            <label for="ptm-sub-title">{{ labelSubstep }} title <abbr>*</abbr></label>
+            <input id="ptm-sub-title" type="text" name="substepTitle" [(ngModel)]="substepTitle" placeholder=" e.g. Line clearance" />
+          </div>
+        </div>
+      </ng-container>
+    </fieldset>
+
+    <fieldset class="ptm-fieldset" *ngIf="entryMode === 'stage' || entryMode === 'step' || entryMode === 'substep'">
+      <div class="ptm-actions-bar">
+        <button type="button" class="btn btn-outline" (click)="toggleActions()" [attr.aria-expanded]="actionsOpen">
+          Actions
+          <span class="ptm-chevron" [class.ptm-chevron--open]="actionsOpen">▼</span>
+        </button>
+        <span class="ptm-actions-hint"
+          >For this row: Equipments · Line clearance · {{ yieldProvisionLabel() }} · In-process analysis · Weighing · Procedure<span
+            class="ptm-no-print"
+          >
+            · Additional parameters (optional)</span
+          >
+          · IPC (Production / IPQA). Open Actions to change.</span
+        >
+      </div>
+
+      <div class="ptm-actions-body" *ngIf="actionsOpen" role="region" aria-label="Provisions and in-process checks">
+        <div class="ptm-grid ptm-grid--two">
+          <div class="ptm-field-group">
+            <span class="ptm-muted-heading">Provisions</span>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionEquipments" [(ngModel)]="provisionEquipments" />
+              Equipments
+            </label>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionLineClearance" [(ngModel)]="provisionLineClearance" />
+              Line clearance
+            </label>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionStageYield" [(ngModel)]="provisionStageYield" />
+              {{ yieldProvisionLabel() }}
+            </label>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionInprocessAnalysis" [(ngModel)]="provisionInprocessAnalysis" />
+              In-process analysis
+            </label>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionWeighing" [(ngModel)]="provisionWeighing" />
+              Weighing
+            </label>
+            <label class="ptm-check">
+              <input type="checkbox" name="provisionProcedure" [(ngModel)]="provisionProcedure" />
+              Procedure
+            </label>
+            <label class="ptm-check">
+              <input
+                type="checkbox"
+                name="provisionAdditionalParameter"
+                [(ngModel)]="provisionAdditionalParameter"
+                (ngModelChange)="onAdditionalParameterChange($event)"
+              />
+              Additional parameter
+            </label>
+
+            <div class="gmp-add-field ptm-add-field" *ngIf="provisionAdditionalParameter">
+             
+
+              <div class="ptm-add-param-slots">
+                <div class="ptm-add-param-slot" *ngFor="let slot of additionalParamSlots; let i = index; trackBy: trackBySlotIndex">
+                  <span class="ptm-add-param-slot__num">{{ i + 1 }}.</span>
+                  <input
+                    type="text"
+                    class="gmp-in-text"
+                    [name]="'apLabel_' + i"
+                    [(ngModel)]="slot.label"
+                    (ngModelChange)="onAdditionalSlotLabelChange(i)"
+                    placeholder="Display label"
+                    autocomplete="off"
+                  />
+                 
+                  <button
+                    type="button"
+                    class="btn btn-outline btn-sm ptm-no-print"
+                    *ngIf="additionalParamSlots.length > 1"
+                    (click)="removeAdditionalParamSlot(i)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <div class="ptm-add-param-footer ptm-no-print">
+                <button type="button" class="btn btn-outline btn-sm" (click)="addAdditionalParamSlot()">+ Add another parameter</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ptm-field-group">
+            <span class="ptm-muted-heading">In-process checks by</span>
+            <label class="ptm-radio">
+              <input type="radio" name="ipcBy" value="none" [(ngModel)]="inProcessChecksBy" />
+              Not applicable
+            </label>
+            <label class="ptm-radio">
+              <input type="radio" name="ipcBy" value="production" [(ngModel)]="inProcessChecksBy" />
+              Production
+            </label>
+            <label class="ptm-radio">
+              <input type="radio" name="ipcBy" value="ipqa" [(ngModel)]="inProcessChecksBy" />
+              IPQA
+            </label>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <footer class="ptm-footer ptm-footer--entry">
+      <button type="button" class="btn" (click)="resetCurrentEntry()" [disabled]="savingBatch">Reset entry</button>
+      <button type="button" class="btn btn-success" (click)="addHierarchyRow()" [disabled]="savingBatch">Add to list</button>
+    </footer>
+  </div>
+
+  <div class="ptm-table-wrap" id="ptm-print-root">
+    <div class="ptm-table-header">
+      <h2 class="ptm-table-title">Lines to save <span class="ptm-batch ptm-no-print">(batch: {{ batchUid }})</span></h2>
+      <div class="ptm-table-actions ptm-no-print">
+        <button type="button" class="btn btn-outline" (click)="printTable()" [disabled]="lines.length === 0 || savingBatch">Print</button>
+      </div>
+    </div>
+
+    <div class="ptm-table-scroll">
+      <table class="ptm-table ptm-table--wide">
+        <thead>
+          <tr>
+            <th>Seq</th>
+            <th>Level</th>
+            <th>Dosage</th>
+            <th>Process</th>
+            <th>{{ labelStage }} #</th>
+            <th>{{ labelStage }} title</th>
+            <th>{{ labelStep }} #</th>
+            <th>{{ labelStep }} title</th>
+            <th>{{ labelSubstep }} #</th>
+            <th>{{ labelSubstep }} title</th>
+            <th>Equip.</th>
+            <th>L.clr</th>
+            <th>Yld</th>
+            <th>I.A.</th>
+            <th>Wgh</th>
+            <th>Prc</th>
+            <th>A.P.</th>
+            <th>Param. detail</th>
+            <th>IPC</th>
+            <th class="ptm-no-print">Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of lines; let i = index">
+            <td><span class="ptm-seq" [style.margin-left.rem]="indentRem(row)">{{ row.sequence_path }}</span></td>
+            <td>{{ levelCaption(row) }}</td>
+            <td>{{ row.dosage_form }}</td>
+            <td>{{ row.process_title }}</td>
+            <td>{{ row.stage_no }}</td>
+            <td>{{ row.stage_title }}</td>
+            <td>{{ row.step_no || '—' }}</td>
+            <td>{{ row.step_title || '—' }}</td>
+            <td>{{ row.substep_no || '—' }}</td>
+            <td>{{ row.substep_title || '—' }}</td>
+            <td>{{ ynOrDash(row, row.provision_equipments) }}</td>
+            <td>{{ ynOrDash(row, row.provision_line_clearance) }}</td>
+            <td>{{ ynOrDash(row, row.provision_stage_yield) }}</td>
+            <td>{{ ynOrDash(row, row.provision_inprocess_analysis) }}</td>
+            <td>{{ ynOrDash(row, row.provision_weighing) }}</td>
+            <td>{{ ynOrDash(row, row.provision_procedure) }}</td>
+            <td>{{ ynOrDash(row, row.provision_additional_parameter) }}</td>
+            <td class="ptm-cell-detail">{{ additionalParamSummary(row) }}</td>
+            <td>{{ ipcOrDash(row) }}</td>
+            <td class="ptm-no-print">
+              <button type="button" class="btn btn-sm btn-warning" (click)="removeLine(i)" [disabled]="savingBatch">✕</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="ptm-empty" *ngIf="lines.length === 0">
+      No rows yet. Set level names above, choose what you are adding ({{ labelStage }} / {{ labelStep }} / {{ labelSubstep }}), then Add to list. Removing a
+      row also removes its nested children.
+    </p>
+  </div>
+
+  <app-process-type-save-log
+    class="ptm-no-print"
+    [active]="schemaStatus === 'ready'"
+    [refreshTick]="saveLogRefreshTick"
+  ></app-process-type-save-log>
+
+  <footer class="ptm-footer ptm-footer--final ptm-no-print">
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="finalSaveToDb()"
+      [disabled]="savingBatch || lines.length === 0 || schemaStatus !== 'ready'"
+    >
+      {{ savingBatch ? 'Saving…' : 'Final save (store all in DB)' }}
+    </button>
+  </footer>
+</section>

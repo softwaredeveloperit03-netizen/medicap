@@ -1,0 +1,129 @@
+<div class="component store-legacy-dash">
+  <div class="subsection">
+    <div class="purchase-block">
+      <div style="text-align:end" class="exit-section">
+        <div class="header-block" style="margin:10px 0px">
+          <h3>Track Lane</h3>
+        <div routerLink="/store/wms" class="name-board2"><i class="fas fa-times"></i>
+        </div>
+      </div>
+
+      <div class="main-section" style="margin: 0px 10px 10px 10px !important;">
+        <div class="card">
+          <div class="card-block">
+            <div class="clr-row" style="margin-bottom: 20px;">
+              <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Scan Lane Barcode:</strong></label>
+                <input 
+                  type="text" 
+                  #barcodeInputField
+                  [(ngModel)]="barcodeInput"
+                  (keyup.enter)="onBarcodeScan($event)"
+                  class="form-control"
+                  style="font-size: 18px; padding: 10px;"
+                  placeholder="Scan barcode or enter manually and press Enter"
+                  autofocus>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="padding-top: 25px;">
+                <button class="btn btn-primary" (click)="trackLane(barcodeInput)">{{'common.search' | translate}}</button>
+                <button class="btn btn-secondary" (click)="clearSearch()">{{'common.clear' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="loading">
+          <div class="card-block">
+            <div style="text-align: center; padding: 20px;">
+              <span class="spinner spinner-inline"></span>
+              <span>Loading lane details...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="laneData && !loading">
+          <div class="card-header" style="background-color: #0f4c75; color: white;">
+            <h4>Lane Details</h4>
+          </div>
+          <div class="card-block">
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Lane No:</strong></td>
+                    <td><strong style="color: #0f4c75;">{{ laneData.laneNO || 'N/A' }}</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Room Name:</strong></td>
+                    <td>{{ laneData.section_name || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>{{ laneData.status || 'N/A' }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <h5>Summary</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Total Locations:</strong></td>
+                    <td>{{ summary.totalLocations || 0 }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Total Palates:</strong></td>
+                    <td>{{ summary.totalPalates || 0 }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Total Materials:</strong></td>
+                    <td>{{ summary.totalMaterials || 0 }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="laneData">
+              <div class="clr-col-12">
+                <h4 style="margin-top: 20px; color: #0f4c75;">Racks in Lane ({{ totalRecords }})</h4>
+                <div class="datagrid-wrapper" *ngIf="racks && racks.length > 0">
+                  <clr-datagrid>
+                    <clr-dg-column>Sr. No.</clr-dg-column>
+                    <clr-dg-column>Rack No</clr-dg-column>
+                    <clr-dg-column>Locations Count</clr-dg-column>
+                    <clr-dg-column>Palates Count</clr-dg-column>
+                    <clr-dg-column>Materials Count</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let rack of racks; let i = index" [clrDgItem]="rack">
+                      <clr-dg-cell>{{ (currentPage - 1) * pageSize + i + 1 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ rack.rack_no }}</clr-dg-cell>
+                      <clr-dg-cell>{{ rack.locations_count || 0 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ rack.palates_count || 0 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ rack.materials_count || 0 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ rack.status || 'N/A' }}</clr-dg-cell>
+                    </clr-dg-row>
+
+                    <clr-dg-footer>
+                      <clr-dg-pagination #pagination [clrDgPageSize]="pageSize" [clrDgTotalItems]="totalRecords">
+                        <clr-dg-page-size [clrPageSizeOptions]="[50, 100, 200, 500]">Racks per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}} of {{pagination.totalItems}} racks
+                      </clr-dg-pagination>
+                    </clr-dg-footer>
+                  </clr-datagrid>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="laneData && racks && racks.length === 0">
+              <div class="clr-col-12">
+                <div class="alert alert-info" style="margin-top: 20px;">
+                  <i class="fas fa-info-circle"></i> No racks found in this lane.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

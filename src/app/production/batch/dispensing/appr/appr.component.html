@@ -1,0 +1,427 @@
+<div class="card" *ngIf="!isView && !isStart && !isViewDispensing">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Receiving Dispensing
+                Requests</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/prod-f-ebmr/batch/dispensing">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Date</th>
+                    <th>Plan No</th>
+                    <th>Product Code</th>
+                    <th>Product Name</th>
+                    <th>Batch/Lot No.</th>
+                    <th>Batch Size</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td>{{ result.dispense_request_sent_on | date: 'dd-MM-yyyy' }}</td>
+                    <td>{{ result.plan_no }}</td>
+                    <td>{{ result.product_code}}</td>
+                    <td>{{ result.product_name }}</td>
+                    <td>{{ result.batch_number }}</td>
+                    <td>{{ result.batch_size }}</td>
+                    <td>Pending</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="12">No Records Found!</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> Dispensing Details
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_number']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>BFR No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['bfr_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr_no']}}</td>
+
+                    </tr>
+                </table>
+                <h3>Bill of Material:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align: left;">Lot No.</th>
+                        <th style="text-align: left;">Lot Type</th>
+                        <th style="text-align: left;">Material Subtype</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <!-- <th style="text-align: left;">Medicap lot no</th>
+                        <th style="text-align: left;">AR Avl Qty</th> -->
+                        <th style="text-align: left;">Grade</th>
+                        <!-- <th style="text-align: left;"> Std.Batch Qty</th> -->
+                        <th style="text-align: left;"> Batch Qty</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.lot_no }}</td>
+                        <td style="text-align: left;">{{ comp.lot_type }}</td>
+                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                        <!-- <td style="text-align: left;"></td>
+                        <td style="text-align: left;">avl qty</td> -->
+                        <td style="text-align: left;">{{ comp.grade }}</td>
+
+                        <!-- <td style="text-align: left;">{{ comp.batch_qty }}</td> -->
+                        <td style="text-align: left;">{{ comp.batch_qty }}</td>
+                        
+                        <td>
+                            <!-- <button *ngIf="comp.dispence_id==0" class="btn btn-sm" (click)="show(i)" [disabled]="comp.dispence_id== 0">START DISPENSING</button> -->
+                            <button class="btn btn-sm" (click)="show(i)" [disabled]="comp.prod_status!='pending'">view</button>
+                        </td>
+                        
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isView=false">close</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="card" *ngIf="isStart">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> Dispensing Activity
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="isStart= false;isView=true"
+                    style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+
+                    <tr>
+                        <td style="text-align: left;"><b>Product Name:</b></td>
+                        <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left;">{{selectedResult['batch_number']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;"><b>Grade:</b></td>
+                        <td style="text-align: left;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="text-align: left;"><b>BFR No.:</b></td>
+                        <td style="text-align: left;">{{selectedResult['bfr_no']}}</td>
+                        <td style="text-align: left;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left;">{{selectedResult['mfr_no']}}</td>
+
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;"><b>Dispensing No:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedResult['work_order_no']}}</strong></td>
+
+                        <td style="text-align: left;"><b>Material Name:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedMaterial['material_name']}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;"><b>Material Code:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedMaterial['material_code']}}</strong></td>
+                        <td style="text-align: left;"><b>Grade:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedMaterial['grade']}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;"><b>LOD Criteria:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedResult['lod_status']}}</strong></td>
+                        <td style="text-align: left;"><b>Assay Criteria:</b></td>
+                        <td style="text-align: left;"><strong>{{selectedResult['assay_status']}}</strong></td>
+                    </tr>
+                </table>
+
+
+                <div class="card" *ngIf="software_type=='Formulation'">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                Assay Calculation</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="row container-fluid" id="show">
+                                <form #empForm="ngForm">
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-3 clr-col-md-3">
+                                            <label>AR Number:</label>
+                                            <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                                tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3">
+                                            <label>Assay (%):</label>
+                                            <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                                tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3">
+                                            <label>Qty. Available:</label>
+                                            <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                                tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3">
+                                            <label>Drug Qty. Present:</label>
+                                            <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                                tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3 clr-col-md-3">
+                                            <label>Qty Unit:</label>
+                                            <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                                tabindex="-1">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card" *ngIf="software_type=='Formulation'">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                LOD Calculation</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="row container-fluid" id="show">
+                                <form #empForm="ngForm">
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card" *ngIf="software_type=='Formulation'">
+                    <div class="card-header" style="text-align: center ">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                Equivalency Calculation</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="row container-fluid" id="show">
+                                <form #empForm="ngForm">
+
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card" *ngIf="software_type=='Formulation'">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                Required Qty.(AFTER CALCULATION)</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="row container-fluid" id="show">
+                                <form #empForm="ngForm">
+
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                Dispensing Activity</div>
+                            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-6 clr-col-md-6">
+                                    <label>Required Qty:</label>
+                                    <input type="text" name="qty" [ngModel]="selectedMaterial['batch_qty']" readonly
+                                        tabindex="-1">
+                                </div>
+                                <div class="clr-col-lg-6 clr-col-md-6">
+                                    <label>Balance Qty:</label>
+                                    <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly
+                                        tabindex="-1">
+                                </div>
+                            </div>
+                            <div class="clr-row">
+                                <div class="clr-col-lg-6 clr-col-md-6">
+                                    <h4>Available A R Data:</h4>
+                                </div>
+                                <div class="clr-col-lg-6 clr-col-md-6">
+                                    <h3>FIFO Type: {{fifo_method}}</h3>
+
+
+                                </div>
+                            </div>
+                            <form #contanerForm="ngForm">
+                                <table class="table">
+                                    <tr>
+                                        
+                                        <th style="background-color: #004a70; color :white">QTY Avbl.</th>
+                                        <th style="background-color: #004a70; color :white">Pack Size</th>
+                                        <!-- <th style="background-color: #004a70; color :white">Intact Containers</th>
+                                        <th style="background-color: #004a70; color :white">Loose Qty.</th> -->
+                                        <th style="background-color: #004a70; color :white">Lod %.</th>
+                                        <th style="background-color: #004a70; color :white">Dry Qty</th>
+                                        <th style="background-color: #004a70; color :white">Assay %.</th>
+                                        <th style="background-color: #004a70; color :white">Pure Qty</th>
+                                        <th style="background-color: #004a70; color :white">Equvalancy Factor</th>
+                                        <th style="background-color: #004a70; color :white">Qty To Dispense</th>
+                                        <th style="background-color: #004a70; color :white">Next Medicap lot no Qty</th>
+                                        <!-- <th style="background-color: #004a70; color :white">Action</th> -->
+                                    </tr>
+                                    <tr *ngFor="let list of available_ars_data;let i=index;">
+                                        <td style="text-align: center;">{{i+1}}</td>
+                                        <td style="text-align: left;">{{ list.batch_no }}</td>
+                                        <td style="text-align: left;">{{list.balance_qty}}</td>
+                                        <td style="text-align: left;">{{list.pack_size}}</td>
+                                        <!-- <td style="text-align: left;">{{list.intact_containers}}</td>
+                                        <td style="text-align: left;">{{list.loose_qty}}</td> -->
+                                        <td *ngIf="list.dry_qty>0" style="text-align: left;">{{list.lod_per}}</td>
+                                        <td *ngIf="list.dry_qty==0" style="text-align: left;">N/A</td>
+
+                                        <td *ngIf="list.dry_qty>0" style="text-align: left;">{{list.dry_qty}}</td>
+                                        <td *ngIf="list.dry_qty==0" style="text-align: left;">N/A</td>
+
+                                        <td *ngIf="list.pure_qty>0" style="text-align: left;">{{list.assay}}</td>
+                                        <td *ngIf="list.pure_qty==0" style="text-align: left;">N/A</td>
+
+                                        <td *ngIf="list.pure_qty>0" style="text-align: left;">{{list.pure_qty}}</td>
+                                        <td *ngIf="list.pure_qty==0" style="text-align: left;">N/A</td>
+
+                                        <td style="text-align: left;">{{list.e_factor}}</td>
+                                        <td style="text-align: left;">{{list.qty_to_dispense}}</td>
+                                        <td style="text-align: left;">{{list.next_ar_qty}}</td>
+                                        <!-- <td style="padding: 0px;"><button class="btn btn-sm"
+                                            (click)="adddata(contanerForm)" style="margin: 0px;">Add</button></td> -->
+                                    </tr>
+
+                                </table>
+                            </form>
+                            <form #contanerForm="ngForm">
+                                <table class="table">
+                                    <tr>
+                                        <th style="background-color: #004a70; color :white">Medicap lot no</th>
+                                        <th style="background-color: #004a70; color :white">Container No</th>
+                                        <th style="background-color: #004a70; color :white">Container Type</th>
+                                        <th style="background-color: #004a70; color :white">Gross Wt</th>
+                                        <th style="background-color: #004a70; color :white">Tare Wt</th>
+                                        <th style="background-color: #004a70; color :white">Net Wt</th>
+                                        <!-- <th style="background-color: #004a70; color :white">Action</th> -->
+                                    </tr>
+                                    <tr *ngFor="let list of available_ars;let i=index;">
+                                        <td style="text-align: left;">{{list.ar_no}}</td>
+                                        <td style="text-align: left;">{{list.container_no}}</td>
+                                        <td style="text-align: left;">{{list.container_type}}</td>
+                                        <td style="text-align: left;">{{list.gross_wt}}</td>
+                                        <td style="text-align: left;">{{list.tare_wt}}</td>
+                                        <!-- <td style="padding: 0px;"><input type="text" name="tare_wt{{i}}"
+                                                (input)="calc_tare_weight($event.target.value,i)"
+                                                [(ngModel)]="list.tare_wt" style="margin: 0px;" required></td> -->
+
+                                        <td style="text-align: left;">{{list.net_weight}}</td>
+                                        <!-- <td style="padding: 0px;"><button class="btn btn-sm"
+                                                (click)="adddata(contanerForm)" style="margin: 0px;">Add</button></td> -->
+                                    </tr>
+                                    <!-- <tr *ngFor="let list of containers;let i=index;">
+                                        <td style="text-align: left;">{{list.ar_no}}</td>
+                                        <td style="text-align: left;">{{list.container_no}}</td>
+                                        <td style="text-align: left;">{{list.gross_wt}}</td>
+                                        <td style="text-align: left;">{{list.tare_wt}}</td>
+                                        <td style="text-align: left;">{{list.net_wt}}</td>
+                                        <td>
+                                            <clr-icon shape="trash" class="is-error" (click)="delData(i)"></clr-icon>
+                                        </td>
+                                    </tr> -->
+                                    <tr>
+                                        <td colspan="2" style="text-align: right;">Total:</td>
+                                        <td style="text-align: left;">{{selectedResult['gross_total'] | number : '1.2-2'}}</td>
+                                        <td style="text-align: left;">{{selectedResult['tare_total'] | number : '1.2-2'}}</td>
+                                        <td style="text-align: left;">{{selectedResult['net_total'] | number : '1.2-2'}}</td>
+                                    </tr>
+                                </table>
+                            </form>
+                            
+
+                        </div>
+                    </div>
+                </div>
+
+
+              
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="button" class="btn btn-primary" (click)="updateDispensingStatus('Approve')">Approve</button>
+            <button type="button" class="btn btn-danger" (click)="updateDispensingStatus('Reject')">Reject</button>
+            <button type="button" class="btn btn-danger" (click)="isStart = false">close</button>
+        </div>
+    </div>
+</div>

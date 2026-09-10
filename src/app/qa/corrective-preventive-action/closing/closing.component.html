@@ -1,0 +1,144 @@
+<div class="card rcd-form" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        CAPA Closing — {{ mode === 'qa' ? 'Verification by QA' : 'Request by Owner' }} (SOP-QA-070)
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" routerLink="/qa/corrective-preventive-action" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>CAPA #</th>
+          <th>Title</th>
+          <th>Dept Code</th>
+          <th>Status</th>
+          <th *ngIf="mode === 'owner'">Corrective Target</th>
+          <th *ngIf="mode === 'owner'">Preventative Target</th>
+          <th *ngIf="mode === 'qa'">Closure Requested By / Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of results; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.capa_no }}</td>
+          <td>{{ r.capa_document_title }}</td>
+          <td>{{ r.dept_code }}</td>
+          <td><span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status_label || getStatusLabel(r.status) }}</span></td>
+          <td *ngIf="mode === 'owner'">{{ r.corrective_target_date | date: 'dd-MM-yyyy' }}</td>
+          <td *ngIf="mode === 'owner'">{{ r.preventative_target_date | date: 'dd-MM-yyyy' }}</td>
+          <td *ngIf="mode === 'qa'">{{ r.closure_request_by }} / {{ r.closure_request_date | date: 'dd-MM-yyyy' }}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" (click)="viewRecord(r)">{{ mode === 'qa' ? 'Verify' : 'Request Closure' }}</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length">
+          <td colspan="8" style="text-align: center">No records found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- OWNER: REQUEST CLOSURE -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord && mode === 'owner'">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Request Closure — CAPA # {{ selectedRecord.capa_no }}</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Title</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.capa_document_title }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.corrective_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Corrective Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.corrective_actions }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.preventative_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Preventative Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.preventative_actions }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">Closure Proof / Notes</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Proof / Notes <span class="rcd-form__required">*</span></td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <textarea class="rcd-form__textarea" [(ngModel)]="closureProof" rows="4" placeholder="Describe completed actions and evidence of completion"></textarea>
+        </td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button class="btn btn-primary" (click)="requestClosure()">Submit Closure Request to QA</button>
+    </div>
+  </div>
+</div>
+
+<!-- QA: VERIFY CLOSURE -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord && mode === 'qa'">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Verify Closure — CAPA # {{ selectedRecord.capa_no }}</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Title</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.capa_document_title }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.corrective_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Corrective Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.corrective_actions }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.preventative_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Preventative Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.preventative_actions }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Closure Proof / Notes</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.closure_proof }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Requested By / Date</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.closure_request_by }} / {{ selectedRecord.closure_request_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Effectiveness Required (Corrective / Preventative)</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          {{ selectedRecord.corrective_effectiveness_required || 'NO' }} / {{ selectedRecord.preventative_effectiveness_required || 'NO' }}
+        </td>
+      </tr>
+    </table>
+
+    <p class="rcd-form__note">
+      If either Corrective or Preventative effectiveness check is required, the CAPA will move to Pending Effectiveness; otherwise it will be Closed.
+    </p>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button class="btn btn-success" (click)="approveClosure()">Verify &amp; Close</button>
+    </div>
+  </div>
+</div>

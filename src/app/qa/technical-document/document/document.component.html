@@ -1,0 +1,109 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+          Client Document Request (QA Head)
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/qa" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <clr-datagrid>
+          <clr-dg-column clrDgField="request_no">Request No</clr-dg-column>
+          <clr-dg-column clrDgField="entry_date">Date of Request</clr-dg-column>
+          <clr-dg-column clrDgField="TrdNm">Client</clr-dg-column>
+          <clr-dg-column clrDgField="document_type">Document Type</clr-dg-column>
+          <clr-dg-column clrDgField="required_in">Required in Form of</clr-dg-column>
+          <clr-dg-column clrDgField="documents">Document Name</clr-dg-column>
+          <clr-dg-column clrDgField="status">Status</clr-dg-column>
+          <clr-dg-column clrDgField="assigned_dept">Assigned Dept</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *ngFor="let item of list; let i = index">
+            <clr-dg-cell>{{ item.request_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.TrdNm || item.client_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.document_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.required_in }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.documents }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span class="label" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ item.assigned_dept || '-' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-info" (click)="viewPlan(i)">{{ 'common.view' | translate }}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="l">
+  <h3 class="modal-title">Client Document Request</h3>
+  <div class="modal-body">
+    <table class="table table-compact">
+      <tr>
+        <td style="text-align:left;width:30%;">Request No:</td>
+        <td style="text-align:left;">{{ selectedEntry['request_no'] }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">Client:</td>
+        <td style="text-align:left;">{{ selectedEntry['TrdNm'] || selectedEntry['client_code'] }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">Document Type:</td>
+        <td style="text-align:left;">{{ selectedEntry['document_type'] }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">Required in Form of:</td>
+        <td style="text-align:left;">{{ selectedEntry['required_in'] }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">Document Name:</td>
+        <td style="text-align:left;">{{ selectedEntry['documents'] }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;">Status:</td>
+        <td style="text-align:left;">{{ selectedEntry['status'] }}</td>
+      </tr>
+    </table>
+
+    <div *ngIf="isPendingQaHead()" class="clr-row" style="margin-top: 1rem;">
+      <div class="clr-col-lg-6">
+        <label><strong>Select Department</strong> <span style="color:red;">*</span></label>
+        <select name="assigned_dept" [(ngModel)]="assignedDept" required>
+          <option value="">-- Select --</option>
+          <option value="QC">QC</option>
+          <option value="Regulatory">Regulatory</option>
+        </select>
+      </div>
+    </div>
+
+    <div *ngIf="isPendingQaApproval()" style="margin-top: 1rem;">
+      <p><strong>Uploaded by:</strong> {{ selectedEntry['uploaded_by'] }} on {{ selectedEntry['uploaded_date'] | date: 'dd-MM-yyyy HH:mm' }}</p>
+      <button type="button" class="btn btn-sm btn-info" (click)="openUploadedFile()" *ngIf="selectedEntry['file'] && selectedEntry['file'] !== 'NA'">
+        View Uploaded Document
+      </button>
+      <div class="clr-row" style="margin-top: 1rem;">
+        <div class="clr-col-lg-12">
+          <label>QA Remarks</label>
+          <textarea rows="3" name="qa_remarks" [(ngModel)]="qaRemarks"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" *ngIf="isPendingQaHead()" (click)="assignDept()">Assign to Department</button>
+    <button type="button" class="btn btn-success" *ngIf="isPendingQaApproval()" (click)="approveRequest()">Approve</button>
+    <button type="button" class="btn btn-warning" *ngIf="isPendingQaApproval()" (click)="rejectRequest()">Reject</button>
+    <button type="button" class="btn btn-danger" (click)="isView = false">Close</button>
+  </div>
+</clr-modal>

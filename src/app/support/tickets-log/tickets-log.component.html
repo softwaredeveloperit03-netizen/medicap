@@ -1,0 +1,178 @@
+ 
+<div class="card">
+  <div class="card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue; margin-top: -2px; text-align: left;">Support Tickets</div>
+      <div class="clr-col-lg-6" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button routerLink="/it" class="btn btn-sm btn-danger">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading"  >
+
+          <clr-dg-column >{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column>Ticket No.</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+           <clr-dg-column>Query Type</clr-dg-column>
+          <clr-dg-column>Form Name</clr-dg-column>
+          <clr-dg-column>Url </clr-dg-column>
+          <clr-dg-column>Screenshot</clr-dg-column>
+          <clr-dg-column>{{'common.description' | translate}}</clr-dg-column>
+          <clr-dg-column>Raised By</clr-dg-column>
+          <clr-dg-column>Acknowledge By/On/Remark</clr-dg-column>
+          <clr-dg-column>Assign Developer</clr-dg-column>
+          <clr-dg-column>Assign Tester</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"
+          [ngStyle]="{'background-color': getPlantColor(result.plant_id)}">
+            <clr-dg-cell>{{ result.entryOn | date:'dd-MM-yyyy'}}</clr-dg-cell>
+            <clr-dg-cell>{{ result.support_ticket_no }}</clr-dg-cell>
+            <clr-dg-cell> 
+              <span style="color: green;" *ngIf="result.status == 'Resolved'"><b>{{result.status}}</b></span>
+              <span style="color: rgb(156, 156, 7);" *ngIf="result.status == 'Pending'"><b>{{result.status}}</b></span>
+              <span style="color: blue;" *ngIf="result.status == 'Acknowledged'"><b>{{result.status}}</b></span>
+              <span style="color: red;" *ngIf="result.status == 'Developer Assigned'"><b>{{result.status}}</b></span>
+              <span style="color: rgb(231, 99, 12);" *ngIf="result.status == 'Taster Assigned'"><b>{{result.status}}</b></span>
+              <span style="color: rgb(213, 12, 231);" *ngIf="result.status == 'Assigning Tester'"><b>{{result.status}}</b></span>
+              <span style="color: rgb(9, 181, 224);" *ngIf="result.status == 'Testing Done'"><b>{{result.status}}</b></span>
+            </clr-dg-cell>
+             <clr-dg-cell>{{ result.queryType }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.formName }}</clr-dg-cell>
+            <clr-dg-cell>
+              <a class="btn btn-sm"   href="{{result.errorUrl}}" target="_blank"><clr-icon shape="link"></clr-icon></a>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm"  (click)="viewfile(result.errorphoto)"  ><clr-icon shape="eye"></clr-icon></button>
+            </clr-dg-cell>
+            <clr-dg-cell> 
+              <button class="btn btn-sm" (click)="viewDiscription(result.errordescription)" ><clr-icon shape="file"></clr-icon></button>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ result.entryByName }}</clr-dg-cell>
+            <clr-dg-cell> 
+              <button class="btn btn-sm" (click)="viewAck(result)" ><clr-icon shape="tasks"></clr-icon></button>
+            </clr-dg-cell>
+            <clr-dg-cell> 
+               <button [disabled]="result.devloperId == 'Pending'"  class="btn btn-sm btn-success" (click)="viewDeveloperDetails(result)" >{{result.devloperName}}</button>
+            </clr-dg-cell>
+            <clr-dg-cell> 
+               <button [disabled]="result.testerId == 'Pending'"   class="btn btn-sm btn-success" (click)="viewTesterDetails(result)" >{{result.testerName}}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isViewAssignTester" clrModalSize="m" (clrModalClosable)="false" >
+  <div class="modal-title">Assigned Tester</div>
+  <div class="modal-body" >
+    <div class="card">
+      <div class="card-block">
+        <form #viewTesterAssigned="ngForm" class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left;font-weight: bold;">Assigned Tester : <span style="color: blue;">{{testerDetails['testerName']}}</span></td>
+                <td style="text-align: left;font-weight: bold;">Assigned Date/Time :  <span style="color: blue;">{{testerDetails['testerAssignOn'] | date:'dd-MM-yyyy'}} / {{testerDetails['testerAssignOn'] | date:'hh:mm:ss'}}</span></td>
+              </tr>
+              <tr>
+                <td colspan="2" style="text-align: left;font-weight: bold;">Remark For Tester : <br>
+                  <span style="color: blue;">{{testerDetails['remarkForTester']}}</span>
+                </td>
+               </tr>
+              <tr>
+                <td colspan="2" style="text-align: left;font-weight: bold;">Tester Remark : <br>
+                  <span style="color: blue;">{{testerDetails['testerRemark']}}</span>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+       <button class="btn btn-danger" (click)="isViewAssignTester = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isViewAssignDevloper" clrModalSize="m" (clrModalClosable)="false" >
+  <div class="modal-title">Assigned Developer</div>
+  <div class="modal-body" >
+    <div class="card">
+      <div class="card-block">
+        <form #viewDeveloperForm="ngForm" class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left;font-weight: bold;">Assigned Developer : <span style="color: blue;">{{devloperDetails['devloperName']}}</span></td>
+                <td style="text-align: left;font-weight: bold;">Assigned Date/Time :  <span style="color: blue;">{{devloperDetails['devloperAssignOn'] | date:'dd-MM-yyyy'}} / {{devloperDetails['devloperAssignOn'] | date:'hh:mm:ss'}}</span></td>
+              </tr>
+              <tr>
+                <td colspan="2" style="text-align: left;font-weight: bold;">Remark For Developer : <br>
+                  <span style="color: blue;">{{devloperDetails['remarkForDevloper']}}</span>
+                </td>
+               </tr>
+              <tr>
+                <td colspan="2" style="text-align: left;font-weight: bold;">Developer Remark: <br>
+                  <span style="color: blue;">{{devloperDetails['developerRemark']}}</span>
+                </td>
+               </tr>
+            </table>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+       <button class="btn btn-danger" (click)="isViewAssignDevloper = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+ 
+<clr-modal [(clrModalOpen)]="isDiscription" clrModalSize="m" (clrModalClosable)="false" >
+<div class="modal-title">Ticket Discription</div>
+<div class="modal-body" >
+  <div class="clr-row">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <label>Description :<span style="color:red;">*</span></label>
+      <textarea rows="20" name="company_name" [(ngModel)]="discription" required ></textarea>
+    </div>
+  </div>
+</div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isAkno" clrModalSize="m" (clrModalClosable)="false" >
+<div class="modal-title">Acknowledged By</div>
+<div class="modal-body" >
+  <div class="clr-row">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left;font-weight: bold;">Acknowledged By : <span style="color: blue;">{{acnkoData['acknowledgeByName']}}</span></td>
+          <td style="text-align: left;font-weight: bold;">Acknowledged Date/Time :  <span style="color: blue;">{{acnkoData['acknowledgeOn'] | date:'dd-MM-yyyy'}} / {{acnkoData['acknowledgeOn'] | date:'hh:mm:ss'}}</span></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: left;font-weight: bold;">Acknowledger Remark : <br>
+            <span style="color: blue;">{{acnkoData['acknowledgementRemark']}}</span>
+          </td>
+        </tr>
+      </table>    
+    </div>
+  </div>
+</div>
+</clr-modal>

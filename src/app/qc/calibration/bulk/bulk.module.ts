@@ -1,0 +1,38 @@
+﻿import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { NewComponent } from './new/new.component';
+import { CheckingComponent } from './checking/checking.component';
+import { RouterModule, Routes } from '@angular/router';
+ import { ClarityModule } from '@clr/angular';
+import { LogComponent } from './log/log.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { FormComponent } from './form/form.component';
+import { FormsModule } from '@angular/forms';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { TranslateModule } from '@ngx-translate/core';
+
+
+const routes: Routes = [
+  {path: '', component: DashboardComponent},
+  {path:'new', component: NewComponent},
+  {path:'checking', component: CheckingComponent},
+  {path: 'log', component: LogComponent},
+]
+
+@NgModule({
+  declarations: [DashboardComponent,
+    NewComponent,
+    CheckingComponent,
+    LogComponent,
+    FormComponent  
+  ],
+  imports: [
+    SharedModule,
+    TranslateModule,
+    CommonModule,
+    FormsModule,
+    ClarityModule,
+    RouterModule.forChild(routes)
+  ]
+})
+export class BulkModule { }

@@ -1,0 +1,207 @@
+<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">NEW BOM</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/planning/unitformula">CLOSE</button>
+          </div>
+        </div>
+      </div>
+    <div class="card-block">
+        <div class="card-text">
+            <form #basicForm="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>BOM Type:</label>
+                        <select name="bom_type" ngModel="Fresh Batch" required (change)="bomType($event.target.value)">
+                            <option>Fresh Batch</option>
+                            <option>Blending Batch</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Product Type:<span style="color:red;">*</span></label>
+                        <select name="product_type" [(ngModel)]="product_type" required (change)="getProductsByDosage($event.target.value)">
+                            <option>API</option>
+                            <option>Intermediate</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Product Name:<span style="color:red;">*</span></label>
+                        <select name="product_code" ngModel required (change)="getProduct($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let product of products; let i = index" value="{{product.product_code}}">{{ product.product_name }} {{ product.grade }}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Input Batch Size: (Kg)</label>
+                        <input type="number" name="input_qty" (input)="checkValue($event)"   [(ngModel)]="input_qty" required>
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Dispatch Qty: (Kg)</label>
+                        <input type="number" name="dispatch_qty" (input)="checkValue($event)" ngModel="500" required>
+                    </div>
+                </div>
+                <!-- <h4>Standard Output Range:</h4>
+                <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Output Qty Range %: (Min)</label>
+                        <input type="number" name="min_per" [(ngModel)]="min_per" (input)="checkValue($event)" (keyup)="calculate()" required>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Output Qty Range %: (Max)</label>
+                        <input type="number" name="max_per" [(ngModel)]="max_per" (input)="checkValue($event)" (keyup)="calculate()" required>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Output Qty Range: (Min)</label>
+                        <input type="text" name="min_output_qty" [(ngModel)]="min_output_qty" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Output Qty Range: (Max)</label>
+                        <input type="text" name="max_output_qty" [(ngModel)]="max_output_qty" readonly tabindex="-1">
+                    </div>
+                </div> -->
+            </form>
+
+            <div *ngIf="basicForm.value.bom_type == 'Fresh Batch'">
+                <h4>Raw Materials List:</h4>
+                <form #rawForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                            <label>Material Type:</label>
+                            <select name="material_subtype" (change)="getApprovedRawMaterials($event.target.value)" ngModel>
+                                <option></option>
+                                <option>KSM</option>
+                                <option>Raw Material</option>
+                                <option>Intermidiate</option>
+                            </select>
+                        </div>
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Material Name:</label>
+                            <select name="material_code" (change)="getSelectedMaterial($event.target.selectedIndex)" ngModel>
+                                <option></option>
+                                <option *ngFor="let material of materials;" [value]="material.material_code">{{ material.material_name }} - {{ material.grade }}</option>
+                            </select>
+                        </div>
+                
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                            <label>Qty:<br></label>
+                            <input type="text" name="qty" ngModel required style="width: 65%;">
+                            <select name="unit" ngModel required style="width: 35%;">
+                                <option></option>
+                                <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Variation(%):</label>
+                        <input type="number" name="variation" ngModel required>
+                        </div>
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-3 clr-col-xs-3">
+                        <label>LOD Calculation:</label>
+                        <select name="islod" ngModel required>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                        </div>
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <button class="btn btn-primary" (click)="add(rawForm)">ADD</button>
+                        </div>
+                    </div>
+                </form>
+
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align: left;">Material type</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <th>Qty</th>
+                        <th>Variation (%)</th>
+                        <th style="text-align: left;">LOD Calculation</th>
+                        <th>Del</th>
+                    </tr>
+                    <tr *ngFor="let comp of materialList; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                        <td>{{ comp.qty }} {{ comp.unit }}</td>
+                        <td>{{ comp.variation }}</td>
+                        <td style="text-align: left;">{{ comp.islod }}</td>
+                        <td>
+                            <clr-icon shape="trash" class="is-error" (click)="dele(i)"></clr-icon>
+                        </td>
+                    </tr>
+                    <tr *ngIf="materialList.length == 0">
+                        <td colspan="7">No Records Found!</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <h4>Packing Materials List: (for {{ basicForm.value.dispatch_qty }} Kg)</h4>
+            <form #packForm="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="padding-right: 0px;">
+                    <label>Material Type:</label>
+                    <select name="material_subtype" (change)="getMaterial($event.target.value)" ngModel>
+                        <option></option>
+                        <option>Primary</option>
+                        <option>Secondary</option>
+                    </select>
+                    </div>
+
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="padding-left: 0px;padding-right: 0px;">
+                    <label>Material Name:</label>
+                    <select name="material_code" (change)="getPackings($event.target.selectedIndex)" ngModel>
+                        <option></option>
+                        <option *ngFor="let material of packings;" [value]="material.material_code">{{ material.material_name }}</option>
+                    </select>
+                    </div>
+            
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="padding-left: 0px;padding-right: 0px;">
+                    <label>Qty:</label>
+                    <input type="text" name="qty" ngModel required>
+                    </div>
+            
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="padding-left: 0px;padding-right: 0px;">
+                    <label>Unit:</label>
+                    <select name="unit" ngModel required>
+                        <option></option>
+                        <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                    </select>
+                    </div>
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <button class="btn btn-primary" (click)="addPage(packForm)">ADD</button>
+                    </div>
+                </div>
+            </form>
+
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">Material type</th>
+                    <th style="text-align: left;">Material Code</th>
+                    <th style="text-align: left;">Material Name</th>
+                    <th>Qty</th>
+                    <th>Del</th>
+                </tr>
+                <tr *ngFor="let comp of packingList; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                    <td style="text-align: left;">{{ comp.material_code }}</td>
+                    <td style="text-align: left;">{{ comp.material_name }}</td>
+                    <td>{{ comp.qty }} {{ comp.unit }}</td>
+                    <td>
+                        <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+                    </td>
+                </tr>
+                <tr *ngIf="packingList.length == 0">
+                    <td colspan="6">No Records Found!</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="save(basicForm)">SAVE</button>
+    </div>
+</div>

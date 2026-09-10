@@ -1,0 +1,86 @@
+<div class="ptm-save-log" *ngIf="active">
+  <div class="ptm-save-log__head">
+    <h2 class="ptm-save-log__title">Saved to database (recent batches)</h2>
+    <button type="button" class="btn btn-sm btn-outline" (click)="loadSaveLog()" [disabled]="loadingSaveLog">
+      {{ loadingSaveLog ? 'Loading…' : 'Refresh' }}
+    </button>
+  </div>
+  <p class="ptm-save-log__hint">
+    Each row is one <strong>Final save</strong> for this plant: time, dosage, process title, line count, and batch id
+    (hover for full id). Use the view button to open the saved hierarchy in sequence order.
+  </p>
+  <div class="ptm-save-log__scroll">
+    <table class="ptm-table ptm-save-log-table" *ngIf="!loadingSaveLog && saveLog.length > 0">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Dosage form</th>
+          <th>Process title</th>
+          <th class="ptm-save-log-num">Lines</th>
+          <th>Emp id</th>
+          <th>Batch UID</th>
+          <th class="ptm-save-log-actions">View</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of saveLog">
+          <td>{{ row.entry_at }}</td>
+          <td>{{ row.dosage_form }}</td>
+          <td>{{ row.process_title }}</td>
+          <td class="ptm-save-log-num">{{ row.line_count }}</td>
+          <td>{{ row.saved_by_emp_id || '—' }}</td>
+          <td class="ptm-save-log-uid" [title]="row.batch_uid">
+            {{
+              row.batch_uid.length > 22 ? (row.batch_uid | slice : 0 : 22) + '…' : row.batch_uid || '—'
+            }}
+          </td>
+          <td class="ptm-save-log-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline ptm-save-log-eye"
+              (click)="openBatchDetail(row)"
+              title="View saved lines in sequence"
+            >
+              <clr-icon shape="eye"></clr-icon>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="ptm-save-log__empty" *ngIf="!loadingSaveLog && saveLog.length === 0">No batches stored yet for this plant.</p>
+</div>
+
+<clr-modal
+  clrModalSize="lg"
+  [clrModalOpen]="detailModalOpen"
+  (clrModalOpenChange)="onDetailModalChange($event)"
+  [clrModalClosable]="true"
+>
+  
+  <div class="modal-body ptm-batch-detail-modal">
+    <p class="ptm-batch-detail-meta" *ngIf="detailListHeader && !detailLoading">
+      <strong>{{ detailListHeader.dosage_form }}</strong> · {{ detailListHeader.process_title }} ·
+      {{ detailListHeader.entry_at }} · {{ detailListHeader.batch_uid }}
+    </p>
+    <div class="ptm-batch-detail-loading" *ngIf="detailLoading">Loading lines…</div>
+    <ol class="ptm-batch-ladder" *ngIf="!detailLoading && detailRows.length > 0">
+      <li *ngFor="let r of detailRows; let idx = index" class="ptm-batch-ladder__item" [ngClass]="ladderClass(r)">
+       
+        <div class="ptm-batch-ladder__body">
+          <div class="ptm-batch-ladder__seq">{{ r.sequence_path }} · {{ (r.hierarchy_level || '').toUpperCase() }}</div>
+          <div class="ptm-batch-ladder__title">{{ rowTitleLine(r) }}</div>
+          <div class="ptm-batch-ladder__meta" *ngIf="additionalParamsText(r)">
+            <strong>Additional parameters:</strong> {{ additionalParamsText(r) }}
+          </div>
+        </div>
+      </li>
+    </ol>
+    <p class="ptm-batch-detail-empty" *ngIf="!detailLoading && detailRows.length === 0">
+      No lines returned for this batch.
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="onDetailModalChange(false)">Close</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,76 @@
+<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Confirmed Sales Order
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="csoSearchInput">Search Sales Order:</label>
+          <input type="text" id="csoSearchInput"
+            placeholder="Type to filter items..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="cso-grid">
+          <clr-dg-column>Group</clr-dg-column>
+          <clr-dg-column>Entry No</clr-dg-column>
+          <clr-dg-column>Sales Order No</clr-dg-column>
+          <clr-dg-column>FO No</clr-dg-column>
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Plan Month</clr-dg-column>
+          <clr-dg-column>Sales Order Qty</clr-dg-column>
+          <clr-dg-column>Quantity Under Planning</clr-dg-column>
+          <clr-dg-column>Balance Qty to Produce</clr-dg-column>
+          <clr-dg-column>Unit</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>Actions</clr-dg-column>
+
+          <clr-dg-row *ngFor="let row of orders"
+            class="cso-row"
+            [class.cso-row--uncovered]="!isUnderForecast(row)">
+            <clr-dg-cell>{{ row.mainGroupName || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.doc_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.order_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span *ngIf="row.forecastNo; else noForecast">{{ row.forecastNo }}</span>
+              <ng-template #noForecast><span class="cso-tag cso-tag--warn">No Forecast</span></ng-template>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ row.product_code || '-' }}</clr-dg-cell>
+            <clr-dg-cell [title]="row.product_name || ''">{{ row.product_name || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ formatPlanMonth(row.planMonth) }}</clr-dg-cell>
+            <clr-dg-cell>{{ salesQty(row) }}</clr-dg-cell>
+            <clr-dg-cell>{{ planningQty(row) }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span [class.cso-balance-hot]="balanceQty(row) > 0">{{ balanceQty(row) }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ row.planUnit || '-' }}</clr-dg-cell>
+            <clr-dg-cell [title]="row.status || ''">{{ row.status || '-' }}</clr-dg-cell>
+            <clr-dg-cell class="cell-actions">
+              <button class="btn btn-success btn-sm"
+                [disabled]="!isUnderForecast(row)"
+                (click)="proceedForBilling(row)">Proceed For Billing</button>
+              <button class="btn btn-warning btn-sm"
+                [disabled]="balanceQty(row) <= 0"
+                (click)="sendBalanceToReceive(row)">Send Balance to Receive PO/FO</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>No confirmed sales orders to process.</clr-dg-placeholder>
+        </clr-datagrid>
+      </div>
+
+    </div>
+  </div>
+</div>

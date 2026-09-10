@@ -1,0 +1,235 @@
+﻿<div class="container-fluid">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Preparation of Volumetric Solution</div>
+              <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+ 
+                <button class="btn btn-sm" routerLink="/qc/volumetric" style="background-color: red;color: white;">
+                  CLOSE
+                </button>
+              </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #preparationForm="ngForm">
+                    <div class="clr-row">
+                        
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Name of Volumetric Solution:<span style="color: red;">*</span></label>
+                            <select name="solution_no" ngModel (change)="getdetails($event.target.selectedIndex)" required>
+                                <option></option>
+                                <option *ngFor="let solution of solutions" [value]="solution.solution_no">{{ solution.solution_name }} - strength: {{ solution.strength }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>RP No:<span style="color: red;">*</span></label>
+                            <input type="text" name="rp_no" ngModel required>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Analyst:<span style="color: red;">*</span></label>
+                            <select  name="anylist" ngModel required >
+                                <option></option>
+                                <option *ngFor="let item of employee;">{{item.emp_id}}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Date of Preparation:<span style="color: red;">*</span></label>
+                            <input type="date" name="date_of_prep" ngModel required>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Expiary Date :<span style="color: red;">*</span></label>
+                            <input type="date" name="exp_date" ngModel required>
+                        </div>
+                        
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Volume To Be Prepared(ML):<span style="color: red;">*</span></label>
+                            <input type="text" name="volume_prepared" ngModel required>
+                        </div>
+
+                    </div>
+                    <div class="clr-row">
+                     
+        
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <form #reg="ngForm">
+                                <h4>Chemicals:</h4> 
+                                <table class="table table-border">
+                                    <tr>
+                                        <th style="background-color: aqua;font-weight: bold;text-align: left;">Chemical Name</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Medicap Lot No</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Used Qty.</th>
+                                        <th style="background-color: aqua;font-weight: bold;">MFG Date</th>
+                                        <th style="background-color: aqua;font-weight: bold;">EXP Date</th>
+                                    </tr>
+                                    <tr *ngFor="let dt of selectedResult['chemicals'] || []; let i = index;">
+                                        <td style="text-align: left;">{{ dt.chemical_name || '-' }}</td>
+                                        <td style="text-align: left;">
+                                            <select
+                                                name="chem_batch_{{ i }}"
+                                                [(ngModel)]="dt.batch_no"
+                                                [ngModelOptions]="{ standalone: true }"
+                                                (change)="onBatchChangeChem(dt.batch_no, i)"
+                                            >
+                                                <option value=""></option>
+                                                <option *ngFor="let st of dt.stock_data || []" [value]="st.batch_no || st.ar_no">
+                                                    {{ st.batch_no || st.ar_no }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td style="text-align: left;">
+                                            <input
+                                                type="text"
+                                                name="chem_used_{{ i }}"
+                                                [(ngModel)]="dt.usedQty"
+                                                [ngModelOptions]="{ standalone: true }"
+                                            />
+                                        </td>
+                                        <td style="text-align: left;">{{ dt.mfg_date || '-' }}</td>
+                                        <td style="text-align: left;">{{ dt.exp_date ? (dt.exp_date | date: 'dd-MM-yyyy') : '-' }}</td>
+                                    </tr>
+                                    <tr *ngIf="!(selectedResult['chemicals']?.length)">
+                                        <td colspan="5">No chemicals configured for this solution.</td>
+                                    </tr>
+                                </table>
+                            </form >
+                        </div>
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <form #reg="ngForm">
+                                <h4>Reagents:</h4> 
+                                <table class="table table-border">
+                                    <tr>
+                                        <th style="background-color: aqua;font-weight: bold;text-align: left;">Reagents</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Medicap Lot No</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Used Qty.</th>
+                                        <th style="background-color: aqua;font-weight: bold;">MFG Date</th>
+                                        <th style="background-color: aqua;font-weight: bold;">EXP Date</th>
+                                    </tr>
+                                    <tr *ngFor="let dt of selectedResult['Reagent'] || []; let i = index;">
+                                        <td style="text-align: left;">{{ dt.reagent || '-' }}</td>
+                                        <td style="text-align: left;">
+                                            <select
+                                                name="reagent_batch_{{ i }}"
+                                                [(ngModel)]="dt.batch_no"
+                                                [ngModelOptions]="{ standalone: true }"
+                                                (change)="onBatchChangeReagent(dt.batch_no, i)"
+                                            >
+                                                <option value=""></option>
+                                                <option *ngFor="let st of dt.stock_data || []" [value]="st.batch_no || st.ar_no">
+                                                    {{ st.batch_no || st.ar_no }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td style="text-align: left;">
+                                            <input
+                                                type="text"
+                                                name="reagent_used_{{ i }}"
+                                                [(ngModel)]="dt.usedQty"
+                                                [ngModelOptions]="{ standalone: true }"
+                                            />
+                                        </td>
+                                        <td style="text-align: left;">{{ dt.mfg_date || '-' }}</td>
+                                        <td style="text-align: left;">{{ dt.exp_date ? (dt.exp_date | date: 'dd-MM-yyyy') : '-' }}</td>
+                                    </tr>
+                                    <tr *ngIf="!(selectedResult['Reagent']?.length)">
+                                        <td colspan="5">No reagents configured for this solution.</td>
+                                    </tr>
+                                </table>
+                            </form >
+                        </div>
+                        
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <form #Equi="ngForm">
+                                <h4>Eqipment Details</h4>
+                                <table class="table table-border">
+                                    <tr>
+                                        <th style="background-color: aqua;font-weight: bold;text-align: left;"> Equipment Name</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Equipment Code</th>
+                                        <!-- <th style="background-color: aqua;font-weight: bold;">Calibration Due Date</th> -->
+                                    </tr>
+                                    <tr *ngFor="let dt of selectedResult['Equipment']; let i = index;">
+                                        <td style="text-align: left;"> {{dt.equipment_name}}</td>
+                                        <td>{{dt.equipment_code}}</td>
+                                        <!-- <td>{{dt.cali_due_date}}</td> -->
+                                    </tr>
+                                </table>
+                            </form> 
+                        </div>
+                        
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <form #saf="ngForm">
+                                <h4>Safety</h4>
+                                <table class="table table-border">
+                                    <tr>
+                                        <th style="background-color: aqua;font-weight: bold;text-align: left;"> Safty Note</th>
+                                    </tr>
+                                    <tr  *ngFor="let item of  selectedResult['Safty']; let i = index;">
+                                        <td style="text-align: left;"> {{item.note}}</td>
+                                    </tr>
+                                </table>
+                            </form>
+                        </div>
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <form #pro="ngForm"> 
+                                <h4>Preparation / Procedure  Required:</h4> 
+                                <table class="table table-border">
+                                    <tr>
+                                        <th style="text-align: left;background-color: aqua;font-weight: bold;text-align: left;"> Procedure</th>
+                                        <th style="background-color: aqua;font-weight: bold;">Perform By</th>
+                                    </tr>
+                                    <tr *ngFor="let act of selectedResult['procedures']; let i = index;">
+                                        <td style="text-align: left;"> {{act.procedure}}</td>
+                                        <td style="padding: 0;margin: 0;">
+                                            <select  name="perform_by" [(ngModel)]="act.perform_by"  >
+                                                <option></option>
+                                                <option *ngFor="let item of employee;">{{item.emp_id}}</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </form>
+                        </div>
+                    
+                    </div>
+                    <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Weigh Slip Required<span style="color: red;">*</span></label>
+                            <select name="weigh_slip_req"   [(ngModel)]="weigh_slip_req" required>
+                                <option></option>
+                                <option>Required</option>
+                                <option>Not Required</option>
+                             </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="weigh_slip_req == 'Required'">
+                            <label>Upload Weigh Slip <span style="color: red;">*</span></label>
+                            <input type="file" name="weigh_slip" ngModel 
+                            (change)="onFileChanged($event)">
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Expiry<span style="color: red;">*</span></label>
+                            <textarea type="text" name="Expirary"  [(ngModel)]="selectedResult['Expirary']" readonly></textarea>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Storage As per SOP No :<span style="color: red;">*</span></label>
+                            <textarea type="text" name="storage_condition" [(ngModel)]="selectedResult['storage_condition']" readonly></textarea>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Disposal : <span style="color: red;">*</span></label>
+                            <textarea type="text" name="disposal" [(ngModel)]="selectedResult['disposal']" readonly></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button    class="btn btn-primary" (click)="saveVolumetricPreparation(preparationForm)">{{'common.submit' | translate}}</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+        
+    </div>
+</div>
+
+ 
+
+ 

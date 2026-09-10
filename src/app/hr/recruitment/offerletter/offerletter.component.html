@@ -1,0 +1,251 @@
+<div class="container-fluid" *ngIf="isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Generate Offer Letter </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/hr/recruitment" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon>{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <form #Form="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Select Candidate:</label>
+              <select name="emp_id" [(ngModel)]="emp_id" required (change)="setGrossSalary(emp_id)">
+                <option></option>
+                <option *ngFor="let candidate of candidates" [value]="candidate.id">{{ candidate.candidate_name }}
+                </option>
+              </select>
+            </div>
+
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Employee Type<span style="color: red;">*</span> </label>
+              <select name="emp_type" [(ngModel)]="emp_type" (change)="editType($event.target.value)" required>
+                <option *ngFor="let data of salary_types">{{data.payroll_type}}</option>
+                <option style="color: red;">ADD NEW</option>
+              </select>
+
+            </div>
+
+            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-6 clr-col-xs-6">
+              <label>Medical Checkup</label><br>
+              <select name="checkup_type" ngModel required>
+                <option value="Pre Employeement">Pre Employeement</option>
+                <option value="Post Joining">Post Joining</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-4 clr-col-xs-4">
+              <label>CTC (Monthly):</label>
+              <input type="number" name="gross_salary" [(ngModel)]="gross_salary" (input)="calculateSalary()" required>
+            </div>
+          </div>
+          <div class="clr-row">
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+              <label>CTC Per Month:</label>
+              <input type="text" name="gross_salary" [(ngModel)]="gross_salary" readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+              <label>CTC Per Annum:</label>
+              <input type="text" name="ctc_annual" [(ngModel)]="ctc_annual" readonly tabindex="-1">
+            </div>
+          </div>
+          <table class="table" style="overflow-y: auto">
+            <thead>
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Salary Head</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Calculation Type</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Value</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Per Month</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Per Annum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="height: 10px; background:aquamarine">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Company (Earnings)</strong></td>
+              </tr>
+              <tr *ngFor="let res of earnings_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+              <tr>
+                <td colspan="3" style="text-align: left; background-color: rgb(14, 67, 112); color: white;">
+                  <strong>Gross Salary</strong>
+                </td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_earn_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{ total_earn_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+
+              <tr style="height: 10px; background:cornflowerblue">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Company (Deduction)</strong></td>
+              </tr>
+              <tr *ngFor="let res of ctc_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+              <tr *ngIf="ctc_list>1">
+                <!-- <tr *ngIf="ctc_list.length>1"> -->
+                <td colspan="3" style="text-align: left;"><strong>Total CTC Deductions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_ctc_ded_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ total_ctc_ded_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+              <tr *ngIf="total_ctc>0">
+                <td colspan="3"
+                  style="text-align: left; font-weight: bolder;background-color: rgb(14, 67, 112); color: white; ">
+                  <strong>CTC Total </strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{ total_ctc | number : '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ ctc_annual | number : '1.0-0'}}</td>
+              </tr>
+
+
+              <tr style="height: 10px; background:burlywood">
+                <td colspan="3" style="color: blue;text-align: left"><strong>Cost To Employee (Deductions)</strong></td>
+              </tr>
+              <tr *ngFor="let res of detuctions_list; let i=index;">
+                <td style="text-align: left;">{{res.salary_head}}</td>
+                <td style="text-align: left;">{{res.calc_type}}</td>
+                <td>{{res.value | number : '1.2-2'}}</td>
+                <td>{{res.Amount | number : '1.0-0'}}</td>
+                <td>{{ res.Annum | number : '1.0-0'}}</td>
+              </tr>
+              <!-- <tr *ngIf="detuctions_list.length>1"> -->
+              <tr *ngIf="detuctions_list>1">
+                <td colspan="3" style="text-align: left;"><strong>Total Deductions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{total_ded_month_amt | number :
+                  '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;"> {{ total_ded_annum_amt | number :
+                  '1.0-0'}}</td>
+              </tr>
+
+              <tr>
+                <td colspan="3" style="text-align: left;background-color: rgb(14, 67, 112); color: white;"><strong>Net
+                    Salary (Take Home)</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{
+                  total_earn_month_amt-total_ded_month_amt | number : '1.0-0'}}</td>
+                <td style="background-color: rgb(14, 67, 112); color: white;">{{
+                  total_earn_annum_amt-total_ded_annum_amt | number : '1.0-0'}}</td>
+              </tr>
+
+
+              <tr>
+                <td><button class="btn btn-sm" style="background-color: green; color:white;">CTC : {{gross_salary |
+                    number : '1.0-0'}}</button></td>
+                <td><button class="btn btn-sm">Gross Salary : {{total_earn_month_amt | number : '1.0-0'}}</button></td>
+                <td><button class="btn btn-sm">Company Deductions : {{total_earn_month_amt | number : '1.0-0'}}</button>
+                </td>
+                <td><button class="btn btn-sm">Employee Deductions: {{total_ded_month_amt | number : '1.0-0'}}</button>
+                </td>
+                <td><button class="btn btn-sm">Take Home Salary :{{ total_earn_month_amt-total_ded_month_amt | number :
+                    '1.0-0'}}</button></td>
+
+              </tr>
+
+            </tbody>
+          </table>
+
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="saveSalaryAnnexure(Form)">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="!isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Selected Candidate List</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+
+          <button class="btn btn-sm btn-success" (click)="openNew()">NEW OFFER LETTER</button>
+          <button class="btn btn-sm" routerLink="/hr/recruitment" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" >
+          <clr-dg-column>Registration Date</clr-dg-column>
+          <clr-dg-column>Candidate Name</clr-dg-column>
+          <clr-dg-column>Qualification</clr-dg-column>
+          <clr-dg-column>Contact No.</clr-dg-column>
+          <clr-dg-column>Email Id</clr-dg-column>
+          <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.designation' | translate}}</clr-dg-column>
+          <clr-dg-column>Offer Letter</clr-dg-column>
+          <clr-dg-row *clrDgItems="let user of item; let i = index" [clrDgItem]="results">
+            <!-- <tr *ngFor="let user of item"> -->
+            <clr-dg-cell>{{user.entry_date|date: 'dd-MM-yyyy'}}</clr-dg-cell>
+            <clr-dg-cell>{{user.candidate_name}}</clr-dg-cell>
+            <clr-dg-cell>{{user.qualification}}</clr-dg-cell>
+            <clr-dg-cell>{{(user.mobile_no | canadianPhone)}}</clr-dg-cell>
+            <clr-dg-cell>{{user.email_id}}</clr-dg-cell>
+            <clr-dg-cell>{{user.finaldepartment}}</clr-dg-cell>
+            <clr-dg-cell>{{user.finaldesignation}}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-info btn-icon" (click)="downloadPdf(user.id)">
+                <clr-icon shape="download"></clr-icon>
+              </button>
+              <button class="btn btn-sm btn-info btn-icon" (click)="emailOffer(user.id)">
+                <clr-icon shape="envelope"></clr-icon>
+              </button>
+              <button type="button" class="btn btn-sm btn-icon btn-success" (click)="update('Accept',user.id)">
+                <clr-icon shape="check"></clr-icon>
+              </button>
+              <button type="button" class="btn btn-sm btn-icon btn-danger" (click)="update('Reject',user.id)">
+                <clr-icon shape="error-standard"></clr-icon>
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+          <!-- <clr-dg-footer class="clarity-footer">  
+            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+              {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+              of {{pagination.totalItems}} 
+            </clr-dg-pagination>
+          </clr-dg-footer> -->
+        </clr-datagrid>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isEdit" [clrModalSize]="'md'">
+  <h3 class="modal-title">Add Employee Type</h3>
+  <div class="modal-body">
+    <form #test="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+          <label>Employee Type:<span style="color: red">*</span></label>
+          <input type="text" name="typeField" ngModel>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="saveEmployeeType(test)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isEdit = false">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,223 @@
+<div class="vapp vapp--card card" *ngIf="!isView">
+  <header class="vapp__header card-header mef-panel-header">
+    <h1 class="vapp__title mef-panel-header__title">QA – Vendor For Approval</h1>
+    <a class="vapp__btn vapp__btn--close mef-panel-header__close" routerLink="/qa/vendor">{{'common.close' | translate}}</a>
+  </header>
+  <div class="vapp__body">
+    <div class="vapp__toolbar">
+      <label class="vapp__search-label">Search</label>
+      <input type="text" class="vapp__search" placeholder="Search vendor, name, no., status..." [(ngModel)]="searchQuery" aria-label="Search vendors" />
+    </div>
+
+    <div class="vapp__table-wrap">
+      <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading" >
+        <clr-dg-column class="vapp__col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column class="vapp__col-date">Entry Date</clr-dg-column>
+        <clr-dg-column class="vapp__col-by">Entry By</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Country</clr-dg-column>
+        <clr-dg-column>Contact Person</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column class="vapp__col-action">{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let product of filteredMaterials; let i = index" [clrDgItem]="product">
+          <clr-dg-cell class="vapp__cell-sr">{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell class="vapp__cell-date">{{ product.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell class="vapp__cell-by">{{ product.entry_by || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.vendor_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.material_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.vendor_no || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.vendor_name || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.country || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ product.contact_person || '-' }}</clr-dg-cell>
+          <clr-dg-cell><strong class="vapp__status" [class.vapp__status--corrected]="isCorrectedResubmit(product)">{{ statusLabel(product) | uppercase }}</strong></clr-dg-cell>
+          <clr-dg-cell class="vapp__cell-action">
+            <button type="button" class="vapp__btn vapp__btn--view" (click)="view(product)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50]">Vendors per page</clr-dg-page-size>
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} vendors
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="vdetail vdetail--card" *ngIf="isView">
+  <header class="vdetail__header">
+    <div class="vdetail__header-text">
+      <h1 class="vdetail__name">{{ selectedResult['vendor_name'] || 'Vendor' }}</h1>
+      <p class="vdetail__subtitle">
+        QA – Vendor Details
+        <span class="vdetail__status-badge vdetail__status-badge--corrected" *ngIf="isCorrectedResubmit(selectedResult)">Corrected Details</span>
+      </p>
+    </div>
+    <button type="button" class="vdetail__close" (click)="isView = false" aria-label="Close">{{'common.close' | translate}}</button>
+  </header>
+  <div class="vdetail__body">
+    <div class="vdetail__banner vdetail__banner--corrected" *ngIf="isCorrectedResubmit(selectedResult)">
+      <strong>Resubmitted with purchase corrections</strong>
+      <span>Purchase updated this vendor after your correction request. Review the changes below before approving.</span>
+    </div>
+
+    <section class="vdetail__section" *ngIf="selectedResult['status_remark'] || selectedResult['correction_log']?.qa_remark">
+      <h2 class="vdetail__section-title">Your previous correction request</h2>
+      <p class="vdetail__remark">{{ selectedResult['status_remark'] || selectedResult['correction_log']?.qa_remark }}</p>
+    </section>
+
+    <section class="vdetail__section" *ngIf="correctionChanges(selectedResult).length">
+      <h2 class="vdetail__section-title">Changes made by purchase</h2>
+      <p class="vdetail__meta" *ngIf="selectedResult['correction_log']?.corrected_on">
+        Corrected on {{ selectedResult['correction_log'].corrected_on | date:'dd-MM-yyyy HH:mm' }}
+        <span *ngIf="selectedResult['correction_log']?.corrected_by"> by {{ selectedResult['correction_log'].corrected_by }}</span>
+      </p>
+      <div class="vdetail__table-wrap">
+        <table class="vdetail__table vdetail__table--changes">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Previous value</th>
+              <th>Updated value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let change of correctionChanges(selectedResult)">
+              <td>{{ change.label || change.field }}</td>
+              <td>{{ formatCorrectionValue(change.old) }}</td>
+              <td><strong>{{ formatCorrectionValue(change.new) }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="vdetail__section">
+      <h2 class="vdetail__section-title">Basic Information</h2>
+      <div class="vdetail__grid vdetail__grid--2">
+        <div class="vdetail__field"><span class="vdetail__label">Vendor Type</span><span class="vdetail__value">{{ selectedResult['vendor_type'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Material Type</span><span class="vdetail__value">{{ selectedResult['material_type'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Vendor No.</span><span class="vdetail__value">{{ selectedResult['vendor_no'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Country</span><span class="vdetail__value">{{ selectedResult['country'] || '—' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Vendor / division</span><span class="vdetail__value">{{ selectedResult['vendor_Is'] || '—' }}</span></div>
+        <div class="vdetail__field" *ngIf="selectedResult['vendor_Is'] === 'Division' && selectedResult['parentVendor']"><span class="vdetail__label">Parent vendor no.</span><span class="vdetail__value">{{ selectedResult['parentVendor'] || '—' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Contact Person</span><span class="vdetail__value">{{ selectedResult['contact_person'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Phone</span><span class="vdetail__value">{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">{{'common.email' | translate}}</span><span class="vdetail__value">{{ selectedResult['contact_email'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Vendor for</span><span class="vdetail__value">{{ selectedResult['vendorFor'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Qualified by</span><span class="vdetail__value">{{ selectedResult['qualifiedBy'] || '-' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Client code</span><span class="vdetail__value">{{ selectedResult['client_code'] || '—' }}</span></div>
+        <div class="vdetail__field"><span class="vdetail__label">Trading currencies</span><span class="vdetail__value">{{ currencyCodesDisplay(selectedResult) }}</span></div>
+      </div>
+    </section>
+
+    <section class="vdetail__section" *ngIf="(selectedResult['other_contact'] || []).length">
+      <h2 class="vdetail__section-title">Other Contacts</h2>
+      <div class="vdetail__table-wrap">
+        <table class="vdetail__table">
+          <thead><tr><th>Contact Type</th><th>{{'common.name' | translate}}</th><th>Telephone</th><th>{{'common.email' | translate}}</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of selectedResult['other_contact'] || []">
+              <td>{{ item.contactType || '-' }}</td><td>{{ item.cPersonName || '-' }}</td><td>{{ (item.cPersonMob  | canadianPhone)|| '-' }}</td><td>{{ item.cPersonEmail || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="vdetail__section">
+      <h2 class="vdetail__section-title">Addresses</h2>
+      <div class="vdetail__split">
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Vendor Address</h3>
+          <div class="vdetail__grid vdetail__grid--1">
+            <div class="vdetail__field"><span class="vdetail__label">Unit Name</span><span class="vdetail__value">{{ selectedResult['vendor_name'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{'common.address' | translate}}</span><span class="vdetail__value">{{ selectedResult['address'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Country</span><span class="vdetail__value">{{ selectedResult['country'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{ regionLabel(selectedResult['country']) }}</span><span class="vdetail__value">{{ selectedResult['permanent_state'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">City</span><span class="vdetail__value">{{ selectedResult['city'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{ postalLabel(selectedResult['country']) }}</span><span class="vdetail__value">{{ selectedResult['pincode'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Phone</span><span class="vdetail__value">{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</span></div>
+            <ng-container *ngIf="showVendorIndiaTax(selectedResult)">
+              <div class="vdetail__field"><span class="vdetail__label">GST applicable</span><span class="vdetail__value">{{ selectedResult['gst_applicable'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">State code (GST)</span><span class="vdetail__value">{{ selectedResult['scode'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">GST No.</span><span class="vdetail__value">{{ selectedResult['gst_no'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">PAN No.</span><span class="vdetail__value">{{ selectedResult['panNo'] || '—' }}</span></div>
+            </ng-container>
+          </div>
+        </div>
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Corporate Address</h3>
+          <div class="vdetail__grid vdetail__grid--1">
+            <div class="vdetail__field"><span class="vdetail__label">Office Name</span><span class="vdetail__value">{{ selectedResult['c_unit_name'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{'common.address' | translate}}</span><span class="vdetail__value">{{ selectedResult['c_address'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Country</span><span class="vdetail__value">{{ selectedResult['c_country'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{ regionLabel(selectedResult['c_country']) }}</span><span class="vdetail__value">{{ selectedResult['c_state'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">City</span><span class="vdetail__value">{{ selectedResult['c_city'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{ postalLabel(selectedResult['c_country']) }}</span><span class="vdetail__value">{{ selectedResult['c_pincode'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Phone</span><span class="vdetail__value">{{ (selectedResult['c_mobile_no'] | canadianPhone) || '-' }}</span></div>
+            <ng-container *ngIf="showCorporateIndiaTax(selectedResult)">
+              <div class="vdetail__field"><span class="vdetail__label">GST applicable</span><span class="vdetail__value">{{ selectedResult['c_gst_applicable'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">State code (GST)</span><span class="vdetail__value">{{ selectedResult['c_scode'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">GST No.</span><span class="vdetail__value">{{ selectedResult['c_gst_no'] || '—' }}</span></div>
+              <div class="vdetail__field"><span class="vdetail__label">PAN No.</span><span class="vdetail__value">{{ selectedResult['c_panNo'] || '—' }}</span></div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vdetail__section vdetail__signature">
+      <h2 class="vdetail__section-title">Workflow</h2>
+      <div class="vdetail__signature-grid">
+        <div class="vdetail__signature-item">
+          <span class="vdetail__signature-label">Added By</span>
+          <span class="vdetail__signature-check">&#10003;</span>
+          <span class="vdetail__signature-value">{{ selectedResult['entry_by'] || '-' }}</span>
+          <span class="vdetail__signature-label">Added on</span>
+          <span class="vdetail__signature-value">{{ selectedResult['entry_date'] | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="vdetail__signature-item" *ngIf="selectedResult['approve_by']">
+          <span class="vdetail__signature-label">Purchase approved By</span>
+          <span class="vdetail__signature-check">&#10003;</span>
+          <span class="vdetail__signature-value">{{ selectedResult['approve_by'] }}</span>
+          <span class="vdetail__signature-label">On</span>
+          <span class="vdetail__signature-value">{{ selectedResult['approve_date'] | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+    </section>
+  </div>
+  <footer class="vdetail__footer vdetail__footer--wrap">
+    <button type="button" class="vdetail__btn vdetail__btn--primary" (click)="updateVendorStatusFromQa('Send_For_Quali_Questionnaire')">Send For Qualification Questionnaire</button>
+    <button type="button" class="vdetail__btn vdetail__btn--success" (click)="updateVendorStatusFromQa('Approved')">Quali. Questi. Not Required – Direct Approved</button>
+    <button type="button" class="vdetail__btn vdetail__btn--warning" (click)="sendToPurchaseForEditing()">Send to purchase for corrections</button>
+    <button type="button" class="vdetail__btn vdetail__btn--secondary" (click)="isView = false">{{'common.close' | translate}}</button>
+  </footer>
+</div>
+
+<clr-modal [(clrModalOpen)]="isCorrectionOpen" [clrModalSize]="'lg'" [clrModalClosable]="true">
+  <h3 class="modal-title">Send to Purchase for Corrections</h3>
+  <div class="modal-body">
+    <label for="correctionRemark" style="display:block;font-weight:600;margin-bottom:0.4rem;">
+      Remark <span style="color:#dc2626;">*</span>
+    </label>
+    <textarea
+      id="correctionRemark"
+      name="correctionRemark"
+      rows="4"
+      [(ngModel)]="correctionRemark"
+      placeholder="Enter the reason / corrections required…"
+      style="width:100%;padding:0.5rem;border:1px solid #cbd5e1;border-radius:6px;"
+    ></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="isCorrectionOpen = false">{{'common.cancel' | translate}}</button>
+    <button type="button" class="btn btn-warning" (click)="submitCorrection()">Send for Corrections</button>
+  </div>
+</clr-modal>

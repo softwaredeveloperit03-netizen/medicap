@@ -1,0 +1,222 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface PlantHeadCard {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  readonly cards: PlantHeadCard[] = [
+    {
+      id: 'hr',
+      title: 'HR',
+      route: 'hr',
+      icon: 'fa-file-signature',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #334155 0%, #475569 100%)',
+    },
+    {
+      id: 'purchase',
+      title: 'Purchase',
+      route: 'purchase',
+      icon: 'fa-users',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+    },
+    {
+      id: 'store',
+      title: 'Store',
+      route: 'store',
+      icon: 'fa-warehouse',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
+    },
+    {
+      id: 'security',
+      title: 'Security',
+      route: 'security',
+      icon: 'fa-shield-alt',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+    },
+    {
+      id: 'regulatory',
+      title: 'Regulatory',
+      route: 'regulatory',
+      icon: 'fa-thumbs-up',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+    },
+    {
+      id: 'outpass',
+      title: 'Outpass Approval',
+      route: 'outpass-approval',
+      icon: 'fa-id-card',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)',
+    },
+    {
+      id: 'artwork',
+      title: 'Artwork',
+      route: 'artwork',
+      icon: 'fa-paint-brush',
+      category: 'Plant head',
+      gradient: 'linear-gradient(135deg, #c2410c 0%, #ea580c 100%)',
+    },
+    {
+      id: 'qc',
+      title: 'QC',
+      route: 'qc',
+      icon: 'fa-check-circle',
+      category: 'Other',
+      gradient: 'linear-gradient(135deg, #3730a3 0%, #6366f1 100%)',
+    },
+    {
+      id: 'marketing',
+      title: 'Marketing',
+      route: 'marketing',
+      icon: 'fa-bullhorn',
+      category: 'Other',
+      gradient: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)',
+    },
+  ];
+
+  paletteOptions: { name: string; background: string; cardShadow: string }[] = [
+    {
+      name: 'Corporate',
+      background: 'linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)',
+      cardShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+    },
+    { name: 'Light', background: '#f8fafc', cardShadow: '0 8px 24px rgba(15, 23, 42, 0.06)' },
+    {
+      name: 'Cool gray',
+      background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+      cardShadow: '0 8px 24px rgba(51, 65, 85, 0.1)',
+    },
+    {
+      name: 'Warm white',
+      background: 'linear-gradient(180deg, #fffdfb 0%, #f8fafc 100%)',
+      cardShadow: '0 8px 24px rgba(180, 83, 9, 0.08)',
+    },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  searchQuery = '';
+
+  ngOnInit(): void {
+    const saved = localStorage.getItem('plant_head_dashboard_palette');
+    if (saved) {
+      const found = this.paletteOptions.find((p) => p.name === saved);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  getCategories(): string[] {
+    return ['All', ...Array.from(new Set(this.cards.map((c) => c.category)))];
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  getFilteredCards(): PlantHeadCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter((c) => {
+      const matchCat = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q);
+      return matchCat && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: PlantHeadCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('plant_head_dashboard_palette', palette.name);
+    } catch {
+      /* ignore */
+    }
+  }
+}

@@ -1,0 +1,409 @@
+<div class="container-fluid" *ngIf="!isNewBP && !isView">
+  <div class="card">
+    <div class="card-header">Batch Planning Log Book</div>
+    <div class="card-block">
+      <div class="card-text">
+        <button class="btn btn-sm btn-info" (click)="isNewBP = true">PLAN NEW BATCH</button>
+        <table class="table">
+          <tr>
+            <th>No.</th>
+            <th>Dosage Form</th>
+            <th>Product Name</th>
+            <th>BOM No.</th>
+            <th>{{'common.status' | translate}}</th>
+            <th>Entry By</th>
+            <th>Entry Date</th>
+            <th>View</th>
+          </tr>
+          <tr *ngFor="let result of results; let i = index">
+            <td>{{ result.no }}</td>
+            <td>{{ result.dosage_form }}</td>
+            <td>{{ result.product_code }}</td>
+            <td>{{ result.bom_no }}</td>
+            <td>{{ result.status }}</td>
+            <td>{{ result.entry_by }}</td>
+            <td>{{ result.entry_date }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="viewBatch(i)">{{'common.view' | translate}}</button>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="isNewBP">
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header">Batch Planning</div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Dosage Form:</label>
+              <select name="dosage_form" [(ngModel)] = "dosage_form" (change)="getProducts()">
+                <option></option>
+                <option *ngFor="let dosage of dosages">{{ dosage.dosage_form }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Product Name:</label>
+              <select name="product_name" [(ngModel)]="product_name" (change)="getProductGrades()">
+                <option></option>
+                <option *ngFor="let product of products">{{ product.product_name }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Grade:</label>
+              <select name="grade" [(ngModel)]="grade" (change)="getBatchSizes($event.target.selectedIndex)" required>
+                <option></option>
+                <option *ngFor="let grade of grades">{{ grade.grade }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Batch Size:</label>
+              <select name="bom_no" [(ngModel)]="bom_no" (change)="getBOM()">
+                <option></option>
+                <option *ngFor="let batch of batches" [value]="batch.bom_no">{{ batch.batch_size }}</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="clr-row" style="padding: 20px;" *ngIf="isnote">
+            <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+              <span class="shortage">Cannot Plan Batch With Shortage Quantity</span>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="text-align: right;">
+              <button class="btn btn-sm btn-info" *ngIf="bombtn" (click)="isBOM = true">View Standard Bill Of Material</button>
+            </div>
+          </div>
+  
+          <button class="btn btn-sm btn-info" *ngIf="bombtn && !isnote" (click)="isBOM = true">View Standard Bill Of Material</button>
+  
+          <h5 style="margin-top: 5px;">Materials:</h5>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Qty / Tab</th>
+              <th>Item Code</th>
+              <th>Ingredients</th>
+              <th>Specification</th>
+              <th>Std Qty</th>
+              <th>Available Qty</th>
+              <th>API Qty Calc.</th>
+            </tr>
+            <tr *ngFor="let material of materials; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ material.unit_qty }}</td>
+              <td>{{ material.item_code }}</td>
+              <td>{{ material.ingredients }}</td>
+              <td>{{ material.specification }}</td>
+              <td>{{ material.std_qty }} {{ material.unit }}</td>
+              <td *ngIf="material.isShortage == 'yes'" style="background-color: red;color:white;font-size: 16px;">
+                {{ material.available_qty }} {{ material.unit }}
+              </td>
+              <td *ngIf="material.isShortage == 'no'">
+                {{ material.available_qty }} {{ material.unit }}
+              </td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="showAPICalc(i)">{{'common.view' | translate}}</button>
+              </td>
+            </tr>
+          </table>
+  
+          <div *ngIf="isnote">
+            <h5>Available Material Status:</h5>
+            <table class="table">
+              <tr>
+                <th>Sr.</th>
+                <th>Item Code</th>
+                <th>Ingredients</th>
+                <th>Specification</th>
+                <th>Available Qty</th>
+                <th>{{'common.status' | translate}}</th>
+              </tr>
+              <tr *ngFor="let material of materials; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ material.item_code }}</td>
+                <td>{{ material.ingredients }}</td>
+                <td>{{ material.specification }}</td>
+                <td>{{ material.available_qty }} {{ material.unit }}</td>
+                <td>{{ material.status }}</td>
+              </tr>
+            </table>
+  
+            <h5>Following Row Materials Are Shortage:</h5>
+            <table class="table">
+              <tr>
+                <th>Sr.</th>
+                <th>Item Code</th>
+                <th>Ingredients</th>
+                <th>Specification</th>
+                <th>Required Qty</th>
+                <th>Available Qty</th>
+                <th>Shortage Qty</th>
+              </tr>
+              <tr *ngFor="let material of materials; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ material.item_code }}</td>
+                <td>{{ material.ingredients }}</td>
+                <td>{{ material.specification }}</td>
+                <td>{{ material.std_qty }} {{ material.unit }}</td>
+                <td>{{ material.available_qty }} {{ material.unit }}</td>
+                <td>{{ +material.std_qty - +material.available_qty }} {{ material.unit }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="saveBatchPlanning()" *ngIf="!isnote">CONFIRM & PLAN BATCH</button>
+        <button class="btn btn-primary" *ngIf="isnote" (click)="sortage_indend()">SEND Purchase Requisition FOR SHORTAGE MATERIALS</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header">API Quantity Calculation</div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-lg-5 clr-col-md-5 clr-col-sm-12 clr-col-xs-12" style="padding-right: 0px;">
+              <table class="table">
+                <tr>
+                  <td style="vertical-align: middle;width:40%;">Quantity To Be Used For Batch (First AR)</td>
+                  <td style="vertical-align: middle;padding: 0px;">=</td>
+                  <td>Quantity Per Batch X 100<hr>Assay On Such Basis (B)</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-7 clr-col-md-7 clr-col-sm-12 clr-col-xs-12">
+              <table class="table">
+                <tr>
+                  <td style="vertical-align: middle;width:40%;">Quantity To Be Used For Batch (Additional AR)</td>
+                  <td style="vertical-align: middle;">=</td>
+                  <td>(Std. Quantity Per Batch - First AR Qty) X 100<hr>Assay On Such Basis (B)</td>
+                </tr>
+              </table>
+            </div>
+          </div><!-- <br>
+          <button class="btn btn-primary">Show batch formula calculation</button>
+          <table class="table">
+            <tr>
+              <th>Name of API</th>
+              <th>Grade</th>
+              <th>A. R. No.</th>
+              <th>Assay</th>
+              <th>Available Stock</th>
+              <th>Avaialble Drug Qty</th>
+            </tr>
+            <tr>
+              <td colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>Standard API Qty (A):&nbsp;&nbsp;</label>
+              <input type="text" style="width: 200px;">
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>&nbsp;&nbsp;Required API Qty (B):&nbsp;&nbsp;</label>
+              <input type="text" style="width: 200px;">
+            </div>
+          </div>
+          <div>
+            <label>Compensetion of Quantity of API with Excipient:&nbsp;&nbsp;</label>
+            <select style="width: 200px;">
+              <option></option>
+            </select>
+          </div>
+          <table class="table">
+            <tr>
+              <th>Excipient Name</th>
+              <th>A. R. No.</th>
+              <th>Batch Qty (C)</th>
+              <th>Required Qty [C - (A - B)]</th>
+            </tr>
+            <tr>
+              <td colspan="4"></td>
+            </tr>
+          </table> -->
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <clr-modal [(clrModalOpen)]="isShowAPI" [clrModalSize]="'xl'">
+    <h3 class="modal-title">API Quantity Calculation: {{ selectedMaterial['ingredients'] }}</h3>
+    <div class="modal-body">
+      <table class="table">
+        <tr>
+          <th>A. R. No.</th>
+          <th>Assay</th>
+          <th>Stock Qty</th>
+          <th>Available Qty</th>
+          <th>Avaialble Drug Qty</th>
+          <th>Expiry Date</th>
+        </tr>
+        <tr *ngFor="let result of selectedMaterial['materials']">
+          <td>{{ result.ar_no }}</td>
+          <td>{{ result.assay }}</td>
+          <td>{{ result.qty }}</td>
+          <td>{{ result.available_qty }}</td>
+          <td>{{ result.assay_qty }}</td>
+          <td>{{ result.expiry_date }}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isShowAPI = false">{{'common.close' | translate}}</button>
+    </div>
+  </clr-modal>
+  
+  
+  <clr-modal [(clrModalOpen)]="isBOM" [clrModalSize]="'xl'">
+    <h3 class="modal-title">Bill of Material: {{ bom['bom_no'] }}</h3>
+    <div class="modal-body">
+      <table class="table">
+        <tr>
+          <td>Product Name:</td>
+          <td colspan="3">{{ product_name }}</td>
+        </tr>
+        <tr>
+          <td>Batch Size:</td>
+          <td>{{ bom['batch_size'] }}</td>
+          <td>No. Of Lots:</td>
+          <td>{{ bom['lot_no'] }}</td>
+        </tr>
+      </table>
+      <h5>Materials:</h5>
+      <table class="table">
+        <tr>
+          <th>Sr.</th>
+          <th>Item Code</th>
+          <th>Ingredients</th>
+          <th>Specification</th>
+          <th>Qty/Tab</th>
+          <th>St. Qty (Kg)</th>
+        </tr>
+        <tr *ngFor="let material of materials; let i = index">
+          <td>{{ i+1 }}</td>
+          <td>{{ material.item_code }}</td>
+          <td>{{ material.ingredients }}</td>
+          <td>{{ material.specification }}</td>
+          <td>{{ material.unit_qty }}</td>
+          <td>{{ material.std_qty }} X {{ bom['lot_no'] }} = {{ material.std_qty * bom['lot_no'] }}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isBOM = false">{{'common.close' | translate}}</button>
+    </div>
+  </clr-modal>
+
+  <button class="btn btn-danger" (click)="isNewBP = false">{{'common.close' | translate}}</button>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">Batch Planning Report</div>
+    <div class="card-block">
+      <div class="card-text">
+        <table class="table">
+          <tr>
+            <td style="text-align: left;width:20%;">No.:</td>
+            <td style="text-align: left;">{{ selectedBatch['no'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Dosage Form:</td>
+            <td style="text-align: left;">{{ selectedBatch['dosage_form'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Product Code:</td>
+            <td style="text-align: left;">{{ selectedBatch['product_code'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Product Name:</td>
+            <td style="text-align: left;">{{ selectedBatch['product_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Generic Name:</td>
+            <td style="text-align: left;">{{ selectedBatch['generic_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Grade:</td>
+            <td style="text-align: left;">{{ selectedBatch['grade'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Packing Style:</td>
+            <td style="text-align: left;">{{ selectedBatch['packing_style'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Label Claim:</td>
+            <td style="text-align: left;">{{ selectedBatch['label_claim'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;width:20%;">Batch Size:</td>
+            <td style="text-align: left;">{{ selectedBatch['batch_size'] }}</td>
+          </tr>
+        </table>
+
+        <h3>Master Formula Record:</h3>
+        <table class="table">
+          <tr>
+            <th style="width: 50px;">Sr.</th>
+            <th style="text-align: left;">Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">Grade</th>
+            <th style="text-align: right;">Qty/Tab</th>
+            <th>{{'common.unit' | translate}}</th>
+          </tr>
+          <tr *ngFor="let user of selectedBatch['materials']; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td style="text-align: left;">{{user.material_code}}</td>
+            <td style="text-align: left;">{{user.material_name}}</td>
+            <td style="text-align: left;">{{user.grade}}</td>
+            <td style="text-align: right;">{{user.qty }}</td>
+            <td>{{user.unit}}</td>
+          </tr>
+        </table>
+
+        <h3>Equipments:</h3>
+        <table class="table">
+          <tr>
+            <th style="width: 50px;">Sr.</th>
+            <th style="text-align: left;">Equipment Code</th>
+            <th style="text-align: left;">Equipment Name</th>
+            <th style="text-align: left;">Capacity</th>
+            <th style="text-align: left;">Make</th>
+          </tr>
+          <tr *ngFor="let user of selectedBatch['equipments']; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ user.equipment_no }}</td>
+            <td style="text-align: left;">{{ user.equipment_name }}</td>
+            <td style="text-align: left;">{{ user.capacity }}</td>
+            <td style="text-align: left;">{{ user.make }}</td>
+          </tr>
+        </table>
+
+        <h3>Manufacturing Instructions:</h3>
+        <table class="table">
+          <tr>
+            <th style="width: 50px;">Sr.</th>
+            <th style="text-align: left;">Instruction</th>
+          </tr>
+          <tr *ngFor="let user of selectedBatch['instructions']; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ user.instruction }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

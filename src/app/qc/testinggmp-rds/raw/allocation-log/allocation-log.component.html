@@ -1,0 +1,178 @@
+<div class="container-fluid" >
+
+<div class="card"  >
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Testing Allocation Log</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/qc/testing-rds/raw/allocation"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getTestingAllocationLog()"  >
+                  <option></option>
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                    <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Testing No.</clr-dg-column>
+                    <clr-dg-column>Sampling No.</clr-dg-column>
+                    <clr-dg-column>Material Name</clr-dg-column>
+                    <clr-dg-column>Material Code</clr-dg-column>
+                    
+                    <clr-dg-column>Receiving no</clr-dg-column>
+                    <clr-dg-column>Sepc. No.</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Allocated By/Dt.</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            
+                    <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.testing_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.sampling_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_name || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_code || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.grn_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.specification_no || '-' }}</clr-dg-cell>
+                        <clr-dg-cell><strong style="color: green;">{{ result.status | uppercase }}</strong></clr-dg-cell>
+                        <clr-dg-cell>{{ result.allocationBy || '-' }} / {{ result.allocationOn | date:'dd-MM-yyyy' }}</clr-dg-cell>
+                        <clr-dg-cell>
+                          <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadTestingAllocationLog()">{{'common.download' | translate}}</button>
+    <button class="btn btn-danger"routerLink="/qc/testing-rds/raw/allocation">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> {{material_type}} Testing Allocation Details </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+                <h3>Material Details : </h3>
+
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Testing No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['testing_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Sampling No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['sampling_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Material Name:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_name'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_code'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Medicap Lot No.:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['batch_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['grn_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Sepc. No.:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;" colspan="3"> {{ selectedTesting['specification_no'] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <h3>Testing Tests : </h3>
+              <div class="clr-row">
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <table class="table table-border"  >
+                            <tr>
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th> 
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test Type</th> 
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test</th>
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Outside Testing <span style="color: red;"><strong>*</strong></span></th>
+                                <th style="min-width: 200px; background-color: rgb(14, 67, 112); color: white;">Chemist / Lab <span style="color: red;"><strong>*</strong></span></th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Alternate Chemist</th>
+                                <th *ngIf="isEdit" style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                            </tr>
+                            <tr *ngFor="let test of selectedTesting['testingTests']; let i = index"  >
+                                
+                                <td style="text-align: left;color:blue;"> {{i+1}}</td>
+                                <td style="text-align: left;color:blue;"> {{test.test_type}}</td>
+                                <td style="text-align: left;color:blue;">{{test.test}}</td>
+                                <td style="text-align: left;color:blue;">{{test.subtest}}</td>
+                                <td style="text-align: left;color:blue;">{{test.isoutside}}</td>
+                                <td *ngIf="!isEdit" style="text-align: left;color:blue;">{{test.personName}} {{test.person }} {{test.lab_name}}</td>
+                                <td *ngIf="!isEdit" style="text-align: left;color:blue;">{{test.person_altName}} {{test.person_alt || '-'}} </td>
+
+
+                                <td *ngIf="isEdit" style="padding: 0;margin:0;">
+                                    <select *ngIf="test.isoutside == 'No' && test.test_type != 'Microbiology'" name="person{{i}}" style="margin: 0;" [(ngModel)]="test.person"  required>
+                                        <option></option>
+                                        <option *ngFor="let emp of employees" [value]="emp.emp_id">{{ emp.empNAme }}</option>
+                                    </select>
+
+                                    <select *ngIf="test.isoutside == 'No'  && test.test_type == 'Microbiology' " name="person{{i}}" style="margin: 0;" [(ngModel)]="test.person"  required>
+                                        <option></option>
+                                        <option *ngFor="let emp of microEmployees" [value]="emp.emp_id">{{ emp.empNAme }}</option>
+                                    </select>
+
+                                    <select *ngIf="test.isoutside == 'Yes'" name="lab_no{{i}}" style="margin: 0;" [(ngModel)]="test.lab_no" required>
+                                        <option></option>
+                                        <option *ngFor="let lab of labs" value="{{ lab.lab_no }}">{{ lab.lab_name }} - ( {{ lab.lab_no }} )</option>
+                                    </select>
+                                </td>
+                                <td *ngIf="isEdit" style="padding: 0;margin:0;">
+                                    <select [disabled]="test.isoutside == 'Yes'" name="person_alt{{i}}" style="margin: 0;" [(ngModel)]="test.person_alt">
+                                        <option></option>
+                                        <option>master</option>
+                                        <option *ngFor="let emp of employees" [value]="emp.emp_id">{{ emp.empNAme }}</option>
+                                    </select>
+                                </td>
+                                <td *ngIf="isEdit" style="padding: 0;margin:0;">
+                                        <button class="btn btn-success" (click)="updateAllocatedPerson(test)">{{'common.update' | translate}}</button>
+                                </td>
+                            </tr>
+                        </table>
+                  </div>
+              </div>
+        </div>
+      </div>
+    </div> 
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" (click)="isEdit = !isEdit">{{'common.edit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+</div>
+
+

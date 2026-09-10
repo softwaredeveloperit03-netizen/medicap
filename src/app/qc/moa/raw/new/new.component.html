@@ -1,0 +1,721 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">STP</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/qc" >{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <clr-datagrid>
+        <clr-dg-column>Spec No</clr-dg-column>
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>Material Name</clr-dg-column>
+        <clr-dg-column>Grade</clr-dg-column>
+        <clr-dg-column>Material Code</clr-dg-column>
+        <clr-dg-column>Version No</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *ngFor="let user of specifications; let i = index">
+            <clr-dg-cell>{{user.specification_no}}</clr-dg-cell>
+            <clr-dg-cell>{{user.material_subtype}}</clr-dg-cell>
+            <clr-dg-cell>{{user.material_name}}</clr-dg-cell>
+            <clr-dg-cell>{{user.gradeName}}</clr-dg-cell>
+            <clr-dg-cell>{{user.material_code}}</clr-dg-cell>
+            <clr-dg-cell>{{user.version_no}}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-info" (click)="viewSpecification(i)">Proceed</button>
+            </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">New MOA Specification</div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table" style="color: black;">
+        <tr>
+          <td style="text-align: left;width: 15%;"><b>Specification No </b></td>
+          <td style="text-align: left;">: {{ selectedSpec['specification_no'] }}</td>
+          <td style="text-align: left;width: 15%;"><b>Specification Type</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['spec_type'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 15%;"><b>Material Type</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['material_subtype'] }}</td>
+          <td style="text-align: left;width: 15%;"><b>Material Name</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['material_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 15%;"><b>Material Code</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['material_code'] }}</td>
+          <td style="text-align: left;width: 15%;"><b>Material Grade</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['gradeName'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 15%;"><b>Version No</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['version_no'] }}</td>
+          <td style="text-align: left;width: 15%;"><b>Supersede No</b></td>
+          <td style="text-align: left;">: {{ selectedSpec['supersede_no'] }}</td>
+        </tr>
+        
+        <tr>
+           <td style="text-align: left;width: 15%;"><b>Storage</b></td>
+          <td style="text-align: left;" *ngIf="selectedSpec['storage']!=''">: {{ selectedSpec['storage_condition'] }}</td>
+          <td style="text-align: left;" *ngIf="selectedSpec['storage']==''">: NA</td>
+        </tr>
+     
+       
+      </table>
+
+      <h3>Tests:</h3>
+      <table class="table table-border">
+        <tr>
+          <th style="text-align: left;font-weight: bold;background-color: maroon;color: white;">Test</th>
+          <th style="text-align: left;font-weight: bold;background-color: maroon;color: white;">Sub Test</th>
+          <th style="text-align: left;font-weight: bold;background-color: maroon;color: white;">{{'common.description' | translate}}</th>
+          <th style="text-align: left;font-weight: bold;background-color: maroon;color: white;">Reference Type</th>
+           <th style="text-align: left;font-weight: bold;background-color: maroon;color: white;">Method</th>
+        </tr>
+        <tr *ngFor="let comp of selectedSpec['tests']; let i = index">
+            <td style="text-align: left; font-weight: bold;">{{comp.test}}</td>
+            <td style="text-align: left; font-weight: bold;" >{{comp.subtest || "NA"}}</td>
+            <td style="text-align: left; font-weight: bold;" >{{comp.description || "NA"}}</td>
+            <td style="text-align: left; font-weight: bold;">{{comp.reference_type}}</td>
+            <td style="text-align: left; font-weight: bold;"  >
+              <button *ngIf="comp.method == 'pending'" class="btn btn-sm btn-info" (click)="addmethod(comp.test_master_id)">add Method</button>  
+              <button *ngIf="comp.method != 'pending'" class="btn btn-sm btn-success" (click)="viewMethod(comp.test_master_id)">View Method</button>  
+            </td>
+            
+        </tr>
+      </table>
+<button type="button" class="btn btn-info btn-lg" (click)="PrepareGTP()">View Method</button>                  
+
+  
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isRivisionrequest" clrModalSize="xl">
+  <h3 class="modal-title"></h3>
+  <div class="modal-body">
+
+      <form #rivisionForm="ngForm">
+     <div class="clr-row">
+          <div class="clr-col-md-3">
+              <label>Document Name</label>
+              <input type="text" name="doc_name" [(ngModel)]="doc_name">
+          </div>
+          <div class="clr-col-md-3">
+              <label>Document No</label>
+              <input type="text" name="doc_no" [(ngModel)]="method_no">
+          </div>
+          <div class="clr-col-md-3">
+              <label>Revision type</label>
+              <select name="revision_type" [(ngModel)]="revision_type">
+                  <option></option>
+                  <option>Periodic/schedule revisiohn</option>
+                  <option>Change Proposed</option>
+              </select>
+          </div>
+          <div class="clr-col-md-3">
+              <label>Revision description/propsed changes</label>
+              <input type="text" name="rivision_chnages" ngModel >
+          </div>
+      </div>
+  </form>
+  </div>
+  <div class="modal-footer">
+      <button type="button" class="btn btn-success" (click)="save(rivisionForm)">{{'common.save' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="isYieldStatement = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<div class="modal fade" [ngClass]="{'in': isPrepare, 'show': isPrepare}" 
+     [style.display]="isPrepare ? 'block' : 'none'" 
+     role="dialog">
+  <div class="modal-dialog modal-full">
+    <div class="modal-content modal-full-content">
+      <div class="modal-header">
+        <button type="button" class="close" (click)="closeModal()">&times;</button>
+        <h4 class="modal-title">GTP</h4>
+      </div>
+      <div class="modal-body">
+        <div class="card" *ngFor="let abc of selectedSpec['tests'];let i = index">
+     <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">{{abc.test}}</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+         
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text" *ngFor="let pqr of abc.methodsData;let j = index">
+        
+              <h2 style="text-align:center">Method of Analysis / Standard Test Procedure</h2>
+            
+              <hr>
+
+
+            <div class="card" *ngIf="pqr['Genral_Instruction']?.length>0">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">General Instructions</div>
+                        <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow1()">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+                    <div class="card-text">
+                        <div *ngIf="isShown1" class="row container-fluid" id="divshow">
+                          <form #Gen_insForm="ngForm" >
+                            <table class="table table-border">
+                              <tr>
+                                <th style="font-weight: bold;text-align: left;background-color: aquamarine;">Parameter Heading</th>
+                                <th style="font-weight: bold;text-align: left;background-color: aquamarine;">{{'common.description' | translate}}</th>
+                                <th style="font-weight: bold;text-align: left;background-color: aquamarine;">Specification/Limit</th>
+                              </tr>
+                              <tr *ngFor="let data of pqr['Genral_Instruction'];let i=index;">
+                                <td style="font-weight: bold;text-align: left;">{{data.parameter}}</td>
+                                <td style="font-weight: bold;text-align: left;">{{data.discrption}}</td>
+                                <td style="font-weight: bold;text-align: left;">{{data.spec_limit}}</td>
+                              </tr>
+                            </table>
+                          </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['purpose'] != 'NA'">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Purpose:</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow2()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown2" class="row container-fluid" id="divshow" >
+                        <div  [innerHtml]="pqr['purpose']"></div>
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['Scope'] != 'NA'">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Scope</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow3()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                <div class="card-text">
+                    <div *ngIf="isShown3" class="row container-fluid" id="divshow" >
+                      <div [innerHtml]="pqr['Scope']"></div>
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['Associative_Document']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Associate  Document:</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow4()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown4" class="row container-fluid" id="divshow">
+                        <table class="table table-border">
+                            <tr>
+                              <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Receiving no</td>
+                              <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Document Name</td>
+                            </tr>
+                            <tr *ngFor="let data of pqr['Associative_Document'];let i = index;">
+                                <td style="font-weight: bold;text-align: left;">{{data.doc_no}}</td>
+                                <td style="font-weight: bold;text-align: left;">{{data.doc_name}}</td>
+                            </tr>
+                        </table>
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['Refrenced_Document']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Reference Document</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow5()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown5" class="row container-fluid" id="divshow">
+                        <table class="table table-border">
+                            <tr>
+                              <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Receiving no</td>
+                              <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Document Name</td>
+                            </tr>
+                            <tr *ngFor="let data of pqr['Refrenced_Document'];let i = index;">
+                                <td style="font-weight: bold;text-align: left;">{{data.doc_no}}</td>
+                                <td style="font-weight: bold;text-align: left;">{{data.doc_name}}</td>
+                            </tr>
+                        </table>
+                     </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card"  *ngIf="pqr['defination']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Definition</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow6()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown6" class="row container-fluid" id="divshow">
+                          <table class="table table-border" >
+                              <tr>
+                                <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Term</td>
+                                <td style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Definition</td>
+                              </tr>
+                              <tr *ngFor="let data of pqr['defination'];let i = index;">
+                                <td style="text-align: left;font-weight: bold;">{{data.term}}</td>
+                                <td style="text-align: left;font-weight: bold;">{{data.defination}}</td>
+                            </tr>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['Safety'] != 'NA'">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Safety</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow7()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                <div class="card-text">
+                    <div *ngIf="isShown7" class="row container-fluid" id="divshow" >
+                      <div  [innerHtml]="pqr['Safety']"></div>
+                    </div>
+                </div>
+              </div>
+            </div>
+       
+            <div class="card"  *ngIf="pqr['testinginstruction']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Testing Instruction:</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow8()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown8" class="row container-fluid" id="divshow">
+
+                        <table class="table ">
+                          <tr style="background-color: rgb(117, 162, 247);color:white;"  >
+                            <td><b>Sr. No</b></td>
+                            <td style="text-align: left;"><b>Instruction Heading</b></td>
+                          </tr>
+                          <tr *ngFor="let item of pqr['testinginstruction']; let j = index;"  >
+                            <td>{{ j+1}}</td>
+                            <td>
+                                <tr>
+                                  <td style="text-align: left;font-weight: bolder;">{{ item.testing_heading }}</td>
+                                </tr>
+                                <tr>
+                                    <ul>
+                                      <li *ngFor="let instruction of item.testing_instruction" style="text-align: left;" >{{ instruction.testing_instruction }}</li>
+                                    </ul>
+                                </tr>
+                            </td>
+                          </tr>
+                        </table>
+
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card"  *ngIf="pqr['Procedure'] != 'NA'">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Procedure:</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow9()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text"> 
+                      <div *ngIf="isShown9" class="row container-fluid" id="divshow">
+                        <div  [innerHtml]="pqr['Procedure']"></div>
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card"  *ngIf="pqr['equipment_instruments']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Equipments / Instruments:</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow10()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text"> 
+                      <div *ngIf="isShown10" class="row container-fluid" id="divshow">
+            
+                              <table class="table table-border" >
+                                  <tr>
+                                    <th style="background-color: maroon; text-align: left; font-weight: bold; color: white;">{{'common.table.srNo' | translate}}</th>
+                                    <th style="background-color: maroon; text-align: left; font-weight: bold; color: white;">Equipment Name</th>
+                                    <th style="background-color: maroon; text-align: left; font-weight: bold; color: white;">Equipment Code</th>
+                                  </tr>
+                                  <tr *ngFor="let user of pqr['equipment_instruments']; let i = index">
+                                    <td style="text-align: left; font-weight: bold;">{{ i + 1 }}.</td>
+                                    <td style="text-align: left; font-weight: bold;">{{ user.equipment_name }}</td>                               
+                                    <td style="text-align: left; font-weight: bold;">{{ user.equipment_code }}</td>                               
+                                  </tr>
+                                
+                              </table>  
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card" *ngIf="pqr['chemical_reagents']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Chemical / Reagents</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow11()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                      <div *ngIf="isShown11" class="row container-fluid" id="div">
+                        <table class="table table-border" >                 
+                          <tr>
+                            <th style="background-color: maroon; text-align: left;font-weight: bold; color: white;">{{'common.table.srNo' | translate}}</th>
+                            <th style="background-color: maroon; text-align: left;font-weight: bold; color: white;">Chemical Name</th>
+                            <th style="background-color: maroon; text-align: left;font-weight: bold; color: white;">Grade</th>
+                          </tr>
+                          <tr *ngFor="let list of pqr['chemical_reagents']; let i = index">
+                            <td>{{ i + 1 }}</td>
+                            <td style="text-align: left;">{{ list.material_name }}</td>
+                            <td>{{ list.grade || '-'}}</td>
+                          </tr>
+                        </table>
+                      </div>
+                  </div>
+              </div>
+            </div>
+        
+            <div class="card" *ngIf="pqr['glasswares']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Glasswares</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow12()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                    <div *ngIf="isShown12" class="row container-fluid" id="div">
+                        <table class="table table-border">
+                          <tr>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">{{'common.table.srNo' | translate}}</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Glassware Name</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Capacity</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">{{'common.type' | translate}}</th>
+                          </tr>
+                          <tr *ngFor="let user of pqr['glasswares']; let i = index">
+                            <td style="font-weight: bold;text-align: left;">{{ i + 1 }}.</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.material_name }}</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.capacity }}</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.class_type }}</td>
+                          </tr> 
+                        </table>
+                    </div>
+                  </div>
+              </div>
+            </div>
+         
+    
+            <div class="card" *ngIf="pqr['balance']?.length>0">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Balance</div>
+                        <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow13()">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+                    <div class="card-text">
+                      <div *ngIf="isShown13" class="row container-fluid" id="div">
+                        <table class="table table-border"  >
+                          <tr>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">{{'common.table.srNo' | translate}}</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Balance Name</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Balance id</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Capacity</th>
+                          </tr>
+                          <tr *ngFor="let user of pqr['balance']; let i = index">
+                            <td style="font-weight: bold;text-align: left;">{{ i + 1 }}.</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.equipment_name }}</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.equipment_code }}</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.capacity || '-'}}</td>
+                          </tr>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+           
+            <div class="card" *ngIf="pqr['volumetric_solutions']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Volumetric/Regents Solutions</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow14()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                    <div *ngIf="isShown14" class="row container-fluid" id="div">
+          
+ 
+                        <table class="table table-border" >
+                          <tr>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">{{'common.table.srNo' | translate}}</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Solution Name</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">Percentage / Strength</th>
+                            <th style="background-color: maroon;color: white;font-weight: bold;text-align: left;">{{'common.unit' | translate}}</th>
+                          </tr>
+                          <tr *ngFor="let user of pqr['volumetric_solutions']; let i = index">
+                            <td style="font-weight: bold;text-align: left;">{{ i + 1 }}.</td>
+                            <td style="font-weight: bold;text-align: left;">{{ user.solution_name }}</td>                               
+                            <td style="font-weight: bold;text-align: left;">{{ user.percentage }} {{ user.strength }}</td>                               
+                            <td style="font-weight: bold;text-align: left;">{{ user.unit }}</td>
+                          </tr>
+                        </table>                     
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+
+            
+            <div class="card" *ngIf="pqr['instrumentParameterList']?.length>0 || pqr['refractiveIndexList']?.length>0 || pqr['retentionTimeList']?.length>0 || pqr['methodParameterList']?.length>0">
+              <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">HPLC</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow15()">
+                              <clr-icon shape="eye" class="is-warning"></clr-icon>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div class="card-block">
+                  <div class="card-text">
+                    <div *ngIf="isShown15" class="row container-fluid" id="div">
+                        <div class="clr-row"  >
+                            <form #conditionForm="ngForm">
+                              <div class="clr-row"  >
+                                  <div *ngIf="pqr['instrumentParameterList']?.length>0" class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                    <h3>Instrument Parameter</h3>
+                                    <form #instrumentParaForm="ngForm">
+                                      <table class="table table-border">
+                                        <tr>
+                                            <td style="background-color: #F4F4F4; color: #333333; font-weight: bolder;text-align: left;">Parameter</td>
+                                            <td style="background-color: #F4F4F4; color: #333333; font-weight: bolder;text-align: left;">Criteria</td>
+                                        </tr>
+                                        <tr *ngFor="let data of pqr['instrumentParameterList'];let i = index;">
+                                          <td style="font-weight: bolder;text-align: left;">{{data.parameter}}</td>
+                                          <td style="font-weight: bolder;text-align: left;">{{data.Criteria}}</td>
+                                        </tr>
+                                      </table>
+                                    </form>
+                                  </div>
+                                  <div *ngIf="pqr['refractiveIndexList']?.length>0" class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                    <h3>Refractive Index and Detection Parameter</h3>
+                                    <form #refractiveIndexDetForm="ngForm">
+                                      <table class="table table-border">
+                                        <tr>
+                                            <td style="background-color: #E3EAFD; color: #1A1A1A ; font-weight: bolder;text-align: left;">Parameter</td>
+                                            <td style="background-color: #E3EAFD; color: #1A1A1A ; font-weight: bolder;text-align: left;">Criteria</td>
+                                        </tr>
+                                        <tr *ngFor="let data of pqr['refractiveIndexList'];let i = index;">
+                                          <td style="font-weight: bolder;text-align: left;">{{data.parameter}}</td>
+                                          <td style="font-weight: bolder;text-align: left;">{{data.Criteria}}</td>
+                                        </tr>
+                                      </table>
+                                    </form>
+                                  </div>
+                                  <div *ngIf="pqr['methodParameterList']?.length > 0" class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                      <h3>Method Parameter</h3>
+                                      <form #methodParameterForm="ngForm">
+                                        <table class="table table-border">
+                                          <tr>
+                                              <td style="background-color: #D1E7E0; color: #154A44 ; font-weight: bolder;text-align: left;">Parameter</td>
+                                              <td style="background-color: #D1E7E0; color: #154A44 ; font-weight: bolder;text-align: left;">Criteria</td>
+                                          </tr>
+                                          <tr *ngFor="let data of pqr['methodParameterList'];let i = index;">
+                                            <td style="font-weight: bolder;text-align: left;">{{data.parameter}}</td>
+                                            <td style="font-weight: bolder;text-align: left;">{{data.Criteria}}</td>
+                                          </tr>
+                                        </table>
+                                      </form>
+                                  </div>
+
+                                  <div *ngIf=" pqr['retentionTimeList']?.length > 0" class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                      <h3>Retention time</h3>
+                                      <form #retentionTimeForm="ngForm">
+                                        <table class="table table-border">
+                                          <tr>
+                                              <td style="background-color: #F5E8D9; color: #5A463B; font-weight: bolder;text-align: left;">Peak</td>
+                                              <td style="background-color: #F5E8D9; color: #5A463B; font-weight: bolder;text-align: left;">Ret. Time(min.)</td>
+                                              <td style="background-color: #F5E8D9; color: #5A463B; font-weight: bolder;text-align: left;">Relative Ret. time</td>
+                                          </tr>
+                                          <tr *ngFor="let data of  pqr['retentionTimeList'];let i = index;">
+                                            <td style="font-weight: bolder;text-align: left;">{{data.peak}}</td>
+                                            <td style="font-weight: bolder;text-align: left;">{{data.Retention_time}}</td>
+                                            <td style="font-weight: bolder;text-align: left;">{{data.relative_retention_time}}</td>
+                                          </tr>
+                                        </table>
+                                      </form>
+                                  </div>
+                              </div>
+
+
+                              
+                              
+                                <!-- <h3 *ngIf="cromatograms_list?.length > 0">Example Cromatograms</h3>
+                                <form #exampleCromatogramsForm="ngForm" *ngIf="cromatograms_list?.length > 0">
+                                  <table class="table table-border" >
+                                    <tr  *ngFor="let data of cromatograms_list;let i = index;">
+                                        <td > 
+                                          <button class="btn btn-success btn-sm"  (click)="viewCromatograms(data.cromatograms)">{{'common.view' | translate}}</button>      
+                                        </td>
+                                    </tr>
+                                  </table>
+                                </form> -->
+                            </form>
+
+                            <div class="clr-col-lg-12 clr-col-md-12" *ngIf="pqr['phases']?.length > 0">
+                              <h4>Mobile Phase:</h4>
+                              <form #phaseForm="ngForm">
+                                <table class="table table-border"  >
+                                  <tr>
+                                    <th colspan="4" style="background-color: #F5E8D9; color: #5A463B; font-weight: bolder;text-align: center;">Components of Mobile Phase</th>
+                                  </tr>
+                                  <tr>
+                                    <th style="background-color: #D1E7E0; color: #154A44 ; font-weight: bolder;text-align: left;">Name of Solvent / Chemical</th>
+                                    <th style="background-color: #D1E7E0; color: #154A44 ; font-weight: bolder;text-align: left;">% Strength</th>
+                                    <th style="background-color: #D1E7E0; color: #154A44 ; font-weight: bolder;text-align: left;">Prepare</th>
+                                  </tr>
+                                  <tr *ngFor="let phase of pqr['phases']; let i = index">
+                                    <td style="font-weight: bolder;text-align: left;">{{ phase.solvent_name }}</td>
+                                    <td style="font-weight: bolder;text-align: left;">{{ phase.per_strength }}</td>
+                                    <td style="font-weight: bolder;text-align: left;">{{ phase.preparation }}</td>
+                                  </tr>
+                                </table>
+
+                                
+                              </form>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+ 
+          
+
+
+
+
+      </div>
+    </div>
+    
+</div>
+
+
+       
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" (click)="closeModal()">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,290 @@
+<div class="card rcd-form" *ngIf="!isLog && !isQaReview">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Return of Merchandise Report ({{ formNo }}) — Page 1
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/returned-finished-products/report/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/returned-finished-products" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <form #reportForm="ngForm">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">TITLE:</td>
+          <td colspan="3" class="rcd-form__title-cell">RETURN OF MERCHANDISE REPORT FORM</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+        </tr>
+      </table>
+
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Received Date <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="date" name="received_date" [(ngModel)]="receivedDate" required />
+          </td>
+          <td class="rcd-form__label-cell">Inspected by</td>
+          <td class="rcd-form__value-cell">
+            <div class="rcd-form__readonly">{{ inspectedBy || '—' }}</div>
+            <button type="button" class="btn btn-sm btn-outline" (click)="stampInspectedBy()">Stamp</button>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Customer Name</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="customer_name" [(ngModel)]="customerName" /></td>
+          <td class="rcd-form__label-cell">Product Code</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="product_code" [(ngModel)]="productCode" [readonly]="productSelectMode !== manualProduct && !!selectedProduct" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Customer Address</td>
+          <td class="rcd-form__value-cell" colspan="3"><input class="rcd-form__input" type="text" name="customer_address" [(ngModel)]="customerAddress" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product Description/Strength <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <select class="rcd-form__select" name="product_select" [(ngModel)]="selectedProduct" (ngModelChange)="onProductChange()" *ngIf="productSelectMode !== manualProduct">
+              <option [ngValue]="null">-- Select Product from Master --</option>
+              <option *ngFor="let p of products" [ngValue]="p">{{ p.product_name || p.material_name }}</option>
+              <option [ngValue]="manualProduct">+ Enter Manually</option>
+            </select>
+            <input class="rcd-form__input" type="text" name="product_description" [(ngModel)]="productDescription" *ngIf="productSelectMode === manualProduct" required />
+          </td>
+          <td class="rcd-form__label-cell">Expiry Date</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="expiry_date" [(ngModel)]="expiryDate" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Lot Number <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="lot_number" [(ngModel)]="lotNumber" required /></td>
+          <td class="rcd-form__label-cell">Original Date of P.O.</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="original_po_date" [(ngModel)]="originalPoDate" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">P.O Number</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="po_number" [(ngModel)]="poNumber" /></td>
+          <td class="rcd-form__label-cell">Invoice Date</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="invoice_date" [(ngModel)]="invoiceDate" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Invoice Number</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="invoice_number" [(ngModel)]="invoiceNumber" /></td>
+          <td class="rcd-form__label-cell">Credit Date</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="credit_date" [(ngModel)]="creditDate" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Credit Number</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="credit_number" [(ngModel)]="creditNumber" /></td>
+          <td class="rcd-form__label-cell">Narcotic / Non-Narcotic</td>
+          <td class="rcd-form__value-cell">
+            <label style="margin-right: 1rem" *ngFor="let opt of narcoticOptions">
+              <input type="radio" name="narcotic_type" [value]="opt" [(ngModel)]="narcoticType" /> {{ opt }}
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">QTY Received</td>
+          <td class="rcd-form__value-cell" colspan="3"><input class="rcd-form__input" type="text" name="qty_received" [(ngModel)]="qtyReceived" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Comments — Receiving</td>
+          <td class="rcd-form__value-cell" colspan="3"><textarea class="rcd-form__textarea" name="comments_receiving" [(ngModel)]="commentsReceiving" rows="3"></textarea></td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__note">Materials Management receives return, records details, assigns Return # (R-XXX/YY) and forwards to QA for Page 2 assessment.</p>
+      <div style="text-align: center">
+        <button type="button" class="btn btn-primary" (click)="saveReceiving(reportForm)">Save &amp; Send to QA</button>
+      </div>
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose</p>
+    </form>
+  </div>
+</div>
+
+<!-- QA REVIEW PAGE 2 -->
+<div class="card rcd-form" *ngIf="isQaReview">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        QA Review — Return of Merchandise Report ({{ returnMerchandiseNo }}) — Page 2
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/returned-finished-products/report/log">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Return #</td>
+        <td class="rcd-form__value-cell">{{ returnMerchandiseNo }}</td>
+        <td class="rcd-form__label-cell">Product / Lot</td>
+        <td class="rcd-form__value-cell">{{ productDescription }} / {{ lotNumber }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">If Goods for Destruction</div>
+    <ul class="rcd-form__criteria-list">
+      <li *ngFor="let item of destructionCriteria; let i = index">
+        <clr-checkbox-wrapper>
+          <input type="checkbox" clrCheckbox [(ngModel)]="destructionChecks[i]" [name]="'dest_' + i" />
+          <label>{{ item }}</label>
+        </clr-checkbox-wrapper>
+      </li>
+    </ul>
+
+    <div class="rcd-form__section-title">If Goods for Return to Stock Consideration</div>
+    <ul class="rcd-form__criteria-list">
+      <li *ngFor="let item of returnStockCriteria; let i = index">
+        <clr-checkbox-wrapper>
+          <input type="checkbox" clrCheckbox [(ngModel)]="returnStockChecks[i]" [name]="'stock_' + i" />
+          <label>{{ item }}</label>
+        </clr-checkbox-wrapper>
+      </li>
+    </ul>
+
+    <div class="rcd-form__section-title">If Goods are for Return to Salvaging Operations</div>
+    <ul class="rcd-form__criteria-list">
+      <li *ngFor="let item of salvagingCriteria; let i = index">
+        <clr-checkbox-wrapper>
+          <input type="checkbox" clrCheckbox [(ngModel)]="salvagingChecks[i]" [name]="'salv_' + i" />
+          <label>{{ item }}</label>
+        </clr-checkbox-wrapper>
+      </li>
+    </ul>
+
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Comments — QA</td>
+        <td class="rcd-form__value-cell" colspan="3"><textarea class="rcd-form__textarea" [(ngModel)]="commentsQa" name="comments_qa" rows="3"></textarea></td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Disposition <span class="rcd-form__required">*</span></td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <label style="margin-right: 1rem" *ngFor="let opt of dispositionOptions">
+            <input type="radio" name="disposition" [value]="opt" [(ngModel)]="disposition" /> {{ opt }}
+          </label>
+        </td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Director/Designate</td>
+        <td class="rcd-form__value-cell">
+          <div class="rcd-form__readonly">{{ directorDesignate || '—' }}</div>
+          <button type="button" class="btn btn-sm btn-outline" (click)="stampDirector()">Stamp</button>
+        </td>
+        <td class="rcd-form__label-cell">Date</td>
+        <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="director_date" [(ngModel)]="directorDate" /></td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button type="button" class="btn btn-success" (click)="completeQaReview()">Complete QA Review &amp; Update Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT LOG -->
+<div class="card rcd-form" *ngIf="isLog && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Return of Merchandise Report Log ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/returned-finished-products/report/new" style="margin-right: 0.35rem">New Report</button>
+        <button class="btn btn-sm" routerLink="/qa/returned-finished-products" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="alert alert-info" *ngIf="pendingQa?.length && dept_head === 'Yes'">
+      {{ pendingQa.length }} report(s) pending QA review.
+    </div>
+
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3"><label>From</label><input class="rcd-form__input" type="date" [(ngModel)]="fromDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3"><label>To</label><input class="rcd-form__input" type="date" [(ngModel)]="toDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3" style="padding-top: 1.2rem"><button class="btn btn-sm btn-primary" (click)="getLog(); loadPendingQa()">Search</button></div>
+    </div>
+
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>Return #</th>
+          <th>Received Date</th>
+          <th>Customer</th>
+          <th>Product</th>
+          <th>Lot #</th>
+          <th>Qty</th>
+          <th>Status</th>
+          <th>Disposition</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of results; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.return_merchandise_no }}</td>
+          <td>{{ r.received_date | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ r.customer_name }}</td>
+          <td>{{ r.product_description }}</td>
+          <td>{{ r.lot_number }}</td>
+          <td>{{ r.qty_received }}</td>
+          <td><span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status }}</span></td>
+          <td>{{ r.disposition || '—' }}</td>
+          <td>
+            <button class="btn btn-sm btn-info" (click)="view(r)">View</button>
+            <button class="btn btn-sm btn-warning" *ngIf="r.status === 'Pending QA' && dept_head === 'Yes'" (click)="goQaReview(r)">QA Review</button>
+            <button class="btn btn-sm btn-outline" (click)="downloadForm(r.id)">PDF</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length"><td colspan="10" style="text-align: center">No records found</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Return of Merchandise Report — {{ selectedRecord.return_merchandise_no }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+        <button class="btn btn-sm btn-outline" (click)="downloadForm(selectedRecord.id)">PDF</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr><td class="rcd-form__label-cell">Status</td><td class="rcd-form__value-cell"><span class="label" [ngClass]="getStatusClass(selectedRecord.status)">{{ selectedRecord.status }}</span></td><td class="rcd-form__label-cell">Disposition</td><td class="rcd-form__value-cell">{{ selectedRecord.disposition || '—' }}</td></tr>
+      <tr><td class="rcd-form__label-cell">Customer</td><td class="rcd-form__value-cell">{{ selectedRecord.customer_name }}</td><td class="rcd-form__label-cell">Product</td><td class="rcd-form__value-cell">{{ selectedRecord.product_description }}</td></tr>
+      <tr><td class="rcd-form__label-cell">Lot #</td><td class="rcd-form__value-cell">{{ selectedRecord.lot_number }}</td><td class="rcd-form__label-cell">Qty Received</td><td class="rcd-form__value-cell">{{ selectedRecord.qty_received }}</td></tr>
+      <tr><td class="rcd-form__label-cell">Comments — Receiving</td><td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.comments_receiving }}</td></tr>
+      <tr><td class="rcd-form__label-cell">Comments — QA</td><td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.comments_qa }}</td></tr>
+      <tr><td class="rcd-form__label-cell">QA Initial / Date</td><td class="rcd-form__value-cell">{{ selectedRecord.qa_initial }} / {{ selectedRecord.qa_initial_date | date: 'dd-MM-yyyy' }}</td><td class="rcd-form__label-cell">Director / Date</td><td class="rcd-form__value-cell">{{ selectedRecord.director_designate }} / {{ selectedRecord.director_date | date: 'dd-MM-yyyy' }}</td></tr>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,739 @@
+<div class="card" *ngIf="!isNew && !isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Client List</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" (click)="openNewForm()">{{'common.new' | translate}}</button>
+            <button class="btn btn-sm btn-danger" routerLink="/marketing/leads" >{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="client-search-bar">
+                <label class="search-label">Search by Client Name</label>
+                <input type="text" class="search-input" placeholder="Type client or brand name..." [(ngModel)]="clientSearch" name="clientSearch" />
+                <button type="button" class="btn btn-sm btn-download-excel" (click)="downloadClientList()">Download Excel</button>
+            </div>
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" >
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Enquiry Client Code</clr-dg-column>
+                    <clr-dg-column>Client Name</clr-dg-column>
+                    <clr-dg-column>Brand Name</clr-dg-column>
+                    <clr-dg-column>Type of Client</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry By</clr-dg-column>
+                    <clr-dg-column>Entry On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let clien of getFilteredClients(); let i=index" [clrDgItem]="clien">
+                        <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                        <clr-dg-cell>{{clien.client_code || '-'}}</clr-dg-cell>
+                        <clr-dg-cell>{{clien.LglNm || '-'}}</clr-dg-cell>
+                        <clr-dg-cell>{{clien.TrdNm || '-'}}</clr-dg-cell>
+                        <clr-dg-cell>{{clien.client_type || '-'}}</clr-dg-cell>
+                        <clr-dg-cell><strong>{{clien.status | uppercase}}</strong></clr-dg-cell>
+                        <clr-dg-cell>{{clien.entryByName || '-'}}</clr-dg-cell>
+                        <clr-dg-cell>{{clien.entry_date | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                        <clr-dg-cell >
+                            <button class="btn btn-sm btn-primary" (click)="view(clien)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card" *ngIf="!isNew && isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Client Details</div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+      
+            <form #clientform="ngForm">
+
+                <div class="card">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">1. Basic Client Information :</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Client Name (Legal Name) : <span style="color: red;">*</span> </strong></label>
+                                    <input type="text" name="LglNm" [(ngModel)]="selectedClient['LglNm']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Brand Name (if different) : <span style="color: red;">*</span> </strong></label>
+                                    <input type="text" name="TrdNm" [(ngModel)]="selectedClient['TrdNm']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Type of Client :<span style="color: red;">*</span> </strong></label>
+                                    <input *ngIf="!isEdit" type="text" name="client_type" [(ngModel)]="selectedClient['client_type']" [readonly]="!isEdit">
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Client Category :<span style="color: red;">*</span> </strong></label>
+                                    <input *ngIf="!isEdit" type="text" name="category" [(ngModel)]="selectedClient['category']" [readonly]="!isEdit">
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Service Category :</strong></label>
+                                    <input type="text" name="serviceCategory" [(ngModel)]="selectedClient['serviceCategory']" readonly>
+                                </div>
+
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="viewServiceEntries.length">
+                                    <h3>Added Service Details:</h3>
+                                    <div class="table-responsive saved-service-wrap">
+                                    <table class="table table-border saved-service-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="cell-sno">S.No</th>
+                                                <th class="cell-category">Service Category</th>
+                                                <th class="cell-descriptions">Descriptions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let entry of viewServiceEntries; let i = index">
+                                                <td class="cell-sno">{{ i + 1 }}</td>
+                                                <td class="cell-category">{{ entry.category }}</td>
+                                                <td class="cell-descriptions">
+                                                    <div
+                                                        class="service-desc-block"
+                                                        *ngIf="isCommercialManufacturingCategory(entry.category) && entry.products?.length"
+                                                    >
+                                                        <div class="service-desc-heading">Product</div>
+                                                        <ul class="service-cell-list">
+                                                            <li *ngFor="let product of entry.products">
+                                                                {{ product.displayLabel || (product.product_name + ' (' + product.product_code + ')') }}
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="service-desc-block" *ngIf="getDescriptionLinesForEntry(entry)?.length">
+                                                        <div class="service-desc-heading">Descriptions</div>
+                                                        <ul class="service-cell-list">
+                                                            <li *ngFor="let line of getDescriptionLinesForEntry(entry)">{{ line }}</li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    </div>
+                                </div>
+
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="!viewServiceEntries.length && selectedClient['serviceDescription']">
+                                    <label><strong>Service Description :</strong></label>
+                                    <textarea rows="3" readonly>{{ selectedClient['serviceDescription'] }}</textarea>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Date of Onboarding :  <span style="color: red;">*</span></strong></label>
+                                    <input type="date" name="dateOfOnboarding" [(ngModel)]="selectedClient['dateOfOnboarding']" [readonly]="!isEdit" required>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">2. Contact Information :</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Contact Person Name : <span style="color: red;">*</span></strong></label>
+                                    <input type="text" name="contactPerson" [(ngModel)]="selectedClient['contactPerson']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Designation : <span style="color: red;">*</span></strong></label>
+                                    <input type="text" name="designation" [(ngModel)]="selectedClient['designation']" [readonly]="!isEdit" required>
+                                </div>
+                            
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                                    <label><strong>Phone (Mobile / Landline) : <span style="color: red;">*</span> </strong></label>
+                                    <input
+                                      *ngIf="!isEdit"
+                                      type="text"
+                                      name="mobNo"
+                                      [ngModel]="selectedClient['mobNo']"
+                                      readonly
+                                    >
+                                    <input
+                                      *ngIf="isEdit"
+                                      type="text"
+                                      name="mobNo"
+                                      [(ngModel)]="selectedClient['mobNo']"
+                                      [canadianPhone]="false"
+                                      required
+                                      placeholder="e.g. 416-555-1234"
+                                      (blur)="formatSelectedClientMobNo()"
+                                    >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                                    <label><strong>Email ID : <span style="color: red;">*</span> </strong></label>
+                                    <input type="email" name="email" [(ngModel)]="selectedClient['email']" [readonly]="!isEdit" required >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Communication Preference :<span style="color: red;">*</span> </strong></label>
+                                    <input *ngIf="!isEdit" type="text"  name="communicationPreference" [(ngModel)]="selectedClient['communicationPreference']" [readonly]="!isEdit" >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">3. Address Details :</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="clr-row">
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong><strong> Registered Office Address : <span style="color: red;">*</span></strong> </strong></label>
+                                    <input type="text" name="address" [(ngModel)]="selectedClient['address']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong><strong> Billing Address : <span style="color: red;">*</span></strong> </strong></label>
+                                    <input type="text" name="billingAddress" [(ngModel)]="selectedClient['billingAddress']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Country:  <span style="color: red;">*</span></strong></label>
+                                    <input *ngIf="!isEdit" type="text"  name="country" [(ngModel)]="selectedClient['country']" [readonly]="!isEdit" >
+                                    <select *ngIf="isEdit" class="form-select-field" name="country" [(ngModel)]="selectedClient['country']"  required>
+                                        <option></option>
+                                        <option *ngFor="let country of countries" [value]="country">{{ country }} </option>
+                                    </select>
+                                </div>
+
+                                <div *ngIf="selectedClient['country']!='India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>State / Province: <span style="color: red;">*</span></strong></label>
+                                    <input type="text" name="state" [(ngModel)]="selectedClient['state']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div *ngIf="selectedClient['country'] == 'India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>State / Province: <span style="color: red;">*</span></strong></label>
+                                    <input *ngIf="!isEdit" type="text" name="state" [(ngModel)]="selectedClient['state']" [readonly]="!isEdit" >
+                                    <select *ngIf="isEdit" class="form-select-field" name="state" [(ngModel)]="selectedClient['state']"  required>
+                                        <option value=""></option>
+                                        <option *ngFor="let s of states" [value]="s">{{ s }}</option>
+                                    </select>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>City : <span style="color: red;">*</span></strong></label>
+                                    <input type="text" name="city" [(ngModel)]="selectedClient['city']" [readonly]="!isEdit" required>
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                    <label><strong>Postal Code : <span style="color: red;">*</span></strong></label>
+                                    <input type="text" name="pincode" [(ngModel)]="selectedClient['pincode']" [readonly]="!isEdit" numbersOnly maxlength="6" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="text-align: center">
+                        <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">5. Other Informations</div>
+                        </div>
+                    </div>
+                    <div class="card-block">
+                        <div class="card-text">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-12">
+                                    <label><strong> Reffered By:<span style="color: red;">*</span> </strong></label>
+                                    <input *ngIf="!isEdit" type="text" name="refered_by"  [(ngModel)]="selectedClient['refered_by']" [readonly]="!isEdit">
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-4" *ngIf="selectedClient['refered_by'] == 'Agent'">
+                                    <label><strong> Agent Name:<span style="color: red;">*</span> </strong></label>
+                                    <input *ngIf="!isEdit" type="text" name="agent_no"  [(ngModel)]="selectedClient['agent_no']" [readonly]="!isEdit">
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                  <label><strong>Enquiry Ticket Size :   </strong></label>
+                                  <input type="text"  name="enquiryTicketSize"  [(ngModel)]="selectedClient['enquiryTicketSize']" [readonly]="!isEdit"   >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                  <label><strong>Exp. No. Of Product :   </strong></label>
+                                  <input type="text"  name="NoOfProducts"  [(ngModel)]="selectedClient['NoOfProducts']" [readonly]="!isEdit"   >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                  <label><strong>Approx. Turnover :   </strong></label>
+                                  <input type="text"  name="approxTurnover"  [(ngModel)]="selectedClient['approxTurnover']" [readonly]="!isEdit"   >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                  <label><strong>Company Size :   </strong></label>
+                                  <input type="text"  name="approxTurnover"  [(ngModel)]="selectedClient['approxTurnover']" [readonly]="!isEdit"   >
+                                </div>
+
+                                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                  <label><strong>Exiting Bussiness :   </strong></label>
+                                  <input type="text"  name="approxTurnover"  [(ngModel)]="selectedClient['approxTurnover']" [readonly]="!isEdit"   >
+                                </div>
+
+
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</div>
+
+ 
+
+ 
+
+<div class="card" *ngIf="isNew && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Client Form</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="closeNewForm()">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <form #clientform="ngForm">
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">1. Basic Client Information :</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+              <div class="clr-row">
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Client Name (Legal Name) : <span style="color: red;">*</span> </strong></label>
+                  <input type="text" name="LglNm" ngModel required minlength="2" maxlength="200">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Brand Name (if different) : <span style="color: red;">*</span> </strong></label>
+                  <input type="text" name="TrdNm" ngModel required minlength="2" maxlength="200">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Type of Client :<span style="color: red;">*</span> </strong></label>
+                  <select class="form-select-field" name="client_type" ngModel required>
+                    <option value=""></option>
+                    <option value="DOMESTIC">DOMESTIC</option>
+                    <option value="EXPORT">EXPORT</option>
+                    <option value="EXPORT/DOMESTIC">EXPORT / DOMESTIC</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Client Category :<span style="color: red;">*</span> </strong></label>
+                  <select class="form-select-field" name="category" ngModel required>
+                    <option value=""></option>
+                    <option value="Regular">Regular</option>
+                    <option value="OEM">OEM</option>
+                    <option value="Private Label">Private Label</option>
+                    <option value="etc">etc</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Service Category : <span style="color: red;">*</span></strong></label>
+                  <p-multiSelect
+                    name="serviceCategorySelect"
+                    class="form-dropdown-field"
+                    [options]="serviceCategories"
+                    [(ngModel)]="selectedServiceCategories"
+                    placeholder="Select Service Category"
+                    selectedItemsLabel="{0} categories selected"
+                    [maxSelectedLabels]="2"
+                    (onChange)="onServiceCategoriesChange()"
+                    [style]="{ width: '100%' }"
+                    [panelStyle]="{ 'min-width': '280px' }"
+                    appendTo="body"
+                  ></p-multiSelect>
+                </div>
+
+                <div
+                  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                  *ngFor="let category of selectedServiceCategories"
+                >
+                  <div class="service-description-panel">
+                    <h4 class="service-category-title">{{ category }}</h4>
+
+                    <div class="clr-row" *ngIf="isCommercialManufacturingCategory(category)">
+                      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Finished Product(s) : <span style="color: red;">*</span></strong></label>
+                        <p-multiSelect
+                          [name]="'finishedProducts_' + category"
+                          class="form-dropdown-field"
+                          [options]="finishedProducts"
+                          [ngModel]="getCategoryDraftProducts(category)"
+                          (ngModelChange)="setCategoryDraftProducts(category, $event)"
+                          optionLabel="displayLabel"
+                          dataKey="product_code"
+                          placeholder="Select finished products from master"
+                          selectedItemsLabel="{0} products selected"
+                          [maxSelectedLabels]="2"
+                          [style]="{ width: '100%' }"
+                          [panelStyle]="{ 'min-width': '320px' }"
+                          appendTo="body"
+                          [filter]="true"
+                          filterPlaceHolder="Search product"
+                        ></p-multiSelect>
+                      </div>
+                    </div>
+
+                    <label><strong>Select Description :</strong></label>
+                    <div class="service-description-boxes">
+                      <button
+                        type="button"
+                        class="service-description-box"
+                        *ngFor="let item of getDescriptionItems(category)"
+                        [class.selected]="isDescriptionItemSelected(category, item)"
+                        (click)="toggleDescriptionItem(category, item)"
+                      >
+                        {{ item }}
+                      </button>
+                    </div>
+
+                    <div
+                      class="description-detail-row"
+                      *ngFor="let entry of getSelectedDescriptionEntries(category)"
+                    >
+                      <div class="description-detail-label">{{ entry.label }}</div>
+                      <input
+                        type="text"
+                        [name]="'serviceDetail_' + category + '_' + entry.label"
+                        [(ngModel)]="entry.details"
+                        (ngModelChange)="onDescriptionDetailsChange(category, entry.label, $event)"
+                        placeholder="Add details for this description"
+                      />
+                    </div>
+
+                    <label class="manual-description-label"><strong>Or add manually :</strong></label>
+                    <input
+                      type="text"
+                      [name]="'manualServiceDescription_' + category"
+                      [(ngModel)]="categoryManualText[category]"
+                      (ngModelChange)="onCategoryManualChange(category)"
+                      placeholder="Type description manually if not selected above"
+                    />
+
+                    <div class="service-category-actions">
+                      <button type="button" class="btn btn-sm btn-success" (click)="addServiceCategoryEntry(category)">
+                        ADD
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="savedServiceEntries.length">
+                  <div class="saved-service-panel">
+                    <h4 class="service-category-title">Added Service Details</h4>
+                    <div class="table-responsive saved-service-wrap">
+                      <table class="table table-bordered saved-service-table has-action-column">
+                        <thead>
+                          <tr>
+                            <th class="cell-sno">S.No</th>
+                            <th class="cell-category">Service Category</th>
+                            <th class="cell-descriptions">Descriptions</th>
+                            <th class="cell-action">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let entry of savedServiceEntries; let i = index">
+                            <td class="cell-sno">{{ i + 1 }}</td>
+                            <td class="cell-category">{{ entry.category }}</td>
+                            <td class="cell-descriptions">
+                              <div
+                                class="service-desc-block"
+                                *ngIf="isCommercialManufacturingCategory(entry.category) && entry.products?.length"
+                              >
+                                <div class="service-desc-heading">Product</div>
+                                <ul class="service-cell-list">
+                                  <li *ngFor="let product of entry.products">
+                                    {{ product.displayLabel || getProductLabel(product) }}
+                                  </li>
+                                </ul>
+                              </div>
+                              <div class="service-desc-block" *ngIf="getDescriptionLinesForEntry(entry)?.length">
+                                <div class="service-desc-heading">Descriptions</div>
+                                <ul class="service-cell-list">
+                                  <li *ngFor="let line of getDescriptionLinesForEntry(entry)">{{ line }}</li>
+                                </ul>
+                              </div>
+                              <span class="cell-empty-value" *ngIf="!(isCommercialManufacturingCategory(entry.category) && entry.products?.length) && !getDescriptionLinesForEntry(entry)?.length">N/A</span>
+                            </td>
+                            <td class="cell-action">
+                              <button type="button" class="btn btn-sm btn-danger" (click)="removeSavedServiceEntry(i)">
+                                DELETE
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12 service-save-row" *ngIf="selectedServiceCategories.length">
+                  <button type="button" class="btn btn-primary" (click)="saveAllServiceDetails()">
+                    SAVE SERVICE DETAILS
+                  </button>
+                  <span class="service-save-status" *ngIf="serviceDetailsSaved">Service details saved</span>
+                </div>
+
+                <input type="hidden" name="serviceCategory" [(ngModel)]="serviceCategory" />
+                <input type="hidden" name="serviceDescription" [(ngModel)]="serviceDescription" />
+                <input type="hidden" name="serviceDescriptionData" [(ngModel)]="serviceDescriptionData" />
+                <input type="hidden" name="selectedProductCodes" [(ngModel)]="selectedProductCodes" />
+
+ 
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">2. Contact Information :</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+              <div class="clr-row">
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Contact Person Name : <span style="color: red;">*</span></strong></label>
+                  <input type="text" name="contactPerson" ngModel required minlength="2" maxlength="100">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Designation : <span style="color: red;">*</span></strong></label>
+                  <input type="text" name="designation" ngModel required minlength="2" maxlength="100">
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                  <label><strong>Phone (Mobile / Landline) : <span style="color: red;">*</span> </strong></label>
+                  <input
+                    type="text"
+                    name="mobNo"
+                    [(ngModel)]="mobNo"
+                    required
+                    [canadianPhone]="false"
+                    placeholder="e.g. 416-555-1234"
+                    (focus)="onMobNoFocus()"
+                    (blur)="formatMobNoOnBlur()"
+                  >
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12 remove-side-arrow-container">
+                  <label><strong>Email ID : <span style="color: red;">*</span> </strong></label>
+                  <input type="email" name="email" [(ngModel)]="email" required email>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Communication Preference :<span style="color: red;">*</span> </strong></label>
+                  <select class="form-select-field" name="communicationPreference" ngModel required>
+                    <option value=""></option>
+                    <option value="Email">{{'common.email' | translate}}</option>
+                    <option value="Phone">{{'common.phone' | translate}}</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                  </select>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">3. Address Details :</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+              <div class="clr-row">
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong><strong> Registered Office Address : <span style="color: red;">*</span></strong> </strong></label>
+                  <input type="text" name="address" ngModel required minlength="5" maxlength="500">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong><strong> Billing Address : <span style="color: red;">*</span></strong> </strong></label>
+                  <input type="text" name="billingAddress" ngModel required minlength="5" maxlength="500">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Country:  <span style="color: red;">*</span></strong></label>
+                  <select class="form-select-field" name="country" [(ngModel)]="country" required>
+                    <option></option>
+                    <option *ngFor="let country of countries" [value]="country">{{ country }} </option>
+                  </select>
+                </div>
+
+                <div *ngIf="country!='India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>State / Province: <span style="color: red;">*</span></strong></label>
+                  <input type="text" name="state" ngModel required>
+                </div>
+
+                <div *ngIf="country == 'India'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>State / Province: <span style="color: red;">*</span></strong></label>
+                  <select class="form-select-field" name="state" ngModel required>
+                    <option value=""></option>
+                    <option *ngFor="let s of states" [value]="s">{{ s }}</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>City : <span style="color: red;">*</span></strong></label>
+                  <input type="text" name="city" ngModel required minlength="2" maxlength="100">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Postal Code : <span style="color: red;">*</span></strong></label>
+                  <input type="text" name="pincode" ngModel numbersOnly minlength="6" maxlength="10" required>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">4. Other Informations</div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+              <div class="clr-row">
+
+                  <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-12">
+                    <label><strong> Reffered By:<span style="color: red;">*</span> </strong></label>
+                    <select class="form-select-field" name="refered_by" [(ngModel)]="refered_by" required>
+                      <option></option>
+                      <option>Agent</option>
+                      <option>Direct Customer</option>
+                    </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-4" *ngIf="refered_by == 'Agent'">
+                    <label><strong> Agent Name : </strong></label>
+                    <select class="form-select-field" name="agent_no" ngModel >
+                      <option value=""></option>
+                      <option *ngFor="let agent of agents;let i index" value="{{agent.agent_no}}">{{agent.agent_name}}</option>
+                    </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Enquiry Ticket Size :   </strong></label>
+                    <input type="text"  name="enquiryTicketSize"  ngModel   >
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Exp. No. Of Product :   </strong></label>
+                    <input type="text"  name="NoOfProducts"  ngModel   >
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Approx. Turnover :   </strong></label>
+                    <input type="text"  name="approxTurnover"  ngModel   >
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-12">
+                    <label><strong> Company Size :  </strong></label>
+                    <select class="form-select-field" name="companySize" ngModel >
+                      <option></option>
+                      <option>Small Scale</option>
+                      <option>Medium Scale</option>
+                      <option>Large Scale</option>
+                    </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-sm-3 clr-col-md-4 clr-col-sm-12">
+                    <label><strong> Exiting Bussiness :  </strong></label>
+                    <select class="form-select-field" name="exitingBussiness" ngModel >
+                      <option></option>
+                      <option>Pharma</option>
+                      <option>Cosmetic</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+    
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" type="button" (click)="saveTempClient(clientform)">{{'common.submit' | translate}}</button>
+    <button class="btn btn-danger" type="button" (click)="closeNewForm()">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+
+
+ 
+
+
+
+
+
+
+
+ 
+
+
+
+ 

@@ -1,0 +1,201 @@
+﻿<div class="container-fluid">
+    <div class="card" *ngIf="!isView">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">CORRECTIVE AND PREVENTIVE ACTION LOG</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/qa/capa">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+        <div class="card-block">
+            <div class="card-text">
+              <div class="clr-row">
+                <div class="clr-col-lg-5">
+                  <label>From Date:</label>
+                  <input type="date" name="from_date" [(ngModel)]="from_date">
+                </div>
+                <div class="clr-col-lg-5">
+                  <label>To Date:</label>
+                  <input type="date" name="to_date" [(ngModel)]="to_date">
+                </div>
+                <div class="clr-col-lg-2">
+                  <button class="btn btn-danger"(click)="getcapaLog()" style="margin-top:28px">Serach</button>
+                </div>
+              </div>
+                <table class="table table-border">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Initiated Dept.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">CAPA Reference No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Origin/ Reference From / Ref. Document No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Details of CAPA</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Requisition By</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Issued By</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Closed on/by</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.remarks' | translate}}</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">view</th>
+                    </tr>
+                    <tr *ngFor="let result of results; let i = index">
+                        <td style="text-align: left;">{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ result.initiate_date | date: 'dd-MM-yyyy'}}</td>
+                        <td style="text-align: left;">{{ result.department}}</td>
+                        <td style="text-align: left;">{{ result.capa_no}}</td>
+                        <td><span *ngFor="let result1 of result['origin']">{{ result1 }}, </span> / {{ result.document_no }}</td>
+                        <td><span *ngFor="let result1 of result['plan']">{{ result1.capa }}, </span></td>
+                        <td style="text-align: left;">{{ result.initiate_by }}</td>
+                        <td style="text-align: left;">{{ result.close_verify_approve_by }}</td>
+                        <td style="text-align: left;">{{ result.close_date | date: 'dd-MM-yyyy' }}/{{ result.close_by }}</td>
+                        <td style="text-align: left;">{{ result.remark }}</td>
+                        <td>
+                          <button class="btn btn-sm btn-info" (click)="viewIncident(i)">{{'common.view' | translate}}</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="results?.length == 0">
+                        <td colspan="11">{{'common.noRecords' | translate}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+        </div>
+    </div>
+    <div class="card" *ngIf="isView">
+      <div class="card-header">CAPA Details</div>
+      <div class="card-block">
+          <div class="card-text">
+            <table class="table">
+              <tr>
+                <td style="text-align: left;">CAPA No:</td>
+                <td style="text-align: left;">{{selectedDev['capa_no']}}</td>
+                <td style="text-align: left;">Date:</td>
+                <td style="text-align: left;">{{selectedDev['close_date'] | date: 'dd-MM-yyyy'}}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;">Initiated Deparment:</td>
+                <td style="text-align: left;">{{selectedDev['department']}}</td>
+                <td style="text-align: left;">Reference Document No:</td>
+                <td style="text-align: left;">{{selectedDev['document_no']}}</td>
+              </tr>
+            </table>
+            <h3>CAPA Origin:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">Origin</th>
+                </tr>
+                <tr *ngFor="let origin of selectedDev['origin']; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{origin}}</td>
+                </tr>
+            </table>
+            <h3>CAPA Plan:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">CAPA</th>
+                    <th style="text-align: left;">Person</th>
+                    <th style="text-align: left;">Target Due Date</th>
+                    <th>Extension</th>
+                </tr>
+                <tr *ngFor="let origin of selectedDev['plan']; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{origin.capa}}</td>
+                    <td style="text-align: left;">{{origin.person}}</td>
+                    <td style="text-align: left;">{{origin.due_date | date: 'dd-MM-yyyy' }}</td>
+                    <td>{{ origin.isextension }}</td>
+                </tr>
+            </table>
+            <table class="table">
+                <tr>
+                  <td style="text-align: left;">CAPA Initiated By: {{ selectedDev['initiate_by'] }} / {{ selectedDev['initiate_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">CAPA Initiated Department Head: {{ selectedDev['check_by'] }} / {{ selectedDev['check_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+              </table>
+  
+              <h3>QA Assessment:</h3>
+              <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4">
+                    <label>Has this type of CAPA occured previously:</label>
+                    <input type="text" name="prev_occured" [(ngModel)]="selectedDev['prev_occured']" tabindex="-1" readonly>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4" *ngIf="selectedDev['prev_occured'] == 'Yes'">
+                    <label>CAPA No:</label>
+                    <input type="text"name="pcapa_no" [ngModel]="selectedDev['pcapa_no']" tabindex="-1" readonly>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4">
+                    <label>change Control Required:</label>
+                    <input type="text" name="changecontrol" [ngModel]="selectedDev['changecontrol']" tabindex="-1" readonly>
+                </div>
+            </div>
+            <table class="table">
+                <tr>
+                  <th style="text-align: left;">Comment</th>
+                  <th style="text-align: left;">Reviewer</th>
+                </tr>
+                <tr>
+                  <td style="text-align: left;">{{ selectedDev['comment'] }}</td>
+                  <td style="text-align: left;">QA Executive/Designee: {{ selectedDev['review1_by'] }} / {{ selectedDev['review1_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;">{{ selectedDev['review2_comment'] }}</td>
+                  <td style="text-align: left;">Reviewed by Head QA Head/Designee: {{ selectedDev['review2_by'] }} / {{ selectedDev['review2_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;">{{ selectedDev['review3_comment'] }}</td>
+                  <td style="text-align: left;">Reviewed by CQA Head/Designee: {{ selectedDev['review3_by'] }} / {{ selectedDev['review3_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+            </table>
+            <h3>CAPA Closure:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Particular</th>
+                    <th>View Attachment</th>
+                </tr>
+                <tr *ngFor="let attachment of selectedDev['attachments']; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td>{{ attachment.particular }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="viewfile(attachment.file)">{{'common.view' | translate}}</button>
+                    </td>
+                </tr>
+            </table>
+            <table class="table">
+                <tr>
+                    <td style="text-align: left;">Responsible Person: {{ selectedDev['close_by'] }} / {{ selectedDev['close_date'] | date: 'dd-MM-yyyy' }}</td>
+                    <td style="text-align: left;">Approved By (Department Head): {{ selectedDev['closing_approval_by'] }} / {{ selectedDev['closing_approval_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+            </table>
+            <div class="clr-row" style="margin-top: 10px;">
+              <div class="clr-col-lg-12">
+                  <label>Comment:</label>
+                  <input type="text" name="verify_comment" [ngModel]="selectedDev['verify_comment']" readonly tabindex="-1">
+              </div>
+              <div class="clr-col-lg-4">
+                  <label>CAPA Effectiveness Required:</label>
+                  <input type="text" name="effectiveness" [ngModel]="selectedDev['effectiveness']" readonly tabindex="-1">
+              </div>
+              <div class="clr-col-lg-4" *ngIf="selectedDev['effectiveness']=='Yes'">
+                <label>CAPA Effectiveness No.:</label>
+                <input type="text" name="effectiveness_no" [ngModel]="selectedDev['effectiveness_no']" readonly tabindex="-1">
+              </div>
+            </div>
+            <table class="table">
+              <tr>
+                <td style="text-align: left;">QA Executive/Designee: {{ selectedDev['close_verify_by'] }} / {{ selectedDev['close_verify_date'] | date: 'dd-MM-yyyy' }}</td>
+                <td style="text-align: left;">Approved By ( Head QA): {{ selectedDev['close_verify_approve_by'] }} / {{ selectedDev['close_verify_approve_date'] | date: 'dd-MM-yyyy' }}</td>
+              </tr>
+          </table>
+          </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadp()">{{'common.download' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>

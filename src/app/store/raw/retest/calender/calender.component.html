@@ -1,0 +1,124 @@
+<div class="container-fluid">
+  <div class="card recv-page">
+    <header class="card-header mef-panel-header">
+      <h2 class="mef-panel-header__title">Retest Calendar</h2>
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw/retest">{{ 'common.close' | translate }}</button>
+    </header>
+    <div class="card-block">
+      <div class="clr-row">
+        <div class="clr-col-lg-2">
+          <label>Calendar Month <span style="color:red;">*</span></label>
+          <input type="month" [(ngModel)]="calendarMonthValue" (change)="onCalendarMonthChange()" required />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Material Type</label>
+          <select [(ngModel)]="materialType" (change)="applyFilters()">
+            <option value="">Raw + Packing</option>
+            <option value="Raw Material">Raw Material</option>
+            <option value="Packing Material">Packing Material</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Due within</label>
+          <select [(ngModel)]="dueWithinDays" (change)="applyFilters()">
+            <option [ngValue]="10">10 days</option>
+            <option [ngValue]="15">15 days</option>
+            <option [ngValue]="null">All</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Material Code</label>
+          <input type="text" [(ngModel)]="material_code" (keyup)="applyFilters()" />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Receiving No.</label>
+          <input type="text" [(ngModel)]="grn_no" (keyup)="applyFilters()" />
+        </div>
+        <div class="clr-col-lg-2" style="margin-top:1.2rem;">
+          <button class="btn btn-primary" (click)="generateCalendar()" [disabled]="loading || !calendarMonthValue">Generate Calendar</button>
+        </div>
+      </div>
+      <p class="retest-slip-hint" *ngIf="!generated">
+        <strong>How to generate:</strong> Select <em>Calendar Month</em> → click <em>Generate Calendar</em> → coloured days show retest due dates → click a day to see materials below.
+      </p>
+
+      <div *ngIf="generated" class="retest-buckets">
+        <div class="retest-bucket retest-bucket--overdue" *ngIf="overdueRows.length">
+          <h4>Overdue ({{ overdueRows.length }})</h4>
+          <div class="retest-bucket__list">
+            <span *ngFor="let r of overdueRows | slice:0:8">{{ r.grn_no }} — {{ r.material_code }} ({{ r.due_label }})</span>
+          </div>
+        </div>
+        <div class="retest-bucket retest-bucket--today" *ngIf="todayRows.length">
+          <h4>Due Today ({{ todayRows.length }})</h4>
+          <div class="retest-bucket__list">
+            <span *ngFor="let r of todayRows">{{ r.grn_no }} — {{ r.material_name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="generated" class="retest-month">
+        <div class="retest-month__nav">
+          <button type="button" class="btn btn-sm btn-outline" (click)="prevMonth()">‹</button>
+          <strong>{{ monthLabel() }}</strong>
+          <button type="button" class="btn btn-sm btn-outline" (click)="nextMonth()">›</button>
+        </div>
+        <div class="retest-month__grid">
+          <div class="retest-month__head" *ngFor="let d of ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']">{{ d }}</div>
+          <button
+            type="button"
+            class="retest-month__cell"
+            *ngFor="let cell of calendarCells()"
+            [class.retest-month__cell--empty]="!cell.date"
+            [ngClass]="cellClass(cell.items)"
+            [class.retest-month__cell--selected]="selectedDay === cell.key"
+            [disabled]="!cell.date"
+            (click)="selectDay(cell)">
+            <span class="retest-month__day" *ngIf="cell.date">{{ cell.date.getDate() }}</span>
+            <span class="retest-month__count" *ngIf="cell.items?.length">{{ cell.items.length }}</span>
+          </button>
+        </div>
+      </div>
+
+      <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading" *ngIf="selectedDayRows.length">
+        <clr-dg-column>Receiving No.</clr-dg-column>
+        <clr-dg-column>Material</clr-dg-column>
+        <clr-dg-column>Medicap Lot No</clr-dg-column>
+        <clr-dg-column>Retest Date</clr-dg-column>
+        <clr-dg-column>Due</clr-dg-column>
+        <clr-dg-row *clrDgItems="let row of selectedDayRows">
+          <clr-dg-cell>{{ row.grn_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.material_code }} — {{ row.material_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.batch_no || row.ar_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.retest_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell [ngClass]="dueClass(row.due_days)">{{ row.due_label }}</clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+
+      <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading" *ngIf="generated">
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column>Type</clr-dg-column>
+        <clr-dg-column>Receiving No.</clr-dg-column>
+        <clr-dg-column>Material</clr-dg-column>
+        <clr-dg-column>Medicap Lot No</clr-dg-column>
+        <clr-dg-column>Release</clr-dg-column>
+        <clr-dg-column>Retest</clr-dg-column>
+        <clr-dg-column>Due</clr-dg-column>
+        <clr-dg-row *clrDgItems="let row of filteredResults; let i = index">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.material_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.grn_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.material_code }} — {{ row.material_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.batch_no || row.ar_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.release_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.retest_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell [ngClass]="dueClass(row.due_days)">{{ row.due_label }}</clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-placeholder *ngIf="!loading && !filteredResults?.length">No retest entries.</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="download()" [disabled]="!generated || !allResults?.length">{{ 'common.download' | translate }}</button>
+    </div>
+  </div>
+</div>

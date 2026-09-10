@@ -1,0 +1,217 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Equipment Cleaning Verification Log
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" routerLink="/qa/equipment-cleaning-verification" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row ecv-log__filters">
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>From Date</label>
+        <input type="date" class="ecv-log__readonly" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>To Date</label>
+        <input type="date" class="ecv-log__readonly" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" style="display:flex; align-items:flex-end;">
+        <button class="btn btn-primary" (click)="getLog()">{{ 'common.search' | translate }}</button>
+      </div>
+    </div>
+
+    <clr-datagrid>
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>{{ 'common.date' | translate }}</clr-dg-column>
+      <clr-dg-column>Equipment Name</clr-dg-column>
+      <clr-dg-column>Equipment ID</clr-dg-column>
+      <clr-dg-column>Previous Product</clr-dg-column>
+      <clr-dg-column>Sample Type</clr-dg-column>
+      <clr-dg-column>QC Sample #</clr-dg-column>
+      <clr-dg-column>Lot</clr-dg-column>
+      <clr-dg-column>Entry By</clr-dg-column>
+      <clr-dg-column>Checked By &amp; Date</clr-dg-column>
+      <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.equipment_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.equipment_id }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.previous_product_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.sample_type }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.qc_lab_sample_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.lot_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_by }}</clr-dg-cell>
+        <clr-dg-cell>
+          <span *ngIf="isChecked(row)">{{ row.checked_by_date }}</span>
+          <button
+            *ngIf="!isChecked(row)"
+            class="btn btn-sm btn-success ecv-log__check-btn"
+            [disabled]="checkingId === row.id"
+            (click)="markChecked(row)"
+          >
+            Checked By &amp; Date
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button class="btn btn-sm btn-primary" (click)="downloadForm(row.id)">{{ 'common.download' | translate }}</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadLog()">{{ 'common.download' | translate }} Log</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Equipment Cleaning Verification View
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" (click)="isView = false" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="ecv-log__view-table">
+      <tr>
+        <th style="width:20%">Form No.</th>
+        <td>{{ selectedRecord?.form_no }}</td>
+        <th style="width:20%">Equipment Name</th>
+        <td>{{ selectedRecord?.equipment_name }}</td>
+      </tr>
+      <tr>
+        <th>Equipment ID#</th>
+        <td>{{ selectedRecord?.equipment_id }}</td>
+        <th>Date of Cleaning</th>
+        <td>{{ selectedRecord?.cleaning_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <th>Previous Product Name</th>
+        <td>{{ selectedRecord?.previous_product_name }}</td>
+        <th>Product Code</th>
+        <td>{{ selectedRecord?.product_code }}</td>
+      </tr>
+      <tr>
+        <th>QC Lab Sample #</th>
+        <td>{{ selectedRecord?.qc_lab_sample_no }}</td>
+        <th>Lot</th>
+        <td>{{ selectedRecord?.lot_no }}</td>
+      </tr>
+      <tr>
+        <th>Sample Type</th>
+        <td colspan="3">
+          {{ selectedRecord?.sample_type }}
+          <span *ngIf="selectedRecord?.sample_type_specify">({{ selectedRecord?.sample_type_specify }})</span>
+        </td>
+      </tr>
+      <tr>
+        <th>Expiry Date</th>
+        <td>{{ selectedRecord?.expiry_date | date: 'dd-MM-yyyy' }}</td>
+        <th>Entry By / Date</th>
+        <td>{{ selectedRecord?.entry_by }} / {{ selectedRecord?.entry_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+
+    <table class="ecv-log__sample-table" style="margin-top:0.75rem">
+      <tbody>
+        <tr>
+          <th class="ecv-log__sample-side" rowspan="8">Sample Information</th>
+          <th class="ecv-log__sample-no">#</th>
+          <th>Sample Detail</th>
+          <th class="ecv-log__param-label">Parameter</th>
+          <th class="ecv-log__param-value">Value</th>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">1.</td>
+          <td>{{ selectedRecord?.sample_rows?.[0]?.sample_info }}</td>
+          <td class="ecv-log__param-label">1. Water Temp</td>
+          <td class="ecv-log__param-value">{{ selectedRecord?.water_temp }}</td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">2.</td>
+          <td>{{ selectedRecord?.sample_rows?.[1]?.sample_info }}</td>
+          <td class="ecv-log__param-label">2. Duration of Flush</td>
+          <td class="ecv-log__param-value">{{ selectedRecord?.duration_flush }}</td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">3.</td>
+          <td>{{ selectedRecord?.sample_rows?.[2]?.sample_info }}</td>
+          <td class="ecv-log__param-label">3. Volume of Final Rinse</td>
+          <td class="ecv-log__param-value">
+            <span *ngIf="selectedRecord?.volume_30ml === 'Yes'">30 ml</span>
+            <span *ngIf="selectedRecord?.volume_50ml === 'Yes'">50 ml</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">4.</td>
+          <td>{{ selectedRecord?.sample_rows?.[3]?.sample_info }}</td>
+          <td class="ecv-log__param-label">4. Sample Taken</td>
+          <td class="ecv-log__param-value">
+            {{ selectedRecord?.sample_taken_time }}
+            <span *ngIf="selectedRecord?.sample_taken_date">/ {{ selectedRecord?.sample_taken_date | date: 'dd-MM-yyyy' }}</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">5.</td>
+          <td>{{ selectedRecord?.sample_rows?.[4]?.sample_info }}</td>
+          <td class="ecv-log__param-label">&nbsp;</td>
+          <td class="ecv-log__param-value">&nbsp;</td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">6.</td>
+          <td>{{ selectedRecord?.sample_rows?.[5]?.sample_info }}</td>
+          <td class="ecv-log__param-label">Sampled By &amp; Date</td>
+          <td class="ecv-log__param-value">{{ selectedRecord?.sampled_by_date }}</td>
+        </tr>
+        <tr>
+          <td class="ecv-log__sample-no">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td class="ecv-log__param-label">Checked By &amp; Date</td>
+          <td class="ecv-log__param-value">
+            <span *ngIf="isChecked(selectedRecord)">{{ selectedRecord?.checked_by_date }}</span>
+            <button
+              *ngIf="!isChecked(selectedRecord)"
+              class="btn btn-sm btn-success ecv-log__check-btn"
+              [disabled]="checkingId === selectedRecord?.id"
+              (click)="markChecked(selectedRecord)"
+            >
+              Checked By &amp; Date
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" class="ecv-log__param-label">Expiry Date (30 days from date of cleaning)</td>
+          <td colspan="2" class="ecv-log__param-value">{{ selectedRecord?.expiry_date | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="ecv-log__view-table" style="margin-top:0.75rem">
+      <tr>
+        <th>Comments</th>
+        <td colspan="3">{{ selectedRecord?.comments }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadForm(selectedRecord?.id)">{{ 'common.download' | translate }}</button>
+  </div>
+</div>

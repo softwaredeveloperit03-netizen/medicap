@@ -1,0 +1,119 @@
+<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Location Chart</div>
+          <div class="clr-col-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/rnd/store/rack" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="clr-row">
+                <div class="clr-col-lg-5">
+                    <label>Room Name:</label>
+                    <select name="section_code" [(ngModel)]="section_code" required>
+                        <option></option>
+                        <option *ngFor="let section of sections" value="{{ section.section_code }}">{{ section.section_name }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-5">
+                    <label>Material Type:</label>
+                    <select name="material_type" [(ngModel)]="material_type" required>
+                        <option></option>
+                        <option value="raw Material">Raw Material</option>
+                        <option value="Packing Material">Packing Material</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-2" style="padding: 0px;">
+                    <button class="btn btn-danger" (click)="getAllocatedRacks()" style="margin: 30px;">{{'common.search' | translate}}</button>
+                </div>
+            </div>
+            <table class="table">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Room Name</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Rack No.</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Qty</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td style="text-align: left;">{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{ result.section_name }}</td>
+                    <td style="text-align: left;">{{ result.rack_no }}</td>
+                    <td style="text-align: left;">{{ result.material_type }}</td>
+                    <td style="text-align: left;">{{ result.material_code }}</td>
+                    <td style="text-align: left;">{{ result.qty }} {{ result.material_unit }}</td>
+                    <td> <button class="btn btn-sm btn-primary" (click)="allocate(i)">shift location</button></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+    </div>
+    <div id="chart"></div>
+</div>
+
+
+
+ <clr-modal [(clrModalOpen)]="isView"  [clrModalSize]="'xl'">
+    <h3 class="modal-title">Material Shift location </h3>
+    <div class="modal-body">
+        <table class="table">
+            <tr>
+                <td style="text-align: left;">Material Type</td>
+                <td>{{selectedResult['material_type']}}</td>
+                <td style="text-align: left;">Material Code</td>
+                <td>{{selectedResult['material_code']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;">Qty</td>    
+                <td>{{selectedResult['qty']}} {{selectedResult['unit']}}</td>
+                <td style="text-align: left;">Room Name</td>
+                <td>{{selectedResult['section_name']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;">Rack no.</td>
+                <td>{{selectedResult['rack_no']}}</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        
+        <form #rackForm="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label>Material Type</label>
+                    <input type="text" name="material_type" [ngModel]="selectedResult['material_type']" readonly tabindex="-1">
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label>Material Code</label>
+                    <input type="text" name="material_code" [ngModel]="selectedResult['material_code']" readonly tabindex="-1">
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label>Sections:</label>
+                    <select name="section" ngModel (change)="getRacks($event.target.selectedIndex)" required>
+                        <option></option>
+                        <option *ngFor="let section of sections">{{ section.section_name }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label>Racks:</label>
+                    <select name="rack_no" ngModel required>
+                        <option></option>
+                        <option *ngFor="let rack of racks" value="{{ rack.rack_no }}">{{ rack.rack_name }}</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="isView = false" >{{'common.cancel' | translate}}</button>
+        <button type="button" class="btn btn-primary" (click)="saveRack(rackForm)">{{'common.save' | translate}}</button>
+    </div>
+</clr-modal> 

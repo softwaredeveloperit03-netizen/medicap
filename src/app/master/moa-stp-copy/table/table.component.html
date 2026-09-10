@@ -1,0 +1,1196 @@
+<div class="spec-check-page moa-new-page" *ngIf="!isView && !isSpecWorkflowView">
+  <div class="card spec-page-card">
+    <div class="card-header spec-page-header">
+      <div class="spec-page-header__bar">
+        <h2 class="spec-page-header__title">{{ listViewTitle }}</h2>
+        <div class="spec-page-header__actions moa-header-actions">
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle moa-scope-toggle"
+            [class.btn-info]="moaScope === 'test'"
+            [class.btn-outline]="moaScope !== 'test'"
+            (click)="setMoaScope('test')"
+          >
+            Test Specific
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle moa-scope-toggle"
+            [class.btn-info]="moaScope === 'specification'"
+            [class.btn-outline]="moaScope !== 'specification'"
+            (click)="setMoaScope('specification')"
+          >
+            Specification Specific
+          </button>
+          <span class="moa-header-sep" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle"
+            [class.btn-info]="listView === 'pending'"
+            [class.btn-outline]="listView !== 'pending'"
+            (click)="setListView('pending')"
+          >
+            Proceed / Pending
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle"
+            [class.btn-info]="listView === 'log'"
+            [class.btn-outline]="listView !== 'log'"
+            (click)="setListView('log')"
+          >
+            Log Table
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle"
+            [class.btn-info]="listView === 'checking'"
+            [class.btn-outline]="listView !== 'checking'"
+            (click)="setListView('checking')"
+          >
+            Checking
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle"
+            [class.btn-info]="listView === 'approval'"
+            [class.btn-outline]="listView !== 'approval'"
+            (click)="setListView('approval')"
+          >
+            Approval
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm moa-header-actions__toggle"
+            [class.btn-info]="listView === 'correction'"
+            [class.btn-outline]="listView !== 'correction'"
+            (click)="setListView('correction')"
+          >
+            Correction
+          </button>
+          <button class="btn btn-sm spec-btn-close" routerLink="/master/moa-stp-copy">Close</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block spec-page-body">
+      <div class="moa-table-toolbar">
+        <div class="moa-table-toolbar__search">
+          <label for="specSearch">Search</label>
+          <input
+            id="specSearch"
+            type="text"
+            [(ngModel)]="specSearch"
+            (ngModelChange)="onSpecSearchChange()"
+            [placeholder]="moaScope === 'test' ? 'Test, type, method no...' : 'Spec no, material, grade, code...'"
+          />
+        </div>
+        <div class="moa-table-toolbar__meta">
+          <ng-container *ngIf="moaScope === 'test'">
+            <span *ngIf="listView === 'pending'">{{ filteredTestMaster.length }} pending test(s)</span>
+            <span *ngIf="listView === 'log'">{{ filteredTestMaster.length }} approved test method(s)</span>
+            <span *ngIf="listView === 'checking'">{{ filteredTestMaster.length }} awaiting checking</span>
+            <span *ngIf="listView === 'approval'">{{ filteredTestMaster.length }} awaiting approval</span>
+            <span *ngIf="listView === 'correction'">{{ filteredTestMaster.length }} in correction</span>
+          </ng-container>
+          <ng-container *ngIf="moaScope === 'specification'">
+            <span *ngIf="listView === 'pending'">{{ filteredSpecifications.length }} pending record(s)</span>
+            <span *ngIf="listView === 'log'">{{ filteredSpecifications.length }} completed record(s)</span>
+            <span *ngIf="listView === 'checking'">{{ filteredWorkflow.length }} awaiting checking</span>
+            <span *ngIf="listView === 'approval'">{{ filteredWorkflow.length }} awaiting approval</span>
+            <span *ngIf="listView === 'correction'">{{ filteredWorkflow.length }} in correction</span>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- ========== TEST SPECIFIC (Test Master data) ========== -->
+      <ng-container *ngIf="moaScope === 'test'">
+        <div *ngIf="isLoadingList" class="moa-loading-hint">Loading tests…</div>
+        <div class="spec-table-wrap moa-table-scroll" *ngIf="!isLoadingList">
+          <table class="table spec-data-table moa-data-table">
+            <thead>
+              <tr>
+                <th>Sr</th>
+                <th>Test Type</th>
+                <th>Test</th>
+                <th>Method No</th>
+                <th>Status</th>
+                <th>Method Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of paginatedTestMaster; let i = index">
+                <td>{{ (specCurrentPage - 1) * specPageSize + i + 1 }}</td>
+                <td>{{ row.test_type || '—' }}</td>
+                <td>{{ row.test || '—' }}</td>
+                <td>{{ row.test_method_no || '—' }}</td>
+                <td>{{ row.status || '—' }}</td>
+                <td>
+                  <span
+                    class="moa-status-badge"
+                    [class.moa-status-badge--completed]="isTestMethodCompleted(row)"
+                    [class.moa-status-badge--pending]="!isTestMethodCompleted(row)"
+                    [class.moa-status-badge--added]="testMethodStatusLabel(row) === 'For Checking' || testMethodStatusLabel(row) === 'For Approval'"
+                  >
+                    {{ testMethodStatusLabel(row) }}
+                  </span>
+                </td>
+                <td class="moa-actions-cell">
+                  <div class="moa-actions">
+                    <ng-container *ngIf="listView === 'pending'">
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-info"
+                        *ngIf="canAddTestMethod(row)"
+                        (click)="addTestMasterMethod(row)"
+                      >
+                        Add Method
+                      </button>
+                      <button type="button" class="btn btn-xs btn-primary" *ngIf="!canAddTestMethod(row)" (click)="viewTestMasterMethod(row)">
+                        View Method
+                      </button>
+                    </ng-container>
+                    <ng-container *ngIf="listView === 'log'">
+                      <button type="button" class="btn btn-xs btn-primary" (click)="viewTestMasterMethod(row)">View Method</button>
+                    </ng-container>
+                    <ng-container *ngIf="listView === 'checking'">
+                      <button type="button" class="btn btn-xs btn-primary" (click)="viewTestMasterMethod(row)">View Method</button>
+                      <button type="button" class="btn btn-xs btn-info" (click)="testMasterWorkflowAction(row, 'forward')">Forward</button>
+                      <button type="button" class="btn btn-xs btn-danger" (click)="testMasterWorkflowAction(row, 'reject')">Reject</button>
+                    </ng-container>
+                    <ng-container *ngIf="listView === 'approval'">
+                      <button type="button" class="btn btn-xs btn-primary" (click)="viewTestMasterMethod(row)">View Method</button>
+                      <button type="button" class="btn btn-xs btn-success" (click)="testMasterWorkflowAction(row, 'approve')">Approve</button>
+                      <button type="button" class="btn btn-xs btn-danger" (click)="testMasterWorkflowAction(row, 'reject')">Reject</button>
+                    </ng-container>
+                    <ng-container *ngIf="listView === 'correction'">
+                      <button type="button" class="btn btn-xs btn-secondary" (click)="addTestMasterMethod(row)">Edit</button>
+                      <button type="button" class="btn btn-xs btn-info" (click)="testMasterWorkflowAction(row, 'resend')">Re-send Checking</button>
+                    </ng-container>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="!filteredTestMaster.length" class="spec-empty-row">
+                <td colspan="7">
+                  <span *ngIf="listView === 'pending'">No pending tests — Add Method from Test Master.</span>
+                  <span *ngIf="listView === 'log'">No approved test methods in log.</span>
+                  <span *ngIf="listView === 'checking'">No test methods awaiting checking.</span>
+                  <span *ngIf="listView === 'approval'">No test methods awaiting approval.</span>
+                  <span *ngIf="listView === 'correction'">No test methods in correction.</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="moa-pagination" *ngIf="filteredTestMaster.length && !isLoadingList">
+          <div class="moa-pagination__info">
+            Page {{ specCurrentPage }} of {{ testMasterTotalPages }} · Showing
+            {{ filteredTestMaster.length ? (specCurrentPage - 1) * specPageSize + 1 : 0 }}–{{
+              specCurrentPage * specPageSize > filteredTestMaster.length ? filteredTestMaster.length : specCurrentPage * specPageSize
+            }}
+            of {{ filteredTestMaster.length }}
+          </div>
+          <div class="moa-pagination__controls">
+            <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage <= 1" (click)="specGoToPage(1)">First</button>
+            <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage <= 1" (click)="specGoToPage(specCurrentPage - 1)">Prev</button>
+            <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage >= testMasterTotalPages" (click)="specGoToPage(specCurrentPage + 1)">Next</button>
+            <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage >= testMasterTotalPages" (click)="specGoToPage(testMasterTotalPages)">Last</button>
+            <span class="moa-pagination__size">
+              <select [ngModel]="specPageSize" (ngModelChange)="onSpecPageSizeChange(+$event)">
+                <option [ngValue]="5">5</option>
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="25">25</option>
+                <option [ngValue]="50">50</option>
+              </select>
+            </span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ========== SPECIFICATION SPECIFIC (Zuma) ========== -->
+      <ng-container *ngIf="moaScope === 'specification'">
+        <!-- SPECIFICATION LIST (Pending / Log) -->
+        <ng-container *ngIf="listView === 'pending' || listView === 'log'">
+          <div *ngIf="isLoadingList" class="moa-loading-hint">Loading specifications…</div>
+
+          <div class="spec-table-wrap moa-table-scroll" *ngIf="!isLoadingList">
+            <table class="table spec-data-table moa-data-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Spec No</th>
+                  <th>Material Type</th>
+                  <th>Material Name</th>
+                  <th>Grade</th>
+                  <th>Material Code</th>
+                  <th>Version No</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of paginatedSpecifications; let i = index">
+                  <td>{{ (specCurrentPage - 1) * specPageSize + i + 1 }}</td>
+                  <td>{{ user.specification_no || '—' }}</td>
+                  <td>{{ user.material_subtype || '—' }}</td>
+                  <td>{{ user.material_name || '—' }}</td>
+                  <td>{{ user.gradeName || user.grade || '—' }}</td>
+                  <td>{{ user.material_code || '—' }}</td>
+                  <td>{{ user.version_no || '—' }}</td>
+                  <td>
+                    <span class="moa-status-badge" [class.moa-status-badge--completed]="isSpecCompleted(user)" [class.moa-status-badge--pending]="!isSpecCompleted(user)">
+                      {{ isSpecCompleted(user) ? 'Completed' : 'Pending' }}
+                    </span>
+                  </td>
+                  <td class="moa-actions-cell">
+                    <div class="moa-actions">
+                      <ng-container *ngIf="listView === 'pending'">
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-info"
+                          [disabled]="!canProceed(user)"
+                          (click)="proceedSpecification(user)"
+                          title="{{ canProceed(user) ? 'Proceed to add/update methods' : 'Disabled — method already completed' }}"
+                        >
+                          Proceed
+                        </button>
+                        <button type="button" class="btn btn-xs btn-secondary" (click)="editSpecification(user)">Edit</button>
+                      </ng-container>
+                      <button *ngIf="listView === 'log'" type="button" class="btn btn-xs btn-primary" (click)="openCompleteMethodFor(user)">View Method</button>
+                      <button type="button" class="btn btn-xs btn-warning" (click)="openRevisionForSpec(user)">Revision</button>
+                      <button type="button" class="btn btn-xs btn-primary" (click)="openChangeControlForSpec(user)">Change Control</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredSpecifications.length" class="spec-empty-row">
+                  <td colspan="9">
+                    <span *ngIf="listView === 'pending'">No pending MOA specifications — use Proceed to add methods.</span>
+                    <span *ngIf="listView === 'log'">No completed Method of Analysis records in log.</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="moa-pagination" *ngIf="filteredSpecifications.length && !isLoadingList">
+            <div class="moa-pagination__info">
+              Page {{ specCurrentPage }} of {{ specTotalPages }} · Showing
+              {{ filteredSpecifications.length ? (specCurrentPage - 1) * specPageSize + 1 : 0 }}–{{
+                specCurrentPage * specPageSize > filteredSpecifications.length ? filteredSpecifications.length : specCurrentPage * specPageSize
+              }}
+              of {{ filteredSpecifications.length }}
+            </div>
+            <div class="moa-pagination__controls">
+              <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage <= 1" (click)="specGoToPage(1)">First</button>
+              <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage <= 1" (click)="specGoToPage(specCurrentPage - 1)">Prev</button>
+              <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage >= specTotalPages" (click)="specGoToPage(specCurrentPage + 1)">Next</button>
+              <button type="button" class="btn btn-sm btn-outline" [disabled]="specCurrentPage >= specTotalPages" (click)="specGoToPage(specTotalPages)">Last</button>
+              <span class="moa-pagination__size">
+                <select [ngModel]="specPageSize" (ngModelChange)="onSpecPageSizeChange(+$event)">
+                  <option [ngValue]="5">5</option>
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                </select>
+              </span>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- METHOD WORKFLOW QUEUE (Checking / Approval / Correction) — Zuma -->
+        <ng-container *ngIf="listView === 'checking' || listView === 'approval' || listView === 'correction'">
+          <div *ngIf="isLoadingWorkflow" class="moa-loading-hint">Loading queue…</div>
+
+          <div class="spec-table-wrap moa-table-scroll" *ngIf="!isLoadingWorkflow">
+            <table class="table spec-data-table moa-data-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Material Name</th>
+                  <th>Material Code</th>
+                  <th>Specification No</th>
+                  <th>Method No</th>
+                  <th *ngIf="listView === 'correction'">Remark</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of filteredWorkflow; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ row.material_name || '—' }}</td>
+                  <td>{{ row.material_code || '—' }}</td>
+                  <td>{{ row.specification_no || '—' }}</td>
+                  <td>{{ row.method_no || row.stpNo || '—' }}</td>
+                  <td *ngIf="listView === 'correction'" class="moa-remark-cell">{{ row.moa_wf_remark || row.moa_checker_remark || row.moa_approver_remark || '—' }}</td>
+                  <td>
+                    <span class="moa-status-badge moa-status-badge--added" *ngIf="listView === 'checking'">Pending Checking</span>
+                    <span class="moa-status-badge moa-status-badge--added" *ngIf="listView === 'approval'">Pending Approval</span>
+                    <span class="moa-status-badge moa-status-badge--pending" *ngIf="listView === 'correction'">Correction</span>
+                  </td>
+                  <td class="moa-actions-cell">
+                    <div class="moa-actions">
+                      <button type="button" class="btn btn-xs btn-primary" (click)="viewWorkflowMethod(row)">View Method</button>
+                      <ng-container *ngIf="listView === 'correction'">
+                        <button type="button" class="btn btn-xs btn-secondary" (click)="editCorrectionSpec(row)">Edit</button>
+                        <button type="button" class="btn btn-xs btn-info" (click)="resendSpecForChecking(row)">Re-send Checking</button>
+                      </ng-container>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredWorkflow.length" class="spec-empty-row">
+                  <td [attr.colspan]="listView === 'correction' ? 8 : 7">
+                    <span *ngIf="listView === 'checking'">No complete methods awaiting checking.</span>
+                    <span *ngIf="listView === 'approval'">No complete methods awaiting approval.</span>
+                    <span *ngIf="listView === 'correction'">No methods in correction.</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- Complete Method — Checking / Approval / Correction review -->
+<div class="spec-check-page moa-new-page moa-spec-wf" *ngIf="isSpecWorkflowView && workflowRow">
+  <div class="card spec-page-card">
+    <div class="card-header spec-page-header">
+      <div class="spec-page-header__bar spec-page-header__bar--detail">
+        <h2 class="spec-page-header__title">
+          Complete Method of Analysis
+          <small *ngIf="workflowReviewStage === 'checking'"> — Checking</small>
+          <small *ngIf="workflowReviewStage === 'approval'"> — Approval</small>
+          <small *ngIf="workflowReviewStage === 'correction'"> — Correction</small>
+          <small *ngIf="workflowReviewStage === 'log'"> — Log</small>
+        </h2>
+        <span class="spec-page-header__subtitle">
+          {{ workflowRow['specification_no'] }} · {{ workflowRow['material_name'] || completeDoc.specification?.material_name }} · Method {{ workflowRow['method_no'] || '—' }}
+        </span>
+        <div class="spec-page-header__actions">
+          <button type="button" class="btn btn-sm spec-btn-back" (click)="closeSpecWorkflow()">
+            {{ workflowReviewStage === 'log' ? 'Back to Log Table' : 'Back to Queue' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block spec-page-body moa-complete">
+      <div *ngIf="isLoadingComplete" class="moa-loading-hint">Loading complete method…</div>
+
+      <ng-container *ngIf="!isLoadingComplete">
+        <div class="spec-info-panel">
+          <div class="spec-info-panel__head">Document Summary</div>
+          <div class="spec-info-grid">
+            <div class="spec-info-item"><span class="spec-info-item__label">Material Name</span><span class="spec-info-item__value">{{ workflowRow['material_name'] || completeDoc.specification?.material_name || '—' }}</span></div>
+            <div class="spec-info-item"><span class="spec-info-item__label">Material Code</span><span class="spec-info-item__value">{{ workflowRow['material_code'] || completeDoc.specification?.material_code || '—' }}</span></div>
+            <div class="spec-info-item"><span class="spec-info-item__label">Specification No</span><span class="spec-info-item__value">{{ workflowRow['specification_no'] }}</span></div>
+            <div class="spec-info-item"><span class="spec-info-item__label">Specification Type</span><span class="spec-info-item__value">{{ workflowRow['spec_type'] || completeDoc.specification?.spec_type || '—' }}</span></div>
+            <div class="spec-info-item"><span class="spec-info-item__label">Material Type</span><span class="spec-info-item__value">{{ workflowRow['material_subtype'] || completeDoc.specification?.material_subtype || '—' }}</span></div>
+            <div class="spec-info-item"><span class="spec-info-item__label">Version No</span><span class="spec-info-item__value">{{ workflowRow['version_no'] || completeDoc.specification?.version_no || '—' }}</span></div>
+            <div class="spec-info-item" *ngIf="workflowReviewStage !== 'log'"><span class="spec-info-item__label">Method No</span><span class="spec-info-item__value">{{ workflowRow['method_no'] || '—' }}</span></div>
+          </div>
+        </div>
+
+        <div class="moa-complete__status" *ngIf="workflowReviewStage === 'log'">
+          <span class="moa-status-badge moa-status-badge--completed">{{ preparedTestCount }} method(s) prepared</span>
+        </div>
+
+        <p class="moa-hint" *ngIf="workflowReviewStage !== 'log' && workflowReviewStage !== 'correction' && !completeDocLoadFailed && completeTests.length > 0">
+          Review each test method below (Accept / Reject individually), then use the final action on the complete method at the bottom.
+        </p>
+
+        <p class="moa-hint" *ngIf="workflowReviewStage !== 'log' && workflowReviewStage !== 'correction' && completeDocLoadFailed && completeTests.length === 0">
+          Test-method details could not be loaded from server. You can still use the final action below to move this entry to the next tab.
+        </p>
+
+        <p class="moa-hint" *ngIf="workflowReviewStage !== 'log' && workflowReviewStage !== 'correction' && !completeDocLoadFailed && completeTests.length === 0">
+          No test rows available for this entry. You can continue with final action below.
+        </p>
+
+        <div class="moa-complete__doc-title" *ngIf="workflowReviewStage === 'log' && completeTests.length">Test Methods ({{ completeTests.length }})</div>
+
+        <div class="moa-complete__test" *ngFor="let t of completeTests; let ti = index">
+          <div class="moa-complete__test-head">
+            <div class="moa-complete__test-title">{{ ti + 1 }}. {{ t.test }} <small *ngIf="t.subtest && t.subtest !== 'NA'">— {{ t.subtest }}</small></div>
+            <button type="button" class="btn btn-xs btn-info" *ngIf="canViewMethod(t)" (click)="openMethodView(t)">View</button>
+            <span [class]="methodStatusClass(t)">{{ methodStatusLabel(t) }}</span>
+            <span class="moa-line-badge moa-line-badge--accepted" *ngIf="workflowReviewStage !== 'log' && testLineStatus(t) === 'accepted'">Line Accepted</span>
+            <span class="moa-line-badge moa-line-badge--rejected" *ngIf="workflowReviewStage !== 'log' && testLineStatus(t) === 'rejected'">Line Rejected</span>
+          </div>
+          <div class="moa-complete__test-meta">
+            <span *ngIf="t.test_method_no">Method No: <strong>{{ t.test_method_no }}</strong></span>
+            <span *ngIf="t.method_wf_remark" class="moa-remark-inline">Remark: {{ t.method_wf_remark }}</span>
+          </div>
+
+          <div class="moa-test-line-actions" *ngIf="workflowReviewStage !== 'log' && workflowReviewStage !== 'correction' && canActOnTestLine(t)">
+            <button type="button" class="btn btn-xs btn-success" (click)="acceptTestLine(t)">Accept Test</button>
+            <button type="button" class="btn btn-xs btn-danger" (click)="promptRejectTestLine(t)">Reject Test</button>
+          </div>
+
+          <div class="moa-test-line-reject" *ngIf="testLineRejectId === t.id">
+            <textarea rows="2" [(ngModel)]="testLineRemark" placeholder="Reason for rejecting this test method"></textarea>
+            <button type="button" class="btn btn-xs btn-danger" (click)="confirmRejectTestLine()">Confirm Reject</button>
+            <button type="button" class="btn btn-xs btn-outline" (click)="cancelRejectTestLine()">Cancel</button>
+          </div>
+
+          <ng-container *ngIf="getMethodData(t) as md">
+            <ng-container *ngIf="hasMethodContent(md)">
+              <div class="moa-complete__doc-title">Method of Analysis / Standard Test Procedure</div>
+
+              <div class="moa-complete__section" *ngIf="hasText(md.Safety)">
+                <h4>Safety</h4><div class="moa-complete__rich" [innerHTML]="md.Safety"></div>
+              </div>
+            <div class="moa-complete__section" *ngIf="md.testinginstruction?.length">
+              <h4>Testing Instructions</h4>
+              <div *ngFor="let ins of md.testinginstruction" class="moa-complete__ins">
+                <div class="moa-complete__ins-head">{{ ins.testing_heading }}</div>
+                <ul><li *ngFor="let s of ins.testing_instruction">{{ s.testing_instruction }}</li></ul>
+              </div>
+            </div>
+            <div class="moa-complete__section" *ngIf="methodProcedure(md)">
+              <h4>Procedure</h4><div class="moa-complete__rich" [innerHTML]="methodProcedure(md)"></div>
+            </div>
+            <div class="moa-complete__section" *ngIf="hasText(md.chromatographic_conditions)">
+              <h4>Chromatographic Conditions</h4><div class="moa-complete__rich" [innerHTML]="md.chromatographic_conditions"></div>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.equipment_instruments?.length">
+              <h4>Equipment / Instruments</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Name</th><th>Type</th><th>Code</th></tr></thead>
+                <tbody><tr *ngFor="let e of md.equipment_instruments"><td>{{ e.equipment_name }}</td><td>{{ e.equipment_type }}</td><td>{{ e.equipment_code }}</td></tr></tbody>
+              </table>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.chemical_reagents?.length">
+              <h4>Chemicals / Reagents</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Name</th><th>Grade</th><th>Make</th></tr></thead>
+                <tbody><tr *ngFor="let c of md.chemical_reagents"><td>{{ c.material_name || c.chemical_name }}</td><td>{{ c.grade }}</td><td>{{ c.make }}</td></tr></tbody>
+              </table>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.glasswares?.length">
+              <h4>Glasswares</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Name</th><th>Capacity</th><th>Type</th></tr></thead>
+                <tbody><tr *ngFor="let g of md.glasswares"><td>{{ g.material_name || g.name }}</td><td>{{ g.capacity }}</td><td>{{ g.class_type || g.glassware_class }}</td></tr></tbody>
+              </table>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.balance?.length">
+              <h4>Weighing Balance</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Name</th><th>Code</th><th>Capacity</th></tr></thead>
+                <tbody><tr *ngFor="let b of md.balance"><td>{{ b.equipment_name }}</td><td>{{ b.equipment_code }}</td><td>{{ b.capacity }}</td></tr></tbody>
+              </table>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.volumetric_solutions?.length">
+              <h4>Volumetric Solutions</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Name</th><th>Strength</th><th>Unit</th></tr></thead>
+                <tbody><tr *ngFor="let v of md.volumetric_solutions"><td>{{ v.solution_name || v.name }}</td><td>{{ v.percentage }} {{ v.strength }}</td><td>{{ v.unit }}</td></tr></tbody>
+              </table>
+            </div>
+            <div class="moa-complete__section" *ngIf="md.phases?.length">
+              <h4>Mobile Phase</h4>
+              <table class="table spec-data-table">
+                <thead><tr><th>Solvent</th><th>Strength</th><th>Preparation</th></tr></thead>
+                <tbody><tr *ngFor="let p of md.phases"><td>{{ p.solvent_name }}</td><td>{{ p.per_strength }}</td><td>{{ p.preparation }}</td></tr></tbody>
+              </table>
+            </div>
+            </ng-container>
+          </ng-container>
+          <div *ngIf="!hasMethodContent(getMethodData(t))" class="moa-method-view__empty">
+            No procedure / safety / equipment content is stored for this test in the database.
+            Reject to Correction, open Add Method, enter sections, then use <strong>Save method</strong> again.
+          </div>
+        </div>
+      </ng-container>
+
+      <div class="moa-wf-remark" *ngIf="workflowReviewStage !== 'log' && workflowReviewStage !== 'correction' && !isLoadingComplete">
+        <label class="moa-wf-remark__label" for="specWfRemark">
+          Final {{ workflowReviewStage === 'checking' ? 'Checking' : 'Approval' }} Remark
+          <small>(required when rejecting the complete method)</small>
+        </label>
+        <textarea id="specWfRemark" class="moa-wf-remark__input" rows="3" [(ngModel)]="workflowRemark" placeholder="Remark for the complete method document"></textarea>
+        <p class="moa-hint" *ngIf="!canFinalSpecAction && workflowReviewStage !== 'correction' && !completeDocLoadFailed">
+          Accept or reject each test method individually before the final action on the complete method.
+        </p>
+      </div>
+    </div>
+
+    <div class="spec-page-footer moa-wf-footer" *ngIf="workflowReviewStage === 'log'">
+      <button type="button" class="btn btn-outline" (click)="closeSpecWorkflow()">Close</button>
+    </div>
+    <div class="spec-page-footer moa-wf-footer" *ngIf="workflowReviewStage === 'checking'">
+      <button type="button" class="btn btn-primary" [disabled]="workflowSubmitting || !canFinalSpecAction" (click)="submitSpecForward()">
+        {{ workflowSubmitting ? 'Processing…' : 'Forward Complete Method to Approval' }}
+      </button>
+      <button type="button" class="btn btn-danger" [disabled]="workflowSubmitting" (click)="submitSpecReject()">Reject Complete Method</button>
+    </div>
+    <div class="spec-page-footer moa-wf-footer" *ngIf="workflowReviewStage === 'approval'">
+      <button type="button" class="btn btn-primary" [disabled]="workflowSubmitting || !canFinalSpecAction" (click)="submitSpecApprove()">
+        {{ workflowSubmitting ? 'Processing…' : 'Approve Complete Method' }}
+      </button>
+      <button type="button" class="btn btn-danger" [disabled]="workflowSubmitting" (click)="submitSpecReject()">Reject Complete Method</button>
+    </div>
+    <div class="spec-page-footer moa-wf-footer" *ngIf="workflowReviewStage === 'correction'">
+      <button type="button" class="btn btn-secondary" (click)="editCorrectionSpec(workflowRow)">Edit Method</button>
+      <button type="button" class="btn btn-primary" (click)="resendSpecForChecking(workflowRow)">Re-send for Checking</button>
+    </div>
+  </div>
+</div>
+
+<div class="spec-check-page moa-new-page" *ngIf="isView">
+  <div class="card spec-page-card">
+    <div class="card-header spec-page-header">
+      <div class="spec-page-header__bar spec-page-header__bar--detail">
+        <h2 class="spec-page-header__title">New MOA Specification</h2>
+        <span class="spec-page-header__subtitle">
+          {{ selectedSpec['specification_no'] }} · {{ selectedSpec['material_name'] }}
+          <span *ngIf="detailMode === 'view'" class="moa-mode-tag">View</span>
+          <span *ngIf="detailMode === 'edit'" class="moa-mode-tag moa-mode-tag--edit">Edit</span>
+          <span *ngIf="detailMode === 'proceed'" class="moa-mode-tag moa-mode-tag--proceed">Proceed</span>
+        </span>
+        <div class="spec-page-header__actions moa-detail-header-actions">
+          <button type="button" class="btn btn-sm btn-success" (click)="openCompleteMethod()">
+            <clr-icon shape="eye"></clr-icon> View Complete Method
+          </button>
+          <button type="button" class="btn btn-sm btn-warning" *ngIf="isSpecCompleted(selectedSpec)" (click)="openRevisionForSpec(selectedSpec)">Revision</button>
+          <button type="button" class="btn btn-sm btn-primary" *ngIf="isSpecCompleted(selectedSpec)" (click)="openChangeControlForSpec(selectedSpec)">Change Control</button>
+          <button type="button" class="btn btn-sm btn-outline" (click)="downloadPdf(selectedSpec)">Download PDF</button>
+          <button type="button" class="btn btn-sm spec-btn-back" (click)="closeDetail()">Back to List</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block spec-page-body">
+      <div class="spec-info-panel moa-detail-grid">
+        <div class="spec-info-panel__head">Specification Details</div>
+        <div class="spec-info-grid">
+          <div class="spec-info-item"><span class="spec-info-item__label">Specification No</span><span class="spec-info-item__value">{{ selectedSpec['specification_no'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Specification Type</span><span class="spec-info-item__value">{{ selectedSpec['spec_type'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Type</span><span class="spec-info-item__value">{{ selectedSpec['material_subtype'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Name</span><span class="spec-info-item__value">{{ selectedSpec['material_name'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Code</span><span class="spec-info-item__value">{{ selectedSpec['material_code'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Grade</span><span class="spec-info-item__value">{{ selectedSpec['gradeName'] || selectedSpec['grade'] || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Version No</span><span class="spec-info-item__value">{{ selectedSpec['version_no'] }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Supersede No</span><span class="spec-info-item__value">{{ selectedSpec['supersede_no'] || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Storage</span><span class="spec-info-item__value">{{ selectedSpec['storage'] ? selectedSpec['storage_condition'] : 'NA' }}</span></div>
+        </div>
+      </div>
+
+      <div class="spec-section-label">Tests &amp; Methods</div>
+
+      <div class="moa-table-toolbar">
+        <div class="moa-table-toolbar__search">
+          <label for="testSearch">Search Tests</label>
+          <input id="testSearch" type="text" [(ngModel)]="testSearch" (ngModelChange)="onTestSearchChange()" placeholder="Test, subtest, description, reference..." />
+        </div>
+        <div class="moa-table-toolbar__meta">{{ filteredTests.length }} test(s)</div>
+      </div>
+
+      <div *ngIf="isLoadingTests" class="moa-loading-hint">Loading tests…</div>
+
+      <div class="spec-table-wrap moa-table-scroll" *ngIf="!isLoadingTests">
+        <table class="table spec-data-table moa-data-table">
+          <thead>
+            <tr>
+              <th>Sr</th>
+              <th>Test</th>
+              <th>Sub Test</th>
+              <th>Description</th>
+              <th>Reference Type</th>
+              <th>Add Method</th>
+              <th>Status</th>
+              <th>Prepared By</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>View Method</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let comp of paginatedTests; let i = index">
+              <td>{{ (testCurrentPage - 1) * testPageSize + i + 1 }}</td>
+              <td>{{ comp.test }}</td>
+              <td>{{ comp.subtest || 'NA' }}</td>
+              <td>{{ comp.description || 'NA' }}</td>
+              <td>{{ comp.gradeName || comp.reference_type || '—' }}</td>
+              <td>
+                <button *ngIf="canAddMethod(comp)" type="button" class="btn btn-sm btn-info" (click)="addmethod(comp.id)">Add Method</button>
+                <span *ngIf="!canAddMethod(comp)" class="text-muted">—</span>
+              </td>
+              <td><span [class]="methodStatusClass(comp)">{{ methodStatusLabel(comp) }}</span></td>
+              <td>{{ comp.prepared_by || '—' }}</td>
+              <td>{{ comp.prepared_on ? (comp.prepared_on | date: 'dd-MM-yyyy') : '—' }}</td>
+              <td>{{ comp.prepared_on ? (comp.prepared_on | date: 'HH:mm') : '—' }}</td>
+              <td>
+                <button
+                  *ngIf="canViewMethod(comp)"
+                  type="button"
+                  class="btn btn-xs btn-info"
+                  (click)="openMethodView(comp)"
+                >
+                  View
+                </button>
+                <span *ngIf="!canViewMethod(comp)" class="text-muted">—</span>
+              </td>
+              <td class="moa-actions-cell">
+                <div class="moa-actions" *ngIf="canViewMethod(comp); else noMethodActions">
+                  <button
+                    type="button"
+                    class="btn btn-xs btn-secondary"
+                    [disabled]="methodStatusKey(comp) === 'completed' && !canEditAfterQa(comp)"
+                    (click)="editMethod(comp)"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <ng-template #noMethodActions><span class="text-muted">—</span></ng-template>
+              </td>
+            </tr>
+            <tr *ngIf="!filteredTests.length" class="spec-empty-row">
+              <td colspan="12">No tests found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="moa-pagination" *ngIf="filteredTests.length">
+        <div class="moa-pagination__info">
+          Page {{ testCurrentPage }} of {{ testTotalPages }} · Showing
+          {{ filteredTests.length ? (testCurrentPage - 1) * testPageSize + 1 : 0 }}–{{
+            testCurrentPage * testPageSize > filteredTests.length ? filteredTests.length : testCurrentPage * testPageSize
+          }}
+          of {{ filteredTests.length }}
+        </div>
+        <div class="moa-pagination__controls">
+          <button type="button" class="btn btn-sm btn-outline" [disabled]="testCurrentPage <= 1" (click)="testGoToPage(1)">First</button>
+          <button type="button" class="btn btn-sm btn-outline" [disabled]="testCurrentPage <= 1" (click)="testGoToPage(testCurrentPage - 1)">Prev</button>
+          <button type="button" class="btn btn-sm btn-outline" [disabled]="testCurrentPage >= testTotalPages" (click)="testGoToPage(testCurrentPage + 1)">Next</button>
+          <button type="button" class="btn btn-sm btn-outline" [disabled]="testCurrentPage >= testTotalPages" (click)="testGoToPage(testTotalPages)">Last</button>
+          <span class="moa-pagination__size">
+            <select [ngModel]="testPageSize" (ngModelChange)="onTestPageSizeChange(+$event)">
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="25">25</option>
+              <option [ngValue]="50">50</option>
+            </select>
+          </span>
+        </div>
+      </div>
+
+      <div class="spec-section-label">Revision History</div>
+      <div class="spec-table-wrap">
+        <table class="table spec-data-table moa-data-table">
+          <thead>
+            <tr>
+              <th>Revision No.</th>
+              <th>Revision Description</th>
+              <th>Effective Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let data of revision_history">
+              <td>{{ data.version }}</td>
+              <td>{{ data.desc_rational }}</td>
+              <td>{{ data.doe | date: 'dd-MM-yyyy' }}</td>
+              <td></td>
+            </tr>
+            <tr *ngIf="!revision_history?.length" class="spec-empty-row">
+              <td colspan="4">No revision history</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <form #revisionHistory="ngForm" class="spec-table-wrap" style="border-top: none;" *ngIf="!isViewOnly">
+        <table class="table spec-data-table moa-data-table">
+          <tbody>
+            <tr>
+              <td><input type="text" name="version" ngModel required placeholder="Revision No" /></td>
+              <td><input type="text" name="desc_rational" ngModel required placeholder="Revision Description" /></td>
+              <td><input type="date" name="doe" ngModel required /></td>
+              <td><button type="button" class="btn btn-primary btn-sm" (click)="addrevision_history(revisionHistory)">Add</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+    </div>
+
+    <div class="spec-page-footer">
+      <button type="button" class="btn btn-outline" (click)="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal *ngIf="isMethodView" [(clrModalOpen)]="isMethodView" clrModalSize="xl">
+  <h3 class="modal-title">Added Method — {{ selectedMethodTest?.['test'] }}</h3>
+  <div class="modal-body">
+    <div class="spec-info-panel" *ngIf="selectedMethodTest">
+      <div class="spec-info-grid">
+        <div class="spec-info-item"><span class="spec-info-item__label">Test</span><span class="spec-info-item__value">{{ selectedMethodTest['test'] }}</span></div>
+        <div class="spec-info-item"><span class="spec-info-item__label">Sub Test</span><span class="spec-info-item__value">{{ selectedMethodTest['subtest'] || 'NA' }}</span></div>
+        <div class="spec-info-item spec-info-item--wide"><span class="spec-info-item__label">Description</span><span class="spec-info-item__value">{{ selectedMethodTest['description'] || 'NA' }}</span></div>
+        <div class="spec-info-item"><span class="spec-info-item__label">Status</span><span class="spec-info-item__value"><span [class]="methodStatusClass(selectedMethodTest)">{{ methodStatusLabel(selectedMethodTest) }}</span></span></div>
+      </div>
+    </div>
+
+    <div *ngIf="!isLoadingMethodView && methodStatusKey(selectedMethodTest) === 'pending' && !hasMethodContent(getMethodData(selectedMethodTest))" class="moa-method-view__empty">Method not available yet.</div>
+    <div *ngIf="isLoadingMethodView" class="moa-loading-hint">Loading method details…</div>
+
+    <ng-container *ngIf="!isLoadingMethodView && (methodStatusKey(selectedMethodTest) !== 'pending' || hasMethodContent(getMethodData(selectedMethodTest)))">
+      <ng-container *ngIf="getMethodData(selectedMethodTest) as md">
+        <ng-container *ngIf="hasMethodContent(md)">
+          <div class="card moa-method-view-card">
+            <div class="card-header moa-method-view-card__title">Method of Analysis / Standard Test Procedure</div>
+            <div class="card-block">
+              <div class="card moa-method-view-card__section" *ngIf="hasText(md['Safety'])">
+                <div class="card-header moa-method-view-card__section-title">Safety</div>
+                <div class="card-block">
+                  <div class="moa-method-view-card__content" [innerHTML]="md['Safety']"></div>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="methodProcedure(md)">
+                <div class="card-header moa-method-view-card__section-title">Procedure</div>
+                <div class="card-block">
+                  <div class="moa-method-view-card__content" [innerHTML]="methodProcedure(md)"></div>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="hasText(md['chromatographic_conditions'])">
+                <div class="card-header moa-method-view-card__section-title">Chromatographic Conditions</div>
+                <div class="card-block">
+                  <div class="moa-method-view-card__content" [innerHTML]="md['chromatographic_conditions']"></div>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['testinginstruction']?.length">
+                <div class="card-header moa-method-view-card__section-title">Testing Instructions</div>
+                <div class="card-block">
+                  <div *ngFor="let ins of md['testinginstruction']" class="moa-complete__ins">
+                    <div class="moa-complete__ins-head">{{ ins.testing_heading }}</div>
+                    <ul><li *ngFor="let s of ins.testing_instruction">{{ s.testing_instruction }}</li></ul>
+                  </div>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['equipment_instruments']?.length">
+                <div class="card-header moa-method-view-card__section-title">Equipment / Instruments</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Name</th><th>Type</th><th>Code</th></tr></thead>
+                    <tbody><tr *ngFor="let e of md['equipment_instruments']"><td>{{ e.equipment_name }}</td><td>{{ e.equipment_type }}</td><td>{{ e.equipment_code }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['chemical_reagents']?.length">
+                <div class="card-header moa-method-view-card__section-title">Chemicals / Reagents</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Name</th><th>Grade</th></tr></thead>
+                    <tbody><tr *ngFor="let c of md['chemical_reagents']"><td>{{ c.material_name || c.chemical_name }}</td><td>{{ c.grade }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['glasswares']?.length">
+                <div class="card-header moa-method-view-card__section-title">Glasswares</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Name</th><th>Capacity</th><th>Type</th></tr></thead>
+                    <tbody><tr *ngFor="let g of md['glasswares']"><td>{{ g.material_name || g.name }}</td><td>{{ g.capacity }}</td><td>{{ g.class_type || g.glassware_class }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['balance']?.length">
+                <div class="card-header moa-method-view-card__section-title">Weighing Balance</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Name</th><th>Code</th></tr></thead>
+                    <tbody><tr *ngFor="let b of md['balance']"><td>{{ b.equipment_name }}</td><td>{{ b.equipment_code }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['volumetric_solutions']?.length">
+                <div class="card-header moa-method-view-card__section-title">Volumetric / Reagents Solutions</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Name</th><th>Strength</th><th>Unit</th></tr></thead>
+                    <tbody><tr *ngFor="let v of md['volumetric_solutions']"><td>{{ v.solution_name || v.name }}</td><td>{{ v.percentage }} {{ v.strength }}</td><td>{{ v.unit }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card moa-method-view-card__section" *ngIf="md['phases']?.length">
+                <div class="card-header moa-method-view-card__section-title">Mobile Phase</div>
+                <div class="card-block">
+                  <table class="table spec-data-table">
+                    <thead><tr><th>Solvent</th><th>Strength</th><th>Preparation</th></tr></thead>
+                    <tbody><tr *ngFor="let p of md['phases']"><td>{{ p.solvent_name }}</td><td>{{ p.per_strength }}</td><td>{{ p.preparation }}</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <div class="moa-method-view__section" *ngFor="let data of methodDetailsList(selectedMethodTest)">
+        <h3>{{ data['name'] }}</h3>
+
+        <div *ngIf="data['option'] == 'procedure'">
+          <table class="table spec-data-table">
+            <thead><tr><th>Sr</th><th>{{ data['name'] }}</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let list of data['list']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.test_description }}</td>
+              </tr>
+              <tr *ngIf="!data['list']?.length" class="spec-empty-row"><td colspan="2">No records found</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="data['option'] == 'chemical'">
+          <table class="table spec-data-table">
+            <thead><tr><th>Sr</th><th>Chemical Name</th><th>Grade</th><th>Make</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let list of data['list']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.chemical_name }}</td>
+                <td>{{ list.grade }}</td>
+                <td>{{ list.make }}</td>
+              </tr>
+              <tr *ngIf="!data['list']?.length" class="spec-empty-row"><td colspan="4">No records found</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="data['option'] == 'hplc'">
+          <table class="table spec-data-table">
+            <thead><tr><th>Sr</th><th>HPLC Name</th><th>Packing</th><th>Brand</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let list of data['list']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.name }}</td>
+                <td>{{ list.packing }}</td>
+                <td>{{ list.brand }}</td>
+              </tr>
+              <tr *ngIf="!data['list']?.length" class="spec-empty-row"><td colspan="4">No records found</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="data['option'] == 'glassware'">
+          <table class="table spec-data-table">
+            <thead><tr><th>Sr</th><th>Glassware Name</th><th>Capacity</th><th>Type</th><th>Make</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let list of data['list']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.name }}</td>
+                <td>{{ list.capacity }}</td>
+                <td>{{ list.glassware_class }}</td>
+                <td>{{ list.make }}</td>
+              </tr>
+              <tr *ngIf="!data['list']?.length" class="spec-empty-row"><td colspan="5">No records found</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="data['option'] == 'equipment'">
+          <table class="table spec-data-table">
+            <thead><tr><th>Sr</th><th>Equipment Name</th><th>Category</th><th>Type</th><th>Make</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let list of data['list']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.equipment_name }}</td>
+                <td>{{ list.equipment_type }}</td>
+                <td>{{ list.make }}</td>
+                <td>{{ list.make }}</td>
+              </tr>
+              <tr *ngIf="!data['list']?.length" class="spec-empty-row"><td colspan="5">No records found</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoadingMethodView && !hasMethodContent(getMethodData(selectedMethodTest)) && !methodDetailsList(selectedMethodTest).length" class="moa-method-view__empty">
+        No method details stored. Use full view to open the complete method document.
+      </div>
+    </ng-container>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-info" *ngIf="selectedMethodTest && canViewMethod(selectedMethodTest)" (click)="viewMethod(selectedMethodTest['id'])">Open Full Method</button>
+    <button type="button" class="btn btn-danger" (click)="closeMethodView()">Close</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="showRevisionModal" clrModalSize="lg">
+  <h3 class="modal-title">Revision Request</h3>
+  <div class="modal-body">
+    <p *ngIf="selectedActionRow">
+      <strong>{{ selectedActionRow['specification_no'] }}</strong> — {{ selectedActionRow['test'] || selectedSpec['material_name'] }}
+    </p>
+    <div class="clr-row">
+      <div class="clr-col-12">
+        <label>Reason For Change <span class="req">*</span></label>
+        <textarea rows="3" [(ngModel)]="revisionForm.revision_reason"></textarea>
+      </div>
+      <div class="clr-col-12">
+        <label>Proposed Changes <span class="req">*</span></label>
+        <textarea rows="3" [(ngModel)]="revisionForm.proposed_changes"></textarea>
+      </div>
+      <div class="clr-col-6">
+        <label>Proposed Effective Date</label>
+        <input type="date" [(ngModel)]="revisionForm.effective_date" />
+      </div>
+    </div>
+    <p class="sign-note">On submit, request is sent to <strong>QA → Revision Request</strong> for approval.</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()">Submit to QA</button>
+    <button type="button" class="btn btn-outline" (click)="showRevisionModal = false">Cancel</button>
+  </div>
+</clr-modal>
+
+<div class="mb-modal-backdrop" *ngIf="showCcModal">
+  <div class="mb-modal card mb-modal-wide">
+    <div class="card-header spec-page-header">
+      <h2 class="spec-page-header__title" style="margin:0;font-size:0.85rem;">Initiation Of Change Control</h2>
+    </div>
+    <div class="card-block">
+      <div class="clr-row mb-fm-cc-grid">
+        <div class="clr-col-lg-3 clr-col-6"><label>Initiated By</label><input [(ngModel)]="ccInit.emp_name" readonly /></div>
+        <div class="clr-col-lg-3 clr-col-6"><label>Department</label><input [(ngModel)]="ccInit.department_name" readonly /></div>
+        <div class="clr-col-lg-3 clr-col-6"><label>Date Of Issuance <span class="req">*</span></label><input type="date" [(ngModel)]="ccInit.dateOfIssuance" /></div>
+        <div class="clr-col-lg-3 clr-col-6"><label>Section <span class="req">*</span></label><input [(ngModel)]="ccInit.section" /></div>
+        <div class="clr-col-lg-6"><label>Name Of Product / Document <span class="req">*</span></label><input [(ngModel)]="ccInit.nameOfProductDoc" /></div>
+        <div class="clr-col-lg-6"><label>Medicap Lot No / Document No <span class="req">*</span></label><input [(ngModel)]="ccInit.batchNoDocNo" /></div>
+        <div class="clr-col-lg-4"><label>Change Requested For</label><select [(ngModel)]="ccInit.changeReqFor"><option>Documents</option><option>Procedure</option><option>Specification / Analytical Procedure</option></select></div>
+      </div>
+      <table class="mb-fm-cc-detail-table">
+        <tr><th>Standard Current Procedure</th><td><textarea rows="3" [(ngModel)]="ccInit.existingProcedure"></textarea></td><td><input type="file" (change)="onCcFile($event, 'exis')" /></td></tr>
+        <tr><th>Details Of Change Proposed</th><td><textarea rows="3" [(ngModel)]="ccInit.changedDetails"></textarea></td><td><input type="file" (change)="onCcFile($event, 'change')" /></td></tr>
+        <tr><th>Justification</th><td><textarea rows="3" [(ngModel)]="ccInit.justificationOfChange"></textarea></td><td><input type="file" (change)="onCcFile($event, 'just')" /></td></tr>
+      </table>
+      <div class="clr-row mb-fm-cc-grid">
+        <div class="clr-col-lg-4"><label>Tentative Date Of Closing <span class="req">*</span></label><input type="date" [(ngModel)]="ccInit.tentativeDateClosing" /></div>
+        <div class="clr-col-lg-8"><label>Remark <span class="req">*</span></label><input [(ngModel)]="ccInit.remark" /></div>
+      </div>
+      <h4>Affected Documents</h4>
+      <table class="table spec-data-table">
+        <thead><tr><th>Sr</th><th>Doc No</th><th>Title</th><th>Impact</th><th></th></tr></thead>
+        <tbody>
+          <tr *ngFor="let d of ccAffDocs; let di = index">
+            <td>{{ di + 1 }}</td><td>{{ d.docNo }}</td><td>{{ d.docTitle }}</td><td>{{ d.typeOfImpact }}</td>
+            <td><button class="btn btn-xs btn-danger" (click)="removeCcAffDoc(di)">Del</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="spec-page-footer">
+        <button type="button" class="btn btn-primary" [disabled]="isCcSaving" (click)="submitChangeControl()">{{ isCcSaving ? 'Submitting…' : 'Submit Change Control' }}</button>
+        <button type="button" class="btn btn-outline" (click)="showCcModal = false">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal *ngIf="isRivisionrequest" [(clrModalOpen)]="isRivisionrequest" clrModalSize="xl">
+  <h3 class="modal-title">Revision Request</h3>
+  <div class="modal-body">
+    <form #rivisionForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-md-3">
+          <label>Document Name</label>
+          <input type="text" name="doc_name" [(ngModel)]="doc_name" />
+        </div>
+        <div class="clr-col-md-3">
+          <label>Document No</label>
+          <input type="text" name="doc_no" [(ngModel)]="method_no" />
+        </div>
+        <div class="clr-col-md-3">
+          <label>Revision type</label>
+          <select name="revision_type" [(ngModel)]="revision_type">
+            <option></option>
+            <option>Periodic/schedule revisiohn</option>
+            <option>Change Proposed</option>
+          </select>
+        </div>
+        <div class="clr-col-md-3">
+          <label>Revision description/propsed changes</label>
+          <input type="text" name="rivision_chnages" ngModel />
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-success" (click)="save(rivisionForm)">Save</button>
+    <button type="button" class="btn btn-danger" (click)="isRivisionrequest = false">Close</button>
+  </div>
+</clr-modal>
+
+<!-- COMPLETE METHOD OF ANALYSIS DOCUMENT -->
+<clr-modal *ngIf="isCompleteView" [(clrModalOpen)]="isCompleteView" clrModalSize="xl">
+  <h3 class="modal-title">
+    Complete Method of Analysis
+    <small *ngIf="completeDoc?.specification?.specification_no">
+      — {{ completeDoc.specification.specification_no }} · {{ completeDoc.specification.material_name }}
+    </small>
+  </h3>
+  <div class="modal-body moa-complete">
+    <div *ngIf="isLoadingComplete" class="moa-loading-hint">Assembling complete method…</div>
+
+    <ng-container *ngIf="!isLoadingComplete">
+      <!-- Summary / submission status -->
+      <div class="moa-complete__status">
+        <span class="moa-status-badge moa-status-badge--completed">{{ preparedTestCount }} method(s) prepared</span>
+        <span class="moa-status-badge moa-status-badge--pending" *ngIf="missingMethodCount > 0">{{ missingMethodCount }} test(s) without method</span>
+      </div>
+
+      <!-- Specification header -->
+      <div class="spec-info-panel">
+        <div class="spec-info-panel__head">Specification Details</div>
+        <div class="spec-info-grid">
+          <div class="spec-info-item"><span class="spec-info-item__label">Specification No</span><span class="spec-info-item__value">{{ completeDoc.specification?.specification_no || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Specification Type</span><span class="spec-info-item__value">{{ completeDoc.specification?.spec_type || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Name</span><span class="spec-info-item__value">{{ completeDoc.specification?.material_name || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Code</span><span class="spec-info-item__value">{{ completeDoc.specification?.material_code || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Material Type</span><span class="spec-info-item__value">{{ completeDoc.specification?.material_subtype || completeDoc.specification?.material_type || '—' }}</span></div>
+          <div class="spec-info-item"><span class="spec-info-item__label">Version No</span><span class="spec-info-item__value">{{ completeDoc.specification?.version_no || '—' }}</span></div>
+        </div>
+      </div>
+
+      <!-- Common document-level sections -->
+      <div class="moa-complete__doc-title">Document-Level (Common) Sections</div>
+
+      <div class="moa-complete__section" *ngIf="completeDoc.common?.Genral_Instruction?.length">
+        <h4>General Instructions</h4>
+        <table class="table spec-data-table">
+          <thead><tr><th>Parameter</th><th>Description</th><th>Specification / Limit</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let d of completeDoc.common.Genral_Instruction">
+              <td>{{ d.parameter }}</td><td>{{ d.discrption }}</td><td>{{ d.spec_limit }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="moa-complete__section" *ngIf="hasText(completeDoc.common?.purpose)">
+        <h4>Purpose</h4><div class="moa-complete__text">{{ completeDoc.common.purpose }}</div>
+      </div>
+      <div class="moa-complete__section" *ngIf="hasText(completeDoc.common?.Scope)">
+        <h4>Scope</h4><div class="moa-complete__text">{{ completeDoc.common.Scope }}</div>
+      </div>
+      <div class="moa-complete__section" *ngIf="hasText(completeDoc.common?.standard_Solutions)">
+        <h4>Standard Solution</h4><div class="moa-complete__text">{{ completeDoc.common.standard_Solutions }}</div>
+      </div>
+      <div class="moa-complete__section" *ngIf="hasText(completeDoc.common?.Test_Solutions)">
+        <h4>Test Solution</h4><div class="moa-complete__text">{{ completeDoc.common.Test_Solutions }}</div>
+      </div>
+
+      <div class="moa-complete__section" *ngIf="completeDoc.common?.Associative_Document?.length">
+        <h4>Associate Documents</h4>
+        <table class="table spec-data-table">
+          <thead><tr><th>Document No.</th><th>Document Name</th></tr></thead>
+          <tbody><tr *ngFor="let d of completeDoc.common.Associative_Document"><td>{{ d.doc_no }}</td><td>{{ d.doc_name }}</td></tr></tbody>
+        </table>
+      </div>
+      <div class="moa-complete__section" *ngIf="completeDoc.common?.Refrenced_Document?.length">
+        <h4>Reference Documents</h4>
+        <table class="table spec-data-table">
+          <thead><tr><th>Document No.</th><th>Document Name</th></tr></thead>
+          <tbody><tr *ngFor="let d of completeDoc.common.Refrenced_Document"><td>{{ d.doc_no }}</td><td>{{ d.doc_name }}</td></tr></tbody>
+        </table>
+      </div>
+      <div class="moa-complete__section" *ngIf="completeDoc.common?.defination?.length">
+        <h4>Definitions</h4>
+        <table class="table spec-data-table">
+          <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+          <tbody><tr *ngFor="let d of completeDoc.common.defination"><td>{{ d.term }}</td><td>{{ d.defination }}</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Per-test methods -->
+      <div class="moa-complete__doc-title">Test Methods ({{ completeTests.length }})</div>
+      <div *ngIf="!completeTests.length" class="moa-method-view__empty">No tests found for this specification.</div>
+
+      <div class="moa-complete__test" *ngFor="let t of completeTests; let ti = index">
+        <div class="moa-complete__test-head">
+          <div class="moa-complete__test-title">{{ ti + 1 }}. {{ t.test }} <small *ngIf="t.subtest && t.subtest !== 'NA'">— {{ t.subtest }}</small></div>
+          <button type="button" class="btn btn-xs btn-info" *ngIf="canViewMethod(t)" (click)="openMethodView(t)">View</button>
+          <span [class]="methodStatusClass(t)">{{ methodStatusLabel(t) }}</span>
+        </div>
+        <div class="moa-complete__test-meta">
+          <span *ngIf="t.description && t.description !== 'NA'">{{ t.description }}</span>
+          <span *ngIf="t.prepared_by">Prepared by: <strong>{{ t.prepared_by }}</strong></span>
+          <span *ngIf="t.prepared_on">{{ t.prepared_on | date: 'dd-MM-yyyy HH:mm' }}</span>
+        </div>
+
+        <div *ngIf="methodStatusKey(t) === 'pending' && !hasMethodContent(t.method_data)" class="moa-method-view__empty">Method not prepared yet.</div>
+
+        <ng-container *ngIf="canShowMethodData(t) && t.method_data as md">
+          <div class="moa-complete__section" *ngIf="hasText(md.Safety)">
+            <h4>Safety</h4><div class="moa-complete__rich" [innerHTML]="md.Safety"></div>
+          </div>
+          <div class="moa-complete__section" *ngIf="methodProcedure(md)">
+            <h4>Procedure</h4><div class="moa-complete__rich" [innerHTML]="methodProcedure(md)"></div>
+          </div>
+          <div class="moa-complete__section" *ngIf="hasText(md.chromatographic_conditions)">
+            <h4>Chromatographic Conditions</h4><div class="moa-complete__rich" [innerHTML]="md.chromatographic_conditions"></div>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.testinginstruction?.length">
+            <h4>Testing Instructions</h4>
+            <div *ngFor="let ins of md.testinginstruction" class="moa-complete__ins">
+              <div class="moa-complete__ins-head">{{ ins.testing_heading }}</div>
+              <ul><li *ngFor="let s of ins.testing_instruction">{{ s.testing_instruction }}</li></ul>
+            </div>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.equipment_instruments?.length">
+            <h4>Equipment / Instruments</h4>
+            <table class="table spec-data-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Code</th></tr></thead>
+              <tbody><tr *ngFor="let e of md.equipment_instruments"><td>{{ e.equipment_name }}</td><td>{{ e.equipment_type }}</td><td>{{ e.equipment_code }}</td></tr></tbody>
+            </table>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.chemical_reagents?.length">
+            <h4>Chemicals / Reagents</h4>
+            <table class="table spec-data-table">
+              <thead><tr><th>Name</th><th>Grade</th><th>Make</th></tr></thead>
+              <tbody><tr *ngFor="let c of md.chemical_reagents"><td>{{ c.material_name || c.chemical_name }}</td><td>{{ c.grade }}</td><td>{{ c.make }}</td></tr></tbody>
+            </table>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.glasswares?.length">
+            <h4>Glasswares</h4>
+            <table class="table spec-data-table">
+              <thead><tr><th>Name</th><th>Capacity</th><th>Type</th></tr></thead>
+              <tbody><tr *ngFor="let g of md.glasswares"><td>{{ g.material_name || g.name }}</td><td>{{ g.capacity }}</td><td>{{ g.class_type || g.glassware_class }}</td></tr></tbody>
+            </table>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.balance?.length">
+            <h4>Weighing Balance</h4>
+            <table class="table spec-data-table">
+              <thead><tr><th>Name</th><th>Code</th><th>Capacity</th></tr></thead>
+              <tbody><tr *ngFor="let b of md.balance"><td>{{ b.equipment_name }}</td><td>{{ b.equipment_code }}</td><td>{{ b.capacity }}</td></tr></tbody>
+            </table>
+          </div>
+          <div class="moa-complete__section" *ngIf="md.volumetric_solutions?.length">
+            <h4>Volumetric Solutions</h4>
+            <table class="table spec-data-table">
+              <thead><tr><th>Name</th><th>Strength</th><th>Unit</th></tr></thead>
+              <tbody><tr *ngFor="let v of md.volumetric_solutions"><td>{{ v.solution_name || v.name }}</td><td>{{ v.percentage }} {{ v.strength }}</td><td>{{ v.unit }}</td></tr></tbody>
+            </table>
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </div>
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-primary"
+      *ngIf="!completeReadOnly"
+      [disabled]="completeSubmitting || isLoadingComplete || !canSubmitComplete"
+      (click)="submitCompleteForChecking()"
+    >
+      {{ completeSubmitting ? 'Sending…' : 'Send Complete Method for Checking & Approval' }}
+    </button>
+    <button type="button" class="btn btn-outline" (click)="closeCompleteMethod()">Close</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,138 @@
+<div class="component store-legacy-dash">
+  <div class="subsection">
+    <div class="purchase-block">
+      <div style="text-align:end" class="exit-section">
+        <div class="header-block" style="margin:10px 0px">
+          <h3>Empty Palate from Location</h3>
+        <div routerLink="/store/wms/mapping" class="name-board2"><i class="fas fa-times"></i>
+        </div>
+      </div>
+
+      <div class="main-section" style="margin: 0px 10px 10px 10px !important;">
+        <div class="card">
+          <div class="card-block">
+            <div class="clr-row" style="margin-bottom: 20px;">
+              <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Scan Palate Barcode:</strong></label>
+                <input 
+                  type="text" 
+                  #barcodeInputField
+                  [(ngModel)]="barcodeInput"
+                  (keyup.enter)="onBarcodeScan($event)"
+                  class="form-control"
+                  style="font-size: 18px; padding: 10px;"
+                  placeholder="Scan palate barcode and press Enter"
+                  autofocus>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" style="padding-top: 25px;">
+                <button class="btn btn-primary" (click)="findMapping(barcodeInput)">{{'common.search' | translate}}</button>
+                <button class="btn btn-secondary" (click)="resetForm()">{{'common.clear' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="loading">
+          <div class="card-block">
+            <div style="text-align: center; padding: 20px;">
+              <span class="spinner spinner-inline"></span>
+              <span>Loading mapping details...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" *ngIf="mappingData && !loading">
+          <div class="card-header" style="background-color: #dc3545; color: white;">
+            <h4>Remove Palate from Location</h4>
+          </div>
+          <div class="card-block">
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <h5>Palate Details</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Palate No:</strong></td>
+                    <td>{{ mappingData?.mapping?.palate?.paletteNo || mappingData?.palate?.paletteNo || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Room Name:</strong></td>
+                    <td>{{ mappingData?.mapping?.palate?.section_name || mappingData?.palate?.section_name || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Mapped Date:</strong></td>
+                    <td>{{ mappingData?.mapping?.mapped_date || mappingData?.mapped_date || 'N/A' }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <h5>Location Details</h5>
+                <table class="table table-border">
+                  <tr>
+                    <td><strong>Location No:</strong></td>
+                    <td>{{ mappingData?.mapping?.location?.locationNo || mappingData?.location?.locationNo || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Room Name:</strong></td>
+                    <td>{{ mappingData?.mapping?.location?.section_name || mappingData?.location?.section_name || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Rack:</strong></td>
+                    <td>{{ mappingData?.mapping?.location?.rack_no || mappingData?.location?.rack_no || 'N/A' }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Lane:</strong></td>
+                    <td>{{ mappingData?.mapping?.location?.laneNO || mappingData?.location?.laneNO || 'N/A' }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="materials && materials.length > 0">
+              <div class="clr-col-12">
+                <h5>Materials on Palate ({{ totalRecords }})</h5>
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Warning:</strong> This palate contains {{ totalRecords }} material(s). Removing the palate will not remove the materials from the palate mapping.
+                </div>
+                <div class="datagrid-wrapper">
+                  <clr-datagrid>
+                    <clr-dg-column>Sr. No.</clr-dg-column>
+                    <clr-dg-column>Tracking ID</clr-dg-column>
+                    <clr-dg-column>Material Code</clr-dg-column>
+                    <clr-dg-column>Material Name</clr-dg-column>
+                    <clr-dg-column>Medicap Lot No</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let material of materials; let i = index" [clrDgItem]="material">
+                      <clr-dg-cell>{{ (currentPage - 1) * pageSize + i + 1 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.tracking_id }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.material_code }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.material_name }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.batch_no }}</clr-dg-cell>
+                    </clr-dg-row>
+
+                    <clr-dg-footer>
+                      <clr-dg-pagination #pagination [clrDgPageSize]="pageSize" [clrDgTotalItems]="totalRecords">
+                        <clr-dg-page-size [clrPageSizeOptions]="[50, 100, 200, 500]">Materials per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}} of {{pagination.totalItems}} materials
+                      </clr-dg-pagination>
+                    </clr-dg-footer>
+                  </clr-datagrid>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" style="margin-top: 20px;">
+              <div class="clr-col-12">
+                <button class="btn btn-danger" (click)="confirmEmpty()" [disabled]="loading">
+                  <span *ngIf="loading" class="spinner spinner-inline"></span>
+                  Confirm Remove
+                </button>
+                <button class="btn btn-secondary" (click)="resetForm()" style="margin-left: 10px;">{{'common.cancel' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

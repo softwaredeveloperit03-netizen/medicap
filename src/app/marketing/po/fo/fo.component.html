@@ -1,0 +1,315 @@
+<div class="card" *ngIf="!isView  && !isPrepare">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">PO Log
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/marketing/po">CLOSE</button>
+      </div> 
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-5">
+              <label>Search </label>
+              <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+            </div>
+          </div>
+
+          <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" [clrDgStickyHeader]="true">
+                <clr-dg-column>Sr.No.</clr-dg-column>
+                <clr-dg-column>Order No</clr-dg-column>
+                <clr-dg-column>Client Name</clr-dg-column>
+                <clr-dg-column>Consignee Name</clr-dg-column>
+                <clr-dg-column>Po No</clr-dg-column>
+                <clr-dg-column>Po Date</clr-dg-column>
+                <clr-dg-column>Status</clr-dg-column>
+                <clr-dg-column>Entry By</clr-dg-column>
+                <clr-dg-column>Entry On</clr-dg-column>
+                <clr-dg-column>Order Qty</clr-dg-column>
+                <clr-dg-column>Action</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let po of filteredMaterials; let i = index" [clrDgItem]="po">
+                  <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.order_no || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.clientName || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.conisgneeName || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.po_no || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                  <clr-dg-cell><strong>{{po.status | uppercase}}</strong></clr-dg-cell>
+                  <clr-dg-cell>{{po.entry_by || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.entry_date | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                  <clr-dg-cell>{{po.plan_qty}}</clr-dg-cell>
+                  <clr-dg-cell >
+                      <button class="btn btn-sm btn-primary" (click)="view(po)">View</button>
+                      <button class="btn btn-sm btn-primary" (click)="Prepare(po,i)">Prepare Forcast</button>
+                  </clr-dg-cell>
+                </clr-dg-row>
+            </clr-datagrid>
+          </div>
+ 
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView && !isPrepare">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">PO Details</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView = false">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left;width: 20%;">Client Name:</td>
+          <td style="text-align: left;">{{ selectedResult['clientName'] }}</td>
+          <td style="text-align: left;width: 20%;">Client Name:</td>
+          <td style="text-align: left;">{{ selectedResult['conisgneeName'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 20%;">PO No.:</td>
+          <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+          <td style="text-align: left;width: 20%;">PO Date:</td>
+          <td style="text-align: left;">{{ selectedResult['po_date'] |date:'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 20%;">PO Type:</td>
+          <td style="text-align: left;">{{ selectedResult['po_type'] }}</td>
+          <td style="text-align: left;width: 20%;">View</td>
+          <td style="text-align: left;">
+            <button [disabled]="selectedResult['file']=='NA'" class="btn btn-sm btn-info" 
+            (click)="downloadpo(selectedResult['file'])">View</button>
+          </td>
+        </tr>
+      </table>
+
+      <h3>Products:</h3>
+      <table class="table table-border">
+          <tr>
+            <td style="font-weight:bolder; background-color:aqua;">Sr.No.</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Month</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Name</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Code</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Packing Type</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Qty.</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Unit</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Date Of Delivery</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Remark</td>
+          </tr>
+          <tr *ngFor="let item of selectedResult['products']; let i = index;"
+          >
+            <td style="font-weight:bolder; ">{{i+1}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planMonth | date:'MM-yyyy'}}</td>
+            <td style="text-align:left;color:blue;"> {{item.product_name}}</td>
+            <td style="text-align:left;color:blue;"> {{item.product_code}}</td>
+            <td style="text-align:left;color:blue;"> {{item.packingStyle}} {{item.packingUnit}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planQty}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planUnit}}</td>
+            <td style="text-align:left;color:blue;"> {{item.deliveryDate | date:'dd-MM-yyyy'}}</td>
+            <td style="text-align:left;color:blue;"> {{item.remark || '-'}}</td>
+          </tr>
+      </table>
+  
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="isView = false">CLOSE</button>
+  </div>
+</div>
+<div class="card" *ngIf="isPrepare && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Prepare Forcast</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isPrepare = false">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left;width: 20%;">Client Name:</td>
+          <td style="text-align: left;">{{ selectedResult['clientName'] }}</td>
+          <td style="text-align: left;width: 20%;">Client Name:</td>
+          <td style="text-align: left;">{{ selectedResult['conisgneeName'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 20%;">PO No.:</td>
+          <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+          <td style="text-align: left;width: 20%;">PO Date:</td>
+          <td style="text-align: left;">{{ selectedResult['po_date'] |date:'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;width: 20%;">PO Type:</td>
+          <td style="text-align: left;">{{ selectedResult['po_type'] }}</td>
+          <td style="text-align: left;width: 20%;">Order Qty</td>
+          <td style="text-align: left;">
+           {{ selectedResult['plan_qty'] }}
+          </td>
+        </tr>
+      </table>
+
+      <h3>Marketing Orders:</h3>
+      <table class="table table-border">
+          <tr>
+            <td style="font-weight:bolder; background-color:aqua;">Sr.No.</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Month</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Name</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Code</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Packing Type</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Qty.</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Unit</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Date Of Delivery</td>
+            <td style="font-weight:bolder; background-color:aqua; text-align:left;">Remark</td>
+          </tr>
+          <tr *ngFor="let item of selectedResult['products']; let i = index;" >
+            <td style="font-weight:bolder; ">{{i+1}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planMonth | date:'MM-yyyy'}}</td>
+            <td style="text-align:left;color:blue;"> {{item.product_name}}</td>
+            <td style="text-align:left;color:blue;"> {{item.product_code}}</td>
+            <td style="text-align:left;color:blue;"> {{item.packingStyle}} {{item.packingUnit}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planQty}}</td>
+            <td style="text-align:left;color:blue;"> {{item.planUnit}}</td>
+            <td style="text-align:left;color:blue;"> {{item.deliveryDate | date:'dd-MM-yyyy'}}</td>
+            <td style="text-align:left;color:blue;"> {{item.remark || '-'}}</td>
+          </tr>
+      </table>
+  
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <div class="card">
+              <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                   Plan Forcast {{bal_plan_qty}}</div>
+                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                    <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow()">
+                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-block">
+                <div class="row container-fluid">
+
+                  <div class="clr-row">
+                    <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" [clrDgStickyHeader]="true">
+                <clr-dg-column>Sr.No.</clr-dg-column>
+                <clr-dg-column>Plan month</clr-dg-column>
+               
+                           
+                <clr-dg-column>Plan Order Qty (Nos)</clr-dg-column>
+                <clr-dg-column>Date Of Delivery</clr-dg-column>
+                <clr-dg-column>Remark</clr-dg-column>
+                <clr-dg-column>Action</clr-dg-column>
+
+                    <clr-dg-row  >
+                    <!-- Sr. No (read-only) -->
+                    <clr-dg-cell>#</clr-dg-cell>
+
+
+                    <clr-dg-cell>
+                        <input type="month" [(ngModel)]="plan_month" class="form-control form-control-sm" />
+                    </clr-dg-cell>
+                    <clr-dg-cell>
+                        <input type="number" [(ngModel)]="plan_qty" class="form-control form-control-sm" />
+                    </clr-dg-cell>
+                    <clr-dg-cell>
+                        <input type="date" [(ngModel)]="deliveryDate" class="form-control form-control-sm" />
+                    </clr-dg-cell>
+                    <clr-dg-cell>
+                        <input type="text" [(ngModel)]="remark" class="form-control form-control-sm" />
+                    </clr-dg-cell>
+
+                    <!-- Action Buttons -->
+                    <clr-dg-cell>
+                        
+                        <button class="btn btn-sm btn-primary" (click)="PreparePlan()">Prepare Forecast</button>
+                    </clr-dg-cell>
+                    </clr-dg-row>
+
+            </clr-datagrid>
+
+                  </div>
+                
+          <div class="clr-row" *ngFor="let batch of plannedProductsList; let batchIndex = index">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <div class="card">
+              <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                    
+                                Month: {{ batch[0]?.planMonth || '-' }} | Plan Qty: {{ batch[0]?.plan_qty || '-' }} 
+                        </div>
+                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow(batchIndex)">
+                    <clr-icon shape="eye" class="is-warning"></clr-icon>
+                </button>
+
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-block" *ngIf="showBatch[batchIndex]">
+                <div class="row container-fluid">
+
+                  <div class="clr-row"> 
+
+                      <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                        <td style="font-weight:bolder; background-color:aqua;">Sr.No.</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Month</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Name</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Product Code</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Packing Type</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Plan Qty.</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Unit</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Date Of Delivery</td>
+                                        <td style="font-weight:bolder; background-color:aqua; text-align:left;">Remark</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <tr *ngFor="let item of batch; let i = index">
+                                  <td style="font-weight:bolder; ">{{i+1}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.planMonth | date:'MM-yyyy'}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.product_name}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.product_code}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.packingStyle}} {{item.packingUnit}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.planQty}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.planUnit}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.deliveryDate | date:'dd-MM-yyyy'}}</td>
+                                    <td style="text-align:left;color:blue;"> {{item.remark || '-'}}</td>
+                                </tr>
+                                </tbody> 
+                            </table>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+  <div class="card-footer">
+     <button class="btn btn-danger" (click)="isPrepare = false">CLOSE</button>
+  </div>
+</div>
+
+ 

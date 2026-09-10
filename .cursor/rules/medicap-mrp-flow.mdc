@@ -1,0 +1,72 @@
+---
+description: Medicap MRP flow — handwritten stage order, attached client source only, existing vs ported routes
+globs: src/app/marketing/**,src/app/planning/**,src/app/mrp/**,src/app/fproduction/mfglines/**,src/app/production/**,src/app/store/dispensing/**,src/app/store/stock/**,src/app/store/stocktranfer/**,src/app/qa/ipqa/**,src/app/qa/bmr/**,php/phpdevlop/phpmedicap/marketing/**,php/phpdevlop/phpmedicap/planning/**,php/phpdevlop/phpmedicap/store/**,php/phpdevlop/phpmedicap/bmr/**
+alwaysApply: false
+---
+
+# Medicap MRP flow
+
+Source of truth: the user's handwritten MRP flow (Sep 2026). Plant `1126`, client `GMP22052`.
+This is the **order stages must run in**. Do not reorder, merge, or auto-skip stages.
+
+## Client source — use this and only this
+
+Attached source: **`e:\medicap\mrp`**
+
+- Frontend: `e:\medicap\mrp\src` (the `@mrp/src` folder)
+- Backend: `e:\medicap\mrp\New folder\phpDevelopWonder`
+
+**Do not use** `E:\MRP`. That is a different, older project.
+**Do not use** Zuma (`E:\Zuma`) for MRP. Do not add `ZumaSplitPlanning` or `save_planStages`.
+
+`/mrp/macro` (`planmacro`) is dead code in both trees. Process Plan is **`/planning/stplan/stStp/Canplan`**, copied from `mrp/src/app/planning/stplan`.
+
+## Stages → Medicap routes (handwritten flow + attached src)
+
+Prerequisite (already in Medicap, not STP): Master → MFI → Unit Formula → Batch Formula check/approve → QA approve.
+
+| # | Stage (user's wording) | Route | Status |
+|---|---|---|---|
+| 1 | Marketing → Client PO/FO → New PO/FO entry → **Submit** | `/marketing/po/new` | exists |
+| 2 | Processing PO/FO → **Generate Batch** → Add → Approve | `/marketing/po/processing` | exists |
+| 3 | PO approval | `/marketing/po/approval` | exists |
+| 4 | Planning → STP/Planning hub | `/planning/stplan` | **ported from `mrp/src`** |
+| 5 | Receive PO/FO | `/planning/Receivepofo` | **ported from `mrp/src`** |
+| 6 | Generate work order | `/planning/Generatewo` | **ported from `mrp/src`** |
+| 7 | Shortage analysis | `/planning/Shortages` | **ported from `mrp/src`** |
+| 8 | Process Plan (can planned / STP) | `/planning/stplan/stStp/Canplan` | **ported from `mrp/src`** |
+| 9 | Verify | `/planning/stplan/stStp/VerifyStock` | **ported from `mrp/src`** |
+| 10 | Line booking → Book | `/planning/stplan/stStp/Forplan` | **ported from `mrp/src`** |
+| 11 | Confirm booking / Line approval | `/planning/stplan/stStp/Lineapproval` | **ported from `mrp/src`** |
+| 12 | QA → Batch approval → RM plan for approval | `/qa/bmr/pending` | exists |
+| 13 | Production → Batch planning | `/production/batch-planning` | exists |
+| 14 | Prodn → QA approved batch → **Send dispensing req** | `/production/batch/qa` | exists |
+| 15 | Store → RM dispensing → **Awaiting dispensing req** | `/store/dispensing/raw/request` | exists |
+| 16 | Dispensing activity → Start → Proceed | `/store/dispensing/raw/activity/start` | exists |
+| 17 | QA → IPQA → **Disp-line clearance REQ** | `/qa/ipqa/lineclearance/request` | exists |
+| 18 | Dispensing activity → **In-process** → Start dispense | `/store/dispensing/raw/activity/inprocess` | exists |
+| 19 | Complete dispensing activity | `/store/dispensing/raw/activity/complete` | exists |
+| 20 | QA → IPQA → **Dispensing approval** → Approve | `/qa/ipqa/dispensing` | exists |
+| 21 | Production → dispense material receive → Non eBMR | `/production/batch/dispensing/receiving` | exists |
+
+## The stock branch (after Generate Work Order)
+
+- **Stock already available** → Process Plan (`Canplan`).
+- **Stock short** → Shortage analysis → purchase/GRN → rejoin at Process Plan.
+
+Then: **Process Plan → Verify → Line Booking → Line Approval**. Never skip Verify.
+
+## Porting rules
+
+- Copy MRP/STP code **only from `e:\medicap\mrp`**. Diff first, then apply only the delta.
+- Reuse Medicap screens that already exist (marketing PO, QA BMR, store dispensing). Do not duplicate them.
+- Only create a component when the handwritten stage is missing.
+- Keep Medicap identity: plant `1126`, client `GMP22052`, Cyclone shells. Do not copy client CCC dashboard chrome.
+- After copying a template, keep Medicap i18n (`common.close`, `common.unit`) and "Purchase Requisition" wording.
+- Live MySQL is **case-sensitive**. After editing PHP under `php/phpdevlop/phpmedicap/`, upload to live backend FTP immediately.
+
+## Watch out
+
+- `src/app/qa/product/mrp-approval` is Maximum Retail Price, not this flow.
+- `/planning/workorder/*` is a parallel broken tree. Do not repair it.
+- Do not wire `/mrp/macro` to Zuma endpoints.

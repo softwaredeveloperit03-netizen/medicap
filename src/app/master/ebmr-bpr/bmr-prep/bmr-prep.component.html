@@ -1,0 +1,129 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-file-medical"></i>
+      BMR Master Preparation
+      <span class="eb-sub">Generic BMR (dosage + process template) or Product BMR → Draft → Review → Approval</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-access-note">
+    <i class="fas fa-circle-info"></i>
+    {{ genericBmrDefinition }}
+    <b>Product BMR</b> is tied to one product — header loads from Product Master.
+    <span *ngIf="allAccess"><b>You currently hold all-department rights.</b></span>
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Dosage Form</span>
+      <select class="eb-select" [(ngModel)]="dosageFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="BMR no, dosage, process, title…" />
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-outline" (click)="load()"><i class="fas fa-rotate"></i> Refresh</button>
+  </div>
+
+  <div class="eb-table-wrap">
+    <table class="eb-table bp-prep-table">
+      <thead>
+        <tr>
+          <th style="width:110px">BMR No.</th>
+          <th>Dosage / Process</th>
+          <th style="width:280px">BMR For</th>
+          <th style="width:130px">Status</th>
+          <th style="width:300px">Draft BMR</th>
+          <th style="width:220px">Review / Approval</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!filtered.length"><td colspan="6" class="eb-empty">No configurations. Create one in Configure Master first.</td></tr>
+        <tr *ngFor="let r of filtered">
+          <td class="eb-strong">{{ r.bmr_no }}</td>
+          <td>
+            <div class="eb-strong">{{ r.dosage_form }}</div>
+            <div class="eb-hint">{{ r.process_type }} · {{ r.title }}</div>
+          </td>
+          <td class="bp-bmr-for-cell">
+            <select class="eb-select bp-bmr-for-select"
+                    [ngModel]="getBmrFor(r)"
+                    (ngModelChange)="onBmrForChange(r, $event)"
+                    [disabled]="isStarted(r)">
+              <option [value]="'Generic'">Generic BMR (Dosage + Process)</option>
+              <option [value]="'Product'">Product BMR</option>
+            </select>
+            <select class="eb-select bp-product-select"
+                    *ngIf="getBmrFor(r) === 'Product'"
+                    [ngModel]="productCodeByConfig[r.id]"
+                    (ngModelChange)="onProductChange(r, $event)"
+                    (focus)="ensureProductsLoaded(r)"
+                    [disabled]="isStarted(r)">
+              <option value="">— Select product —</option>
+              <option *ngFor="let p of productsByConfig[r.id] || []" [value]="p.product_code">
+                {{ p.product_name }} ({{ p.product_code }})
+              </option>
+            </select>
+            <span class="eb-hint bp-generic-hint" *ngIf="getBmrFor(r) === 'Generic' && !isStarted(r)">
+              {{ genericBmrRowHint(r.dosage_form, r.process_type) }}
+            </span>
+            <span class="eb-hint" *ngIf="getBmrFor(r) === 'Product' && isStarted(r) && r.draft_product_code">
+              {{ r.draft_product_code }}
+            </span>
+          </td>
+          <td><span class="eb-badge" [ngClass]="statusClass(status(r))">{{ status(r) }}</span></td>
+          <td class="bp-draft-cell">
+            <button class="eb-btn eb-btn-sm eb-btn-solid"
+                    *ngIf="canPrepare(r.matrix) && (!isStarted(r) || status(r)==='Draft' || status(r)==='Rejected')"
+                    (click)="openBuilder(r)">
+              <i class="fas fa-pen-ruler"></i> {{ isStarted(r) ? 'Continue Draft' : 'Draft BMR' }}
+            </button>
+            <button class="eb-btn eb-btn-sm eb-btn-outline"
+                    *ngIf="isStarted(r) && status(r)!=='Draft' && status(r)!=='Rejected'"
+                    (click)="openBuilder(r)">
+              <i class="fas fa-eye"></i> View eBMR
+            </button>
+            <button class="eb-btn eb-btn-sm eb-btn-outline"
+                    *ngIf="canPrepare(r.matrix) && isStarted(r) && (status(r)==='Draft' || status(r)==='Rejected')"
+                    (click)="workflow(r,'submit_review')">
+              <i class="fas fa-paper-plane"></i> Send for Review
+            </button>
+            <span class="eb-hint bp-draft-hint" *ngIf="!canPrepare(r.matrix) && !isStarted(r)">—</span>
+          </td>
+          <td class="bp-review-cell">
+            <button class="eb-btn eb-btn-sm eb-btn-outline"
+                    *ngIf="canReview(r.matrix) && status(r)==='Under Review'"
+                    (click)="workflow(r,'review')">
+              <i class="fas fa-clipboard-check"></i> Review
+            </button>
+            <button class="eb-btn eb-btn-sm eb-btn-solid"
+                    *ngIf="canProd() && status(r)==='Reviewed'"
+                    (click)="workflow(r,'prod_approve')">
+              <i class="fas fa-industry"></i> Approve (Prod)
+            </button>
+            <button class="eb-btn eb-btn-sm eb-btn-solid"
+                    *ngIf="canQA(r.matrix) && status(r)==='Production Approved'"
+                    (click)="workflow(r,'qa_approve')">
+              <i class="fas fa-stamp"></i> Approve (QA)
+            </button>
+            <button class="eb-btn eb-btn-sm eb-btn-outline eb-danger-btn"
+                    *ngIf="isStarted(r) && (status(r)==='Under Review' || status(r)==='Reviewed' || status(r)==='Production Approved')"
+                    (click)="workflow(r,'reject')">
+              <i class="fas fa-rotate-left"></i> Send back
+            </button>
+            <span class="eb-badge eb-badge-ok" *ngIf="status(r)==='Approved'"><i class="fas fa-circle-check"></i> Released</span>
+            <span class="eb-hint" *ngIf="isReviewCellEmpty(r)">—</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

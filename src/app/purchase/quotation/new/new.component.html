@@ -1,0 +1,221 @@
+<div class="qnew">
+  <div class="qnew__card card">
+    <div class="qnew__header card-header mef-panel-header">
+      <h3 class="qnew__title mef-panel-header__title">New Quotation</h3>
+      <div class="qnew__actions mef-panel-header__actions">
+        <button type="button" class="qnew__btn qnew__btn--general" [routerLink]="['/purchase', 'quotation', 'genNew']">
+          General New Quotation
+        </button>
+        <button type="button" class="qnew__btn qnew__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+
+    <div class="qnew__body">
+      <form #quatationForm="ngForm" class="qnew__form">
+        <div class="qnew__form-grid">
+          <div class="qnew__field qnew__field--vendor">
+            <label class="qnew__label" for="vendor_name">Name Of Vendor<span class="qnew__required">*</span></label>
+            <select
+              id="vendor_name"
+              class="qnew__control qnew__select"
+              name="vendor_name"
+              ngModel
+              required
+              (change)="getVendorDetails($event.target.selectedIndex)"
+              title="Select vendor"
+            >
+              <option value="">-- Select Vendor --</option>
+              <option *ngFor="let vendor of vendors" [value]="vendor.id">
+                {{ vendor.vendor_name }} ({{ vendor.vendor_type }}) — {{ vendor.material_type }} — {{ vendor.vendor_no }}
+              </option>
+            </select>
+          </div>
+
+          <div class="qnew__field">
+            <label class="qnew__label" for="vendor_quotation_no">Quotation No<span class="qnew__required">*</span></label>
+            <input
+              id="vendor_quotation_no"
+              class="qnew__control"
+              type="text"
+              name="vendor_quotation_no"
+              [(ngModel)]="vendor_quotation_no"
+              required
+              placeholder="Enter quotation no"
+            />
+          </div>
+
+          <div class="qnew__field">
+            <label class="qnew__label" for="vendor_quotation_date">Quotation Date<span class="qnew__required">*</span></label>
+            <input
+              id="vendor_quotation_date"
+              class="qnew__control"
+              type="date"
+              name="vendor_quotation_date"
+              [(ngModel)]="vendor_quotation_date"
+              required
+            />
+          </div>
+
+          <div class="qnew__field">
+            <label class="qnew__label" for="document">Upload Quotation (If Any)</label>
+            <input
+              id="document"
+              class="qnew__control qnew__file"
+              type="file"
+              name="document"
+              ngModel
+              (change)="onFileChanged($event)"
+              accept="application/pdf"
+            />
+          </div>
+        </div>
+
+        <div class="qnew__section">
+          <div class="qnew__section-title">Add Materials</div>
+          <div class="qnew__table-scroll">
+            <table class="qnew__table">
+              <thead>
+                <tr>
+                  <th class="qnew__col-select">Select</th>
+                  <th class="qnew__col-type">Material Type</th>
+                  <th class="qnew__col-code">Material Code</th>
+                  <th class="qnew__col-name">Material Name</th>
+                  <th class="qnew__col-amt">Quot. Amt.</th>
+                  <th class="qnew__col-curr">Currency</th>
+                  <th class="qnew__col-tax">Tax %</th>
+                  <th class="qnew__col-pack">Pack Size</th>
+                  <th class="qnew__col-unit">Unit</th>
+                  <th class="qnew__col-valid">Valid Till</th>
+                  <th class="qnew__col-past">Past Quotation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!materials_data?.length">
+                  <td class="qnew__empty" colspan="11">Select a vendor to load materials</td>
+                </tr>
+                <tr *ngFor="let item of materials_data; let i = index">
+                  <td class="qnew__col-select">
+                    <input
+                      type="checkbox"
+                      class="qnew__checkbox"
+                      name="selected{{ i }}"
+                      [(ngModel)]="item.selected"
+                      [attr.aria-label]="'Select row ' + (i + 1)"
+                    />
+                  </td>
+                  <td class="qnew__col-type" [title]="item.material_type">{{ item.material_type }}</td>
+                  <td class="qnew__col-code" [title]="item.material_code">{{ item.material_code }}</td>
+                  <td class="qnew__col-name" [title]="item.material_name">{{ item.material_name }}</td>
+                  <td class="qnew__col-amt">
+                    <input
+                      type="text"
+                      class="qnew__control qnew__control--sm"
+                      name="quotation_amt{{ i }}"
+                      [(ngModel)]="item.quotation_amt"
+                      (ngModelChange)="onMaterialValueChange(item)"
+                      aria-label="Quotation amount"
+                    />
+                  </td>
+                  <td class="qnew__col-curr">
+                    <select
+                      class="qnew__control qnew__control--sm qnew__select-plain"
+                      name="currency{{ i }}"
+                      [(ngModel)]="item.currency"
+                      aria-label="Currency"
+                    >
+                      <option value="" disabled>---</option>
+                      <option *ngFor="let curr of getAvailableCurrencies()" [value]="curr.code">{{ curr.code }}</option>
+                    </select>
+                  </td>
+                  <td class="qnew__col-tax">{{ item.gst }}</td>
+                  <td class="qnew__col-pack">
+                    <input
+                      type="text"
+                      class="qnew__control qnew__control--sm"
+                      name="pack_size{{ i }}"
+                      [(ngModel)]="item.pack_size"
+                      (ngModelChange)="onMaterialValueChange(item)"
+                      aria-label="Pack size"
+                    />
+                  </td>
+                  <td class="qnew__col-unit">
+                    <select
+                      class="qnew__control qnew__control--sm qnew__select-plain"
+                      name="pack_size_unit{{ i }}"
+                      [(ngModel)]="item.pack_size_unit"
+                      aria-label="Unit"
+                    >
+                      <option value=""></option>
+                      <option *ngFor="let unit of units" [value]="unit.unit">{{ unit.unit }}</option>
+                    </select>
+                  </td>
+                  <td class="qnew__col-valid">
+                    <input
+                      type="date"
+                      class="qnew__control qnew__control--sm"
+                      name="validTill{{ i }}"
+                      [(ngModel)]="item.validTill"
+                      aria-label="Valid till"
+                    />
+                  </td>
+                  <td class="qnew__col-past">
+                    <button type="button" class="qnew__btn qnew__btn--view" (click)="viewComap(item)">
+                      {{ 'common.view' | translate }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="qnew__footer">
+      <button type="button" class="qnew__btn qnew__btn--save" (click)="save(quatationForm)">
+        {{ 'common.save' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isOpen" [clrModalSize]="'xl'" class="qnew-modal">
+  <h3 class="modal-title">Quotation Comparative Chart</h3>
+  <div class="modal-body qnew-modal__body">
+    <div class="qnew-modal__table-wrap">
+      <table class="qnew-modal__table">
+        <thead>
+          <tr>
+            <th class="qnew-modal__th qnew-modal__col-sr">{{ 'common.table.srNo' | translate }}</th>
+            <th class="qnew-modal__th qnew-modal__th--left qnew-modal__col-vendor">Vendor Name</th>
+            <th class="qnew-modal__th qnew-modal__col-no">Quotation No.</th>
+            <th class="qnew-modal__th qnew-modal__col-rate">Quotation Rate</th>
+            <th class="qnew-modal__th qnew-modal__col-curr">Currency</th>
+            <th class="qnew-modal__th qnew-modal__col-date">Quotation Date</th>
+            <th class="qnew-modal__th qnew-modal__col-by">Approved By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let quotation of selectedquoye; let i = index">
+            <td class="qnew-modal__col-sr">{{ i + 1 }}</td>
+            <td class="qnew-modal__td--left qnew-modal__col-vendor" [title]="quotation.vendor_name">{{ quotation.vendor_name }}</td>
+            <td class="qnew-modal__col-no">
+              <ng-container *ngIf="plant_id != '67'">{{ quotation.quotation_no }}</ng-container>
+              <ng-container *ngIf="plant_id == '67'">{{ quotation.vendor_quotation_no }}</ng-container>
+            </td>
+            <td class="qnew-modal__col-rate">{{ quotation.quotation_amt }}</td>
+            <td class="qnew-modal__col-curr">{{ quotation.currency }}</td>
+            <td class="qnew-modal__col-date">{{ quotation.entry_date | date: 'dd-MM-yyyy' }}</td>
+            <td class="qnew-modal__col-by">{{ quotation.approve_by }}</td>
+          </tr>
+          <tr *ngIf="!selectedquoye?.length">
+            <td class="qnew-modal__empty" colspan="7">No comparative quotations found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer qnew-modal__footer">
+    <button type="button" class="qnew__btn qnew__btn--close" (click)="isOpen = false">{{ 'common.cancel' | translate }}</button>
+  </div>
+</clr-modal>

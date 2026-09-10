@@ -1,0 +1,408 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-diagram-project"></i>
+      Configure Stage &amp; Step
+      <span class="eb-sub">All saved configurations (process type + dosage form). Use Add Stage Step to configure, or View Stage Step to see what's saved.</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button type="button" class="eb-btn eb-btn-outline" (click)="loadConfigs()" *ngIf="!formOpen"><i class="fas fa-rotate"></i> Refresh</button>
+      <button type="button" class="eb-btn eb-btn-ghost" (click)="formOpen ? closeForm() : close()">
+        <i class="fas fa-arrow-left"></i> {{ formOpen ? 'Back to list' : 'Back' }}
+      </button>
+    </div>
+  </div>
+
+  <nav class="eb-subtabs" *ngIf="!formOpen">
+    <a class="eb-subtab eb-subtab-active" routerLink="/master/ebmr-bpr/config-stage-step">Configure Stage &amp; Step</a>
+    <a class="eb-subtab" routerLink="/master/ebmr-bpr/map-product">MAP Product</a>
+  </nav>
+
+  <!-- Step 1: Log of all configurations (hidden while editing) -->
+  <ng-container *ngIf="!formOpen">
+    <div class="eb-toolbar">
+      <div class="eb-field" style="min-width: 320px;">
+        <span class="eb-field-label">Search</span>
+        <input class="eb-input" [(ngModel)]="configSearch" placeholder="BMR no, process type, dosage form, title…" />
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="eb-empty" style="padding:16px;">Loading configurations…</div>
+
+    <div *ngIf="!loading && !configs.length" class="eb-empty" style="padding: 16px;">
+      No configurations found. Create one in <b>Configure Master</b> first, then return here to add its stages &amp; steps.
+    </div>
+
+    <div class="eb-panel" *ngIf="!loading && configs.length">
+      <div class="eb-table-wrap">
+        <table class="eb-table css-log-table css-config-list">
+          <colgroup>
+            <col class="col-bmr" />
+            <col class="col-process" />
+            <col class="col-dosage" />
+            <col class="col-title" />
+            <col class="col-counts" />
+            <col class="col-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>BMR No.</th>
+              <th>Process Type</th>
+              <th>Dosage Form</th>
+              <th>Title</th>
+              <th class="css-center">Stages / Steps</th>
+              <th class="css-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!filteredConfigs.length"><td colspan="6" class="eb-empty">No matching configuration.</td></tr>
+            <tr *ngFor="let c of filteredConfigs">
+              <td class="eb-strong">{{ c.bmr_no }}</td>
+              <td class="css-wrap">{{ c.process_type }}</td>
+              <td class="css-wrap">{{ c.dosage_form }}</td>
+              <td class="css-wrap">{{ c.title || '—' }}</td>
+              <td class="css-center">
+                <span class="eb-badge" [ngClass]="stageCount(c) ? 'eb-badge-ok' : 'eb-badge-muted'">
+                  {{ stageCount(c) }} / {{ stepCount(c) }}
+                </span>
+              </td>
+              <td class="css-actions">
+                <button type="button" class="eb-btn eb-btn-sm eb-btn-solid" (click)="openForm(c, $event)">
+                  <i class="fas fa-plus"></i> Add Stage Step
+                </button>
+                <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="viewStageStep(c, $event)">
+                  <i class="fas fa-eye"></i> View Stage Step
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Step 2: addition form (full panel when Add Stage Step is clicked) -->
+  <div class="css-editor-panel" *ngIf="formOpen && selectedConfig" #stageFormPanel>
+    <div class="css-form-head">
+      <div>
+        <span class="css-form-title"><i class="fas fa-diagram-project"></i> Add Stage &amp; Step</span>
+        <span class="css-form-sub">{{ selectedConfig.bmr_no }} · {{ selectedConfig.process_type }} / {{ selectedConfig.dosage_form }}</span>
+      </div>
+      <div class="css-form-head-actions">
+        <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="loadFromProcessMaster()" [disabled]="bindingLoading">
+          <i class="fas fa-download"></i> Load from Stage Master
+        </button>
+        <button type="button" class="eb-icon-btn" title="Close form" (click)="closeForm()"><i class="fas fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div *ngIf="bindingLoading" class="eb-empty" style="padding:12px;">Loading stages…</div>
+
+    <!-- add a stage (each stage accommodates multiple steps) -->
+    <div class="eb-section-title">Stages &amp; Steps <span class="eb-hint">(one stage can hold many steps)</span></div>
+    <div class="eb-toolbar css-add-stage-bar">
+      <div class="eb-field eb-field-grow">
+        <span class="eb-field-label">Add Stage</span>
+        <input
+          class="eb-input"
+          [(ngModel)]="newStageName"
+          list="cssStageList"
+          placeholder="e.g. Compounding"
+          (keyup.enter)="addStage()" />
+        <datalist id="cssStageList">
+          <option *ngFor="let s of stageSuggestions" [value]="s"></option>
+        </datalist>
+      </div>
+      <div class="eb-field" style="align-self: end;">
+        <button type="button" class="eb-btn eb-btn-solid" (click)="addStage()">
+          <i class="fas fa-plus"></i> Add Stage
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="!bindingLoading && !stages.length" class="eb-empty" style="padding: 16px;">
+      No stage added yet. Type a stage name and click <b>Add Stage</b>, or use <b>Load from Stage Master</b>.
+    </div>
+
+    <!-- One card per stage; steps listed under each stage -->
+    <div class="css-stage-card" *ngFor="let stage of stages; let gi = index">
+      <div class="css-stage-head">
+        <span class="css-stage-no">{{ gi + 1 }}</span>
+        <input class="eb-input css-stage-name" [(ngModel)]="stage.stage_name" list="cssStageList" placeholder="Stage name" />
+        <span class="eb-badge eb-badge-muted">{{ stage.steps.length }} step(s)</span>
+        <button type="button" class="eb-icon-btn eb-danger css-stage-del" title="Remove stage" (click)="removeStage(gi)">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+
+      <div class="eb-table-wrap">
+        <table class="eb-table css-log-table css-steps-table">
+          <colgroup>
+            <col class="col-stp" />
+            <col class="col-step" />
+            <col class="col-ipqc" />
+            <col class="col-sampling" />
+            <col class="col-timestamp" />
+            <col class="col-yield" />
+            <col class="col-instruction" />
+            <col class="col-del" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="css-center">Stp</th>
+              <th>Step</th>
+              <th class="css-center">IPQC Test<br/><span class="eb-hint" style="font-weight:400;font-size:0.65rem">Hold until QC release</span></th>
+              <th class="css-center">Sampling By</th>
+              <th class="css-center">Time Stamp</th>
+              <th class="css-center">Yield Recon.</th>
+              <th class="css-center">Equipment Point</th>
+              <th>Instruction</th>
+              <th class="css-center">—</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!stage.steps.length"><td colspan="9" class="eb-empty">No steps yet — add steps for this stage below.</td></tr>
+            <tr *ngFor="let st of stage.steps; let si = index">
+              <td class="css-center">{{ st.step_seq || (si + 1) }}</td>
+              <td class="css-wrap">{{ st.step_name }}</td>
+              <td class="css-center">
+                <span class="eb-badge" [ngClass]="st.ipqc_testing === 'Yes' ? 'eb-badge-ok' : 'eb-badge-muted'">{{ st.ipqc_testing }}</span>
+              </td>
+              <td class="css-center">
+                <span class="eb-badge eb-badge-type" *ngIf="st.ipqc_testing === 'Yes'">{{ st.sampling_by || 'Production' }}</span>
+                <span class="eb-hint" *ngIf="st.ipqc_testing !== 'Yes'">—</span>
+              </td>
+              <td class="css-center">
+                <select class="eb-select css-ts-select" [(ngModel)]="st.time_stamp">
+                  <option value="Applicable">Applicable</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </td>
+              <td class="css-center">
+                <select class="eb-select css-ts-select" [(ngModel)]="st.yield_reconciliation">
+                  <option value="Applicable">Applicable</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </td>
+              <td class="css-center">
+                <select class="eb-select css-ts-select" [(ngModel)]="st.equipment_point">
+                  <option value="Applicable">Applicable</option>
+                  <option value="Not Applicable">Not Applicable</option>
+                </select>
+              </td>
+              <td class="css-wrap">{{ st.instruction || '—' }}</td>
+              <td class="css-center">
+                <button type="button" class="eb-icon-btn eb-danger" title="Remove step" (click)="removeStep(stage, si)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add-step row for this stage -->
+      <div class="css-add-step">
+        <input class="eb-input" type="number" [(ngModel)]="stage.draftStep.step_seq" placeholder="Seq" style="max-width: 70px;" />
+        <input class="eb-input" [(ngModel)]="stage.draftStep.step_name" placeholder="Step name" (keyup.enter)="addStep(stage)" style="flex: 2;" />
+        <select class="eb-select" [(ngModel)]="stage.draftStep.ipqc_testing" style="max-width: 180px;" title="When Yes, next step is held until QC releases IPQC results">
+          <option value="No">IPQC Test: No</option>
+          <option value="Yes">IPQC Test: Yes (hold till QC)</option>
+        </select>
+        <select class="eb-select" [(ngModel)]="stage.draftStep.sampling_by" *ngIf="stage.draftStep.ipqc_testing === 'Yes'" style="max-width: 120px;">
+          <option value="Production">Production</option>
+          <option value="IPQA">IPQA</option>
+        </select>
+        <select class="eb-select" [(ngModel)]="stage.draftStep.time_stamp" style="max-width: 150px;" title="Time Stamp">
+          <option value="Not Applicable">TS: Not Applicable</option>
+          <option value="Applicable">TS: Applicable</option>
+        </select>
+        <select class="eb-select" [(ngModel)]="stage.draftStep.yield_reconciliation" style="max-width: 160px;" title="Yield Reconciliation">
+          <option value="Not Applicable">YR: Not Applicable</option>
+          <option value="Applicable">YR: Applicable</option>
+        </select>
+        <select class="eb-select" [(ngModel)]="stage.draftStep.equipment_point" style="max-width: 160px;" title="Equipment Point">
+          <option value="Not Applicable">EQ: Not Applicable</option>
+          <option value="Applicable">EQ: Applicable</option>
+        </select>
+        <input class="eb-input" [(ngModel)]="stage.draftStep.instruction" placeholder="Instruction (optional)" style="flex: 3;" />
+        <button type="button" class="eb-btn eb-btn-sm eb-btn-outline" (click)="addStep(stage)">
+          <i class="fas fa-plus"></i> Add Step
+        </button>
+      </div>
+    </div>
+
+    <div class="css-save-bar">
+      <span class="eb-hint">{{ stages.length }} stage(s) · {{ totalSteps }} step(s)</span>
+      <button type="button" class="eb-btn eb-btn-outline" (click)="closeForm()">Cancel</button>
+      <button type="button" class="eb-btn eb-btn-solid" (click)="save()" [disabled]="saving || !stages.length">
+        <i class="fas fa-save"></i> {{ saving ? 'Saving…' : 'Save Stage & Step' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VIEW MODAL ===== -->
+<div class="eb-modal-backdrop" *ngIf="viewOpen" (click)="viewOpen=false">
+  <div class="eb-modal eb-modal-lg" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>
+        Stage &amp; Step —
+        <span *ngIf="viewConfig">{{ viewConfig.bmr_no }} · {{ viewConfig.process_type }} / {{ viewConfig.dosage_form }}</span>
+      </h3>
+      <button type="button" class="eb-modal-close" (click)="viewOpen=false">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div *ngIf="!viewRows.length" class="eb-empty">No stage/step saved for this configuration yet.</div>
+      <div class="eb-table-wrap" *ngIf="viewRows.length">
+        <table class="eb-table css-log-table css-view-table">
+          <colgroup>
+            <col class="col-stg" />
+            <col class="col-stage" />
+            <col class="col-stp" />
+            <col class="col-step" />
+            <col class="col-ipqc" />
+            <col class="col-sampling" />
+            <col class="col-timestamp" />
+            <col class="col-yield" />
+            <col class="col-equip" />
+            <col class="col-instruction" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="css-center">Stg</th>
+              <th>Stage</th>
+              <th class="css-center">Stp</th>
+              <th>Step</th>
+              <th class="css-center">IPQC Test<br/><span class="eb-hint" style="font-weight:400;font-size:0.65rem">Hold until QC release</span></th>
+              <th class="css-center">Sampling By</th>
+              <th class="css-center">Time Stamp</th>
+              <th class="css-center">Yield Recon.</th>
+              <th class="css-center">Equipment Point</th>
+              <th>Instruction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let g of viewGrouped; let gi = index">
+              <tr *ngFor="let r of g.steps; let si = index">
+                <td class="eb-strong css-center" *ngIf="si === 0" [attr.rowspan]="g.steps.length">{{ gi + 1 }}</td>
+                <td class="css-wrap" *ngIf="si === 0" [attr.rowspan]="g.steps.length">{{ g.stage }}</td>
+                <td class="css-center">{{ r.step_seq || (si + 1) }}</td>
+                <td class="css-wrap">{{ r.step_name || '—' }}</td>
+                <td class="css-center"><span class="eb-badge" [ngClass]="r.ipqc_testing === 'Yes' ? 'eb-badge-ok' : 'eb-badge-muted'">{{ r.ipqc_testing }}</span></td>
+                <td class="css-center">{{ r.ipqc_testing === 'Yes' ? (r.sampling_by || 'Production') : '—' }}</td>
+                <td class="css-center">
+                  <span class="eb-badge" [ngClass]="normalizeTimeStamp(r.time_stamp) === 'Applicable' ? 'eb-badge-ok' : 'eb-badge-muted'">
+                    {{ normalizeTimeStamp(r.time_stamp) }}
+                  </span>
+                </td>
+                <td class="css-center">
+                  <span class="eb-badge" [ngClass]="normalizeYieldRecon(r.yield_reconciliation) === 'Applicable' ? 'eb-badge-ok' : 'eb-badge-muted'">
+                    {{ normalizeYieldRecon(r.yield_reconciliation) }}
+                  </span>
+                </td>
+                <td class="css-center">
+                  <span class="eb-badge" [ngClass]="normalizeEquipmentPoint(r.equipment_point) === 'Applicable' ? 'eb-badge-ok' : 'eb-badge-muted'">
+                    {{ normalizeEquipmentPoint(r.equipment_point) }}
+                  </span>
+                </td>
+                <td class="css-wrap">{{ r.instruction || '—' }}</td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="css-yr-view" *ngIf="viewYieldSteps.length">
+        <div class="eb-section-title" style="margin-top:1rem">
+          <i class="fas fa-chart-pie"></i> Yield Reconciliation tables (active in execution)
+        </div>
+        <p class="eb-hint" style="margin:0 0 0.6rem">
+          These steps are marked Applicable. Operators will fill quantities during batch execution; Final Yield % and balance are calculated automatically.
+        </p>
+        <div class="css-yr-card" *ngFor="let r of viewYieldSteps">
+          <div class="css-yr-card-head">
+            <span class="eb-strong">{{ r.stage_name }}</span>
+            <span class="eb-hint">/</span>
+            <span>{{ r.step_name }}</span>
+            <span class="eb-badge eb-badge-ok">Applicable</span>
+          </div>
+          <table class="eb-table css-yr-preview">
+            <thead>
+              <tr>
+                <th style="width:38%">Parameter</th>
+                <th style="width:22%">Quantity / Value</th>
+                <th style="width:12%">UOM</th>
+                <th>Formula / Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Total Input Qty</td>
+                <td class="css-yr-blank">Enter in execution</td>
+                <td>kg / g</td>
+                <td class="eb-hint">Starting / charged quantity</td>
+              </tr>
+              <tr>
+                <td>Total Final Qty / Weight</td>
+                <td class="css-yr-blank">Enter in execution</td>
+                <td>kg / g</td>
+                <td class="eb-hint">Output after process</td>
+              </tr>
+              <tr>
+                <td>Wastage</td>
+                <td class="css-yr-blank">Enter in execution</td>
+                <td>kg / g</td>
+                <td class="eb-hint">Process loss / reject</td>
+              </tr>
+              <tr>
+                <td>Sampling</td>
+                <td class="css-yr-blank">Enter in execution</td>
+                <td>kg / g</td>
+                <td class="eb-hint">Sample drawn quantity</td>
+              </tr>
+              <tr class="css-yr-calc">
+                <td><b>Final Yield Qty</b></td>
+                <td><b>= Total Final Qty</b></td>
+                <td>kg / g</td>
+                <td class="eb-hint">Same as final output qty</td>
+              </tr>
+              <tr class="css-yr-calc">
+                <td><b>Final Yield %</b></td>
+                <td><b>= (Final ÷ Input) × 100</b></td>
+                <td>%</td>
+                <td class="eb-hint">Auto-calculated</td>
+              </tr>
+              <tr class="css-yr-calc">
+                <td><b>Balance</b></td>
+                <td><b>= Input − Final − Wastage − Sampling</b></td>
+                <td>kg / g</td>
+                <td class="eb-hint">Should be ~ 0 when fully accounted</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="css-yr-view" *ngIf="viewEquipmentSteps.length">
+        <div class="eb-section-title" style="margin-top:1rem">
+          <i class="fas fa-tools"></i> Equipment Point (active in BMR build &amp; execution)
+        </div>
+        <p class="eb-hint" style="margin:0 0 0.6rem">
+          These steps are marked Applicable. In BMR build, select equipment and IT / ID; in execution operators see name, capacity, ID, calibration applicable, and preventive maintenance status.
+        </p>
+        <div class="css-yr-card" *ngFor="let r of viewEquipmentSteps">
+          <div class="css-yr-card-head">
+            <span class="eb-strong">{{ r.stage_name }}</span>
+            <span class="eb-hint">/</span>
+            <span>{{ r.step_name }}</span>
+            <span class="eb-badge eb-badge-ok">Applicable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button type="button" class="eb-btn eb-btn-ghost" (click)="viewOpen=false">Close</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,360 @@
+<div class="container-fluid scm-page">
+  <div class="card scm-shell-card">
+    <div class="card-header">
+      <div class="scm-dash-header-row">
+        <div class="scm-dash-title">Sampling Checklist Master</div>
+        <button type="button" class="btn btn-sm scm-dash-btn scm-dash-btn-close" routerLink="/master">
+          {{ 'common.close' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <div class="scm-dash-tabs" role="navigation" aria-label="Sampling Checklist Master tabs">
+      <div class="scm-dash-tabs-links">
+        <button type="button" class="scm-dash-tab tab-new" [class.scm-dash-tab--active]="activeTab === 'new'" (click)="activeTab = 'new'">New</button>
+        <button type="button" class="scm-dash-tab tab-priority" [class.scm-dash-tab--active]="activeTab === 'priority'" (click)="activeTab = 'priority'">Priority</button>
+        <button type="button" class="scm-dash-tab tab-checking" [class.scm-dash-tab--active]="activeTab === 'checking'" (click)="activeTab = 'checking'">Checking</button>
+        <button type="button" class="scm-dash-tab tab-approval" [class.scm-dash-tab--active]="activeTab === 'approval'" (click)="activeTab = 'approval'">Approval</button>
+        <button type="button" class="scm-dash-tab tab-log" [class.scm-dash-tab--active]="activeTab === 'log'" (click)="activeTab = 'log'">Log</button>
+        <button type="button" class="scm-dash-tab tab-revision" [class.scm-dash-tab--active]="activeTab === 'revision'" (click)="activeTab = 'revision'">Revision</button>
+        <button type="button" class="scm-dash-tab tab-obsolete" [class.scm-dash-tab--active]="activeTab === 'obsolete'" (click)="activeTab = 'obsolete'">Obsolete</button>
+      </div>
+      <div class="scm-dash-tabs-tools">
+        <div class="scm-search-wrap">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input
+            id="scm-search"
+            type="search"
+            class="scm-search-input"
+            [(ngModel)]="searchQuery"
+            placeholder="Search…"
+            aria-label="Search checklist"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'new'">
+    <div class="card-header scm-section-header">New FG Sampling Checklist</div>
+    <div class="card-block scm-content-body">
+      <form #checklistForm="ngForm" class="scm-form">
+        <div class="scm-form-grid">
+          <div class="scm-field">
+            <label>Sampling Type <span class="scm-req">*</span></label>
+            <select name="sampling_type" [(ngModel)]="formData.sampling_type" required>
+              <option value="Raw Material Sampling">Raw Material Sampling</option>
+              <option value="Packing Material Sampling">Packing Material Sampling</option>
+              <option value="Finished Goods Sampling">Finished Goods Sampling</option>
+              <option value="Microbiology Sampling">Microbiology Sampling</option>
+              <option value="Water Sampling">Water Sampling</option>
+              <option value="Vendor Sample">Vendor Sample</option>
+            </select>
+          </div>
+          <div class="scm-field scm-field--wide">
+            <label>Checklist Title <span class="scm-req">*</span></label>
+            <input type="text" name="checklist_title" [(ngModel)]="formData.checklist_title" required autocomplete="off" />
+          </div>
+          <div class="scm-field">
+            <label>Effective Date <span class="scm-req">*</span></label>
+            <input type="date" name="effective_date" [(ngModel)]="formData.effective_date" required />
+          </div>
+          <div class="scm-field">
+            <label>Next Review Date <span class="scm-req">*</span></label>
+            <input type="date" name="next_review_date" [(ngModel)]="formData.next_review_date" required />
+          </div>
+        </div>
+
+        <h5 class="scm-subsection-title">Checkpoints (Pharma Raw Material Sampling)</h5>
+        <div class="scm-table-wrap">
+          <table class="table table-bordered table-sm scm-checkpoint-table">
+            <thead>
+              <tr>
+                <th class="scm-col-point">Check Point</th>
+                <th class="scm-col-desc">Checkpoint Description</th>
+                <th class="scm-col-particular">Checkpoint Particular</th>
+                <th class="scm-col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let cp of formData.checkpoints; let i = index">
+                <td>
+                  <input type="text" [(ngModel)]="cp.checkpoint" [ngModelOptions]="{standalone: true}" />
+                </td>
+                <td>
+                  <input type="text" [(ngModel)]="cp.checkpoint_description" [ngModelOptions]="{standalone: true}" />
+                </td>
+                <td>
+                  <select [(ngModel)]="cp.checkpoint_particular" [ngModelOptions]="{standalone: true}">
+                    <option value="Remark">Remark</option>
+                    <option value="Available/Not Available">Available/Not Available</option>
+                    <option value="Cleaned">Cleaned</option>
+                    <option value="OK/Not OK">OK/Not OK</option>
+                    <option value="Checked/Not Checked">Checked/Not Checked</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </td>
+                <td class="scm-cell-action">
+                  <button type="button" class="btn btn-sm btn-danger scm-btn-del" (click)="removeCheckpoint(i)">Del</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="scm-form-actions">
+          <button type="button" class="btn btn-sm btn-info scm-btn-add" (click)="addCheckpoint()">Add Checkpoint</button>
+          <button type="button" class="btn btn-primary scm-btn-save" (click)="saveChecklist(checklistForm)">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'priority'">
+    <div class="card-header scm-section-header">Priority of Checkpoints</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-form-grid scm-form-grid--single">
+        <div class="scm-field">
+          <label>Select Checklist No.</label>
+          <select [(ngModel)]="selectedChecklistForPriority" (ngModelChange)="loadPriorityRows($event)">
+            <option value="">-- Select --</option>
+            <option *ngFor="let r of approvedRowsForPriority" [value]="r.checklist_no">{{ r.checklist_no }} / Rev {{ r.revision_no }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="scm-table-wrap" *ngIf="priorityRows.length > 0">
+        <table class="table table-bordered table-sm scm-priority-table">
+          <thead>
+            <tr>
+              <th>Checkpoint</th>
+              <th>Description</th>
+              <th class="scm-col-priority">Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of priorityRows">
+              <td>{{ p.checkpoint }}</td>
+              <td>{{ p.checkpoint_description || '-' }}</td>
+              <td>
+                <input type="number" min="1" [(ngModel)]="p.priority_no" [ngModelOptions]="{standalone: true}" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scm-form-actions">
+        <button type="button" class="btn btn-primary scm-btn-save" [disabled]="prioritySaving || priorityRows.length === 0" (click)="savePriority()">
+          {{ prioritySaving ? 'Saving...' : 'Save Priority' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'log'">
+    <div class="card-header scm-section-header">Checklist Log</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-datagrid-wrap">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Checklist No</clr-dg-column>
+          <clr-dg-column>Sampling Type</clr-dg-column>
+          <clr-dg-column>Revision No</clr-dg-column>
+          <clr-dg-column>Supersed No</clr-dg-column>
+          <clr-dg-column>Title</clr-dg-column>
+          <clr-dg-column>Effective Date</clr-dg-column>
+          <clr-dg-column>Next Review Date</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>View</clr-dg-column>
+          <clr-dg-column>Approval Matrix</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let row of filteredLog; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.sampling_type || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.revision_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.supersede_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_title }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.effective_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.next_review_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.status }}</clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view"><button type="button" class="btn btn-sm btn-info scm-btn-view" (click)="openView(row)">View</button></clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view">
+              <button *ngIf="row.status === 'Pending' && ischecker === 'Yes'" type="button" class="btn btn-sm btn-warning scm-btn-view" (click)="updateStatus(row, 'Checked')">Check</button>
+              <button *ngIf="row.status === 'Checked' && isapprover === 'Yes'" type="button" class="btn btn-sm btn-success scm-btn-view" (click)="updateStatus(row, 'Approved')">Approve</button>
+              <span *ngIf="!(row.status === 'Pending' && ischecker === 'Yes') && !(row.status === 'Checked' && isapprover === 'Yes')">-</span>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'checking'">
+    <div class="card-header scm-section-header">Checklist Checking</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-datagrid-wrap">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Checklist No</clr-dg-column>
+          <clr-dg-column>Sampling Type</clr-dg-column>
+          <clr-dg-column>Revision No</clr-dg-column>
+          <clr-dg-column>Title</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>View</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+          <clr-dg-row *clrDgItems="let row of checkingRows; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.sampling_type || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.revision_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_title }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.status }}</clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view"><button type="button" class="btn btn-sm btn-info scm-btn-view" (click)="openView(row)">View</button></clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view">
+              <button type="button" class="btn btn-sm btn-warning scm-btn-view" [disabled]="ischecker !== 'Yes'" (click)="updateStatus(row, 'Checked')">Check</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'approval'">
+    <div class="card-header scm-section-header">Checklist Approval</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-datagrid-wrap">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Checklist No</clr-dg-column>
+          <clr-dg-column>Sampling Type</clr-dg-column>
+          <clr-dg-column>Revision No</clr-dg-column>
+          <clr-dg-column>Title</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>View</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+          <clr-dg-row *clrDgItems="let row of approvalRows; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.sampling_type || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.revision_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_title }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.status }}</clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view"><button type="button" class="btn btn-sm btn-info scm-btn-view" (click)="openView(row)">View</button></clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view">
+              <button type="button" class="btn btn-sm btn-success scm-btn-view" [disabled]="isapprover !== 'Yes'" (click)="updateStatus(row, 'Approved')">Approve</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'revision'">
+    <div class="card-header scm-section-header">Revision</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-datagrid-wrap">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Checklist No</clr-dg-column>
+          <clr-dg-column>Sampling Type</clr-dg-column>
+          <clr-dg-column>Revision No</clr-dg-column>
+          <clr-dg-column>Next Review Date</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>Revision Action</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let row of checklistLog; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.sampling_type || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.revision_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.next_review_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.status }}</clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view">
+              <button
+                type="button"
+                class="btn btn-sm scm-btn-view"
+                [ngClass]="getRevisionButtonClass(row)"
+                [disabled]="!isRevisionRowEligible(row) || isRevisionButtonDisabled(row)"
+                (click)="onRevisionAction(row)"
+              >
+                {{ getRevisionButtonLabel(row) }}
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+
+  <div class="card scm-content-card" *ngIf="activeTab === 'obsolete'">
+    <div class="card-header scm-section-header">Obsolete Checklist</div>
+    <div class="card-block scm-content-body">
+      <div class="scm-datagrid-wrap">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Checklist No</clr-dg-column>
+          <clr-dg-column>Revision No</clr-dg-column>
+          <clr-dg-column>Supersed No</clr-dg-column>
+          <clr-dg-column>Title</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>View</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let row of obsoleteRows; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.revision_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.supersede_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.checklist_title }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.status }}</clr-dg-cell>
+            <clr-dg-cell class="scm-cell-view"><button type="button" class="btn btn-sm btn-info scm-btn-view" (click)="openView(row)">View</button></clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="viewModalOpen" [clrModalClosable]="true" clrModalSize="lg">
+  <h3 class="modal-title">Checklist View</h3>
+  <div class="modal-body" *ngIf="selectedViewRow">
+    <p><b>Checklist No:</b> {{ selectedViewRow.checklist_no }}</p>
+    <p><b>Sampling Type:</b> {{ selectedViewRow.sampling_type || '-' }}</p>
+    <p><b>Revision No:</b> {{ selectedViewRow.revision_no }}</p>
+    <p><b>Supersed No:</b> {{ selectedViewRow.supersede_no || '-' }}</p>
+    <table class="table table-bordered table-sm">
+      <tr>
+        <th>Priority</th>
+        <th>Check Point</th>
+        <th>Description</th>
+        <th>Checkpoint Particular</th>
+      </tr>
+      <tr *ngFor="let cp of selectedViewRow.checkpoints">
+        <td>{{ cp.priority_no }}</td>
+        <td>{{ cp.checkpoint }}</td>
+        <td>{{ cp.checkpoint_description || '-' }}</td>
+        <td>{{ cp.checkpoint_particular || cp.remark_type || '-' }}</td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="viewModalOpen = false">Close</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="revisionModalOpen" [clrModalClosable]="true">
+  <h3 class="modal-title">Revision Request Form</h3>
+  <div class="modal-body" *ngIf="selectedRevisionRow">
+    <div class="clr-form-group">
+      <label>Reason <span style="color:red">*</span></label>
+      <input type="text" [(ngModel)]="revisionForm.reason" [ngModelOptions]="{standalone: true}" />
+    </div>
+    <div class="clr-form-group">
+      <label>Remarks</label>
+      <textarea rows="3" [(ngModel)]="revisionForm.remarks" [ngModelOptions]="{standalone: true}"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()">Submit</button>
+    <button type="button" class="btn btn-outline" (click)="closeRevisionModal()">Cancel</button>
+  </div>
+</clr-modal>

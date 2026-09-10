@@ -1,0 +1,159 @@
+<div class="card dq-shell" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">{{ title }}</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" type="button" [routerLink]="closeRoute">{{ 'common.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="dq-toolbar" *ngIf="isCalendar">
+      <button class="btn btn-sm btn-outline" type="button" (click)="prevMonth()" [disabled]="loading">‹ Prev</button>
+      <h4 class="dq-month">{{ monthLabel }}</h4>
+      <button class="btn btn-sm btn-outline" type="button" (click)="nextMonth()" [disabled]="loading">Next ›</button>
+      <button class="btn btn-sm btn-primary" type="button" (click)="loadMonth()" [disabled]="loading">Refresh</button>
+    </div>
+
+    <div class="dq-weekdays" *ngIf="isCalendar">
+      <div class="dq-weekday" *ngFor="let w of weekLabels">{{ w }}</div>
+    </div>
+    <div class="dq-grid" *ngIf="isCalendar" [class.dq-grid--loading]="loading">
+      <button
+        type="button"
+        class="dq-day"
+        *ngFor="let day of calendarDays"
+        [class.dq-day--muted]="!day.inMonth"
+        [class.dq-day--selected]="day.date === selectedDate"
+        [class.dq-day--has]="day.count > 0"
+        (click)="selectDay(day)"
+      >
+        <span class="dq-day__num">{{ day.day }}</span>
+        <span class="dq-day__count" *ngIf="day.count > 0">{{ day.count }}</span>
+      </button>
+    </div>
+
+    <div class="clr-row dq-filters" *ngIf="!isCalendar && queue !== 'reminders'">
+      <div class="clr-col-lg-3">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="fromDate" />
+      </div>
+      <div class="clr-col-lg-3">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="toDate" />
+      </div>
+      <div class="clr-col-lg-4 dq-filters__actions">
+        <button class="btn btn-primary" type="button" (click)="fetchList()" [disabled]="loading">SEARCH</button>
+        <button class="btn btn-outline" type="button" (click)="setCurrentMonth()" [disabled]="loading">CURRENT MONTH</button>
+      </div>
+    </div>
+
+    <div class="clr-row" style="margin-bottom: 0.75rem">
+      <div class="clr-col-lg-4">
+        <input type="search" class="clr-input" placeholder="Search brand, client, country…" [(ngModel)]="searchQuery" />
+      </div>
+    </div>
+
+    <p class="dq-note" *ngIf="isCalendar">Showing dossiers for {{ selectedDate | date: 'dd-MM-yyyy' }}</p>
+    <p class="dq-note" *ngIf="queue === 'reminders'">Upcoming renewals / expected dates in the next 90 days.</p>
+
+    <clr-datagrid [clrDgLoading]="loading">
+      <clr-dg-column>#</clr-dg-column>
+      <clr-dg-column>Req. No</clr-dg-column>
+      <clr-dg-column>Brand Name</clr-dg-column>
+      <clr-dg-column>Generic Name</clr-dg-column>
+      <clr-dg-column>Client</clr-dg-column>
+      <clr-dg-column>Country</clr-dg-column>
+      <clr-dg-column *ngIf="queue === 'reminders'">Expected / Renewal</clr-dg-column>
+      <clr-dg-column *ngIf="queue !== 'reminders'">Expected Date</clr-dg-column>
+      <clr-dg-column>Status</clr-dg-column>
+      <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let row of filteredResults; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.dossier_req_id || row.id || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.brand_name || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.generic_name || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.client_name || '—' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.country || '—' }}</clr-dg-cell>
+        <clr-dg-cell *ngIf="queue === 'reminders'">
+          {{ (row.renewal_date || row.expected_date) | date: 'dd-MM-yyyy' }}
+        </clr-dg-cell>
+        <clr-dg-cell *ngIf="queue !== 'reminders'">{{ row.expected_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ statusLabel(row.wf_status || row.status) }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" type="button" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button
+            class="btn btn-sm btn-success"
+            type="button"
+            *ngIf="queue === 'compilation' || queue === 'review' || queue === 'approval'"
+            (click)="advance(row)"
+          >
+            {{ queue === 'approval' ? 'Approve' : 'Send Next' }}
+          </button>
+          <button
+            class="btn btn-sm btn-warning"
+            type="button"
+            *ngIf="queue === 'compilation' || queue === 'review' || queue === 'approval'"
+            (click)="reject(row)"
+          >
+            Reject
+          </button>
+        </clr-dg-cell>
+      </clr-dg-row>
+
+      <clr-dg-placeholder>No records found.</clr-dg-placeholder>
+    </clr-datagrid>
+  </div>
+</div>
+
+<div class="card dq-shell" *ngIf="isView && selected">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Dossier — {{ selected.dossier_req_id || selected.id }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-secondary" type="button" (click)="closeView()">Back</button>
+        <button class="btn btn-sm btn-danger" type="button" (click)="closeView()">{{ 'common.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <table class="table">
+      <tr>
+        <td style="text-align:left;width:20%">Brand Name</td>
+        <td style="text-align:left">{{ selected.brand_name || '—' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Generic Name</td>
+        <td style="text-align:left">{{ selected.generic_name || '—' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Client</td>
+        <td style="text-align:left">{{ selected.client_name || '—' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Country</td>
+        <td style="text-align:left">{{ selected.country || '—' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Packing Style</td>
+        <td style="text-align:left">{{ selected.packing_style || '—' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Expected Date</td>
+        <td style="text-align:left">{{ selected.expected_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Status</td>
+        <td style="text-align:left">{{ statusLabel(selected.wf_status || selected.status) }}</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">Remark</td>
+        <td style="text-align:left">{{ selected.special_remark || '—' }}</td>
+      </tr>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,165 @@
+<div class="cc-new-form">
+  <div class="cc-card">
+    <div class="cc-card-header">
+      <strong>INITIATION OF CHANGE CONTROL</strong>
+      <button type="button" class="cc-btn cc-btn-close" routerLink="/qa/qms/change-control">
+        <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+      </button>
+    </div>
+    <div class="cc-card-body">
+      <form #changecontrol="ngForm" class="cc-form">
+        <!-- Initiating Department -->
+        <section class="cc-section">
+          <h3 class="cc-section-title">INITIATING DEPARTMENT</h3>
+          <div class="cc-grid-3">
+            <div class="cc-field">
+              <label>Department Name</label>
+              <input type="text" name="department_name" [(ngModel)]="department_name" readonly class="cc-input" />
+            </div>
+            <div class="cc-field">
+              <label>Initiation Date <span class="cc-required">*</span></label>
+              <input type="date" name="initiationDate" [(ngModel)]="initiationDate" required
+                [max]="maxDate" #initDate="ngModel" class="cc-input" />
+              <small class="cc-hint" *ngIf="initiationDate && !isPastOrToday(initiationDate)">Date cannot be in the future.</small>
+              <small class="cc-error" *ngIf="initDate.touched && initDate.errors?.required">Required</small>
+            </div>
+            <div class="cc-field">
+              <label>Title Of Change Control <span class="cc-required">*</span></label>
+              <input type="text" name="titleOfcc" [(ngModel)]="titleOfcc" required class="cc-input" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Type of Change - Checkboxes -->
+        <section class="cc-section">
+          <h3 class="cc-section-title">TYPE OF CHANGE</h3>
+          <div class="cc-field">
+            <label>Type of Change <span class="cc-required">*</span></label>
+            <div class="cc-checkbox-group">
+              <label class="cc-checkbox-item" *ngFor="let opt of typeOfChangeOptions">
+                <input type="checkbox" [value]="opt.value" [checked]="isChangeTypeSelected(opt.value)"
+                  (change)="toggleChangeType(opt.value)" />
+                <span>{{ opt.label }}</span>
+              </label>
+            </div>
+            <small class="cc-error" *ngIf="changecontrol.submitted && changeReqForList.length === 0">Select at least one type.</small>
+          </div>
+          <div class="cc-field cc-field-other" *ngIf="changeReqForList.indexOf('Other') !== -1">
+            <label>Changed Requested For (Other) <span class="cc-required">*</span></label>
+            <input type="text" name="changeReqForOther" [(ngModel)]="changeReqForOther"
+              [required]="changeReqForList.indexOf('Other') !== -1" class="cc-input" />
+          </div>
+        </section>
+
+        <!-- Change Initiation -->
+        <section class="cc-section">
+          <h3 class="cc-section-title">CHANGE INITIATION</h3>
+          <div class="cc-field cc-field-full">
+            <label>REASON & JUSTIFICATION OF PROPOSED CHANGE <span class="cc-required">*</span></label>
+            <textarea name="JUSTIFICATION" [(ngModel)]="justification" required class="cc-textarea"
+              rows="3" placeholder="Enter reason and justification..."></textarea>
+          </div>
+          <div class="cc-row-capa">
+            <div class="cc-field">
+              <label>Is the Change due to CAPA <span class="cc-required">*</span></label>
+              <select name="changeCAPA" [(ngModel)]="changeCAPA" required class="cc-select">
+                <option value="" disabled selected>-- Select --</option>
+                <option value="YES">YES</option>
+                <option value="NO">NO</option>
+              </select>
+            </div>
+            <div class="cc-field" *ngIf="changeCAPA === 'YES'">
+              <label>CAPA <span class="cc-required">*</span></label>
+              <input type="text" name="capaDetails" [(ngModel)]="capaDetails"
+                [required]="changeCAPA === 'YES'" class="cc-input" />
+            </div>
+            <div class="cc-field" *ngIf="changeCAPA === 'YES'">
+              <label>Dated On <span class="cc-required">*</span></label>
+              <input type="date" name="capaDate" [(ngModel)]="capaDate"
+                [required]="changeCAPA === 'YES'" [max]="maxDate" class="cc-input" />
+            </div>
+          </div>
+          <div class="cc-field cc-field-full">
+            <label>DETAILS OF PROPOSED CHANGE <span class="cc-required">*</span></label>
+            <textarea name="PROPOSED" [(ngModel)]="proposed" required class="cc-textarea"
+              rows="3" placeholder="Enter details of proposed change..."></textarea>
+          </div>
+        </section>
+
+        <section class="cc-section" *ngIf="linkedSpecNo || linkedMoaDocNo">
+          <h3 class="cc-section-title">Edit History</h3>
+          <table class="table table-bordered table-sm">
+            <tr>
+              <th>Sr. No</th>
+              <th>Draft Particular</th>
+              <th>REJECTED FROM DEPARTMENT</th>
+              <th>Rejected By</th>
+              <th>View</th>
+            </tr>
+            <tr *ngFor="let h of editHistory; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ h.draft_particular || '-' }}</td>
+              <td>{{ h.rejected_from_department || '-' }}</td>
+              <td>{{ h.rejected_by || '-' }}</td>
+              <td>
+                <button type="button" class="btn btn-sm btn-info" (click)="openDraftPreview()">View</button>
+              </td>
+            </tr>
+            <tr *ngIf="editHistory.length === 0">
+              <td colspan="5">No edit history.</td>
+            </tr>
+          </table>
+        </section>
+
+        <div class="cc-card-footer">
+          <button type="button" class="cc-btn cc-btn-primary" (click)="saveForm(changecontrol)">SUBMIT</button>
+          <button type="button" class="cc-btn cc-btn-secondary" *ngIf="linkedSpecNo || linkedMoaDocNo" (click)="openDraftPreview()">
+            {{ linkedMoaDocNo ? 'View Draft MOA/STP' : 'View Draft Specification' }}
+          </button>
+          <button type="button" class="cc-btn cc-btn-danger" routerLink="/qa/qms/change-control">CLOSE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="draftPreviewOpen" clrModalSize="lg">
+  <h3 class="modal-title">{{ linkedMoaDocNo ? 'Draft MOA/STP Preview' : 'Draft Specification Preview' }}</h3>
+  <div class="modal-body" *ngIf="draftPreview?.draft_data as d">
+    <p><strong>{{ linkedMoaDocNo ? 'MOA/STP No.' : 'Specification:' }}</strong> {{ linkedMoaDocNo ? d.doc_no : d.specification_no }}</p>
+    <p><strong>Draft Version:</strong> {{ d.draft_version_no }}</p>
+    <p><strong>{{ linkedMoaDocNo ? 'Test Type' : 'Type:' }}</strong> {{ linkedMoaDocNo ? d.test_type : d.spec_type }}</p>
+    <p>
+      <strong>{{ linkedMoaDocNo ? 'Test' : 'Item:' }}</strong>
+      {{ linkedMoaDocNo ? d.test : d.material_name }} <span *ngIf="!linkedMoaDocNo">({{ d.material_code }})</span>
+    </p>
+    <div *ngIf="!linkedMoaDocNo">
+      <p><strong>Reason / Justification:</strong></p>
+      <p>{{ d.hazardAndPrecautions || '-' }}</p>
+    </div>
+    <div *ngIf="!linkedMoaDocNo && d.spectTests?.length">
+      <h5>Tests</h5>
+      <table class="table table-bordered table-sm">
+        <tr><th>Type</th><th>Test</th><th>Subtest</th><th>Limits</th></tr>
+        <tr *ngFor="let t of d.spectTests">
+          <td>{{ t.test_type }}</td>
+          <td>{{ t.test }}</td>
+          <td>{{ t.subtest }}</td>
+          <td>{{ t.limits }}</td>
+        </tr>
+      </table>
+    </div>
+    <div *ngIf="linkedMoaDocNo && d.subtests?.length">
+      <h5>Subtests</h5>
+      <table class="table table-bordered table-sm">
+        <tr><th>Subtest</th></tr>
+        <tr *ngFor="let s of d.subtests">
+          <td>{{ s.subtest }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="draftPreviewOpen = false">Close</button>
+  </div>
+</clr-modal>

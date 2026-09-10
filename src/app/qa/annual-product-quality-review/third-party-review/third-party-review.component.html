@@ -1,0 +1,209 @@
+<div class="card rcd-form">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        <span *ngIf="isLog && !isView">Third Party APQR Review Log (FQA-027-A)</span>
+        <span *ngIf="!isLog">APQR/APR Summary — 3rd Party Generated Reports</span>
+        <span *ngIf="isView">View Third Party Review</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" *ngIf="isLog && !isView" routerLink="/qa/annual-product-quality-review/third-party/new" style="margin-right: 0.35rem">New Review</button>
+        <button class="btn btn-sm btn-secondary" *ngIf="!isLog || isView" routerLink="/qa/annual-product-quality-review/third-party/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/annual-product-quality-review" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <ng-container *ngIf="isLog && !isView">
+      <div class="clr-row rcd-form__filters">
+        <div class="clr-col-lg-3"><label>From</label><input type="date" class="rcd-form__input" [(ngModel)]="fromDate" /></div>
+        <div class="clr-col-lg-3"><label>To</label><input type="date" class="rcd-form__input" [(ngModel)]="toDate" /></div>
+        <div class="clr-col-lg-3" style="padding-top: 1.2rem"><button class="btn btn-sm btn-primary" (click)="getLog()">Search</button></div>
+      </div>
+      <div class="rcd-form__scroll-wrap">
+        <table class="table table-compact rcd-form__log-table">
+          <thead>
+            <tr>
+              <th>Sr.</th>
+              <th>Third Party</th>
+              <th>Product</th>
+              <th>Reporting Period</th>
+              <th>Received</th>
+              <th>Disposition</th>
+              <th>QA Reviewer</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of results; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ r.third_party_name }}</td>
+              <td>{{ r.product_name }}</td>
+              <td>{{ r.reporting_from | date: 'dd-MM-yyyy' }} — {{ r.reporting_to | date: 'dd-MM-yyyy' }}</td>
+              <td>{{ r.report_received_date | date: 'dd-MM-yyyy' }}</td>
+              <td><span class="label" [ngClass]="statusClass(r.final_disposition)">{{ r.final_disposition }}</span></td>
+              <td>{{ r.qa_reviewer }}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="viewRecord(r)">View</button>
+                <button class="btn btn-sm btn-warning" (click)="downloadPdf(r)">PDF</button>
+              </td>
+            </tr>
+            <tr *ngIf="!results?.length"><td colspan="8" style="text-align:center">No records found</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <form #tpForm="ngForm" *ngIf="!isLog || isView">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate }}</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="rcd-form__title-cell">APQR / APR SUMMARY OF 3RD PARTY GENERATED REPORTS</td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__note">
+        Per SOP-QA-027 §2: QA reviews third-party APQR/APR for completeness, regulatory compliance, and quality agreement status.
+        Product may be selected from master or entered manually; third-party name and assessments are manual entry.
+      </p>
+
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Third Party / Contractor <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <input class="rcd-form__input" name="thirdPartyName" [(ngModel)]="thirdPartyName" required [readonly]="isView" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product Source</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label *ngIf="!isView"><input type="radio" name="tpProductMode" value="master" [(ngModel)]="productSelectMode" /> Product Master</label>
+            <label *ngIf="!isView" style="margin-left:1rem"><input type="radio" name="tpProductMode" value="manual" [(ngModel)]="productSelectMode" /> Manual</label>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select *ngIf="!isView && productSelectMode === 'master'" class="rcd-form__select" name="tpProductCode" [(ngModel)]="productCode" required (change)="onProductChange()">
+              <option value="">-- Select --</option>
+              <option *ngFor="let p of products" [value]="p.product_code">{{ p.product_name }}</option>
+            </select>
+            <input *ngIf="!isView && productSelectMode === 'manual'" class="rcd-form__input" name="tpProductName" [(ngModel)]="productName" required />
+            <span *ngIf="isView">{{ productName }}</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">NDA / ANDA Ref.</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" name="tpRegRef" [(ngModel)]="regulatoryRef" [readonly]="isView" /></td>
+          <td class="rcd-form__label-cell">Report Received Date <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell"><input type="date" class="rcd-form__input" name="reportReceivedDate" [(ngModel)]="reportReceivedDate" required [readonly]="isView" /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Reporting Period From <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell"><input type="date" class="rcd-form__input" name="tpFrom" [(ngModel)]="reportingFrom" required [readonly]="isView" /></td>
+          <td class="rcd-form__label-cell">Reporting Period To <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell"><input type="date" class="rcd-form__input" name="tpTo" [(ngModel)]="reportingTo" required [readonly]="isView" /></td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">Quality Agreement Review (SOP §2.3)</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Agreement Review Notes</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" rows="3" name="qaReview" [(ngModel)]="qualityAgreementReview" [readonly]="isView"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Agreement Status</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select class="rcd-form__select" name="qaStatus" [(ngModel)]="qualityAgreementStatus" [disabled]="isView">
+              <option value="">-- Select --</option>
+              <option *ngFor="let o of agreementStatusOptions" [value]="o">{{ o }}</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">Report Evaluation (SOP §2.2–2.4)</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Completeness Assessment</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" rows="3" name="completeness" [(ngModel)]="completenessAssessment" [readonly]="isView"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Regulatory Compliance Assessment</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" rows="3" name="compliance" [(ngModel)]="complianceAssessment" [readonly]="isView"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Additional Information Required?</td>
+          <td class="rcd-form__value-cell">
+            <select class="rcd-form__select" name="addInfo" [(ngModel)]="additionalInfoRequired" [disabled]="isView">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+            </select>
+          </td>
+          <td class="rcd-form__label-cell">Details (if Yes)</td>
+          <td class="rcd-form__value-cell">
+            <textarea class="rcd-form__textarea" rows="2" name="addInfoDetails" [(ngModel)]="additionalInfoDetails" [readonly]="isView"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Final Disposition <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select class="rcd-form__select" name="finalDisposition" [(ngModel)]="finalDisposition" required [disabled]="isView">
+              <option value="">-- Select --</option>
+              <option *ngFor="let o of dispositionOptions" [value]="o">{{ o }}</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">File Reference / Location</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <input class="rcd-form__input" name="fileRef" [(ngModel)]="fileReference" [readonly]="isView" placeholder="QA filing reference for approved 3rd party report + FQA-027-A" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">QA Reviewer Remarks</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" rows="3" name="remarks" [(ngModel)]="remarks" [readonly]="isView"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">QA &amp; Compliance Reviewer</td>
+          <td class="rcd-form__value-cell">{{ qaReviewer }}</td>
+          <td class="rcd-form__label-cell">Review Date</td>
+          <td class="rcd-form__value-cell">{{ isView ? (selectedRecord?.entry_date | date: 'dd-MM-yyyy') : (reportReceivedDate | date: 'dd-MM-yyyy') }}</td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose Without Authorization</p>
+
+      <div *ngIf="!isView" style="margin-top: 0.75rem">
+        <button type="button" class="btn btn-sm btn-primary" (click)="save(tpForm)">Save &amp; File Review</button>
+      </div>
+      <div *ngIf="isView" style="margin-top: 0.75rem">
+        <button type="button" class="btn btn-sm btn-warning" (click)="downloadPdf(selectedRecord)">PDF</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="closeView()" style="margin-left: 0.35rem">Close</button>
+      </div>
+    </form>
+  </div>
+</div>

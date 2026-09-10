@@ -1,0 +1,144 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Purchase Rate Contract Log
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button class="btn btn-sm btn-primary" routerLink="/accounts/prc/contract" style="margin-right: 5px;">
+            <i class="fas fa-plus"></i> New Contract
+          </button>
+          <button class="btn btn-sm" routerLink="/accounts/prc" style="background-color: red; color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-12" style="text-align: right;">
+            <button class="btn btn-sm btn-info" (click)="refresh()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>Main Group</clr-dg-column>
+            <clr-dg-column>Sub Group</clr-dg-column>
+            <clr-dg-column>Vendor</clr-dg-column>
+            <clr-dg-column>Material</clr-dg-column>
+            <clr-dg-column>Rate</clr-dg-column>
+            <clr-dg-column>Rate UOM</clr-dg-column>
+            <clr-dg-column>Delivery Delay (Days)</clr-dg-column>
+            <clr-dg-column>Valid From</clr-dg-column>
+            <clr-dg-column>Valid To</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let contract of contracts; let i = index" [clrDgItem]="contract">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.main_group_name || contract.main_group }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.sub_group_name || contract.sub_group }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.vendor_name || contract.vendor_no }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.material_name || contract.material_code }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.rate }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.rate_uom }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.delivery_delay_time }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.valid_from_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ contract.valid_to_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span [class]="contract.status === 'Active' ? 'label label-success' : 'label label-danger'">
+                  {{ contract.status }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(i)" title="View">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" (click)="edit(i)" title="Edit" style="margin-left: 5px;">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="delete(i)" title="Delete" style="margin-left: 5px;" *ngIf="contract.status === 'Active'">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Contracts per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} contracts
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="contracts.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No contracts found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Contract Details</h3>
+  <div class="modal-body" *ngIf="selectedContract">
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Main Group:</strong> {{ selectedContract.main_group_name || selectedContract.main_group }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Sub Group:</strong> {{ selectedContract.sub_group_name || selectedContract.sub_group }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Vendor:</strong> {{ selectedContract.vendor_name || selectedContract.vendor_no }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Material:</strong> {{ selectedContract.material_name || selectedContract.material_code }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Rate:</strong> {{ selectedContract.rate }} {{ selectedContract.rate_uom }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Delivery Delay Time:</strong> {{ selectedContract.delivery_delay_time }} days
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Valid From Date:</strong> {{ selectedContract.valid_from_date | date: 'dd-MM-yyyy' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Valid To Date:</strong> {{ selectedContract.valid_to_date | date: 'dd-MM-yyyy' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Status:</strong> 
+        <span [class]="selectedContract.status === 'Active' ? 'label label-success' : 'label label-danger'">
+          {{ selectedContract.status }}
+        </span>
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Entry Date:</strong> {{ selectedContract.entry_date | date: 'dd-MM-yyyy HH:mm' }}
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+

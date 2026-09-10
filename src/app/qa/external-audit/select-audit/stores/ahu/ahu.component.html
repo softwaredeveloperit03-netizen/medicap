@@ -1,0 +1,161 @@
+﻿<div class="card" *ngIf="!isStart">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Air Handling Unit</div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <!-- <button class="btn btn-sm btn-danger" (click)="isPressureDiff=true">{{'common.new' | translate}}</button> -->
+                <button class="btn btn-sm btn-danger" routerLink="/qa/external-audit/select-audit/stores">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class='clr-row'>
+            <div class="clr-col-lg-3">
+                <label> From Date</label>
+                <input type="date" name="from_date" [(ngModel)]="from_date" [max]="today" required>
+            </div>
+            <div class="clr-col-lg-4">
+                <label> TO Date</label>
+                <input type="date" name="to_date" [(ngModel)]="to_date" [max]="today" required>
+            </div>
+            <div class="clr-col-lg-1">
+                <button class="btn btn-primary" (click)="getAHURecords()" style="margin-top:33px">{{'common.search' | translate}}</button>
+            </div>
+        </div>
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Select</th>
+                    <th>{{'common.date' | translate}}</th>
+                    <th>AHU No.</th>
+                    <th>Start Time</th>
+                    <th>Corridor</th>
+                    <th>Sampling Area</th>
+                    <th>Dispensing Area</th>
+                    <th>Stop Time</th>
+                    <th>Start By</th>
+                    <th>Stop By</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let res of results;let i=index">
+                    <td><input type="checkbox" name="ahu_log"></td>
+                    <td>{{ res.entry_date | date: 'dd-MM-yyyy' }}</td>
+                    <td>{{ res.equipment_code }}</td>
+                    <td>{{ res.start_time | slice : 0:5 }}</td>
+                    <td>{{ res.corridor }}</td>
+                    <td>{{ res.sampling }}</td>
+                    <td>{{ res.dispensing }}</td>
+                    <td>{{ res.stop_time | slice : 0:5 }}</td>
+                    <td>{{ res.firstname }}-{{ res.start_by }}</td>
+                    <td>{{ res.stop_name }}-{{ res.stop_by }}</td>
+                    <td *ngIf="res['status']=='PENDING'">
+                        <button class="btn btn-sm btn-info" (click)="start(i)"> Start</button>
+                    </td>
+                    <td *ngIf="res['status']=='INPROCESS'">
+                        <button class="btn btn-sm btn-info" (click)="stop(i)"> Stop</button>
+                    </td>
+                    <td *ngIf="res['status']=='START'">
+                        <button class="btn btn-sm btn-info" (click)="pressureReading(i)">Pressure Reading</button>
+                    </td>
+                    <td *ngIf="res['status']=='STOP'">#</td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="11">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary">{{'common.submit' | translate}}</button>
+    </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isStart" [clrModalSize]="sm">
+    <h3 class="modal-title"> Start AHU</h3>
+    <div class="modal-body">
+        <table class="table">
+            <tr>
+                <td>AHU NO.:</td>
+                <td>{{ selectedStart['equipment_code'] }}</td>
+            </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-4">
+                <label>Start Time:</label>
+                <input type="time" name="start_time" [(ngModel)]="start_time" [max]="current_time" required>
+            </div>
+
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="startAHU()">START</button>
+        <button type="button" class="btn btn-danger" (click)="isStart = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isStop" [clrModalSize]="sm">
+    <h3 class="modal-title"> Stop AHU</h3>
+    <div class="modal-body">
+        <table class="table">
+            <tr>
+                <td>AHU NO.:</td>
+                <td>{{ selectedStop['equipment_code'] }}</td>
+            </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-12">
+                <label>Stop Time:</label>
+                <input type="time" name="stop_time" [(ngModel)]="stop_time" [max]="current_time" required >
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="stopAHU()">STOP</button>
+        <button type="button" class="btn btn-danger" (click)="isStop = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+
+
+
+
+
+
+
+<clr-modal [(clrModalOpen)]="isPressureDiff" [clrModalSize]="sm">
+    <h3 class="modal-title">Pressure Differential Reading</h3>
+    <div class="modal-body">
+        <table class="table">
+            <tr>
+                <td>AHU NO.:</td>
+                <td>AHU-001</td>
+            </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-12">
+                <label>Room Pressure Diff.Reading:</label>
+            </div>
+            <div class="clr-col-lg-4">
+                <label>Corridor:</label>
+                <input type="text" name="corridor" [(ngModel)]="corridor" required>
+            </div>
+            <div class="clr-col-lg-4">
+                <label>Sampling Area:</label>
+                <input type="text" name="samling" [(ngModel)]="sampling" required>
+            </div>
+            <div class="clr-col-lg-4">
+                <label>Dispensing Area:</label>
+                <input type="text" name="dispensing" [(ngModel)]="dispensing" required>
+            </div>
+            <!--  <div  class="clr-col-lg-12">
+                <label>Stop Time:</label>
+                <input type="time" name="stop_time" [(ngModel)]="stop_time" [max]="current_time" required >
+            </div> -->
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="savePressure()">Pressure Reading</button>
+        <button type="button" class="btn btn-danger" (click)="isStop = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>

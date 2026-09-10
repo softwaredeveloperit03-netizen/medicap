@@ -1,0 +1,305 @@
+<div class="gqnew">
+  <div class="gqnew__card">
+    <div class="gqnew__header">
+      <div class="gqnew__header-inner">
+        <h3 class="gqnew__title">New General Material Quotation</h3>
+        <div class="gqnew__actions">
+          <button
+            type="button"
+            class="gqnew__btn gqnew__btn--close"
+            [routerLink]="['/purchase']"
+            [queryParams]="{ category: 'Quotation' }"
+          >
+            <clr-icon shape="window-close" class="is-solid"></clr-icon>
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gqnew__body">
+      <form #quatationForm="ngForm" class="gqnew__form">
+        <div class="gqnew__form-grid">
+          <div class="gqnew__field gqnew__field--vendor">
+            <label class="gqnew__label" for="vendor_no">Name of Vendor<span class="gqnew__required">*</span></label>
+            <select
+              id="vendor_no"
+              class="gqnew__control gqnew__select"
+              name="vendor_no"
+              ngModel
+              required
+              (change)="getVendorDetails($event.target.selectedIndex)"
+              title="Select vendor"
+            >
+              <option value="">-- Select Vendor --</option>
+              <option *ngFor="let vendor of vendors" [value]="vendor.id">
+                {{ vendor.vendor_name }} — {{ vendor.vendor_type }} — {{ vendor.material_type }} — {{ vendor.vendorFor }}
+              </option>
+            </select>
+          </div>
+
+          <div class="gqnew__field">
+            <label class="gqnew__label" for="vendor_quotation_no">Quotation No<span class="gqnew__required">*</span></label>
+            <input
+              id="vendor_quotation_no"
+              class="gqnew__control"
+              type="text"
+              name="vendor_quotation_no"
+              [(ngModel)]="vendor_quotation_no"
+              required
+              placeholder="Enter quotation no"
+            />
+          </div>
+
+          <div class="gqnew__field">
+            <label class="gqnew__label" for="material_type">Material Group/Type<span class="gqnew__required">*</span></label>
+            <select
+              id="material_type"
+              class="gqnew__control gqnew__select"
+              name="material_type"
+              [(ngModel)]="material_type"
+              required
+              (ngModelChange)="onMaterialTypeChange()"
+            >
+              <option value="">-- Select --</option>
+              <option>Engg Store Mech</option>
+              <option>Engg Store Elect</option>
+              <option>Stationary</option>
+              <option>Housekeeping</option>
+              <option>Canteen</option>
+              <option>Building Material</option>
+              <option>Machine Spares (Dedicated)</option>
+              <option>Machine Spares (Common)</option>
+              <option>QC Materials</option>
+              <option>IT Materials</option>
+              <option>Others</option>
+              <option>Service</option>
+              <option>Equipment</option>
+            </select>
+          </div>
+
+          <div class="gqnew__field">
+            <label class="gqnew__label" for="material_subtype">Sub Group/Type<span class="gqnew__required">*</span></label>
+            <select
+              *ngIf="material_type != 'Service' && material_type != 'Equipment'"
+              id="material_subtype"
+              class="gqnew__control gqnew__select"
+              name="material_subtype"
+              [(ngModel)]="material_subtype"
+              required
+              (change)="getGeneralMaterials()"
+              aria-label="Sub Group/Type"
+            >
+              <option value="">-- Select --</option>
+              <option *ngFor="let type of types" [ngValue]="type.material_subtype">{{ type.material_subtype }}</option>
+            </select>
+            <select
+              *ngIf="material_type == 'Service'"
+              id="material_subtype_svc"
+              class="gqnew__control gqnew__select"
+              name="material_subtype"
+              [(ngModel)]="material_subtype"
+              required
+              (change)="getGeneralMaterials()"
+              aria-label="Sub Group/Type"
+            >
+              <option value="">-- Select --</option>
+              <option *ngFor="let data of serviceSutType" [ngValue]="data">{{ data }}</option>
+            </select>
+            <select
+              *ngIf="material_type == 'Equipment'"
+              id="material_subtype_eq"
+              class="gqnew__control gqnew__select"
+              name="material_subtype"
+              [(ngModel)]="material_subtype"
+              required
+              (change)="getGeneralMaterials()"
+              aria-label="Sub Group/Type"
+            >
+              <option value="">-- Select --</option>
+              <option>Process Equipment</option>
+              <option>Analytical /QC</option>
+              <option>Lableling</option>
+              <option>Balance(Weighing)</option>
+              <option>Computers/Printers</option>
+              <option>Microscope</option>
+              <option>Autoclave</option>
+              <option>Sampler</option>
+              <option>AHU</option>
+              <option>LAF</option>
+              <option>Packaging</option>
+              <option>Engineering</option>
+              <option>Sampling Equipment</option>
+              <option>STABILITY CHEMBER</option>
+              <option>Storage</option>
+              <option>Vaccum</option>
+              <option>Incubator</option>
+              <option *ngFor="let type of equipment_type_data" [value]="type.equipment_type">{{ type.equipment_type }}</option>
+            </select>
+          </div>
+
+          <div class="gqnew__field gqnew__field--upload">
+            <label class="gqnew__label" for="document">Upload Document (if any)</label>
+            <input
+              id="document"
+              class="gqnew__control gqnew__file"
+              type="file"
+              name="document"
+              ngModel
+              (change)="onFileChanged($event)"
+              accept="application/pdf"
+            />
+          </div>
+        </div>
+
+        <div class="gqnew__section">
+          <div class="gqnew__section-head">
+            <div class="gqnew__section-title">Available Materials</div>
+            <button type="button" class="gqnew__btn gqnew__btn--add" (click)="addSelectedMaterial()">
+              Add Selected
+            </button>
+          </div>
+          <div class="gqnew__table-scroll">
+            <table class="gqnew__table">
+              <thead>
+                <tr>
+                  <th class="gqnew__col-nr">{{ 'common.table.srNo' | translate }}</th>
+                  <th class="gqnew__col-chk">Select</th>
+                  <th class="gqnew__col-type">Material Type</th>
+                  <th class="gqnew__col-subtype">Subtype</th>
+                  <th class="gqnew__col-name">Material Name</th>
+                  <th class="gqnew__col-code">Code</th>
+                  <th class="gqnew__col-amt">Quot. Amt.</th>
+                  <th class="gqnew__col-tax">Tax Type</th>
+                  <th class="gqnew__col-gst">GST%</th>
+                  <th class="gqnew__col-curr">Currency</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!materials?.length">
+                  <td class="gqnew__empty" colspan="10">No data — select material type and subtype</td>
+                </tr>
+                <tr *ngFor="let mat of materials; let i = index">
+                  <td class="gqnew__col-nr">{{ i + 1 }}</td>
+                  <td class="gqnew__col-chk">
+                    <input
+                      type="checkbox"
+                      class="gqnew__checkbox"
+                      name="selected{{ i }}"
+                      [(ngModel)]="mat.selected"
+                      [ngModelOptions]="{standalone: true}"
+                      [attr.aria-label]="'Select row ' + (i + 1)"
+                    />
+                  </td>
+                  <td class="gqnew__col-type" [title]="mat.material_type">{{ mat.material_type }}</td>
+                  <td class="gqnew__col-subtype" [title]="mat.material_subtype">{{ mat.material_subtype }}</td>
+                  <td class="gqnew__col-name" [title]="mat.material_name">{{ mat.material_name }}</td>
+                  <td class="gqnew__col-code" [title]="mat.material_code">{{ mat.material_code }}</td>
+                  <td class="gqnew__col-amt">
+                    <input
+                      type="text"
+                      class="gqnew__control gqnew__control--sm"
+                      name="quotation_amt{{ i }}"
+                      [(ngModel)]="mat.quotation_amt"
+                      [ngModelOptions]="{standalone: true}"
+                      aria-label="Quotation amount"
+                    />
+                  </td>
+                  <td class="gqnew__col-tax">
+                    <select
+                      class="gqnew__control gqnew__control--sm gqnew__select"
+                      name="tax_type{{ i }}"
+                      [(ngModel)]="mat.tax_type"
+                      [ngModelOptions]="{standalone: true}"
+                      aria-label="Tax type"
+                    >
+                      <option value="Local">Local</option>
+                      <option value="Import">Import</option>
+                      <option value="Local /Import">Local /Import</option>
+                    </select>
+                  </td>
+                  <td class="gqnew__col-gst">
+                    <select
+                      class="gqnew__control gqnew__control--sm gqnew__select"
+                      name="tax{{ i }}"
+                      [(ngModel)]="mat.tax"
+                      [ngModelOptions]="{standalone: true}"
+                      aria-label="GST"
+                    >
+                      <option value=""></option>
+                      <option *ngFor="let unit of gsts" [value]="unit.gst">{{ unit.gst }} %</option>
+                    </select>
+                  </td>
+                  <td class="gqnew__col-curr">
+                    <select
+                      class="gqnew__control gqnew__control--sm gqnew__select"
+                      name="currency{{ i }}"
+                      [(ngModel)]="mat.currency"
+                      [ngModelOptions]="{standalone: true}"
+                      aria-label="Currency"
+                    >
+                      <option value="" disabled>---</option>
+                      <option *ngFor="let curr of (selectedVendor?.currency || currencyOptions)" [value]="curr.code">{{ curr.code }}</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="gqnew__section">
+          <div class="gqnew__section-title">Added Materials ({{ materials_data?.length || 0 }})</div>
+          <div class="gqnew__table-scroll">
+            <table class="gqnew__table gqnew__table--added">
+              <thead>
+                <tr>
+                  <th class="gqnew__col-nr">{{ 'common.table.srNo' | translate }}</th>
+                  <th class="gqnew__col-type">Material Type</th>
+                  <th class="gqnew__col-subtype">Subtype</th>
+                  <th class="gqnew__col-name">Material Name</th>
+                  <th class="gqnew__col-code">Code</th>
+                  <th class="gqnew__col-amt">Quot. Amt.</th>
+                  <th class="gqnew__col-tax">Tax Type</th>
+                  <th class="gqnew__col-gst">GST%</th>
+                  <th class="gqnew__col-del">DEL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!materials_data?.length">
+                  <td class="gqnew__empty" colspan="9">No materials added yet</td>
+                </tr>
+                <tr *ngFor="let item of materials_data; let i = index">
+                  <td class="gqnew__col-nr">{{ i + 1 }}</td>
+                  <td class="gqnew__col-type" [title]="item.material_type">{{ item.material_type }}</td>
+                  <td class="gqnew__col-subtype" [title]="item.material_subtype">{{ item.material_subtype }}</td>
+                  <td class="gqnew__col-name" [title]="item.material_name">{{ item.material_name }}</td>
+                  <td class="gqnew__col-code" [title]="item.material_code">{{ item.material_code }}</td>
+                  <td class="gqnew__col-amt">{{ item.quotation_amt }}</td>
+                  <td class="gqnew__col-tax">{{ item.tax_type || 'Local' }}</td>
+                  <td class="gqnew__col-gst">{{ item.tax }}</td>
+                  <td class="gqnew__col-del">
+                    <button type="button" class="gqnew__btn gqnew__btn--del" (click)="materials_data.splice(i, 1)">
+                      DEL
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="gqnew__footer">
+      <button
+        type="button"
+        class="gqnew__btn gqnew__btn--save"
+        [disabled]="!(materials_data?.length > 0)"
+        (click)="save(quatationForm)"
+      >
+        {{ 'common.save' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

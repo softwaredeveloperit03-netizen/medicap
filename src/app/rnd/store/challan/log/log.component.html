@@ -1,0 +1,263 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Challans Log</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/rnd/store/challan">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Vendor Name:</label>
+          <select name="vendor_no" [(ngModel)]="vendor_no" required>
+            <option></option>
+            <option *ngFor="let vendor of vendors" [value]="vendor.vendor_no">{{ vendor.vendor_name }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="padding-left: 1px;padding-right:1px;">
+          <label>From Date:</label>
+          <input type="date" name="from_date" [(ngModel)]="from_date">
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="padding-left: 1px;padding-right: 1px;">
+          <label>To Date:</label>
+          <input type="date" name="to_date" [(ngModel)]="to_date">
+        </div>
+        <div class="clr-col-lg-1 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+          <button class="btn btn-danger" style="margin-top:30px;" (click)="getChallansLog()">{{'common.search' | translate}}</button>
+        </div>
+      </div>
+      <table class="table">
+        <tr>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip Date</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">PO No.</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">PO Date</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Invoice No.</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.amount' | translate}}</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Prepared Date</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Prepared By</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">View</th>
+        </tr>
+        <tr *ngFor="let result of results; let i = index">
+          <td style="text-align: left;">{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ result.material_type }}</td>
+          <td style="text-align: left;">{{ result.vendor_name }}</td>
+          <td style="text-align: left;">{{ result.challan_no }}</td>
+          <td style="text-align: left;">{{ result.challan_date | date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{ result.po_no }}</td>
+          <td style="text-align: left;">{{ result.po_date | date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{ result.tax_invoice }}</td>
+          <td style="text-align: right;">{{ result.net_total }}</td>
+          <td style="text-align: left;">{{ result.entry_date | date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left;">{{ result.entry_by }}</td>
+          <td>
+            <button class="btn btn-sm btn-info btn-icon" (click)="view(i)"><clr-icon shape="eye" class="is-info"></clr-icon></button>
+          </td>
+        </tr>
+        <tr *ngIf="results?.length == 0">
+          <td colspan="10">No. Records Found!</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+   <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">Inword Challan Details</div>
+  <div class="card-block">
+    <div class="card-text">
+      <h3>Vendor Details:</h3>
+      <table class="table" style="border:1px solid black">
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor No.:</td>
+          <td style="text-align: left; border-right:1px solid black">{{ selectedResult['vendor_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Vendor Name:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+          <td style="text-align: left; border-right:1px solid black">{{ selectedResult['challan_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">PO No:</td>
+          <td style="text-align: left; border-right:1px solid black"> {{ selectedResult['po_no'] }}</td>
+          <td style="text-align: left; width: 20%;">PO Date:</td>
+          <td style="text-align: left;">{{ selectedResult['po_date'] | date: 'dd-MM-yyyy' }}</td>
+          <td></td>
+      </tr> 
+        <tr>
+          <td style="text-align: left; width: 20%;">Tax Invoice No:</td>
+          <td style="text-align: left; border-right:1px solid black">{{ selectedResult['tax_invoice'] }}</td>
+        </tr>
+      </table>
+      <!-- <h4>Manufacturer/Supplier</h4>
+      <input type="text" name="manufacturer" [ngModel]="selectedResult['manufacturer']" required> -->
+      <h3>Materials:</h3>
+      <table class="table" *ngIf="selectedResult['material_type']=='Raw Material'|| selectedResult['material_type']=='Packing Material'">
+          <tr>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Qty</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">GST%</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Received Rate</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Required For</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Gross</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">GST</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Net</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+            <td style="text-align: left;">{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_type }}{{ comp.material_subtype }} </td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td style="text-align: left;">{{ comp.material_name }}</td>
+            <td style="text-align: left;">{{ comp.grade }}</td>
+            <td style="text-align: left;">{{ comp.qty }} {{ comp.unit }}</td>
+            <td style="text-align: left;">{{ comp.gst }}</td>
+            <td style="text-align: left;">{{ comp.rate }}</td>
+            <td style="text-align: left;">{{ comp.received_rate }}</td>
+            <td style="text-align: left;">{{ comp.diff }}</td>
+            <td style="text-align: left;">{{ comp.required_for }}</td>
+            <td style="text-align: left;">{{ comp.gross_total }}</td>
+            <td style="text-align: left;">{{ comp.gst_total }}</td>
+            <td style="text-align: left;">{{ comp.net_total }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length == 0">
+              <td colspan="13">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+      <table class="table" *ngIf="selectedResult['material_type']=='Chemicals'">
+        <tr>
+          <th>Sr.</th>
+          <th style="text-align: left;">Chemical No</th>
+          <th style="text-align: left;">Chemical Name</th>
+          <th>Grade</th>
+          <th>Qty</th>
+          <th>Rate/Unit</th>
+          <th>Received Rate</th>
+          <th>Diff.</th>
+          <th>Required For</th>
+          <th>Gross</th>
+          <th>GST</th>
+          <th>Net</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ comp.chemical_no }}</td>
+          <td style="text-align: left;">{{ comp.chemical_name }}</td>
+          <td>{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.rate }}</td>
+          <td>{{ comp.received_rate }}</td>
+          <td>{{ comp.diff }}</td>
+          <td>{{ comp.required_for }}</td>
+          <td>{{ comp.gross_total }}</td>
+          <td>{{ comp.gst_total }}</td>
+          <td>{{ comp.net_total }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['materials'].length == 0">
+            <td colspan="13">{{'common.noRecords' | translate}}</td>
+        </tr>
+    </table>
+    <table class="table" *ngIf="selectedResult['material_type']=='Glasswares'">
+      <tr>
+        <th>Sr.</th>
+        <th style="text-align: left;">Glassware No</th>
+        <th style="text-align: left;">Glassware Description</th>
+        <th>Grade</th>
+        <th>Qty</th>
+        <th>Rate/Unit</th>
+        <th>Received Rate</th>
+        <th>Diff.</th>
+        <th>Required For</th>
+        <th>Gross</th>
+        <th>GST</th>
+        <th>Net</th>
+      </tr>
+      <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+        <td>{{ i + 1 }}.</td>
+        <td style="text-align: left;">{{ comp.glassware_no }}</td>
+        <td style="text-align: left;">{{ comp.description }}</td>
+        <td>{{ comp.grade }}</td>
+        <td>{{ comp.qty }} {{ comp.unit }}</td>
+        <td>{{ comp.rate }}</td>
+        <td>{{ comp.received_rate }}</td>
+        <td>{{ comp.diff }}</td>
+        <td>{{ comp.required_for }}</td>
+        <td>{{ comp.gross_total }}</td>
+        <td>{{ comp.gst_total }}</td>
+        <td>{{ comp.net_total }}</td>
+      </tr>
+      <tr *ngIf="selectedResult['materials'].length == 0">
+          <td colspan="13">{{'common.noRecords' | translate}}</td>
+      </tr>
+  </table>
+  <table class="table" *ngIf="selectedResult['material_type']=='General Material'">
+    <tr>
+      <th>Sr.</th>
+      <th style="text-align: left;">Material Type</th>
+      <th style="text-align: left;">Material Code</th>
+      <th style="text-align: left;">Material Name</th>
+      <th>Grade</th>
+      <th>Qty</th>
+      <th>Rate/Unit</th>
+      <th>Received Rate</th>
+      <th>Diff.</th>
+      <th>Required For</th>
+      <th>Gross</th>
+      <th>GST</th>
+      <th>Net</th>
+    </tr>
+    <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+      <td>{{ i + 1 }}.</td>
+      <td style="text-align: left;">{{ comp.material_type }}{{ comp.material_subtype }} </td>
+      <td style="text-align: left;">{{ comp.material_code }}</td>
+      <td style="text-align: left;">{{ comp.material_name }}</td>
+      <td>{{ comp.grade }}</td>
+      <td>{{ comp.qty }} {{ comp.unit }}</td>
+      <td>{{ comp.rate }}</td>
+      <td>{{ comp.received_rate }}</td>
+      <td>{{ comp.diff }}</td>
+      <td>{{ comp.required_for }}</td>
+      <td>{{ comp.gross_total }}</td>
+      <td>{{ comp.gst_total }}</td>
+      <td>{{ comp.net_total }}</td>
+    </tr>
+    <tr *ngIf="selectedResult['materials'].length == 0">
+        <td colspan="13">{{'common.noRecords' | translate}}</td>
+    </tr>
+</table>
+    
+      <table class="table">
+        <tr>
+          <th>Gross Total</th>
+          <th>GST Total</th>
+          <th>NET Total</th>
+        </tr>
+        <tr>
+          <td>{{ selectedResult['gross_total'] }}</td>
+          <td>{{ selectedResult['gst_total'] }}</td>
+          <td>{{ selectedResult['net_total'] }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

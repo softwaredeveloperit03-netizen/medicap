@@ -1,0 +1,350 @@
+﻿<div class="card" *ngIf="!isNew">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Medicap Lot No Allocation
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/qa/bmr">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table pharmacy-table">
+        <!-- Table headers -->
+        <tr>
+          <th class="pharmacy-header">{{'common.table.srNo' | translate}}</th>
+          <th class="pharmacy-header">{{'common.date' | translate}}</th>
+          <th class="pharmacy-header">Work Order No</th>
+          <!-- <th class="pharmacy-header">Dossage Form</th> -->
+          <th class="pharmacy-header">Product Code</th>
+          <th class="pharmacy-header">Product Name</th>
+           <th class="pharmacy-header">Batch Size</th>
+          <th class="pharmacy-header">Prepared By</th>
+          <th class="pharmacy-header">View</th>
+        </tr>
+        <tr *ngFor="let result of results; let i = index" class="pharmacy-row">
+          <td>{{ i + 1 }}</td>
+          <td>{{ result.entry_date ? (result.entry_date | date: 'dd-MM-yyyy') : '-' }}</td>
+          <td>{{ result.work_order_no || '-' }}</td>
+          <!-- <td >{{ result.dosage_form}}</td> -->
+          <td>{{ result.product_code || '-' }}</td>
+          <td style="text-align: left;">{{ result.product_name || '-' }}</td>
+           <td>{{ result.batch_size || '-' }}</td>
+          <td>{{ result.entry_by || '-' }}</td>
+          <td>
+            <button 
+              class="btn btn-sm" 
+              [class.btn-pharmacy]="isLineApproved(result)"
+              [class.btn-secondary]="!isLineApproved(result)"
+              (click)="view(i)"
+              [disabled]="!isLineApproved(result)"
+              [title]="!isLineApproved(result) ? 'Stock verification from line is pending' : 'View Work Order'">
+              View
+            </button>
+            <div *ngIf="!isLineApproved(result)" class="text-danger" style="font-size: 11px; margin-top: 5px; font-weight: bold;">
+              Stock verification from line is pending
+            </div>
+            </td>
+        </tr>
+        <tr *ngIf="results?.length == 0">
+          <td colspan="11">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isNew">
+    <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Medicap Lot No Allocation:
+        {{ selectedResult['plan_no'] }}</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-bordered">
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Work Order No.</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['work_order_no'] || '-'}}</td>
+          <td style="text-align: left; border:1px solid black;"><b>{{'common.date' | translate}}</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['entry_date'] ? (selectedResult['entry_date'] | date: 'dd-MM-yyyy') : '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Product Code</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code'] || '-'}}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name'] || '-'}}
+            {{selectedResult['grade'] || ''}}</td>
+        </tr>
+        <tr *ngIf="plant_id=='67' || plant_id=='86'">
+          <td style="text-align: left; border:1px solid black;"><b>Dosage Form</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form'] || '-'}}</td>
+          <td style="text-align: left; border:1px solid black;"><b> eBMR</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['ebmr_status'] || '-'}}</td>
+        </tr>
+        <tr *ngIf="plant_id!='67' && plant_id!='86'">
+          <td style="text-align: left; border:1px solid black;"><b> Product Type</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_type'] || '-'}}</td>
+          <td style="text-align: left; border:1px solid black;"><b> eBMR</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['ebmr_status'] || '-'}}</td>
+        </tr>
+        <tr  *ngIf="plant_type=='Formulation' && plant_id!='67'">
+          <td style="text-align: left; border:1px solid black;"><b> LOD Criteria</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['lod_status']}}</td>
+          <td style="text-align: left; border:1px solid black;"><b> Assay Criteria</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['assay_status']}}</td>
+        </tr>
+
+      </table>
+      <!-- <form #tempForm="ngForm" class="clr-form">
+        <div class="clr-row">
+          <div class="clr-col-lg-4">
+            <div class="clr-form-control">
+              <label for="mfg" class="clr-control-label">Manufacturing Date</label>
+              <input type="date" id="mfg" name="mfg" class="clr-input" [(ngModel)]="mfg" >
+            </div>
+          </div>
+          <div class="clr-col-lg-4">
+            <div class="clr-form-control">
+              <label for="exp" class="clr-control-label">Expiry Date</label>
+              <input type="date" id="exp" name="exp" class="clr-input" [(ngModel)]="exp" >
+            </div>
+          </div>
+        </div>
+      </form> -->
+      
+
+      <div style="clear: both">
+        <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Raw Materials:</h3>
+        <h3 style="float: right; color: rgb(6, 34, 16); font-weight: bold;">Work Order for Batch Size:
+          {{selectedResult['batch_size']}} kg</h3>
+      </div>
+      <!-- <table class="table table-box-shadow">
+        <tr>
+          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+          <th style="background-color: #dcebf7; color:black;">Material type</th>
+          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+           <th style="background-color: #dcebf7; color:black;">Percent Qty</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+          <th *ngIf="plant_type=='Formulation'" style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+          <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+          <th *ngIf="plant_type=='Formulation'" style="background-color: #dcebf7; color:black;">LOD</th>
+          <th *ngIf="plant_type=='Formulation'" style="background-color: #dcebf7; color:black;">Assay</th>
+          <th style="background-color: #dcebf7; color:black;">Available Stock</th>
+
+
+        </tr>
+        <tr *ngFor="let comp of work_order_raw_materials; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ comp.material_subtype }}</td>
+          <td>{{ comp.material_code }}</td>
+          <td>{{ comp.material_name }}</td>
+          <td>{{ comp.gradeName }}</td>
+          <td>{{ comp.unit_qty }} {{ comp.unit }}</td>
+         
+          
+          <td>{{ comp.percent_qty }}</td>
+          <td>{{ comp.batch_qty }}</td>
+          <td *ngIf="plant_type=='Formulation'">{{ comp.batch_overages}}</td>
+          <td>{{ comp.total_batch_qty }}</td>
+          <td *ngIf="plant_type=='Formulation'">{{ comp.lod_status }}</td>
+          <td *ngIf="plant_type=='Formulation'">{{ comp.assay_status }}</td>
+          <td>{{ comp.avbl_stock }}</td>
+
+        </tr>
+        <tr *ngIf="raw_materials?.length == 0">
+          <td colspan="8">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table> -->
+
+
+      
+      <table  class="table table-border" style="margin-top:0px">
+        <ng-container *ngFor="let stage of groupedMaterials | keyvalue">
+          
+            <tr>
+              <th style="background-color: aquamarine;font-weight: bold;text-align: left;" colspan="11">Stage: {{ stage.key }}</th>
+            </tr>
+            <tr>
+                <th style="background-color: #dcebf7; color:black;">Sr.</th>
+                <th style="background-color: #dcebf7; color:black; text-align: left;">Material type</th>
+                <th style="background-color: #dcebf7; color:black;">Material Code</th>
+                <th style="background-color: #dcebf7; color:black;text-align: left;">Material Name</th>
+                <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+                <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+                <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+                <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+                <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+                <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+                <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+    
+            </tr>
+        
+            <tr *ngFor="let comp of stage.value; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                <td>{{ comp.material_code }}</td>
+                <td  style="text-align: left;">{{ comp.material_name }}</td>
+                <td>{{ comp.grade }}</td>
+                <td>{{ comp.unit_qty }} {{ comp.unit }}</td>
+                <td>{{ comp.overages }}</td>
+                <td>{{ comp.total_unit_qty }}</td>
+                <td>{{ comp.batch_qty }}</td>
+                <td>{{ comp.batch_overages}}</td>
+                <td>{{ comp.total_batch_qty }}</td>
+            </tr>
+        </ng-container>
+      </table>
+
+      <!-- <div style="clear: both">
+                <h3 style="float: left;color: rgb(94, 19, 77); font-weight: bold;">Packing Materials:</h3>
+                <h3 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Size: {{selectedResult['pack_size']}} -
+                  {{selectedResult['pack_unit']}}</h3>
+              </div>
+              <table class="table" style="margin-top:10px">
+                <tr>
+                  <th style="background-color: #dcebf7; color:black;">Sr.</th>
+                  <th style="background-color: #dcebf7; color:black;">Material type</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Code</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Name</th>
+                  <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+                  <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+                  <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+                  <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+                  <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+                  <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th>
+                  <th style="background-color: #dcebf7; color:black;">Batch Total Qty</th>
+                  
+        
+                </tr>
+                <tr *ngFor="let comp of work_order_packing_materials; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ comp.material_subtype }}</td>
+                  <td>{{ comp.material_code }}</td>
+                  <td>{{ comp.material_name }}</td>
+                  <td>{{ comp.grade }}</td>
+                  <td>{{ comp.unit_qty }} {{ comp.unit }}</td>
+                  <td>{{ comp.overages }}</td>
+                  <td>{{ comp.total_unit_qty }}</td>
+                  <td>{{ comp.batch_qty }}</td>
+                  <td>{{ comp.batch_overages}}</td>
+                  <td>{{ comp.total_batch_qty }}</td> 
+                </tr>
+                <tr *ngIf="raw_materials?.length == 0">
+                  <td colspan="8">{{'common.noRecords' | translate}}</td>
+                </tr>
+              </table> -->
+
+      <table class="table" style="margin-top:10px" *ngIf="work_order_lots.length>0 && plant_type=='Formulation'">  
+        <!-- <h3 style="float: left;color: rgb(6, 34, 16); font-weight: bold;">Lot wise Raw Materials:</h3> -->
+        <tr *ngFor="let row of work_order_lots; let i = index">
+          <div style="clear: both">
+            <h3 style="float: left; color: rgb(6, 34, 16); font-weight: bold;">{{row.lot_type}}</h3>
+          </div>
+
+          <table class="table" style="margin-top:10px" *ngFor="let lot of row['lots']; let i = index">
+            <tr *ngIf="lot.lot_no.length>0">
+              <h3 style="float: left; color: rgb(6, 34, 16); font-weight: bold;"> Lot No: {{i+1}}</h3>
+              <!-- <h3 style="float: left; color: rgb(6, 34, 16); font-weight: bold;"> Lot No: {{lot.lot_no}}</h3> -->
+
+            </tr>
+            <tr>
+              <th style="background-color: #2196f3; color:black;">Sr.</th>
+              <th style="background-color: #2196f3; color:black;">Material type</th>
+              <th style="background-color: #2196f3; color:black;">Material Code</th>
+              <th style="background-color: #2196f3; color:black;">Material Name</th>
+              <th style="background-color: #2196f3; color:black;">Batch Total Qty</th>
+
+
+            </tr>
+            <tr *ngFor="let comp of lot['lots_list']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{ comp.material_subtype }}</td>
+              <td>{{ comp.material_code }}</td>
+              <td>{{ comp.material_name }}</td>
+              <td>{{ comp.batch_qty }}</td>
+            </tr>
+            <tr *ngIf="raw_materials?.length == 0">
+              <td colspan="8">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+
+
+
+
+        </tr>
+
+      </table>
+
+      <form #tempForm="ngForm" class="form-container">
+        <div class="clr-row">
+          <!-- <div class="clr-col-lg-4">
+            <label>Stability</label>
+            <select name="stability" [(ngModel)]="selectedResult.stability">
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4" *ngIf="selectedResult.stability=='Yes'">
+            <label>Reason</label>
+            <select name="stability_reason" [(ngModel)]="selectedResult.reason">
+              <option></option>
+              <option>Validation</option>
+              <option>Yearly Stability</option>
+              <option>Evaluation</option>
+              <option>Other</option>
+              <option>New Product</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4">
+            <label>Process Validation Batch</label>
+            <select name="process_validation" [(ngModel)]="selectedResult.validation">
+              <option></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div> -->
+          
+          <div class="clr-col-lg-4" *ngIf="selectedResult['ebmr_status']!='applicable'">
+            <label>Hardcopy Issued</label>
+            <select name="hard_copy_issued" [(ngModel)]="hard_copy_issued">
+              <option></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4" *ngIf="hard_copy_issued =='Yes'">
+            <label>Hard Copy Issued By</label>
+            <select name="hard_copy_issued_by" [(ngModel)]="hard_copy_issued_by">
+              <option></option>
+              <option *ngFor="let pro of person" [value]="pro.emp_id">{{ pro.firstname }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4" *ngIf="hard_copy_issued =='Yes'">
+            <label>BMR Number</label>
+            <input type="text" name="ebmr_number" [(ngModel)]="ebmr_number" required>
+          </div>
+          <div class="clr-col-lg-4">
+            <label for="batch_number">Batch Number<span class="mandatory">*</span></label>
+            <input type="text" name="batch_number" [(ngModel)]="batch_number" required id="batch_number" class="pharma-input" placeholder="Enter Batch Number">
+          </div>
+          
+
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="allocate('approve',tempForm)">{{'common.approve' | translate}}</button>
+    <button class="btn btn-warning" (click)="allocate('reject',tempForm)">{{'common.reject' | translate}}</button>
+    <button class="btn btn-danger" (click)="isNew=false">{{'common.close' | translate}}</button>
+  </div>
+</div>

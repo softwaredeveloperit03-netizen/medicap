@@ -1,0 +1,153 @@
+<div class="card c2c-page">
+  <div class="card-header c2c-header">
+    <div class="c2c-header-row">
+      <div class="c2c-title">Code to Code Transfer Request</div>
+      <div class="c2c-actions">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <clr-tabs>
+      <clr-tab>
+        <button clrTabLink>New Request</button>
+        <clr-tab-content *clrIfActive>
+          <p class="c2c-hint">
+            Transfer stock from one material code to another. Same GRN / AR will be used at store execution.
+            Only materials with available qty appear in the source list.
+          </p>
+
+          <div class="c2c-form-grid">
+            <div class="c2c-field">
+              <label>From Material (available stock)</label>
+              <input type="text" class="c2c-search-input"
+                placeholder="Type code or name (min 1 character)…"
+                [(ngModel)]="fromSearch"
+                (ngModelChange)="onFromSearchChange()"
+                (focus)="onFromFocus()">
+              <div class="c2c-picker-hint" *ngIf="materialsLoading">
+                <span class="spinner spinner-inline"></span> Searching materials…
+              </div>
+              <div class="c2c-picker" *ngIf="showFromPicker && !materialsLoading && filteredFrom.length && fromSearch && !selectedFrom">
+                <button type="button" class="c2c-picker-item"
+                  *ngFor="let m of filteredFrom | slice:0:40"
+                  (click)="selectFrom(m)">
+                  <strong>{{ m.material_code }}</strong> — {{ m.material_name || '—' }}
+                  <span class="c2c-picker-qty">{{ m.available_qty }} {{ m.unit }}</span>
+                </button>
+              </div>
+              <div class="c2c-picker-hint" *ngIf="showFromPicker && !materialsLoading && fromSearch && !filteredFrom.length && !selectedFrom">
+                No material with available stock found.
+              </div>
+              <div class="c2c-selected" *ngIf="selectedFrom">
+                {{ selectedFrom.material_code }} — {{ selectedFrom.material_name }}
+                <button type="button" class="btn btn-link btn-sm" (click)="resetForm()">Change</button>
+              </div>
+            </div>
+
+            <div class="c2c-field">
+              <label>Available Qty</label>
+              <div class="c2c-readonly">
+                {{ availableQty }} {{ unit }}
+                <button type="button" class="btn btn-link btn-sm" (click)="refreshAvailableQty()" *ngIf="selectedFrom">Refresh</button>
+              </div>
+            </div>
+
+            <div class="c2c-field">
+              <label>Transfer Qty</label>
+              <input type="number" class="c2c-input" min="0" step="0.0001"
+                [(ngModel)]="transferQty" [disabled]="!selectedFrom">
+            </div>
+
+            <div class="c2c-field">
+              <label>To Material</label>
+              <input type="text" class="c2c-search-input"
+                placeholder="Type destination code or name…"
+                [(ngModel)]="toSearch"
+                (ngModelChange)="onToSearchChange()"
+                (focus)="onToFocus()"
+                [disabled]="!selectedFrom">
+              <div class="c2c-picker" *ngIf="showToPicker && filteredTo.length && toSearch && !selectedTo && selectedFrom">
+                <button type="button" class="c2c-picker-item"
+                  *ngFor="let m of filteredTo | slice:0:40"
+                  (click)="selectTo(m)">
+                  <strong>{{ m.material_code }}</strong> — {{ m.material_name || '—' }}
+                </button>
+              </div>
+              <div class="c2c-selected" *ngIf="selectedTo">
+                {{ selectedTo.material_code }} — {{ selectedTo.material_name }}
+              </div>
+            </div>
+
+            <div class="c2c-field c2c-field--full">
+              <label>Remark</label>
+              <textarea class="c2c-input" rows="2" [(ngModel)]="requestRemark"></textarea>
+            </div>
+          </div>
+
+          <div class="c2c-form-actions">
+            <button type="button" class="btn btn-primary" (click)="saveRequest()"
+              [disabled]="saving || !selectedFrom || !selectedTo">
+              <span *ngIf="saving" class="spinner spinner-inline"></span>
+              Submit for Dept Head Approval
+            </button>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+
+      <clr-tab>
+        <button clrTabLink (click)="loadLog()">Request Log</button>
+        <clr-tab-content *clrIfActive>
+          <div class="clr-row c2c-log-toolbar">
+            <div class="clr-col-md-3 clr-col-12">
+              <label>Search</label>
+              <input type="text" placeholder="Request no, material, status…"
+                [(ngModel)]="logSearch" (keyup.enter)="loadLog()">
+            </div>
+            <div class="clr-col-md-2 clr-col-6">
+              <label>From date</label>
+              <input type="date" [(ngModel)]="logFromDate">
+            </div>
+            <div class="clr-col-md-2 clr-col-6">
+              <label>To date</label>
+              <input type="date" [(ngModel)]="logToDate">
+            </div>
+            <div class="clr-col-md-2 clr-col-12 c2c-log-search-btn">
+              <label>&nbsp;</label>
+              <button type="button" class="btn btn-primary btn-sm" (click)="loadLog()" [disabled]="logLoading">
+                <span *ngIf="logLoading" class="spinner spinner-inline"></span>
+                Load
+              </button>
+            </div>
+          </div>
+          <div class="datagrid-wrapper c2c-log-wrap" *ngIf="!logLoading">
+            <clr-datagrid [clrDgStickyHeader]="true">
+              <clr-dg-column>Request No</clr-dg-column>
+              <clr-dg-column>From Material</clr-dg-column>
+              <clr-dg-column>To Material</clr-dg-column>
+              <clr-dg-column class="cell-num">Avail @ Request</clr-dg-column>
+              <clr-dg-column class="cell-num">Transfer Qty</clr-dg-column>
+              <clr-dg-column>Status</clr-dg-column>
+              <clr-dg-column>Requested On</clr-dg-column>
+
+              <clr-dg-row *ngFor="let row of logRows">
+                <clr-dg-cell>{{ row.request_no }}</clr-dg-cell>
+                <clr-dg-cell>{{ row.from_material_code }} — {{ row.from_material_name }}</clr-dg-cell>
+                <clr-dg-cell>{{ row.to_material_code }} — {{ row.to_material_name }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ row.available_qty }} {{ row.from_unit }}</clr-dg-cell>
+                <clr-dg-cell class="cell-num">{{ row.transfer_qty }} {{ row.from_unit }}</clr-dg-cell>
+                <clr-dg-cell>{{ statusLabel(row.status) }}</clr-dg-cell>
+                <clr-dg-cell>{{ row.requested_on || '—' }}</clr-dg-cell>
+              </clr-dg-row>
+              <clr-dg-placeholder>No requests found</clr-dg-placeholder>
+            </clr-datagrid>
+          </div>
+          <div class="c2c-loading" *ngIf="logLoading">
+            <span class="spinner spinner-inline"></span> Loading log…
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+    </clr-tabs>
+  </div>
+</div>

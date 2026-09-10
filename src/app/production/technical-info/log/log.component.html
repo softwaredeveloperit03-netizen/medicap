@@ -1,0 +1,149 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Technical Information Sheet Log</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/production/technical-info" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+     </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="clr-row">
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                  <label>Dosage Form:</label>
+                  <select name="dosage_form" [(ngModel)]="dosage_form" required (change)="getProductsByDosage()">
+                    <option></option>
+                    <option *ngFor="let dosage of dosages">{{ dosage.dosage_form }}</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product Name:</label>
+                  <select name="product_code" [(ngModel)]="product_code" required>
+                    <option></option>
+                    <option *ngFor="let product of products" [value]="product.product_code">{{ product.product_name }}</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>From Date:</label>
+                  <input type="date" name="from_date" [(ngModel)]="from_date" [max]="max_date" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>To Date:</label>
+                  <input type="date" name="to_date" [(ngModel)]="to_date" [max]="max_date" required>
+                </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <button class="btn btn-primary" (click)="getTechnicalInfoLog()">{{'common.search' | translate}}</button>
+                </div>
+            </div>
+            <table class="table">
+                <tr>
+                    <th>Sr</th>
+                    <th>TI No</th>
+                    <th>BMR No</th>
+                    <th style="text-align: left;">Product Code</th>
+                    <th style="text-align: left;">Product Name</th>
+                    <th style="text-align: left;">Stage</th>
+                    <th>Grade</th>
+                    <th>Sampling Date</th>
+                    <th>Release Date</th>
+                    <th>{{'common.status' | translate}}</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results;let i = index">
+                    <td>{{ i+1 }}.</td>
+                    <td>{{ result.ti_no }}</td>
+                    <td>{{ result.bmr_no }}</td>
+                    <td style="text-align: left;">{{ result.product_code }}</td>
+                    <td style="text-align: left;">{{ result.product_name }}</td>
+                    <td style="text-align: left;">{{ result.stage }}</td>
+                    <td>{{ result.grade }}</td>
+                    <td>{{ result.sampling_date }}</td>
+                    <td>{{ result.release_date }}</td>
+                    <td>{{ result.status }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="11">No Record Found!</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadlog()">DOWNLOAD PDF</button>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Technical Information Sheet Details</div>
+        <div class="card-block">
+            <div class="card-text">
+                
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Batch Size</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Medicap Lot No</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b> Dosage Form</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                    </tr>
+                </table>
+                
+                <h3>Sampling Information:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Sampled By</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['sampled_by']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Check By</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['check_by']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Sampling Qty</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['qty']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Sampling Date</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['sampling_date']}}</td>
+                    </tr>
+                </table>
+
+                <h3>Analytical Information:</h3>
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left;">Test</th>
+                        <th style="text-align: left;">Specification</th>
+                        <th style="text-align: left;">Result</th>
+                        <th>Analysis By</th>
+                        <th>Check By</th>
+                    </tr>
+                    <tr *ngFor="let user of selectedResult['tests'];let i = index">
+                        <td style="text-align: left;">{{ user.test }}</td>
+                        <td style="text-align: left;">{{ user.description }}</td>
+                        <td style="text-align: left;">{{ user.result }}</td>
+                        <td>{{ user.analysis_by }}</td>
+                        <td>{{ user.check_by }}</td>
+                    </tr>
+                </table>
+
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="downloadPDF('manual')">Download Manual PDF</button>
+            <button class="btn btn-success" (click)="downloadPDF('digital')">Download Digital PDF</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

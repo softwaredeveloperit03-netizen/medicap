@@ -1,0 +1,267 @@
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { finalize } from 'rxjs/operators';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+  
+
+@Component({
+  selector: 'app-awaiting',
+  templateUrl: './awaiting.component.html',
+  styleUrls: ['./awaiting.component.css']
+})
+
+
+export class AwaitingComponent implements OnInit {
+  
+  constructor(private service: DataAccessService, private router: Router) { }
+
+ 
+  ngOnInit() {
+    this.getPendingTestingForms();
+   }
+ 
+
+  results;
+  material_type = 'Raw Material';
+  getPendingTestingForms() {
+    this.service.get('qc/testing/raw.php?type=getPendingTestingFormsMicrobilogy&material_type='+this.material_type).subscribe(response => {
+      this.results = response;
+    });
+  }
+ 
+
+  isTestView = false; 
+  isView = false; 
+  selectedTesting = {};
+  tests;
+ 
+  viewTesting(data) {
+    this.loading = true;
+    this.loadingMessage = 'Please Wait Tests Are Loading......';
+    setTimeout(() => {
+      this.getTestByTestingNO(data['testing_no']);
+    }, 300);
+    this.selectedTesting = data;
+    this.isView = true;
+    this.isTestView = false;
+  }
+
+
+
+
+  loading = false;
+  loadingMessage = '';
+  
+  getTestByTestingNO(testing_no: string) {
+    this.service
+      .get(
+        'qc/testing/raw.php?type=getTestByTestingNOMicrobilogy&testing_no=' +
+          encodeURIComponent(testing_no)
+      )
+      .pipe(
+        finalize(() => {
+          this.loading = false;   // ALWAYS stop loader
+        })
+      ).subscribe({
+        next: (response) => {
+          this.tests = response;
+        },
+        error: (err) => {
+          console.error('API error:', err);
+        }
+      });
+  }
+
+
+
+  selectedTest = {};
+
+  viewTest(data){
+ 
+    if(data['person'] == localStorage.getItem('emp_id')){
+        data['performUSer'] = data['personName'] +' - '+data['person'];
+    }else if(data['person_alt'] == localStorage.getItem('emp_id')){
+        data['performUSer'] = data['person_altName'] +' - '+data['person_alt'];
+    }else{
+      alertify.error("This Test Is Not Allocated To You.....");
+      return;
+    }
+
+    this.selectedTest = data;
+
+    this.isView = false;
+    this.isTestView = true;
+  }
+  
+
+ 
+ 
+
+  observation = "";
+  result = 0;
+
+  checkResult(){
+
+    if (this.selectedTest['limit_type'] == 'Range') {
+
+      if(this.result >= Number(this.selectedTest['lower_limit']) && this.result <= Number(this.selectedTest['upper_limit']) ){
+        this.observation = "Complies";
+      }else{
+        this.observation = "Non-Complies";
+      }
+
+      this.reason = '';
+
+    }else if (this.selectedTest['limit_type'] == 'Not MoreThan') {
+      
+      if(this.result <= Number(this.selectedTest['upper_limit']) ){
+        this.observation = "Complies";
+      }else{
+        this.observation = "Non-Complies";
+      }
+      this.reason = '';
+    }else if (this.selectedTest['limit_type'] == 'Not LessThan') {
+      
+      if(this.result >= Number(this.selectedTest['lower_limit'])){
+        this.observation = "Complies";
+      }else{
+        this.observation = "Non-Complies";
+      }
+
+    } 
+
+  }
+ 
+  reason = '';
+ 
+  startTime!: string;
+  endTime!: string;
+
+  setTime(type: 'Start' | 'End'){
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = this.pad(now.getMonth() + 1); // months are 0-based
+    const day = this.pad(now.getDate());
+    const hours = this.pad(now.getHours());
+    const minutes = this.pad(now.getMinutes());
+
+    const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+    if (type === 'Start') {
+      this.startTime = localDateTime;
+    } else {
+      this.endTime = localDateTime;
+    }
+  }
+
+  private pad(value: number): string {
+    return value < 10 ? '0' + value : value.toString();
+  }
+  
+ 
+  temp = {};
+  isDIGI = false;
+  form;
+
+  emp_id = localStorage.getItem('emp_id');
+
+  openDigiSign(data){
+
+    if (!data.valid) {
+      alert('All Field Required!!!!');
+      return;
+    }
+    this.form = data;
+    this.temp = data.value;
+    this.temp['observation'] = this.observation;
+    if(this.temp['reason']=='Other'){
+      this.temp['reason'] = this.temp['ifReasoneIsOther'];
+    }
+    this.temp['reason'] = this.reason;
+    this.temp['selectedTestId'] = this.selectedTest['id'];
+    this.isDIGI = true;
+
+  }
+ 
+
+  digiSign(data){
+
+    if (!data.valid) {
+      alert('Passward OR Login PIN Required!!!!');
+      return;
+    }
+ 
+    let loginPassward = data.value?.loginPassward;
+
+    this.service.get('login.php?type=checkDigiSIgn&mpin=' + loginPassward +'&emp_id=' + localStorage.getItem('emp_id')).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success('Digi-Sign Verified successfully');
+        this.isDIGI = false;
+        data.reset();
+        this.saveTestResult();
+      } else {
+        alertify.error('Digi-Sign Not Verified');
+      }
+    });
+  }
+ 
+  saveTestResult(){
+    this.service.post('qc/testing/raw.php?type=saveTestResult',JSON.stringify(this.temp)).subscribe(response => {
+      if (response['status']) {
+        alertify.success('Test Result Saved Successfully......');
+
+        this.isView = true;
+        this.isTestView = false;
+        this.loading = true;
+        this.loadingMessage = 'Please Wait Tests Are Loading......';
+        setTimeout(() => {
+          this.getTestByTestingNO(this.selectedTesting['testing_no']);
+        }, 300);
+        this.temp ={};
+        this.form.reset();
+        this.observation = '';
+      } else {
+        alertify.error('Failed: An error occured, please try again!');
+      }
+    });
+
+  }
+
+
+
+
+ 
+ 
+    searchQuery;
+ 
+    get filteredMaterials(): any[] {
+      if (!this.searchQuery || this.searchQuery.trim() === '') {
+        return this.results; // If search query is empty or whitespace, return all materials
+      }
+  
+      const query = this.searchQuery.toLowerCase().trim(); // Convert search query to lowercase and trim whitespace
+  
+      return this.results.filter((material) => {
+        // Check if any field of the material contains the search query
+        return Object.entries(material).some(([key, value]) => {
+          if (key === 'entry_date') {
+            // Convert the value to a Date object if it's not already
+            const dateValue = typeof value === 'string' ? new Date(value) : value;
+            // Check if the date value is valid and includes the search query
+            return (
+              dateValue instanceof Date &&
+              dateValue.toISOString().slice(0, 10).includes(query)
+            );
+          } else {
+            // Convert field value to lowercase and check if it includes the search query
+            return value && value.toString().toLowerCase().includes(query);
+          }
+        });
+      });
+    }
+
+ 
+
+}

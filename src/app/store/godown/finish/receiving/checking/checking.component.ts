@@ -1,0 +1,63 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+@Component({
+  selector: 'app-checking',
+  templateUrl: './checking.component.html',
+  styleUrls: ['./checking.component.css']
+})
+export class CheckingComponent implements OnInit {
+
+  isView = false;
+  isUpincedent=false;
+  results;
+  isupdate = false;
+  selectedReport = [];
+  receiveDetails=[];
+  devdetails=[];
+  productdetails=[];
+  insdetails=[];
+  incidentProduct=[];
+  constructor(private service: DataAccessService) { }
+
+  ngOnInit() {
+    this.getInprocessReceivings();
+  }
+
+  getInprocessReceivings() {
+    this.service.get('store/raw.php?type=getInprocessReceivings').subscribe(response => {
+      this.results = response;
+    });
+  }
+
+  view(index) {
+    this.selectedReport = this.results[index];
+    this.receiveDetails=this.selectedReport['receiving_details'];
+
+  
+    if(this.selectedReport['error_type']=='error2'){
+      this.devdetails=this.selectedReport['deviations'];
+      this.productdetails=this.devdetails['product_details'];
+      console.log(this.productdetails);
+    }else if(this.selectedReport['error_type']=='error1'){
+      this.insdetails=this.selectedReport['incidents'];
+     this.incidentProduct=this.insdetails['product_details'];
+     console.log('tt',this.incidentProduct);
+   }
+   
+    this.isView = true;
+  }
+
+  update(status) {
+    this.service.get('store/raw.php?type=checkReceivedMaterial&status=' + status + '&id=' + this.selectedReport['id']).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success('Material updated successfully');
+        this.isView = false;
+        this.getInprocessReceivings();
+      } else {
+        alertify.error('Failed: An error occured, please try again!');
+      }
+    });
+  }
+
+}

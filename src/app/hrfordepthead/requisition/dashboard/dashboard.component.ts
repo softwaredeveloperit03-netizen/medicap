@@ -1,0 +1,52 @@
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+ 
+  
+  constructor(private service: DataAccessService, private router: Router,private cbr:ChangeDetectorRef) { }
+  ngOnInit() {
+    this.getRequisitionDeptLog()
+    this.get_rights();
+  }
+
+  isuser = 'No';
+  rights;
+
+  get_rights() {
+    this.service.get('hr/employee.php?type=getrights&emp_id=' +localStorage.getItem('emp_id') +'&dep_name=' +localStorage.getItem('department')     ).subscribe((response) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+    });
+  }
+ 
+  isView = false;
+  selectedResult = [];
+  view(data) {
+    this.selectedResult = data;
+    this.isView = true;
+  }
+ 
+  download() {
+    this.service.open('hr/manpower.php?type=getRequisitionLogIndividual&id=' + this.selectedResult['id']);
+  }
+
+
+  requisitions;
+ 
+  getRequisitionDeptLog() {
+      this.service.get('hr/manpower.php?type=getRequisitionDeptLog&deptName='+localStorage.getItem('department')).subscribe((response: any) => {
+        this.requisitions = response;
+      });
+  }
+ 
+  
+ 
+ 
+}

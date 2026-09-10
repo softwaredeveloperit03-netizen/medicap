@@ -1,0 +1,138 @@
+<div class="container-fluid" *ngIf="isInit">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">CERTIFICATE OF ANALYSIS</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="closePage()" style="background-color: red;color: white;">
+                  CLOSE
+                </button>
+              </div>
+            </div>
+        </div>
+      <div class="card-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Name</label>
+            <select name="material_name" [(ngModel)]="material_name" required (change)="filterStock()">
+                <option></option>
+                <option *ngFor="let mat of materials" value="{{ mat.material_name}}" >{{ mat.material_name }}</option>
+            </select>
+          </div>
+         
+          <div class="clr-col-lg-4 clr-col-md-4">
+          <button class="btn btn-danger" (click)="clear()" style="margin-top: 33px;">Clear Filter</button>
+          </div>
+        </div>
+        <div class="card-text">
+            <table class="table table-border"> 
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling No</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                    <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">view pdf</th> -->
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">View</th>
+                </tr>
+        
+                <tr *ngFor="let user of results; let i = index">
+                    <td style="text-align: left;">{{i+1}}</td>
+                    <td style="text-align: left;">{{ user.entry_date | date: 'dd-MM-yyyy'}}</td>
+                    <td style="text-align: left;">{{user.material_code}}</td>
+                    <td style="text-align: left;">{{user.material_name}}</td>
+                    <td style="text-align: left;">{{user.sampling_no}}</td>
+                    <td style="text-align: left;">{{user.status}}</td>
+                    <!-- <td>
+                        <button class="btn btn-sm btn-info" (click)="viewCOA(user.testing_no)">view pdf</button>
+                    </td> -->
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(user)">{{'common.view' | translate}}</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadCoaLog()">{{'common.download' | translate}}</button>
+      </div>
+    </div>
+    
+    
+    
+</div>
+<div class="container-fluid" *ngIf="!isInit">
+    <div class="card">
+      <div class="card-header">Testing Approval</div>
+      <div class="card-block">
+        <div class="card-text">
+          <form class="clr-row" #testingForm="ngForm">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Test No:</label>
+              <input type="text" name="testing_no" [ngModel]="selectedOrder['testing_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Sampling No:</label>
+              <input type="text" name="sampling_no" [ngModel]="selectedOrder['sampling_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Specification No:</label>
+              <input type="text" name="specification_no" [ngModel]="selectedOrder['specification_no']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <input type="text" name="material_name" [ngModel]="selectedOrder['material_name']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Grade</label>
+              <input type="text" name="material_grade" [ngModel]="selectedOrder['grade']" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Code:</label>
+              <input type="text" name="item_code" [ngModel]="selectedOrder['material_code']" readonly>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <p *ngIf="loadingTests">Loading test results...</p>
+              <table class="table table-border">
+                <tr>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                   <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.description' | translate}}</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limits</th>
+                   <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;"> Result</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.remark' | translate}}</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+                  <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">End Time</th> 
+                </tr>
+                <tr *ngIf="!loadingTests && tests.length === 0">
+                  <td colspan="9" style="text-align: center;">No test lines found.</td>
+                </tr>
+                <tr *ngFor="let user of tests; let i = index">
+                    <td>{{i+1}}</td>
+                    <td style="text-align: left;">{{user.test}}</td>
+                    <td style="text-align: left;">{{user.subtest ? user.subtest : 'NA'}}</td>
+                     <td style="text-align: left;">{{user.description || user.spec_description || '-'}}</td>
+                    <td style="text-align: left;">{{user.limits || user.spec_limits || '-'}}</td>
+                    <td style="text-align: left;">
+                      <span *ngIf="user.isoutside != 'Yes'">{{ user.result || '-' }}</span>
+                      <button *ngIf="user.isoutside == 'Yes'" [disabled]="user.t_status == 'pending'" class="btn btn-sm btn-info" (click)="viewPhoto(user.result)">View Report</button>
+                    </td>
+                    <td style="text-align: left;">{{user.remark }}</td>
+                    <td style="text-align: left;">{{user.start_time}}</td>
+                    <td style="text-align: left;">{{user.end_time}}</td>
+                  </tr>
+              </table>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+
+          <button class="btn btn-sm btn-info" (click)="viewCOA()">View Pdf</button>
+          <button class="btn btn-sm" (click)="close()" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+
+      </div>
+    </div>
+</div>

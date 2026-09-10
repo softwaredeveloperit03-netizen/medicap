@@ -1,0 +1,1142 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Standard BMR Log</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" routerLink="/production/ebmr/master" style="background-color: red;color: white;">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+          <label>Dosage Form:</label>
+          <select name="dosage_form" [(ngModel)]="dosage_form" required>
+            <option></option>
+            <option *ngFor="let dosage of dosages">{{ dosage.dosage_form }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+          <button class="btn btn-primary" (click)="getMFRs()" style="margin-top: 30px;">{{'common.search' | translate}}</button>
+        </div>
+      </div>
+      <table class="table">
+        <tr>
+          <th>Sr.</th>
+          <th>MFR No.</th>
+          <th style="text-align: left;"> Dosage Form</th>
+          <th style="text-align: left;">Process Type</th>
+          <th style="text-align: left;">Product Name</th>
+          <th style="text-align: left;">Grade</th>
+          <th>Standrad Batch Size</th>
+          <th>UOM</th>
+          <th style="width: 30%;">View</th>
+        </tr>
+        <tr *ngFor="let result of results; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td>{{ result.mfr_no }}</td>
+          <td style="text-align: left;">{{ result.dosage_form }}</td>
+          <td style="text-align: left;">{{ result.process_type }}</td>
+          <td style="text-align: left;">{{ result.product_name }}</td>
+          <td style="text-align: left;">{{ result.grade }}</td>
+          <td>{{ result.batch_size }}</td>
+          <td>{{ result.unit }}</td>
+          <td>
+            <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+            <button class="btn btn-sm btn-info" (click)="new(i)">NEW BATCH SIZE</button>
+            <button class="btn btn-sm btn-info btn-icon" (click)="download1(result.id)"><clr-icon shape="download" class="is-info"></clr-icon></button>
+          </td>
+        </tr>
+        <tr *ngIf="results?.length == 0">
+          <td colspan="11">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<clr-wizard #wizard [clrWizardOpen]="isView" clrWizardSize="xl" [clrWizardClosable]="'false'">
+  <clr-wizard-title style="color: white;">Standard BMR</clr-wizard-title>
+
+  <clr-wizard-button (click)="download()" class="btn-success">DOWNLOAD</clr-wizard-button>
+  <clr-wizard-button [type]="'cancel'" (click)="isView=false">Cancel</clr-wizard-button>
+  <clr-wizard-button [type]="'previous'">Back</clr-wizard-button>
+  <clr-wizard-button [type]="'next'">Next</clr-wizard-button>
+  <clr-wizard-button [type]="'finish'" (click)="close()">Done</clr-wizard-button>
+
+  <clr-wizard-page #pageOne>
+    <ng-template clrPageNavTitle> Product Details</ng-template>
+    <ng-template clrPageTitle>Basic Information</ng-template>
+    <table class="table">
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Dosage Form</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b>Process Type</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['process_type']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Average Weight</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['average_wt']}} {{selectedResult['unit']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b>Color:</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['color']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Product Description</b></td>
+        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['description']}}</td>
+      </tr>
+    </table>
+      <table class="table">
+        <tr>
+          <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Generic Name</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['generic_name']}}</td>
+          <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b> Dosage Form</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+          <td style="text-align: left; border:1px solid black;"><b> Shelf Life</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['shelf_life']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Label Claim</b></td>
+          <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['label_claim']}}</td>
+        </tr>
+      </table>
+      <h3>batches</h3>
+      <table class="table">
+        <tr>
+          <th>Sr.</th>
+          <th>Batch Size</th>
+          <th>No. of Lots</th>
+          <th>master No</th>
+        </tr>
+        <tr *ngFor="let test of selectedResult['batches'];let i=index">
+          <td>{{i+1}}</td>
+          <td>{{ test.batch_size}}</td>
+          <td>{{test.lots}}</td>
+          <td>{{test.master_no}}</td>
+        </tr>
+      </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageTwo>
+      <ng-template clrPageTitle>Unit Formula for Raw Material</ng-template>
+      <ng-template clrPageNavTitle>Unit Formula for Raw Material</ng-template>
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">Grade</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th style="text-align: left;">Role</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td style="text-align: left;">{{ comp.material_name }}</td>
+            <td style="text-align: left;">{{ comp.grade }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td style="text-align: left;">{{ comp.role }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+          <td colspan="7">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <h3>Additional Materials List:</h3>
+      <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th>Qty</th>
+              <th>Overages</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['additional_materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['additional_materials']?.length == 0">
+              <td colspan="6">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageThree>
+      <ng-template clrPageTitle>Standard Formula for Packing</ng-template>
+      <ng-template clrPageNavTitle> Standard Formula for Packing</ng-template>
+
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th>Role</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.role }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['packing_materials']?.length == 0">
+            <td colspan="6">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageThree>
+    <ng-template clrPageTitle>Standard Batch Formula</ng-template>
+    <ng-template clrPageNavTitle>Standard Batch Formula</ng-template>
+    <div class="clr-row">
+      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+        <label>Batch Size:</label>
+        <input type="text" name="batch_size" [ngModel]="selectedResult['batch_size']"  readonly tabindex="-1">
+      </div>
+      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+        <label>No. of Lots:</label>
+        <input type="text" name="lots" [ngModel]="selectedResult['lots']" readonly tabindex="-1" >
+      </div>
+     </div>
+    <h4>Raw Materials:</h4>
+    <table class="table">
+      <tr>
+          <th>Sr.</th>
+          <th style="text-align: left;">Material type</th>
+          <th style="text-align: left;">Material Code</th>
+          <th style="text-align: left;">Material Name</th>
+          <th style="text-align: left;">Grade</th>
+          <th>Qty</th>
+          <th>Overages</th>
+          <th style="text-align: left;">Role</th>
+          <th>Batch Qty</th>
+      </tr>
+      <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ comp.material_subtype }}</td>
+          <td style="text-align: left;">{{ comp.material_code }}</td>
+          <td style="text-align: left;">{{ comp.material_name }}</td>
+          <td style="text-align: left;">{{ comp.grade }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td style="text-align: left;">{{ comp.role }}</td>
+          <td style="text-align: left;">{{ comp.batch_qty }}</td>
+      </tr>
+      <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+        <td colspan="7">{{'common.noRecords' | translate}}</td>
+      </tr>
+    </table>
+
+    <h4>Additional Materials List:</h4>
+    <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th>Batch Qty</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['additional_materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.batch_qty }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['additional_materials']?.length == 0">
+            <td colspan="6">{{'common.noRecords' | translate}}</td>
+        </tr>
+    </table>
+
+    <h4>Packing Materials:</h4>
+    <table class="table">
+      <tr>
+          <th>Sr.</th>
+          <th style="text-align: left;">Material type</th>
+          <th style="text-align: left;">Material Code</th>
+          <th>Qty</th>
+          <th>Overages</th>
+          <th>Role</th>
+          <th>Batch Qty</th>
+      </tr>
+      <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+          <td>{{ i + 1 }}.</td>
+          <td style="text-align: left;">{{ comp.material_subtype }}</td>
+          <td style="text-align: left;">{{ comp.material_code }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ comp.overages }}</td>
+          <td>{{ comp.role }}</td>
+          <td>{{ comp.batch_qty }}</td>
+      </tr>
+      <tr *ngIf="selectedResult['packing_materials']?.length == 0">
+          <td colspan="6">{{'common.noRecords' | translate}}</td>
+      </tr>
+    </table>
+</clr-wizard-page>
+
+  <!-- <clr-wizard-page #pageFour>
+    <ng-template clrPageTitle>Finish Product Specification</ng-template>
+    <ng-template clrPageNavTitle>{{ pageFourTitle }} Finish Product Specification</ng-template>
+
+    <table class="table">
+      <tr>
+        <th>Test</th>
+        <th>Sub Test</th>
+        <th>Specification</th>
+        <th>Limits</th>
+      </tr>
+      <tr *ngFor="let comp of specification['tests']; let i = index">
+        <td>{{comp.test}}</td>
+        <td>{{comp.subtest}}</td>
+        <td>{{comp.description}}</td>
+        <td>{{comp.limit}}</td>
+      </tr>
+      <tr *ngIf="specification['tests']?.length === 0">
+        <td colspan="5" style="height: 40px;">No Record found</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageFive>
+    <ng-template clrPageTitle>Inprocess Specification</ng-template>
+    <ng-template clrPageNavTitle>{{ pageFiveTitle }} Inprocess Specification</ng-template>
+
+    <table class="table">
+      <tr>
+        <th>Test</th>
+        <th>Sub Test</th>
+        <th>Specification</th>
+        <th>Limit</th>
+      </tr>
+      <tr *ngFor="let comp of specification1['tests']; let i = index">
+        <td>{{comp.test}}</td>
+        <td>{{comp.subtest}}</td>
+        <td>{{comp.description}}</td>
+        <td>{{comp.limit}}</td>
+      </tr>
+      <tr *ngIf="specification['tests']?.length === 0">
+        <td colspan="5" style="height: 40px;">No Record found</td>
+      </tr>
+    </table>
+  </clr-wizard-page> -->
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Equipment List</ng-template>
+    <ng-template clrPageNavTitle> Equipment List</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th>Stage</th>
+        <th>Equipment Name</th>
+        <th>Min. Capacity</th>
+        <th>Max. Capacity</th>
+        <th>Make</th>
+      </tr>
+      <tr *ngFor="let equipment of selectedResult['equipments']; let i = index">
+        <td style="text-align: left;">{{ equipment.process_stage }}</td>
+        <td style="text-align: left;">{{ equipment.equipment_name }}</td>
+        <td>{{ equipment.min_capacity }}</td>
+        <td>{{ equipment.max_capacity }}</td>
+        <td>{{ equipment.make }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Stages</ng-template>
+    <ng-template clrPageNavTitle> Stages</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th>Sr.</th>
+        <th>Stage</th>
+      </tr>
+      <tr *ngFor="let stage of selectedResult['stages']; let i = index">
+        <td>{{ i + 1 }}.</td>
+        <td style="text-align: left;">{{ stage.process_stage }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Steps</ng-template>
+    <ng-template clrPageNavTitle> Steps</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th style="font-size: 10px;">Stage</th>
+        <th style="font-size: 10px;">Instruction</th>
+        <th style="font-size: 10px;">Line Clearance</th>
+        <th style="font-size: 10px;">Env. Check</th>
+        <th style="font-size: 10px;">Procedure</th>
+        <th style="font-size: 10px;">Calculation</th>
+        <th style="font-size: 10px;">Inprocess Check</th>
+        <th style="font-size: 10px;">Weighing</th>
+        <th style="font-size: 10px;">Reconc.</th>
+      </tr>
+      <tr *ngFor="let stage of selectedResult['steps']; let i = index">
+        <td style="text-align: left; font-size: 11px;">{{ stage.process_stage }}</td>
+        <td>{{ stage.isinstruction }}</td>
+        <td>{{ stage.isclearance }}</td>
+        <td>{{ stage.isenviornmental }}</td>
+        <td>{{ stage.isprocedure }}</td>
+        <td>{{ stage.iscalculation }}</td>
+        <td>{{ stage.ischecks }}</td>
+        <td>{{ stage.isweighing }}</td>
+        <td>{{ stage.isreconciliation }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSeven *ngFor="let stage of selectedResult['steps']; let i = index">
+      <ng-template clrPageTitle>{{ stage.process_stage }}</ng-template>
+      <ng-template clrPageNavTitle> {{ stage.process_stage }}</ng-template>
+
+      <div *ngIf="stage['materials']?.length > 0">
+        <h4>Materials:</h4>
+        <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th style="text-align: left;">Material Name</th>
+              <th style="text-align: left;">Grade</th>
+              <th>Qty</th>
+              <th>Overages</th>
+              <th style="text-align: left;">Role</th>
+          </tr>
+          <tr *ngFor="let comp of stage['materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td style="text-align: left;">{{ comp.material_name }}</td>
+              <td style="text-align: left;">{{ comp.grade }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+              <td style="text-align: left;">{{ comp.role }}</td>
+          </tr>
+          <tr *ngIf="stage['materials']?.length == 0">
+            <td colspan="7">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+      <div *ngIf="stage['equipments']?.length > 0">
+        <h4>Equipments:</h4>
+        <table class="table">
+          <tr>
+            <th style="text-align: left;">Stage</th>
+            <th style="text-align: left;">Equipment Name</th>
+            <th>Min. Capacity</th>
+            <th>Max. Capacity</th>
+            <th>Make</th>
+          </tr>
+          <tr *ngFor="let equipment of stage['equipments']; let i = index">
+            <td style="text-align: left;">{{ equipment.process_stage }}</td>
+            <td style="text-align: left;">{{ equipment.equipment_name }}</td>
+            <td>{{ equipment.min_capacity }}</td>
+            <td>{{ equipment.max_capacity }}</td>
+            <td>{{ equipment.make }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div>
+        <div *ngIf="stage['isinstruction'] == 'yes'">
+          <h4>General Instructions:</h4>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Instruction</th>
+            </tr>
+            <tr *ngFor="let instruction of stage['instructions']; let j = index">
+              <td>{{ j + 1 }}.</td>
+              <td style="text-align: left;">{{ instruction.instruction }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isclearance'] == 'yes'">
+          <h4>Line Clearance Checkpoints:</h4>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Checkpoints</th>
+            </tr>
+            <tr *ngFor="let checkpoint of stage['clearances']; let j = index">
+              <td>{{j+1}}</td>
+              <td style="text-align: left;">{{ checkpoint.checkpoint }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isprocedure'] == 'yes'">
+          <h4>Procedures:</h4>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Procedure</th>
+            </tr>
+            <tr *ngFor="let procedure of stage['procedures']; let j = index">
+              <td>{{j+1}}</td>
+              <td style="text-align: left;">{{ procedure.procedure }}</td>
+            </tr>
+            <tr *ngIf="stage['procedures']?.length==0">
+                <td colspan="2">No Record Found!</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['ischecks'] == 'yes'">
+          <h4>Inprocess Checks:</h4>
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Frequency:</label>
+              <input type="text" name="frequency" [(ngModel)]="stage.check_frequency" readonly>
+            </div>
+          </div>
+          <table class="table">
+            <tr>
+              <th rowspan="2">Parameters</th>
+              <th colspan="2">Limits</th>
+              <th rowspan="2">{{'common.unit' | translate}}</th>
+            </tr>
+            <tr>
+              <th>Lower Limit</th>
+              <th>Upper Limit</th>
+            </tr>
+            <tr *ngFor="let check of stage['checks']">
+              <td>{{ check.parameter }}</td>
+              <td>{{ check.lower_limit }}</td>
+              <td>{{ check.upper_limit }}</td>
+              <td>{{ check.unit }}</td>
+            </tr>
+            <tr *ngIf="stage['checks']?.length==0">
+              <td colspan="4">No Record Found!</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isweighing'] == 'yes'">
+          <h4>Weighing of Material:</h4>
+          <table class="table">
+            <tr>
+              <th>Container No.</th>
+              <th>Gross Wt.</th>
+              <th>Tare Wt.</th>
+              <th>Net Wt.</th>
+              <th>{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;">
+                <input type="text" name="container_no" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="gross_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="tare_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="net_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px; vertical-align: middle;">
+                <button class="btn btn-sm btn-info" disabled>{{'common.add' | translate}}</button>
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="5">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isenviornmental'] == 'yes'">
+          <h4>Environmental Checks:</h4>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Temp. / Humidity Reading Frequency: {{ stage.temp_frequency }}</label>
+            </div>
+          </div>
+          <h5>Temp./Humidity Readings:</h5>
+          <table class="table">
+            <tr>
+              <th>{{'common.date' | translate}}</th>
+              <th>Time</th>
+              <th>Temp.°C</th>
+              <th>Humidity %</th>
+              <th>Entry By</th>
+              <th>Checked By</th>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+
+          <h5>Pressure Differential Readings:</h5>
+          <table class="table">
+            <tr>
+              <th>{{'common.date' | translate}}</th>
+              <th>Time</th>
+              <th>Pressure</th>
+              <th>Entry By</th>
+              <th>Checked By</th>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+  </clr-wizard-page>
+</clr-wizard>
+
+<clr-wizard #wizard1 [clrWizardOpen]="isNew" clrWizardSize="xl" [clrWizardClosable]="'false'">
+  <clr-wizard-title style="color: white;">Standard BMR</clr-wizard-title>
+
+  <clr-wizard-button [type]="'cancel'">Cancel</clr-wizard-button>
+  <clr-wizard-button [type]="'previous'">Back</clr-wizard-button>
+  <clr-wizard-button [type]="'next'">Next</clr-wizard-button>
+  <clr-wizard-button [type]="'finish'" (click)="close()">Done</clr-wizard-button>
+
+  <clr-wizard-page #pageOne>
+    <ng-template clrPageNavTitle> Product Details</ng-template>
+    <ng-template clrPageTitle>Basic Information</ng-template>
+    <table class="table">
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Dosage Form</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b>Process Type</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['process_type']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Average Weight</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['average_wt']}} {{selectedResult['unit']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b>Color:</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['color']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Product Description</b></td>
+        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['description']}}</td>
+      </tr>
+    </table>
+    <table class="table">
+      <tr>
+        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Generic Name</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['generic_name']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b> Dosage Form</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['dosage_form']}}</td>
+        <td style="text-align: left; border:1px solid black;"><b> Shelf Life</b></td>
+        <td style="text-align: left; border:1px solid black;">{{selectedResult['shelf_life']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left; border:1px solid black;"><b>Label Claim</b></td>
+        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['label_claim']}}</td>
+      </tr>
+    </table>
+
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>New Batch Size:</label>
+              <input type="text" name="batch_size" [(ngModel)]="batch_size" (keyup)="calculate()" required>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+              <label>No. of Lots:</label>
+              <input type="text" name="lots" [(ngModel)]="lots" (keyup)="calculate()" required>
+            </div>
+          </div>
+
+          <h4>Raw Materials:</h4>
+          <table class="table">
+            <tr>
+                <th>Sr.</th>
+                <th style="text-align: left;">Material type</th>
+                <th style="text-align: left;">Material Code</th>
+                <th style="text-align: left;">Material Name</th>
+                <th style="text-align: left;">Grade</th>
+                <th>Qty</th>
+                <th>Overages</th>
+                <th style="text-align: left;">Role</th>
+                <th>Batch Qty</th>
+            </tr>
+            <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                <td style="text-align: left;">{{ comp.material_code }}</td>
+                <td style="text-align: left;">{{ comp.material_name }}</td>
+                <td style="text-align: left;">{{ comp.grade }}</td>
+                <td>{{ comp.qty }} {{ comp.unit }}</td>
+                <td>{{ comp.overages }}</td>
+                <td style="text-align: left;">{{ comp.role }}</td>
+                <td style="text-align: left;">{{ comp.batch_qty }}</td>
+            </tr>
+            <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+              <td colspan="7">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+
+          <h4>Additional Materials List:</h4>
+          <table class="table">
+              <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;">Material type</th>
+                  <th style="text-align: left;">Material Code</th>
+                  <th>Qty</th>
+                  <th>Overages</th>
+                  <th>Batch Qty</th>
+              </tr>
+              <tr *ngFor="let comp of selectedResult['additional_materials']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                  <td style="text-align: left;">{{ comp.material_code }}</td>
+                  <td>{{ comp.qty }} {{ comp.unit }}</td>
+                  <td>{{ comp.overages }}</td>
+                  <td>{{ comp.batch_qty }}</td>
+              </tr>
+              <tr *ngIf="selectedResult['additional_materials']?.length == 0">
+                  <td colspan="6">{{'common.noRecords' | translate}}</td>
+              </tr>
+          </table>
+
+          <h4>Packing Materials:</h4>
+          <table class="table">
+            <tr>
+                <th>Sr.</th>
+                <th style="text-align: left;">Material type</th>
+                <th style="text-align: left;">Material Code</th>
+                <th>Qty</th>
+                <th>Overages</th>
+                <th>Role</th>
+                <th>Batch Qty</th>
+            </tr>
+            <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                <td style="text-align: left;">{{ comp.material_code }}</td>
+                <td>{{ comp.qty }} {{ comp.unit }}</td>
+                <td>{{ comp.overages }}</td>
+                <td>{{ comp.role }}</td>
+                <td>{{ comp.batch_qty }}</td>
+            </tr>
+            <tr *ngIf="selectedResult['packing_materials']?.length == 0">
+                <td colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-success" (click)="saveBatchSize()">{{'common.save' | translate}}</button>
+      </div>
+    </div>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageTwo>
+      <ng-template clrPageTitle>Unit Formula for Raw Material</ng-template>
+      <ng-template clrPageNavTitle>Unit Formula for Raw Material</ng-template>
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th style="text-align: left;">Grade</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th style="text-align: left;">Role</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td style="text-align: left;">{{ comp.material_name }}</td>
+            <td style="text-align: left;">{{ comp.grade }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td style="text-align: left;">{{ comp.role }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+          <td colspan="7">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <h3>Additional Materials List:</h3>
+      <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th>Qty</th>
+              <th>Overages</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['additional_materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['additional_materials']?.length == 0">
+              <td colspan="6">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageThree>
+      <ng-template clrPageTitle>Standard Formula for Packing</ng-template>
+      <ng-template clrPageNavTitle> Standard Formula for Packing</ng-template>
+
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th>Role</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.role }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['packing_materials']?.length == 0">
+            <td colspan="6">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+  </clr-wizard-page>
+
+  <!-- <clr-wizard-page #pageFour>
+    <ng-template clrPageTitle>Finish Product Specification</ng-template>
+    <ng-template clrPageNavTitle>{{ pageFourTitle }} Finish Product Specification</ng-template>
+
+    <table class="table">
+      <tr>
+        <th>Test</th>
+        <th>Sub Test</th>
+        <th>Specification</th>
+        <th>Limits</th>
+      </tr>
+      <tr *ngFor="let comp of specification['tests']; let i = index">
+        <td>{{comp.test}}</td>
+        <td>{{comp.subtest}}</td>
+        <td>{{comp.description}}</td>
+        <td>{{comp.limit}}</td>
+      </tr>
+      <tr *ngIf="specification['tests']?.length === 0">
+        <td colspan="5" style="height: 40px;">No Record found</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageFive>
+    <ng-template clrPageTitle>Inprocess Specification</ng-template>
+    <ng-template clrPageNavTitle>{{ pageFiveTitle }} Inprocess Specification</ng-template>
+
+    <table class="table">
+      <tr>
+        <th>Test</th>
+        <th>Sub Test</th>
+        <th>Specification</th>
+        <th>Limit</th>
+      </tr>
+      <tr *ngFor="let comp of specification1['tests']; let i = index">
+        <td>{{comp.test}}</td>
+        <td>{{comp.subtest}}</td>
+        <td>{{comp.description}}</td>
+        <td>{{comp.limit}}</td>
+      </tr>
+      <tr *ngIf="specification['tests']?.length === 0">
+        <td colspan="5" style="height: 40px;">No Record found</td>
+      </tr>
+    </table>
+  </clr-wizard-page> -->
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Equipment List</ng-template>
+    <ng-template clrPageNavTitle> Equipment List</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th>Stage</th>
+        <th>Equipment Name</th>
+        <th>Min. Capacity</th>
+        <th>Max. Capacity</th>
+        <th>Make</th>
+      </tr>
+      <tr *ngFor="let equipment of selectedResult['equipments']; let i = index">
+        <td style="text-align: left;">{{ equipment.process_stage }}</td>
+        <td style="text-align: left;">{{ equipment.equipment_name }}</td>
+        <td>{{ equipment.min_capacity }}</td>
+        <td>{{ equipment.max_capacity }}</td>
+        <td>{{ equipment.make }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Stages</ng-template>
+    <ng-template clrPageNavTitle> Stages</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th>Sr.</th>
+        <th>Stage</th>
+      </tr>
+      <tr *ngFor="let stage of selectedResult['stages']; let i = index">
+        <td>{{ i + 1 }}.</td>
+        <td style="text-align: left;">{{ stage.process_stage }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSix>
+    <ng-template clrPageTitle>Steps</ng-template>
+    <ng-template clrPageNavTitle> Steps</ng-template>
+    
+    <table class="table">
+      <tr>
+        <th style="font-size: 10px;">Stage</th>
+        <th style="font-size: 10px;">Instruction</th>
+        <th style="font-size: 10px;">Line Clearance</th>
+        <th style="font-size: 10px;">Env. Check</th>
+        <th style="font-size: 10px;">Procedure</th>
+        <th style="font-size: 10px;">Calculation</th>
+        <th style="font-size: 10px;">Inprocess Check</th>
+        <th style="font-size: 10px;">Weighing</th>
+        <th style="font-size: 10px;">Reconc.</th>
+      </tr>
+      <tr *ngFor="let stage of selectedResult['steps']; let i = index">
+        <td style="text-align: left; font-size: 11px;">{{ stage.process_stage }}</td>
+        <td>{{ stage.isinstruction }}</td>
+        <td>{{ stage.isclearance }}</td>
+        <td>{{ stage.isenviornmental }}</td>
+        <td>{{ stage.isprocedure }}</td>
+        <td>{{ stage.iscalculation }}</td>
+        <td>{{ stage.ischecks }}</td>
+        <td>{{ stage.isweighing }}</td>
+        <td>{{ stage.isreconciliation }}</td>
+      </tr>
+    </table>
+  </clr-wizard-page>
+
+  <clr-wizard-page #pageSeven *ngFor="let stage of selectedResult['steps']; let i = index">
+      <ng-template clrPageTitle>{{ stage.process_stage }}</ng-template>
+      <ng-template clrPageNavTitle> {{ stage.process_stage }}</ng-template>
+
+      <div *ngIf="stage['materials']?.length > 0">
+        <h4>Materials:</h4>
+        <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th style="text-align: left;">Material Name</th>
+              <th style="text-align: left;">Grade</th>
+              <th>Qty</th>
+              <th>Overages</th>
+              <th style="text-align: left;">Role</th>
+          </tr>
+          <tr *ngFor="let comp of stage['materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td style="text-align: left;">{{ comp.material_name }}</td>
+              <td style="text-align: left;">{{ comp.grade }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+              <td style="text-align: left;">{{ comp.role }}</td>
+          </tr>
+          <tr *ngIf="stage['materials']?.length == 0">
+            <td colspan="7">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+      <div *ngIf="stage['equipments']?.length > 0">
+        <h4>Equipments:</h4>
+        <table class="table">
+          <tr>
+            <th style="text-align: left;">Stage</th>
+            <th style="text-align: left;">Equipment Name</th>
+            <th>Min. Capacity</th>
+            <th>Max. Capacity</th>
+            <th>Make</th>
+          </tr>
+          <tr *ngFor="let equipment of stage['equipments']; let i = index">
+            <td style="text-align: left;">{{ equipment.process_stage }}</td>
+            <td style="text-align: left;">{{ equipment.equipment_name }}</td>
+            <td>{{ equipment.min_capacity }}</td>
+            <td>{{ equipment.max_capacity }}</td>
+            <td>{{ equipment.make }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div>
+        <div *ngIf="stage['isinstruction'] == 'yes'">
+          <h4>General Instructions:</h4>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Instruction</th>
+            </tr>
+            <tr *ngFor="let instruction of stage['instructions']; let j = index">
+              <td>{{ j + 1 }}.</td>
+              <td style="text-align: left;">{{ instruction.instruction }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isclearance'] == 'yes'">
+          <h4>Line Clearance Checkpoints:</h4>
+          <table class="table">
+            <tr>
+              <th>Checkpoints</th>
+            </tr>
+            <tr *ngFor="let checkpoint of stage['clearances']; let j = index">
+              <td style="text-align: left;">{{ checkpoint.checkpoint }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isprocedure'] == 'yes'">
+          <h4>Procedures:</h4>
+          <table class="table">
+            <tr>
+              <th>Procedure</th>
+            </tr>
+            <tr *ngFor="let procedure of stage['procedures']; let j = index">
+              <td style="text-align: left;">{{ procedure.procedure }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['ischecks'] == 'yes'">
+          <h4>Inprocess Checks:</h4>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Frequency:</label>
+              <input type="text" name="frequency" [(ngModel)]="stage.check_frequency" readonly>
+            </div>
+          </div>
+          <table class="table">
+            <tr>
+              <th rowspan="2">Parameters</th>
+              <th colspan="2">Limits</th>
+              <th rowspan="2">{{'common.unit' | translate}}</th>
+            </tr>
+            <tr>
+              <th>Lower Limit</th>
+              <th>Upper Limit</th>
+            </tr>
+            <tr *ngFor="let check of stage['checks']">
+              <td>{{ check.parameter }}</td>
+              <td>{{ check.lower_limit }}</td>
+              <td>{{ check.upper_limit }}</td>
+              <td>{{ check.unit }}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isweighing'] == 'yes'">
+          <h4>Weighing of Material:</h4>
+          <table class="table">
+            <tr>
+              <th>Container No.</th>
+              <th>Gross Wt.</th>
+              <th>Tare Wt.</th>
+              <th>Net Wt.</th>
+              <th>{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr>
+              <td style="padding: 0px;">
+                <input type="text" name="container_no" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="gross_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="tare_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px;">
+                <input type="text" name="net_wt" ngModel required style="margin: 0px; height: 33px;" disabled>
+              </td>
+              <td style="padding: 0px; vertical-align: middle;">
+                <button class="btn btn-sm btn-info" disabled>{{'common.add' | translate}}</button>
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="5">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+        <div *ngIf="stage['isenviornmental'] == 'yes'">
+          <h4>Environmental Checks:</h4>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <label>Temp. / Humidity Reading Frequency: {{ stage.temp_frequency }}</label>
+            </div>
+          </div>
+          <h5>Temp./Humidity Readings:</h5>
+          <table class="table">
+            <tr>
+              <th>{{'common.date' | translate}}</th>
+              <th>Time</th>
+              <th>Temp.°C</th>
+              <th>Humidity %</th>
+              <th>Entry By</th>
+              <th>Checked By</th>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+
+          <h5>Pressure Differential Readings:</h5>
+          <table class="table">
+            <tr>
+              <th>{{'common.date' | translate}}</th>
+              <th>Time</th>
+              <th>Pressure</th>
+              <th>Entry By</th>
+              <th>Checked By</th>
+            </tr>
+            <tr>
+              <td style="text-align: center;" colspan="6">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+  </clr-wizard-page>
+</clr-wizard>

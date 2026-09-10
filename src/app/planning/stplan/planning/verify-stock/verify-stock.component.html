@@ -1,0 +1,322 @@
+<div class="card vs-page">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">
+        Verify & Book Stock
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-warning" *ngIf="shortageCount > 0" (click)="showShortageModal = true">
+          View Shortages ({{ shortageCount }})
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <clr-tabs>
+      <clr-tab>
+        <button clrTabLink>Verify Stock</button>
+        <clr-tab-content *clrIfActive>
+          <div class="vs-info-banner">
+            Process Plan → <strong>Send for Verification</strong> sends work orders here.
+            Open <strong>View</strong> to verify live stock, book materials on <code>WO_deductions</code>,
+            then <strong>Send for Batch Allocation</strong>.
+          </div>
+          <div class="vs-tab-pane">
+            <div class="search-container">
+              <label for="tableSearchInput">Search PO/FO:</label>
+              <input type="text" id="tableSearchInput"
+                placeholder="Forecast no, work order, product..."
+                [(ngModel)]="searchText"
+                (ngModelChange)="onSearchChange()">
+            </div>
+
+            <div class="clr-row vs-summary-row" *ngIf="!loading">
+              <div class="clr-col-12">
+                Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} -
+                {{ calculateStartSrNo() + (pendingpo?.length || 0) }} of {{ totalRecords }} work order(s)
+                <span class="vs-shortage-hint" *ngIf="shortageCount > 0">
+                  · {{ shortageCount }} with material shortage on this page
+                </span>
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper vs-grid-wrap">
+              <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="vs-queue-grid">
+                <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="96">Delivery Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+                <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="100">Forecast No</clr-dg-column>
+                <clr-dg-column class="cell-num" [style.min-width.px]="76">Order Qty</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="56">UOM</clr-dg-column>
+                <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="110">Work Order No</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="88">WO Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+                <clr-dg-column [clrDgField]="'packing_type'" [style.min-width.px]="80">Packing</clr-dg-column>
+                <clr-dg-column [clrDgField]="'batch_size'" class="cell-num" [style.min-width.px]="72">Plan Qty</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="52">Unit</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="140">Status</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="80">Action</clr-dg-column>
+
+                <clr-dg-row *ngFor="let wo of pendingpo; let i = index; trackBy: trackByWo"
+                  [style.backgroundColor]="wo.bg_color">
+                  <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatDeliveryDate(wo.deliveryDate) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ getOrderQty(wo) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ getOrderUom(wo) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    {{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd/MM/yyyy') : '—' }}
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-material" [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.packing_type || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ wo.batch_size ?? '0' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-status">
+                    <span class="vs-status-badge" [ngClass]="getDisplayStatusClass(wo)">
+                      {{ getDisplayStatusLabel(wo) }}
+                    </span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>
+                    <button type="button" class="btn btn-info btn-sm" (click)="View(wo)">View</button>
+                  </clr-dg-cell>
+                </clr-dg-row>
+
+                <clr-dg-placeholder>
+                  No work orders pending verification. Send work orders from Process Plan using
+                  <strong>Send for Verification</strong>.
+                </clr-dg-placeholder>
+
+                <clr-dg-footer *ngIf="totalRecords > 0">
+                  <clr-dg-pagination
+                    #paginationQueue
+                    [clrDgPage]="currentPage"
+                    [clrDgPageSize]="pageSize"
+                    [clrDgTotalItems]="totalRecords"
+                    (clrDgPageChange)="onPageChange($event)"
+                    (clrDgPageSizeChange)="onPageSizeChange($event)">
+                    <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                    {{ paginationQueue.firstItem + 1 }} - {{ paginationQueue.lastItem + 1 }} of {{ paginationQueue.totalItems }} work orders
+                  </clr-dg-pagination>
+                </clr-dg-footer>
+              </clr-datagrid>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="getLogData()">Log</button>
+        <clr-tab-content *clrIfActive (clrTabContentActivated)="getLogData()">
+          <div class="vs-tab-pane">
+            <div class="search-container">
+              <label for="logSearchInput">Search PO/FO:</label>
+              <input type="text" id="logSearchInput"
+                placeholder="Forecast no, work order, product..."
+                [(ngModel)]="logSearchText"
+                (ngModelChange)="onLogSearchChange()">
+            </div>
+            <div class="clr-row vs-summary-row" style="align-items: center;">
+              <div class="clr-col-lg-8">
+                Showing {{ logTotalRecords ? calculateLogStartSrNo() + 1 : 0 }} -
+                {{ calculateLogStartSrNo() + (logData?.length || 0) }} of {{ logTotalRecords }} sent for batch allocation
+              </div>
+              <div class="clr-col-lg-4 vs-log-toolbar">
+                <button class="btn btn-primary btn-sm" (click)="printLog()">Print</button>
+              </div>
+            </div>
+
+            <div id="logTable" class="datagrid-wrapper vs-grid-wrap">
+              <clr-datagrid [clrDgLoading]="logLoading" [clrDgStickyHeader]="true" class="vs-log-grid">
+                <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="96">Delivery Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+                <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="100">Forecast No</clr-dg-column>
+                <clr-dg-column class="cell-num" [style.min-width.px]="76">Order Qty</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="56">UOM</clr-dg-column>
+                <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="110">Work Order No</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="88">WO Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+                <clr-dg-column [clrDgField]="'packing_type'" [style.min-width.px]="80">Packing</clr-dg-column>
+                <clr-dg-column [clrDgField]="'batch_size'" class="cell-num" [style.min-width.px]="72">Plan Qty</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="52">Unit</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="140">Status</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="80">Action</clr-dg-column>
+
+                <clr-dg-row *ngFor="let wo of logData; let i = index; trackBy: trackByWo"
+                  [style.backgroundColor]="wo.bg_color">
+                  <clr-dg-cell>{{ calculateLogStartSrNo() + i + 1 }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatDeliveryDate(wo.deliveryDate) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ getOrderQty(wo) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ getOrderUom(wo) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    {{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd/MM/yyyy') : '—' }}
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-material" [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.packing_type || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ wo.batch_size ?? '0' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-status">
+                    <span class="vs-status-badge vs-status--allocation">Sent for Batch Allocation</span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>
+                    <button type="button" class="btn btn-info btn-sm" (click)="View(wo, true)">View</button>
+                  </clr-dg-cell>
+                </clr-dg-row>
+
+                <clr-dg-placeholder>No work orders sent for batch allocation</clr-dg-placeholder>
+
+                <clr-dg-footer *ngIf="logTotalRecords > 0">
+                  <clr-dg-pagination
+                    #paginationLog
+                    [clrDgPage]="logCurrentPage"
+                    [clrDgPageSize]="logPageSize"
+                    [clrDgTotalItems]="logTotalRecords"
+                    (clrDgPageChange)="onLogPageChange($event)"
+                    (clrDgPageSizeChange)="onLogPageSizeChange($event)">
+                    <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Rows per page</clr-dg-page-size>
+                    {{ paginationLog.firstItem + 1 }} - {{ paginationLog.lastItem + 1 }} of {{ paginationLog.totalItems }} rows
+                  </clr-dg-pagination>
+                </clr-dg-footer>
+              </clr-datagrid>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+    </clr-tabs>
+  </div>
+</div>
+
+<!-- Work Order Details Modal -->
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl" class="vs-view-modal">
+  <h3 class="modal-title">Work Order: {{ selectedWo?.workorder_no || '—' }}</h3>
+  <div class="modal-body" *ngIf="selectedWo">
+    <div class="vs-modal-summary">
+      <span class="vs-status-badge vs-status-badge--modal" [ngClass]="getDisplayStatusClass(selectedWo)">
+        {{ getDisplayStatusLabel(selectedWo) }}
+      </span>
+      <span class="vs-modal-summary__text">
+        {{ selectedWo.product_code }} — {{ selectedWo.product_name || '—' }}
+      </span>
+    </div>
+
+    <div class="vs-modal-table-wrap datagrid-wrapper">
+      <clr-datagrid [clrDgStickyHeader]="true" class="vs-detail-grid">
+        <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_code'" [style.min-width.px]="100">Material Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_name'" [style.min-width.px]="160">Material Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'mat_type'" [style.min-width.px]="72">Type</clr-dg-column>
+        <clr-dg-column [clrDgField]="'requiredQty'" class="cell-num" [style.min-width.px]="80">Required</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_gross_available'" class="cell-num" [style.min-width.px]="80">Stock</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_booked_qty'" class="cell-num" [style.min-width.px]="80">Booked</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_net_available'" class="cell-num" [style.min-width.px]="80">Net</clr-dg-column>
+        <clr-dg-column [clrDgField]="'deducted_from_RM'" class="cell-num" [style.min-width.px]="88">Deduct</clr-dg-column>
+        <clr-dg-column [clrDgField]="'shortage'" class="cell-num" [style.min-width.px]="72">Shortage</clr-dg-column>
+        <clr-dg-column [style.min-width.px]="100">Book Status</clr-dg-column>
+
+        <clr-dg-row *ngFor="let mat of selectedWo.Deductions || []; let j = index; trackBy: trackByIndex"
+          [class.vs-row-shortage]="(mat.shortage || 0) > 0">
+          <clr-dg-cell>{{ j + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-material" [title]="mat.material_name">{{ mat.material_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.mat_type || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.requiredQty || '0' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.rm_gross_available ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.rm_booked_qty ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.rm_net_available ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.deducted_from_RM || 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num" [class.vs-shortage-yes]="(mat.shortage || 0) > 0">
+            {{ mat.shortage || 0 }}
+          </clr-dg-cell>
+          <clr-dg-cell>{{ mat.qty_status || (mat.stock_booked ? 'Booked' : '—') }}</clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No material deductions</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="modal-footer vs-modal-footer">
+    <button type="button" class="btn btn-warning btn-sm"
+      *ngIf="selectedWo && canVerifyInView()"
+      (click)="verifyStock(selectedWo)"
+      [disabled]="isVerifyingWo(selectedWo)">
+      <span *ngIf="isVerifyingWo(selectedWo)">Verifying...</span>
+      <span *ngIf="!isVerifyingWo(selectedWo)">Verify Stock</span>
+    </button>
+    <button type="button" class="btn btn-danger btn-sm"
+      *ngIf="selectedWo && canRejectInView()"
+      (click)="rejectWorkOrder(selectedWo)"
+      [disabled]="isRejectingWo(selectedWo)">
+      <span *ngIf="isRejectingWo(selectedWo)">Rejecting...</span>
+      <span *ngIf="!isRejectingWo(selectedWo)">Reject</span>
+    </button>
+    <button type="button" class="btn btn-success btn-sm"
+      *ngIf="selectedWo && !viewFromLog && !isRejected(selectedWo)"
+      (click)="sendForBatchAllocation(selectedWo)"
+      [disabled]="bookingStock || !canSendForBatchAllocation(selectedWo)">
+      Send for Batch Allocation
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="isView = false">Close</button>
+  </div>
+</clr-modal>
+
+<!-- Material Shortages Modal -->
+<clr-modal [(clrModalOpen)]="showShortageModal" clrModalSize="xl" class="full-page-modal">
+  <h3 class="modal-title">Work Orders with Material Shortages</h3>
+  <div class="modal-body full-page-modal-body">
+    <div class="table-responsive full-page-table">
+      <table class="table table-bordered table-striped table-hover">
+        <thead class="table-light" style="position: sticky; top: 0; z-index: 10; background-color: #f8f9fa;">
+          <tr>
+            <th>Work Order</th>
+            <th>Product</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Required</th>
+            <th>Available</th>
+            <th>Shortage</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let woInfo of shortageInfo">
+            <tr *ngFor="let mat of woInfo.shortage_materials; let first = first">
+              <td *ngIf="first" [attr.rowspan]="woInfo.shortage_materials.length" style="vertical-align: top; font-weight: bold;">
+                {{ woInfo.workorder_no || '-' }}
+              </td>
+              <td *ngIf="first" [attr.rowspan]="woInfo.shortage_materials.length" style="vertical-align: top;">
+                {{ woInfo.product_name || woInfo.product_code || '-' }}
+              </td>
+              <td>{{ mat.material_code || '-' }}</td>
+              <td>{{ mat.material_name || mat.material_code || '-' }}</td>
+              <td>{{ mat.required_qty || mat.shortage || '-' }}</td>
+              <td>{{ mat.rm_net_available ?? mat.total_available ?? mat.available_RM ?? 0 }}</td>
+              <td [ngStyle]="{
+                color: (mat.shortage && mat.shortage > 0) ? 'red' : 'black',
+                'font-weight': (mat.shortage && mat.shortage > 0) ? 'bold' : 'normal'
+              }">
+                {{ mat.shortage || 0 }}
+              </td>
+              <td>{{ mat.reason || 'Insufficient stock' }}</td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="showShortageModal = false">Close</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,497 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Equipment List</div>
+      <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <app-master-excel-provision
+          *ngIf="isuser == 'Yes'"
+          configId="EQUIPMENT"
+          buttonClass="btn btn-sm btn-primary"
+          (uploaded)="getEquipmentsLog()"
+        ></app-master-excel-provision>
+        <button *ngIf="isuser == 'Yes'" class="btn btn-sm btn-success" routerLink="new">{{'common.new' | translate}}</button>
+        <button *ngIf="isapprover == 'Yes'" class="btn btn-sm btn-primary" routerLink="approval">Approval</button>
+         <button class="btn btn-sm btn-danger" routerLink="/master">{{'common.close' | translate}}</button>
+      </div>
+    </div> 
+  </div>
+  <div class="card-block">
+
+      
+    <div class="clr-row">
+      <div class="clr-col-lg-5">
+        <label>Search </label>
+        <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+       </div>
+    </div>
+    <div class="datagrid-wrapper">    
+      <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Equipment Name</clr-dg-column>
+        <clr-dg-column>Equipment Code</clr-dg-column>
+        <clr-dg-column>{{'common.description' | translate}}</clr-dg-column>
+        <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+        <clr-dg-column>Location</clr-dg-column>
+        <clr-dg-column>Current Status</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        <clr-dg-column>Edit</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+        <clr-dg-column>QR</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ i+1}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.equipment_name || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.equipment_code || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.description || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.department || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.location || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell><strong>{{ result.status | uppercase}}</strong></clr-dg-cell>
+          <clr-dg-cell>
+            <button [disabled]="result.status == 'Pending'" class="btn btn-sm btn-icon btn-outline-danger"
+             (click)="statusChange(result)">
+              Status Change
+            </button>
+            <button  class="btn btn-sm btn-icon btn-outline-danger" (click)="statusChangedHis(result)">
+              Change History
+            </button>
+          </clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-primary" (click)="editEquipment(result)">{{'common.edit' | translate}}</button>
+          </clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-success" (click)="view(result)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="openQrModal(result.id)">Download QR</button>          
+          </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="card-footer">
+  </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="qrModalOpen" [clrModalSize]="'md'">
+  <h3 class="modal-title">Equipment QR Code</h3>
+  <div class="modal-body" *ngIf="qrUrl">
+    <p>Scan this QR code to open the equipment details:</p>
+    <div style="text-align:center">
+      <img [src]="qrUrl" alt="QR Code" style="width:250px; height:250px; margin: 12px 0;" />
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" (click)="qrModalOpen = false">{{'common.close' | translate}}</button>
+    <button class="btn btn-primary" (click)="downloadQr()">{{'common.download' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Equipment Details</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" (click)="isView = false" style="background-color: red;color: white;">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+        <table class="table table-border">
+          <tr>
+            <td style="text-align:left;"><b>Equipment Category :</b></td>
+            <td style="text-align:left;">{{selectedResult['equipment_category']  }}</td>
+            <td style="text-align:left;"><b>Equipment Type :</b></td>
+            <td style="text-align:left;">{{selectedResult['equipment_type'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Equipment Name :</b></td>
+            <td colspan="3" style="text-align:left;">{{selectedResult['equipment_name']  }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Equipment Code :</b></td>
+            <td style="text-align:left;">{{selectedResult['equipment_code']  }}</td>
+            <td style="text-align:left;"><b>Serial No / ID :</b></td>
+            <td style="text-align:left;">{{selectedResult['serial_no'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Department :</b></td>
+            <td style="text-align:left;">{{selectedResult['department']  }}</td>
+            <td style="text-align:left;"><b>Location :</b></td>
+            <td style="text-align:left;">{{selectedResult['location']  }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['capacity_applicable'] == 'Yes'">
+            <td style="text-align:left;"><b>Max.Capacity ( Working From Range - To Range ):</b></td>
+            <td colspan="3" style="text-align:left;">{{selectedResult['capacity'] }} {{selectedResult['unit'] }} ( {{selectedResult['from_range'] }} - {{selectedResult['to_range'] }} {{selectedResult['unit'] }} )</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Purchase Date:</b></td>
+            <td style="text-align:left;">{{selectedResult['purchase_date'] | date:'dd-MM-yyyy' }}</td>
+            <td style="text-align:left;"><b>Installation Date :</b></td>
+            <td style="text-align:left;">{{selectedResult['installation_date'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Preventive Maintenance :</b></td>
+            <td style="text-align:left;">{{selectedResult['preventive_maintenance'] || 'NA' }}</td>
+            <td style="text-align:left;"><b>Calibration Required :</b></td>
+            <td style="text-align:left;">{{selectedResult['calibration_required'] || 'NA' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Requalification :</b></td>
+            <td style="text-align:left;">{{selectedResult['reqv_required'] || 'NA' }}</td>
+            <td style="text-align:left;"><b>Description :</b></td>
+            <td style="text-align:left;">{{selectedResult['description'] || 'NA' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align:left;"><b>Qualification Status :</b></td>
+            <td colspan="3" style="text-align:left;">{{selectedResult['qualification_status'] || 'NA' }}</td>
+          </tr>
+        </table>
+
+
+      <h3>Spares & Parts</h3>
+      <table class="table table-border">
+        <tr>          
+          <td style="background-color: aqua; font-weight: bold;">{{'common.table.srNo' | translate}}</td>
+          <td style="background-color: aqua; font-weight: bold;">Spares/Part Code</td>
+          <td style="background-color: aqua; font-weight: bold;">Spares/Part Name</td>
+        </tr>
+        <tr *ngFor="let item of selectedResult['parts_data'];let i =index;">
+          <td>{{i+1}}</td>
+          <td>{{item.material_code}}</td>
+          <td>{{item.material_name}}</td>
+
+        </tr>
+      </table>
+ 
+        <table style="width:100%; border-collapse:collapse; font-family:Arial, sans-serif; margin-top:20px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <thead>
+            <tr>
+              <th colspan="3" style="background-color:#007bff; color:#fff; font-size:16px; font-weight:bold; text-align:center; padding:12px 0;">
+                Digitally Signed By
+              </th>
+            </tr>
+            <tr>
+              <th style="border:1px solid #ddd; padding:10px 15px; background-color:#f2f2f2;"></th>
+              <th style="border:1px solid #ddd; padding:10px 15px; background-color:#f2f2f2; font-weight:bold;">
+                Entry By <i class="fa fa-check" style="color:green; margin-left:5px;"></i>
+              </th>
+              <th style="border:1px solid #ddd; padding:10px 15px; background-color:#f2f2f2; font-weight:bold;">
+                Approved By <i class="fa fa-check" style="color:green; margin-left:5px;"></i>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="text-align:center;">
+              <td style="border:1px solid #ddd; padding:10px 15px; font-weight:bold;">{{'common.name' | translate}}</td>
+              <td style="border:1px solid #ddd; padding:10px 15px; color:#1a73e8; font-weight:500;">
+                {{selectedResult['entryByName']}}
+              </td>
+              <td style="border:1px solid #ddd; padding:10px 15px; color:#1a73e8; font-weight:500;">
+                {{selectedResult['approvedByName'] || 'Pending'}}
+              </td>
+            </tr>
+            <tr style="text-align:center;">
+              <td style="border:1px solid #ddd; padding:10px 15px; font-weight:bold;">{{'common.date' | translate}}</td>
+              <td style="border:1px solid #ddd; padding:10px 15px; color:#555;">
+                {{selectedResult['entry_date'] }}
+              </td>
+              <td style="border:1px solid #ddd; padding:10px 15px; color:#555;">
+                {{selectedResult['approve_date'] }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<clr-modal [(clrModalOpen)]="isHistory" [clrModalClosable]="true" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Status Change History</h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+             <div class="modal-body">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                
+                <table class="table table-border">
+                  <tr>
+                    <td>Equipment Name :</td>
+                    <td colspan="4">{{selectedResult['equipment_name']}}</td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: aqua;font-weight: bolder;">Changed Status</td>
+                    <td style="background-color: aqua;font-weight: bolder;">{{'common.date' | translate}}</td>
+                    <td style="background-color: aqua;font-weight: bolder;">{{'common.table.remark' | translate}}</td>
+                    <td style="background-color: aqua;font-weight: bolder;">Changed By</td>
+                    <td style="background-color: aqua;font-weight: bolder;">Changed On</td>
+                  </tr>
+                  <tr *ngFor="let item of selectedResult['status_changed_history']">
+                      <td>{{item.change_status}}</td>
+                      <td>{{item.status_change_date}}</td>
+                      <td>{{item.change_status_remark}}</td>
+                      <td>{{item.status_change_by}}</td>
+                      <td>{{item.status_change_on}}</td>
+                  </tr>
+                </table>
+
+              </div>
+            </div>
+         </div>
+      </div>
+      <div class="card-footer">
+        </div>
+    </div>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isEdit1" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Status Change</h3>
+  <div class="modal-body">
+    <form #gradeForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Current Status</label>
+          <input type="text" name="current_status" [(ngModel)]="selectedResult['status']" readonly>
+        </div>
+
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Change Status : <span style="color: red">*</span></label>
+          <select name="change_status" ngModel required>
+            <option></option>
+            <option>Decommissioned</option>
+            <option>Obsolute</option>
+            <option>In Active</option>
+            <option>Out Of Service</option>
+            <option>Active</option>
+            <option>Limited Use</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Date: <span style="color: red">*</span></label>
+          <input type="date" name="status_change_date" ngModel required>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+          <label>Remark For Status Change: <span style="color: red">*</span></label>
+          <input type="text" name="change_status_remark" ngModel required>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="change_status(gradeForm)">Change Status</button>
+    <button type="button" class="btn btn-danger" (click)="isEdit1 = false">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+<clr-modal [(clrModalOpen)]="isEdit" clrModalSize="xl" clrModalClosable="false">
+  <h3 class="modal-title">Update Equipment</h3>
+  <div class="modal-body">
+      <form #equipmentForm="ngForm">
+        <div class="clr-row">
+          
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Equipment Category:<sup style="color: red">*</sup></label>
+            <input type="text" name="equipment_category" [(ngModel)]="selectedResult['equipment_category']" required readonly >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Equipment Type:<span style="color: red">*</span></label>
+            <select name="equipment_type" [(ngModel)]="selectedResult['equipment_type']"   required>
+              <option></option>
+              <option>Process Equipment</option>
+              <option>Analytical /QC</option>
+              <option>Lableling</option>
+              <option>Balance(Weighing)</option>
+              <option>Computers/Printers</option>
+              <option>Microscope</option>
+              <option>Autoclave</option>
+              <option>Sampler</option>
+              <option>AHU</option>
+              <option>LAF</option>
+              <option>Packaging</option>
+              <option>Engineering</option>
+              <option>Sampling Equipment</option>
+              <option>STABILITY CHEMBER</option>
+              <option>Storage</option>
+              <option>Vaccum</option>
+              <option>Incubator</option>
+              <option *ngFor="let type of equipment_type_data">{{ type.equipment_type }}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Equipment Name:<span style="color: red">*</span></label>
+            <input type="text" name="equipment_name" [(ngModel)]="selectedResult['equipment_name']" required >
+          </div>
+
+
+          <div *ngIf="selectedResult['equipment_category'] != 'New Purchase'"
+            class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Serial No / ID:<span style="color: red">*</span></label>
+            <input type="text" name="serial_no" [(ngModel)]="selectedResult['serial_no']" required >
+          </div>
+ 
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Make:</label>
+            <input type="text" name="make" [(ngModel)]="selectedResult['make']" >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Model:</label>
+            <input type="text" name="model" [(ngModel)]="selectedResult['model']" >
+          </div> 
+       
+          <div *ngIf="selectedResult['equipment_category'] !== 'New Purchase'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Department:<sup style="color: red">*</sup></label>
+            <select name="department" [(ngModel)]="selectedResult['department']" (change)="getSectionsByDept($event.target.selectedIndex)" required
+              style="height: 33px">
+              <option></option>
+              <option *ngFor="let dept of departments">
+                {{ dept.department_name }}
+              </option>
+            </select>
+          </div>
+          
+          <div *ngIf="selectedResult['equipment_category'] !== 'New Purchase'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Location:</label>
+            <select name="location" [(ngModel)]="selectedResult['location']" required style="height: 33px">
+              <option></option>
+              <option *ngFor="let section of sections">
+                {{ section.section_name }}
+              </option>
+            </select>
+          </div>
+
+          <div *ngIf="selectedResult['equipment_type'] == 'Balance(Weighing)'" class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+            <label>Least Count </label>
+            <input type="text" name="least_count" [(ngModel)]="selectedResult['least_count']"   >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Capacity Applicable:</label>
+            <select name="capacity_applicable" [(ngModel)]="selectedResult['capacity_applicable']">
+              <option></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+ 
+          <div  *ngIf="selectedResult['capacity_applicable'] == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Max.Capacity:<span style="color: red">*</span></label>
+            <input class="hide-arrow" type="text" name="capacity" [(ngModel)]="selectedResult['capacity']" required min="0" max="9999" step="0.01" >
+          </div>
+
+          <div *ngIf="selectedResult['capacity_applicable'] == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Working From Range:<br ></label>
+            <input class="hide-arrow" type="text" name="from_range" [(ngModel)]="selectedResult['from_range']" max="9999" >
+          </div>
+
+          <div  *ngIf="selectedResult['capacity_applicable'] == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Working To Range:<br ></label>
+            <input class="hide-arrow" type="text" name="to_range" [(ngModel)]="selectedResult['to_range']" max="9999" >
+          </div>
+
+          <div *ngIf="selectedResult['capacity_applicable'] == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Unit:<span style="color: red">*</span></label>
+            <select name="unit" [(ngModel)]="selectedResult['unit']">
+              <option></option>
+              <option *ngFor="let unit of units">{{ unit.unit }}</option>
+            </select>
+          </div>
+ 
+          <div *ngIf="selectedResult['equipment_category'] != 'New Purchase'"
+            class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Purchase Date:</label>
+            <input type="date" name="purchase_date" [(ngModel)]="selectedResult['purchase_date']" [max]="today" >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['equipment_category'] == 'Existing'">
+            <label>Installation Date:</label>
+            <input type="date" name="installation_date" [(ngModel)]="selectedResult['installation_date']" [min]="installation_date" >
+          </div>
+  
+        </div>
+
+        <div class="card" *ngIf="selectedResult['equipment_category'] != 'New Purchase'">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px">
+              <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Others Information</div>
+              <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px"></div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+                <div class="clr-row">
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Preventive Maintenance:</label>
+                    <select name="preventive_maintenance" [(ngModel)]="selectedResult['preventive_maintenance']" >
+                      <option></option>
+                      <option>Applicable</option>
+                      <option>Not Applicable</option>
+                    </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Calibration Required:</label>
+                    <select name="calibration_required" [(ngModel)]="selectedResult['calibration_required']" >
+                      <option></option>
+                      <option>Applicable</option>
+                      <option>Not Applicable</option>
+                    </select>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Requalification:</label>
+                    <select name="reqv_required" [(ngModel)]="selectedResult['reqv_required']" >
+                      <option></option>
+                      <option>Applicable</option>
+                      <option>Not Applicable</option>
+                    </select>
+                  </div>
+                  
+                  <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Description:</label>
+                    <input type="text" name="description" [(ngModel)]="selectedResult['description']" required >
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Qualification Status:</label>
+                    <select name="qualification_status" [(ngModel)]="selectedResult['qualification_status']" required>
+                      <option></option>
+                      <option>{{'common.completed' | translate}}</option>
+                      <option>Under Qualification</option>
+                    </select>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="editEquipmentdata(equipmentForm)"
+      [disabled]="equipmentForm.invalid">{{'common.update' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isEdit= false ">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+

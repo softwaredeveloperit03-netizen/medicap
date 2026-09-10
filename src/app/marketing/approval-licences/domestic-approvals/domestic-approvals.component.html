@@ -1,0 +1,157 @@
+﻿<div class="container-fluid" *ngIf="!isNew">
+  <div class="card">
+      <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Domestic Approvals
+                  Licences</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <!-- <button class="btn btn-sm btn-success" (click)="isNew = true"> NEW </button> -->
+                  <button class="btn btn-sm btn-danger"   routerLink="/marketing/approvalLicences">
+                      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                  </button>
+              </div>
+          </div>
+      </div>
+      <div class="card-block">
+          <div class="card-text">
+
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Plant Name : &nbsp;&nbsp;<span style="color: red">*</span></label>
+                    <select name="plantID" [(ngModel)]="plantID" required  style="height: 33px;" (change)="getDomesticData()">
+                        <option></option>
+                        <option *ngFor="let plant of plants" value="{{ plant.plant_id }}">{{ plant.display_name }}</option>
+                    </select>
+                </div>
+            </div>
+
+              <clr-datagrid [clrDgLoading]="loading">
+                  <clr-dg-column>Product Name</clr-dg-column>
+                  <clr-dg-column>Licence Type</clr-dg-column>
+                   <clr-dg-column>Licence No.</clr-dg-column>
+                  <clr-dg-column>Approval From</clr-dg-column>
+                  <clr-dg-column>Country</clr-dg-column>
+                  <clr-dg-column>Client Name</clr-dg-column>
+                  <clr-dg-column>Authority Name</clr-dg-column>
+                  <clr-dg-column>Grant Date</clr-dg-column>
+                  <clr-dg-column>Valid Till</clr-dg-column>
+                  <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                   <clr-dg-column>View Doc.</clr-dg-column>
+        
+                  <clr-dg-row *ngFor="let res of finalResults">
+                    <clr-dg-cell>{{res.product_name  || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.licence_type || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.lic_no || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.approval_from || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.country || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.clientName || 'NA'}}</clr-dg-cell>
+                    <clr-dg-cell>{{res.authName || 'NA'}}</clr-dg-cell>
+                     <clr-dg-cell>{{ res.grant_date | date:'dd-MM-yy' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.valid_till | date:'dd-MM-yy' }}</clr-dg-cell>
+                    <clr-dg-cell>
+                                    
+            <button *ngIf="res.remaining_days < 1" class="btn btn-sm btn-danger" >EXPIRED</button>
+            <button *ngIf="res.remaining_days > 0" class="btn btn-sm btn-success" >LIVE</button>
+
+                    </clr-dg-cell>
+                     <clr-dg-cell>
+                      <button class="btn btn-sm btn-info" (click)="uploadQuatation(res.document)">
+                        <clr-icon shape="eye" class="is-warning"></clr-icon>
+                      </button>
+                    </clr-dg-cell>
+                  </clr-dg-row>
+                </clr-datagrid>
+          </div>
+      
+      </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isNew">
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Domestic Approvals
+              Licences</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" (click)="isNew = false" style="background-color: red;color: white;">
+                  <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+              </button>
+          </div>
+      </div>
+  </div>
+  <div class="card-block">
+      <form #licenceApprovalForm="ngForm">
+          <div class="card-text">
+              <div class="clr-row">
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Product<sup style="color: red">*</sup>:</strong></label>
+                      <select name="product_code" ngModel required>
+                          <option></option>
+                          <option *ngFor="let res of results" value="{{res.product_code}}">{{res.product_name}}</option>
+                      </select>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Licence Type<sup style="color: red">*</sup>:</strong></label>
+                      <select name="licence_type" [(ngModel)]="licence_type"
+                          (change)="onLicenceTypeChange($event.target.value)" ngModel required>
+                          <option value="Product Permission">Product Permission</option>
+                          <option value="Test Licence">Test Licence</option>
+                          <option value="Free Sale Certificate">Free Sale Certificate</option>
+                          <option value="Halal Certificate">Halal Certificate</option>
+                          <option value="COPP">COPP</option>
+                          <option value="other">Other</option>
+                      </select>
+                  </div>
+                  <div *ngIf="licence_type === 'other'" class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Other Licence Type:</strong></label>
+                      <input type="text" name="other_licence_type" ngModel>
+                  </div>
+                  
+                  <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Licence No.:</strong></label>
+                      <input type="text" name="lic_no" ngModel>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Approval From<sup style="color: red">*</sup>:</strong></label>
+                      <select name="approval_from" required [(ngModel)]="approval_from">
+                          <option>State FDA</option>
+                          <option>Central FDA</option>
+                       </select>
+                  </div>
+
+              
+
+                <div   class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Clients<sup style="color: red">*</sup>:</strong></label>
+                  <select name="clientName" required ngModel>
+                      <option></option>
+                      <option *ngFor="let res of clients">{{res.TrdNm}}</option>
+                  </select>
+               </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Authority Name<sup style="color: red">*</sup>:</strong></label>
+                      <input type="text" name="authName" required ngModel>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Grant Date<sup style="color: red">*</sup>:</strong></label>
+                      <input type="date" name="grant_date" required ngModel>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Valid Till<sup style="color: red">*</sup>:</strong></label>
+                      <input type="date" name="valid_till" required ngModel>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label>Upload Document : <sup style="color: red">*</sup></label>
+                      <input type="file" (change)="onFileChanged6($event)" name="document" required ngModel accept="application/pdf">
+                  </div>
+              </div>
+          </div>
+
+          <div class="card-footer" style="padding: 10px 0px;">
+              <button class="btn btn-primary" type="submit" (click)="Submit(licenceApprovalForm)">{{'common.submit' | translate}}</button>
+          </div>
+      </form>
+  </div>
+</div>

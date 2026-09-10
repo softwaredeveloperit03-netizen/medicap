@@ -1,0 +1,396 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Lead Log</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/marketing/leads" >
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+
+          <div class="client-search-bar">
+            <label class="search-label">Search</label>
+            <input type="text" class="search-input" placeholder="Search..." [(ngModel)]="searchQuery" name="searchQuery" />
+            <button type="button" class="btn btn-sm btn-download-excel" (click)="downloadLeadLog()">Download Excel</button>
+          </div>
+
+          <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                <clr-dg-column>Enquiry No.</clr-dg-column>
+                <clr-dg-column>Client Name</clr-dg-column>
+                <clr-dg-column>Enquiry Generated Through</clr-dg-column>
+                <clr-dg-column>Reference By</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column>Acknow. Status</clr-dg-column>
+                <clr-dg-column>Entry By</clr-dg-column>
+                <clr-dg-column>Entry On</clr-dg-column>
+                <clr-dg-column >{{'common.table.action' | translate}}</clr-dg-column>
+                <clr-dg-column >Client Action</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let lead of filteredMaterials; let i = index" [clrDgItem]="lead">
+                  <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                  <clr-dg-cell>{{lead.enquiry_no || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{lead.LglNm || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{lead.enqGeneratedThrough || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{lead.reference || '-'}}</clr-dg-cell>
+                  <clr-dg-cell><strong>{{lead.status | uppercase}}</strong></clr-dg-cell>
+                  <clr-dg-cell>
+                    <strong *ngIf="lead.acknowledgeStatus == 'Pending'">{{lead.acknowledgeStatus | uppercase}}</strong>
+                    <span *ngIf="lead.acknowledgeStatus != 'Pending'">{{lead.acknowledgeBy || '-'}} / {{lead.acknowledgeOn | date : 'dd-MM-yyyy'}}</span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{lead.entryBy || '-'}}</clr-dg-cell>
+                  <clr-dg-cell>{{lead.entryOn | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                  <clr-dg-cell >
+                      <button class="btn btn-sm btn-primary" (click)="view(lead)">{{'common.view' | translate}}</button>
+                  </clr-dg-cell>
+                  <clr-dg-cell >
+                      <span *ngIf="lead.source_table == 'NEW'"  style="color:green" ><strong>{{lead.clientStatus | uppercase}}</strong></span>
+                      <span *ngIf="lead.source_table != 'NEW'" style="color:green" ><strong>Existing Client</strong></span>
+                  </clr-dg-cell>
+
+                </clr-dg-row>
+            </clr-datagrid>
+          </div>
+
+      </div>
+    </div>
+</div>
+
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Complete Lead Details</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView = false" >
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+        <div class="clr-row">
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"  >
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align:left;"><strong>Clients Name</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['LglNm']}}</td>
+                  <td style="text-align:left;"><strong>Enquiry Generated Through</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['enqGeneratedThrough']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;"><strong>Reference By</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['reference'] || '-'}}</td>
+                  <td style="text-align:left;"><strong>Req. For Country</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['country']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;"><strong>Sample Required</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['sample_required'] || '-'}}</td>
+                  <td style="text-align:left;"><strong>Sample Qty. (NOS)</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['sample_qty']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;"><strong>Reference sample</strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['reference_sample'] || '-'}}</td>
+                  <td style="text-align:left;"><strong>No of Units </strong></td>
+                  <td style="text-align:left; color:blue;">{{selectedEnquiry['refNoOfunits']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;">
+                      <button [disabled]="selectedEnquiry['other_req'] == 'NA'" 
+                      class="btn btn-sm btn-info" (click)="viewDoc(selectedEnquiry['other_req'])">View Doc</button>
+                  </td>
+                  <td style="text-align:left;"><strong>Details </strong></td>
+                  <td colspan="2" style="text-align:left; color:blue;">{{selectedEnquiry['details'] || '--'}}</td>
+                </tr>
+              </table>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <h3><strong>Service Category Details</strong></h3>
+            <table class="table table-border" *ngIf="selectedEnquiry['serviceCategory']">
+              <tr>
+                <td style="text-align:left; width: 220px;"><strong>Service Category</strong></td>
+                <td style="text-align:left; color:blue;">{{ selectedEnquiry['serviceCategory'] || '-' }}</td>
+              </tr>
+            </table>
+
+            <div *ngIf="savedServiceEntries.length" class="table-responsive saved-service-wrap">
+              <table class="table table-border saved-service-table">
+                <thead>
+                  <tr>
+                    <th class="cell-sno">S.No</th>
+                    <th class="cell-category">Service Category</th>
+                    <th class="cell-products">Products</th>
+                    <th class="cell-descriptions">Descriptions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let entry of savedServiceEntries; let i = index">
+                    <td class="cell-sno">{{ i + 1 }}</td>
+                    <td class="cell-category">{{ entry.category }}</td>
+                    <td class="cell-products">
+                      <ul class="service-cell-list" *ngIf="entry.products?.length; else noProductsLeadLog">
+                        <li *ngFor="let product of entry.products">
+                          {{ product.displayLabel || (product.product_name + ' (' + product.product_code + ')') }}
+                        </li>
+                      </ul>
+                      <ng-template #noProductsLeadLog>N/A</ng-template>
+                    </td>
+                    <td class="cell-descriptions">
+                      <ul class="service-cell-list">
+                        <li *ngFor="let line of getDescriptionLines(entry)">{{ line }}</li>
+                      </ul>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div *ngIf="!savedServiceEntries.length && selectedEnquiry['serviceDescription']">
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align:left; width: 220px;"><strong>Service Description</strong></td>
+                  <td style="text-align:left; color:blue;">{{ selectedEnquiry['serviceDescription'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+       
+   
+        </div>
+ 
+
+        <h3><strong>Product Details : </strong> </h3>
+
+        <table class="table table-border">
+          <tr>
+            <th style="background-color: aqua; font-weight:bolder; ">Sr No</th>
+            <th style="background-color: aqua; font-weight:bolder; text-align:left;">Tentative Launch Dt.</th>
+            <th style="background-color: aqua; font-weight:bolder; text-align:left;">Product Name</th>
+            <th style="background-color: aqua; font-weight:bolder; text-align:left;">{{'common.status' | translate}}</th>
+            <th style="background-color: aqua; font-weight:bolder; ">{{'common.table.action' | translate}}</th>
+          </tr>
+          <tr *ngFor="let product of selectedEnquiry['productList']; let i = index">
+            <td style="font-weight:bold; ">{{i+1}}</td>
+            <td style="text-align: left; font-weight:bold; ">{{ product.tentative_launch_dt | date:'dd-MM-yyyy'}}</td>
+            <td style="text-align: left; font-weight:bold;">{{ product.product_name }}</td>
+            <td style="text-align: left; font-weight:bold;"
+            [style.color]="product.status === 'Pending' ? 'red' : (product.status === 'FINAL' ? 'green' : 'black')"
+            ><strong>{{ product.status | uppercase }}</strong></td>
+            <td >
+                <button class="btn btn-sm btn-info" (click)="viewProduct(product)">{{'common.view' | translate}}</button>
+            </td>
+          </tr>
+        </table>
+ 
+      <h3 style="text-align:center;">Lead / Enquiry Actions</h3>  
+        
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          
+          <table class="table table-border">
+            <tr>
+              <th  style="background-color: aquamarine;font-weight: bolder; text-align: left;">Sr No</th>
+              <th  style="background-color: aquamarine;font-weight: bolder; text-align: left;">{{'common.date' | translate}}</th>
+               <th style="background-color: aquamarine;font-weight: bolder; text-align: left;">{{'common.table.action' | translate}}</th>
+               <th style="background-color: aquamarine;font-weight: bolder; text-align: left;">{{'common.table.remark' | translate}}</th>
+             </tr>
+   
+            <tr *ngFor="let action of selectedEnquiry['actions']; let i = index">
+               <td style="font-weight: bolder; text-align: left;">{{ i +1}}</td>
+               <td style="font-weight: bolder; text-align: left;">{{ action.date  | date:'dd-MM-yyyy'}}</td>
+               <td style="font-weight: bolder; text-align: left;">{{ action.action || '-'}}</td>
+              <td style="font-weight: bolder; text-align: left;">{{ action.remark || '-'}}</td>
+             </tr>
+            <tr *ngIf="selectedEnquiry['actions']?.length === 0">
+              <td colspan="4" style="text-align: center;">No Data Found</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+ 
+
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isProductView" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> View Product Details </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+        
+              <div class="clr-row">
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Tentative Launch Dt. <span style="color: red">*</span></label>
+                  <input type="date" name="tentative_launch_dt" [(ngModel)]="selectedProduct['tentative_launch_dt']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product Name <span style="color: red">*</span></label>
+                  <input type="text" name="product_name" [(ngModel)]="selectedProduct['product_name']" readonly required>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Fill Volume of the Pack</label>
+                  <input type="text" name="suggestive_fill_volume" [(ngModel)]="selectedProduct['suggestive_fill_volume']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Demography</label>
+                  <input type="text" name="demography" [(ngModel)]="selectedProduct['demography']" readonly>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume Qty in Nos</label>
+                  <input type="text" name="projected_volume" [(ngModel)]="selectedProduct['projected_volume']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume For </label>
+                  <input type="text" name="projected_volume_for" [(ngModel)]="selectedProduct['projected_volume_for']" readonly>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Primary Packaging Type</label>
+                  <textarea name="primary_packaging_type" [(ngModel)]="selectedProduct['primary_packaging_type']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Secondary Packaging Type</label>
+                  <textarea name="secondary_packaging_type" [(ngModel)]="selectedProduct['secondary_packaging_type']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Primary Claims</label>
+                  <textarea name="primary_claims" [(ngModel)]="selectedProduct['primary_claims']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Secondary Claim</label>
+                  <textarea name="secondary_claim" [(ngModel)]="selectedProduct['secondary_claim']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product / Material Certification for Technical Procurement</label>
+                  <textarea name="product_certification" [(ngModel)]="selectedProduct['product_certification']" readonly rows="2"></textarea>
+                </div>
+              
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Colour Match Reference</label>
+                  <textarea name="colour_match_reference" [(ngModel)]="selectedProduct['colour_match_reference']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Textures / Appearance reference</label>
+                  <textarea name="textures_appearance_reference" [(ngModel)]="selectedProduct['textures_appearance_reference']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>FG Benchmark Product</label>
+                  <textarea name="fg_benchmark_product" [(ngModel)]="selectedProduct['fg_benchmark_product']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Performance Expectation</label>
+                  <textarea name="performance_expectation" [(ngModel)]="selectedProduct['performance_expectation']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Ref. Product / Benchmark Prod. Ingredient List - Only for Ref.</label>
+                  <textarea name="benchmark_ingredient_list" [(ngModel)]="selectedProduct['benchmark_ingredient_list']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Fragrance Reference</label>
+                  <textarea name="fragrance_reference" [(ngModel)]="selectedProduct['fragrance_reference']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Phase of development</label>
+                  <textarea name="phase_of_development" [(ngModel)]="selectedProduct['phase_of_development']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Export Requirement - Certification</label>
+                  <textarea name="export_certification" [(ngModel)]="selectedProduct['export_certification']" readonly rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Shelf Life as per customer</label>
+                  <textarea name="shelf_life" [(ngModel)]="selectedProduct['shelf_life']" readonly rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                  <label>Mandatory Tests Reports</label>
+                  <textarea name="mandatory_tests_reports" [(ngModel)]="selectedProduct['mandatory_tests_reports']" readonly rows="2"></textarea>
+                </div>
+            
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Target Price</label>
+                  <input type="number" name="target_price" [(ngModel)]="selectedProduct['target_price']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>MRP</label>
+                  <input type="number" name="mrp" [(ngModel)]="selectedProduct['mrp']" readonly >
+                </div>
+            
+                <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Timeline of the sample</label>
+                  <input type="text" name="sample_timeline" [(ngModel)]="selectedProduct['sample_timeline']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Formula Number</label>
+                  <input type="text" name="formula_number" [(ngModel)]="selectedProduct['formula_number']" readonly>
+                </div>
+              
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Date of Submission</label>
+                  <input type="date" name="submission_date" [(ngModel)]="selectedProduct['submission_date']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Revision Required</label>
+                  <input type="text" name="revision_required" [(ngModel)]="selectedProduct['revision_required']" readonly>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Second Sample Submission</label>
+                  <input type="text" name="second_sample_submission" [(ngModel)]="selectedProduct['second_sample_submission']" readonly>
+                </div> -->
+              </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" (click)="isProductView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+ 
+  

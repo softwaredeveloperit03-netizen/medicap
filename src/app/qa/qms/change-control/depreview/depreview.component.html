@@ -1,0 +1,526 @@
+<div class="cc-new-form">
+  <div class="cc-card" *ngIf="!isView">
+    <div class="cc-card-header">
+      <strong>CC IMPACT ASSESSMENT</strong>
+      <button type="button" class="cc-btn cc-btn-close" routerLink="/qa/qms/change-control">
+        <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+      </button>
+    </div>
+    <div class="cc-card-body">
+      <div class="cc-table-wrap">
+        <table class="cc-table">
+          <thead>
+            <tr>
+              <th>CC No.</th>
+              <th>Department</th>
+              <th>Changed Requested For</th>
+              <th>Initiate By / On</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let result of results; let i = index">
+              <td class="cc-cell-bold">{{ result.ctrl_no }}</td>
+              <td class="cc-cell-bold">{{ result.department_name }}</td>
+              <td class="cc-cell-bold">{{ result.changeReqFor }}</td>
+              <td class="cc-cell-bold">{{ result.entryBy }} / {{ result.entryDate ? (result.entryDate | date:'dd-MM-yy') : 'NA' }}</td>
+              <td class="cc-cell-bold">{{ result.status }}</td>
+              <td>
+                <button type="button" class="cc-btn cc-btn-view" (click)="view(i)">View</button>
+              </td>
+            </tr>
+            <tr class="cc-no-record" *ngIf="results?.length == 0">
+              <td colspan="6">No Records Found!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="cc-card" *ngIf="isView">
+    <div class="cc-card-header">
+      <strong>CC IMPACT ASSESSMENT</strong>
+      <button type="button" class="cc-btn cc-btn-close" (click)="isView=false">
+        <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+      </button>
+    </div>
+    <div class="cc-card-body">
+      <form #reviewForm="ngForm" class="cc-form">
+        <section class="cc-section">
+          <h3 class="cc-section-title">Change Control Details</h3>
+          <table class="cc-view-table">
+            <tr>
+              <td class="cc-view-label">CC No.</td>
+              <td class="cc-view-value">{{ selectedResult['ctrl_no'] }}</td>
+              <td class="cc-view-label">Change Control Issued By</td>
+              <td class="cc-view-value">{{ selectedResult['entryBy'] }} / {{ selectedResult['department_name'] }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label">Initiated By</td>
+              <td class="cc-view-value">{{ selectedResult['entryBy'] }}</td>
+              <td class="cc-view-label">Department</td>
+              <td class="cc-view-value">{{ selectedResult['department_name'] }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label">Changed Requested For</td>
+              <td class="cc-view-value" [attr.colspan]="selectedResult['changeReqFor'] === 'Other' ? 1 : 3">{{ selectedResult['changeReqFor'] }}</td>
+              <td class="cc-view-label" *ngIf="selectedResult['changeReqFor'] === 'Other'">Specify Change Request</td>
+              <td class="cc-view-value" *ngIf="selectedResult['changeReqFor'] === 'Other'" colspan="2">{{ selectedResult['changeReqForOther'] }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>REASON & JUSTIFICATION OF PROPOSED CHANGE:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['justification'] || 'NA' }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>Is the Change due to CAPA:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['changeCAPA'] || 'NA' }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>CAPA:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['capaDetails'] || 'NA' }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>Dated On:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['capaDate'] ? (selectedResult['capaDate'] | date:'dd-MM-yy') : 'NA' }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>DETAILS OF PROPOSED CHANGE:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['proposed'] || 'NA' }}</td>
+            </tr>
+            <tr>
+              <td class="cc-view-label" colspan="4"><b>COMMENTS BY INITIATION DEPARTMENT HOD:</b></td>
+            </tr>
+            <tr>
+              <td class="cc-view-value" colspan="4">{{ selectedResult['concernHodComment'] || 'NA' }}</td>
+            </tr>
+          </table>
+          <div class="cc-sig-blocks">
+                              <div class="cc-sig-block">
+                                <div class="cc-sig-label">Initiator (Digital Signature)</div>
+                                <div class="cc-sig-content">
+                                  <span class="cc-sig-tick">✓</span>
+                                  <div class="cc-sig-details">
+                                    <span class="cc-sig-name">{{ selectedResult['initiatedBy'] || selectedResult['entryBy'] }}</span>
+                                    <span class="cc-sig-meta">User ID: {{ selectedResult['entryBy'] }} | Dept: {{ selectedResult['department_name'] }}</span>
+                                    <span class="cc-sig-date">{{ selectedResult['entryDate'] | date:'dd/MM/yyyy' }} {{ selectedResult['entryDate'] | date:'shortTime' }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="cc-sig-block" *ngIf="selectedResult['concernHodBy']">
+                                <div class="cc-sig-label">Department Head (Digital Signature)</div>
+                                <div class="cc-sig-content">
+                                  <span class="cc-sig-tick">✓</span>
+                                  <div class="cc-sig-details">
+                                    <span class="cc-sig-name">{{ selectedResult['authBy'] || selectedResult['concernHodBy'] }}</span>
+                                    <span class="cc-sig-meta">User ID: {{ selectedResult['concernHodBy'] }}</span>
+                                    <span class="cc-sig-date">{{ selectedResult['concernHodOn'] | date:'dd/MM/yyyy' }} {{ selectedResult['concernHodOn'] | date:'shortTime' }}</span>
+                                  </div>
+                                </div>
+                              </div>
+          </div>
+        </section>
+        <section class="cc-section">
+          <h3 class="cc-section-title">Impact assessment of Proposed Change</h3>
+          <p class="cc-section-subtitle">EVALUATION AND IMPACT ASSESSMENT OF PROPOSED CHANGE (To be filled up by Quality Assurance)</p>
+          <div class="cc-table-wrap">
+            <table class="cc-impact-table">
+              <thead>
+                <tr>
+                  <th>Process</th>
+                  <th>Tick</th>
+                  <th>Responsible Dept</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Product Quality</strong></td>
+                  <td><input type="checkbox" name="productQualityCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                  <td>
+                    <select name="DeptproductQualityCheck" ngModel class="cc-select" title="Responsible department">
+                      <option value="" disabled selected>Select Option</option>
+                      <option *ngFor="let dept of department" [value]="dept.department_name">{{ dept.department_name }}</option>
+                    </select>
+                  </td>
+                  <td><input type="text" name="productQualityRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                </tr>
+                                <tr>
+                                    <td>Standard Operating Procedure (SOP)</td>
+                                    <td><input type="checkbox" name="sopCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                  <td>
+                    <select name="DeptsopCheck" ngModel class="cc-select" title="Responsible department">
+                      <option value="" disabled selected>Select Option</option>
+                      <option *ngFor="let dept of department" [value]="dept.department_name">{{ dept.department_name }}</option>
+                    </select>
+                  </td>
+                  <td><input type="text" name="sopRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Specification</td>
+                                    <td><input type="checkbox" name="specificationCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptspecificationCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="specificationRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Standard Test Procedure (STP)</td>
+                                    <td><input type="checkbox" name="stpCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptstpCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="stpRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Safety Data Sheet (SDS)</td>
+                                    <td><input type="checkbox" name="sdsCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptsdsCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="sdsRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Method of Analysis (MOA) / Analytical Work Report (AWR)</td>
+                                    <td><input type="checkbox" name="moaAwrCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptmoaAwrCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="moaAwrRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Batch Manufacturing Record (BMR) / Master Formula Record (MFR)</td>
+                                    <td><input type="checkbox" name="bmrMfrCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptbmrMfrCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="bmrMfrRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <!-- Equipment Section -->
+                                <tr>
+                                    <td><strong>Equipment</strong></td>
+                                    <td><input type="checkbox" name="equipmentCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptequipmentCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="equipmentRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Measurements</td>
+                                    <td><input type="checkbox" name="measurementsCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptmeasurementsCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="measurementsRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Material</td>
+                                    <td><input type="checkbox" name="materialCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptmaterialCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="materialRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <!-- Validation Section -->
+                                <tr>
+                                    <td><strong>Validation</strong></td>
+                                    <td><input type="checkbox" name="validationCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptvalidationCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="validationRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Stability Studies</td>
+                                    <td><input type="checkbox" name="stabilityStudiesCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptstabilityStudiesCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="stabilityStudiesRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Process Validation (PV)</td>
+                                    <td><input type="checkbox" name="pvCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptpvCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="pvRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Analytical Method Validation (AMV)</td>
+                                    <td><input type="checkbox" name="amvCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptamvCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="amvRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <!-- Statutory Section -->
+                                <tr>
+                                    <td><strong>Statutory</strong></td>
+                                    <td><input type="checkbox" name="statutoryCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptstatutoryCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="statutoryRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>FDA License</td>
+                                    <td><input type="checkbox" name="fdaLicenseCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptfdaLicenseCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="fdaLicenseRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>WHO License</td>
+                                    <td><input type="checkbox" name="whoLicenseCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptwhoLicenseCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="whoLicenseRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Kosher</td>
+                                    <td><input type="checkbox" name="kosherCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptkosherCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="kosherRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>ISO 9001:2015</td>
+                                    <td><input type="checkbox" name="iso9001Check" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="Deptiso9001Check" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="iso9001Remarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>DMF</td>
+                                    <td><input type="checkbox" name="dmfCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptdmfCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="dmfRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <!-- Others Section -->
+                                <tr>
+                                    <td><strong>Others</strong></td>
+                                    <td><input type="checkbox" name="othersCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptothersCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="othersRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Environment</td>
+                                    <td><input type="checkbox" name="environmentCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptenvironmentCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="environmentRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Machine</td>
+                                    <td><input type="checkbox" name="machineCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptmachineCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="machineRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Skills</td>
+                                    <td><input type="checkbox" name="skillsCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptskillsCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="skillsRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Safety</td>
+                                    <td><input type="checkbox" name="safetyCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptsafetyCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="safetyRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Vendor</td>
+                                    <td><input type="checkbox" name="vendorCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DeptvendorCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="vendorRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+                                <tr>
+                                    <td>Training</td>
+                                    <td><input type="checkbox" name="trainingCheck" ngModel class="cc-checkbox" title="Tick"></td>
+                                    <td>
+                                        <select name="DepttrainingCheck" ngModel class="cc-select" title="Responsible department">
+                                            <option value="" disabled selected>Select Option</option>
+                                            <option *ngFor="let dept of department" [value]="dept.department_name">{{dept.department_name}}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="trainingRemarks" placeholder="Enter Remarks" ngModel class="cc-input" title="Remarks"></td>
+                                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="cc-section">
+          <h3 class="cc-section-title">Impacted Departments – Circulation of Change Control</h3>
+          <table class="cc-circulation-table">
+            <tr>
+              <td colspan="6" class="cc-circulation-title">Impacted Departments. Circulation of Change Control</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" name="engg" [(ngModel)]="engg" class="cc-checkbox" title="Engineering"></td>
+              <td class="cc-cell-bold">Engineering</td>
+              <td><input type="checkbox" name="admin" [(ngModel)]="admin" class="cc-checkbox" title="Personal & Administration"></td>
+              <td class="cc-cell-bold">Personal & Administration</td>
+              <td><input type="checkbox" name="production" [(ngModel)]="production" class="cc-checkbox" title="Production"></td>
+              <td class="cc-cell-bold">Production</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" name="ehs" [(ngModel)]="ehs" class="cc-checkbox" title="EHS"></td>
+              <td class="cc-cell-bold">EHS</td>
+              <td><input type="checkbox" name="qc" [(ngModel)]="qc" class="cc-checkbox" title="Quality Control"></td>
+              <td class="cc-cell-bold">Quality Control</td>
+              <td><input type="checkbox" name="store" [(ngModel)]="store" class="cc-checkbox" title="Store"></td>
+              <td class="cc-cell-bold">Store</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" name="micro" [(ngModel)]="micro" class="cc-checkbox"></td>
+              <td class="cc-cell-bold">Microbiology</td>
+              <td><input type="checkbox" name="it" [(ngModel)]="it" class="cc-checkbox" title="IT"></td>
+              <td class="cc-cell-bold">IT</td>
+              <td><input type="checkbox" name="hr" [(ngModel)]="hr" class="cc-checkbox"></td>
+              <td class="cc-cell-bold">Human Resource</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" name="regulatory" [(ngModel)]="regulatory" class="cc-checkbox" title="Regulatory"></td>
+              <td class="cc-cell-bold">Regulatory</td>
+              <td><input type="checkbox" name="qa" [(ngModel)]="qa" class="cc-checkbox" title="Quality Assurance"></td>
+              <td class="cc-cell-bold">Quality Assurance</td>
+              <td><input type="checkbox" name="rnd" [(ngModel)]="rnd" class="cc-checkbox" title="R AND D"></td>
+              <td class="cc-cell-bold">R AND D</td>
+            </tr>
+          </table>
+        </section>
+        <section class="cc-section">
+          <h3 class="cc-section-title">Category</h3>
+          <table class="cc-view-table">
+            <tr>
+              <td class="cc-view-label">Category</td>
+              <td class="cc-view-value">
+                <select [(ngModel)]="classification" name="classification" required class="cc-select" title="Category">
+                  <option value="" disabled selected>Select Category</option>
+                  <option value="Minor">Minor</option>
+                  <option value="Major">Major</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+        </section>
+      </form>
+    </div>
+    <div class="cc-card-footer">
+      <button type="button" class="cc-btn cc-btn-primary" (click)="update(reviewForm)">SUBMIT</button>
+      <button type="button" class="cc-btn cc-btn-danger" (click)="isView = false">CLOSE</button>
+    </div>
+  </div>
+
+    <!-- QA Approval Component -->
+    <app-cc-qa-approval 
+        *ngIf="showQaApproval"
+        [selectedResult]="selectedResult"
+        [savedFormData]="savedFormData"
+        (onClose)="handleQaApprovalClose()"
+        (onSave)="handleQaApprovalSave($event)">
+    </app-cc-qa-approval>
+</div>
+

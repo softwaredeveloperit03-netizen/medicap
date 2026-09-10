@@ -1,0 +1,489 @@
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Awaiting Raw Materials</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw/receiving">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+
+
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="materialTypeFilter" [(ngModel)]="materialTypeFilter" >
+                  <option value="Raw Material">Raw Material</option>
+                  <option value="Packing Material">Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+              <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading">
+
+                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                  <clr-dg-column>Material Type</clr-dg-column>
+                  <clr-dg-column>Inward Dt.</clr-dg-column>
+                  <clr-dg-column>PO No. / Dt.</clr-dg-column>
+                  <clr-dg-column>Payment Slip / Dt.</clr-dg-column>
+                  <clr-dg-column>Vendor Name</clr-dg-column>
+                  <clr-dg-column>Material Name</clr-dg-column>
+                  <clr-dg-column>Material Code</clr-dg-column>
+                  <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          
+                  <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  [ngClass]="getClass(result)">
+                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.inward_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.po_no}} / {{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.ch_no}} / {{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+                      <clr-dg-cell>
+                          <button class="btn btn-sm btn-info" (click)="viewResult(result)">PROCEED</button>
+                      </clr-dg-cell>
+                  </clr-dg-row>
+
+              </clr-datagrid>
+            </div>
+ 
+    </div>
+  </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Awaiting Raw Materials</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border recv-kv-table" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;"><b>Material Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_name'] }}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedPO['material_code'] }}</td>
+        </tr>
+        <tr >
+          <td style="text-align: left;"><b>Vendor No. :</b></td>
+          <td style="text-align: left;">{{ selectedPO['vendor_no'] }}</td>
+          <td style="text-align: left;"><b>Vendor Name :</b></td>
+          <td style="text-align: left;">{{ selectedPO['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Payment Slip:</b></td>
+          <td style="text-align: left;">{{ selectedPO['ch_no'] }}</td>
+          <td style="text-align: left;"><b>Payment Slip Date:</b></td>
+          <td style="text-align: left;">{{ selectedPO['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO No.:</b></td>
+          <td style="text-align: left;">{{ selectedPO['po_no'] }}</td>
+          <td style="text-align: left;"><b>Material Type:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_type'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Subtype:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_subtype'] }}</td>
+          <td style="text-align: left;"><b>Qty:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedPO['qty']}} {{selectedPO['unit'] }}</td>
+        </tr>
+        <!-- <tr>
+          <td style="text-align: left;"><b>Material For:</b></td>
+          <td style="text-align: left;">{{ selectedPO['materialForName'] }}</td>
+        </tr> -->
+       
+
+      </table>
+      <br>
+ 
+
+      <h3>Labeling Details:</h3>
+      <form #labelform="ngForm">
+        <table class="table table-border recv-kv-table" >
+          <tr>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('supplier_batch_no','Supplier Batch/Lot No') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('batch_no','Medicap Lot No') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('qty_received','Batch Qty') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('pack_size','Pack Size') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{'common.unit' | translate}}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('total_containers','No Of Containers') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('mfg_date','Mfg Date') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('exp_date','Exp Date') }}</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{ getReceivingLabel('coa_received','COA Received') }}:</td>
+            <td style="font-weight:bolder; background-color:aqua;">Upload COA:</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{'common.table.action' | translate}}</td>
+          </tr>
+          <tr> 
+             <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('supplier_batch_no')"> 
+              <input type="text" name="supplier_batch_no" [(ngModel)]="supplier_batch_no" required style="margin:0;">
+            </td>
+             <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('batch_no')"> 
+              <input type="text" name="batch_no" [(ngModel)]="batch_no" required style="margin:0;">
+            </td>
+            <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('qty_received')"> 
+              <input type="number" name="qty_received" [(ngModel)]="qty_received"  (keyup)="getContainerNo($event.target.value)" style="margin:0;" > 
+            </td>
+            <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('pack_size')"> 
+              <input type="number" name="pack_size" [(ngModel)]="pack_size" (keyup)="getContainerNo($event.target.value)" style="margin:0;" >
+            </td>
+            <td >{{selectedPO['unit']}}</td>
+            <td style="padding:0;margin:0;" >
+              <input type="number" name="total_containers" [(ngModel)]="total_containers" required style="margin: 0;" readonly></td>
+            <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('mfg_date')">
+              <input type="date" name="mfg_date" [(ngModel)]="mfg_date" [max]="maxDate" style="margin: 0;">
+            </td>
+            <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('exp_date')">
+              <input type="date" name="exp_date" [(ngModel)]="exp_date" [min]="minDate" style="margin: 0;">
+            </td>
+            <td style="padding:0;margin:0;" *ngIf="isReceivingApplicable('coa_received')">
+              <select name="coa_received" style="margin: 0;" [(ngModel)]="coa_received" required>
+                <option ></option>
+                <option *ngFor="let op of getReceivingOptions('coa_received', ['Yes','No','Not Applicable','Hold'])" [value]="op">{{op}}</option>
+              </select>
+            </td>
+            <td style="padding:0;margin:0;">
+              <input style="margin: 0;"  *ngIf="coa_received=='Yes'" type="file" name="coa_file" [(ngModel)]="coa_file" (change)="onFileChanged3($event)">
+            </td>
+            <td style="padding:0;margin:0;">
+              <button class="btn btn-sm btn-info" type="button" (click)="addlabel(labelform)" [disabled]="isAddingLabel" style="margin: 0;">
+                {{ isAddingLabel ? 'Adding...' : ('common.add' | translate) }}
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngFor="let list of labelList;let i=index">
+            <td style="font-weight: bolder;color: blue;">{{list.supplier_batch_no}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.batch_no}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.qty_received}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.pack_size}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.unit}}</td>
+            <td style="font-weight: bolder;color: blue;">{{ list.total_containers }}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.mfg_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.coa_received}}</td>
+            <td style="font-weight: bolder;color: blue;" *ngIf="list.coa_files===''">Not Uploaded</td>
+            <td style="font-weight: bolder;color: blue;" *ngIf="list.coa_files!=''">  Uploaded</td>
+            <td style="font-weight: bolder;color: blue;">
+              <button class="btn btn-sm btn-info" (click)="deleteLabel(list.batch_no)">{{'common.delete' | translate}}</button>
+            </td> 
+          </tr>
+        </table>
+      </form>
+
+
+      <form #receivingForm="ngForm">
+        <div class="clr-row">
+
+          <div class="clr-col-lg-3 clr-col-md-3  clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('container_type')">
+            <label><strong>{{ getReceivingLabel('container_type','Container type') }} : <span style="color:red;">*</span></strong></label>
+            <select name="container_type" [(ngModel)]="container_type" required  (change)="getSubtypesByContainer_type($event.target.value)">
+                <option></option>
+                <option *ngFor="let cont of containerTypes">{{cont.container_type}}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3  clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('container_subtype')">
+            <label ><strong>{{ getReceivingLabel('container_subtype','Container Subtype') }} : <span style="color:red;">*</span></strong></label>
+            <select name="container_subtype" [(ngModel)]="container_subtype" required>
+                <option></option>
+                <option *ngFor="let cont of containerSubTypes">{{cont.container_subtype}} - ( {{cont.madeUpOf}} )</option>
+            </select>
+          </div>
+       
+          <div class="clr-col-lg-3 clr-col-md-3  clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('challan_qty')">
+            <label>{{ getReceivingLabel('challan_qty','Qty. As Per Payment Slip') }}: {{ selectedPO['unit'] }}</label>
+            <input type="number" name="challan_qty" [(ngModel)]="challan_qty" required>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3  clr-col-sm-12 clr-col-xs-12">
+            <br>
+            <span class="blink" *ngIf="selectedPO['isOPenPO'] == 'YES'" style="color: white;"><b>Open PO</b></span>
+          </div>
+
+        </div>
+
+ 
+
+        <div class="clr-row">
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Actual Received Qty: {{ selectedPO['unit'] }}</label>
+            <input type="text" name="received_qty" [(ngModel)]="qtyReceived" required readonly >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+            <label>No. Of Containers:</label>
+            <input type="text" name="containerTotal" [(ngModel)]="containerTotal" required readonly >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Short / Extra Quantity</label>
+            <input type="text" name="short_qty" [(ngModel)]="result" required readonly >
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('po_status')">
+            <label>{{ getReceivingLabel('po_status','PO Status') }}</label>
+            <select name="po_status" [(ngModel)]="po_status" required>
+              <option></option> 
+              <option *ngIf="po_stat == 'Extra'">Accept</option>  <!--//xtra -->
+              <option *ngIf="po_stat == 'Short'">Keep Open( Short Qty)</option>
+              <option>Reject / Return</option>
+              <option>{{'common.rejected' | translate}}</option>
+              <option *ngIf="po_stat == 'Extra'">Return Material(Extra Qty)</option> <!--//xtra -->
+              <option *ngIf="po_stat == 'Extra'">Raise Additional PO(Extra Qty)</option> <!--//xtra -->
+            </select>
+          </div>
+     
+        </div>
+
+        <h3 >Container Details:</h3>
+        <div class="clr-row">
+          
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('isdamagecontainer')" >
+            <label >{{ getReceivingLabel('isdamagecontainer','Damage Container Observed') }}:</label>
+            <select name="isdamagecontainer" [(ngModel)]="isdamagecontainer" (change)="checkdamage($event.target.value)" 
+               [disabled]="po_status=='Reject / Return' || po_status=='Rejected'">
+              <option *ngFor="let op of getReceivingOptions('isdamagecontainer', ['Yes','No'])" [value]="op">{{op}}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" *ngIf="isdamagecontainer=='Yes'">
+            <label>Medicap Lot No:</label>
+            <select name="damage_batch_no" (change)="selectBat($event.target.selectedIndex)" [(ngModel)]="damage_batch_no" required>
+              <option></option>
+              <option *ngFor="let item of labelList;">{{item.batch_no}}</option>
+            </select>
+          </div>
+    
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isdamagecontainer=='Yes' && isReceivingApplicable('outer_damage')" >
+            <label>{{ getReceivingLabel('outer_damage','Total Damage Containers') }}:</label>
+            <input type="text" name="outer_damage" [(ngModel)]="outer_damage" (input)="calculate_qty($event.target.value)" 
+             [disabled]="po_status=='Reject / Return'  || po_status=='Rejected'">
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isdamagecontainer=='Yes'">
+            <label>Hold Quantity:</label>
+            <input type="text"  name="hold_qty" [(ngModel)]="hold_qty" readonly>
+          </div>
+ 
+        </div>
+
+        <h3>Others Details:</h3>
+        <div class="clr-row">
+
+          <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isReceivingApplicable('dedusting_applicable')">
+            <label>{{ getReceivingLabel('dedusting_applicable','Dedusting Applicable') }}:</label>
+            <select name="dedusting_applicable" [(ngModel)]="dedusting_applicable" required [disabled]="po_status=='Reject / Return'  || po_status=='Rejected'">
+              <option *ngFor="let op of getReceivingOptions('dedusting_applicable', ['Yes','No'])" [value]="op">{{op}}</option>
+            </select>
+          </div> -->
+ 
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-6" *ngIf="isReceivingApplicable('entry_time_start')">
+             <label>{{ getReceivingLabel('entry_time_start','Receiving Start Time') }}:</label>
+            <input type="time" name="entry_time_start" [(ngModel)]="entry_time_start" [min]="min_time"
+              [max]="max_time"  [disabled]="po_status=='Reject / Return'  || po_status=='Rejected'"/>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-6" *ngIf="isReceivingApplicable('entry_time_end')">
+             <label>{{ getReceivingLabel('entry_time_end','Receiving End Time') }}:</label>
+            <input type="time" name="entry_time_end" [(ngModel)]="entry_time_end" [min]="min_time" [max]="max_time"  [disabled]="po_status=='Reject / Return' || po_status=='Rejected'"/>
+          </div>
+
+        </div>
+
+        <h3 *ngIf="dynamicAdditionalFields.length > 0">Additional Custom Fields:</h3>
+        <div class="clr-row" *ngIf="dynamicAdditionalFields.length > 0">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngFor="let cf of dynamicAdditionalFields" [hidden]="!isReceivingApplicable(cf.field_key)">
+            <label>{{ cf.field_label }}</label>
+            <input *ngIf="cf.field_type === 'TEXT' || cf.field_type === 'STANDARD'" type="text" [(ngModel)]="dynamicFieldValues[cf.field_key]" [name]="'dyn_' + cf.field_key">
+            <select *ngIf="cf.field_type === 'DROPDOWN' || cf.field_type === 'YESNO'" [(ngModel)]="dynamicFieldValues[cf.field_key]" [name]="'dyn_' + cf.field_key">
+              <option></option>
+              <option *ngFor="let op of getReceivingOptions(cf.field_key, ['Applicable','Not Applicable'])" [value]="op">{{op}}</option>
+            </select>
+            <input *ngIf="cf.field_type === 'CHECKBOX'" type="checkbox" [(ngModel)]="dynamicFieldValues[cf.field_key]" [name]="'dyn_' + cf.field_key">
+          </div>
+        </div>
+
+      </form>
+
+
+        <div class="receiving-checklist-section">
+        <h3>Receiving Checklist:</h3>
+        <p class="rc-checklist-hint" *ngIf="!checkPointRows?.length">No approved checklist found. Create and approve checklist in Master → Checklist (Store / Receiving / Receiving).</p>
+        <form #checkList="ngForm" *ngIf="checkPointRows?.length">
+          <table class="table" cellspacing="0" cellpadding="0">
+            <colgroup>
+              <col class="rc-col-desc">
+              <col class="rc-col-answer">
+            </colgroup>
+           
+            <tbody>
+              <ng-container *ngFor="let row of checkPointRows; let i = index; trackBy: trackCheckPointRow">
+                <tr *ngIf="row.type === 'header'" class="rc-section-header">
+                  <td colspan="2">
+                    <strong>{{ row.title }}</strong>
+                    <span *ngIf="row.showPoNo"> {{ selectedPO['po_no'] || '_________' }}</span>
+                  </td>
+                </tr>
+
+                <tr *ngIf="row.type === 'footer'" class="rc-footer-note">
+                  <td colspan="2"><strong>{{ row.title }}</strong></td>
+                </tr>
+
+                <tr *ngIf="row.type === 'item'" class="rc-item-row">
+                  <td class="rc-desc-cell">
+                    <span>{{ row.item.check_point }}</span>
+                    <input *ngIf="isObservationsRow(row.item)" type="text" class="rc-inline-text rc-obs-input" [name]="'check_obs_' + row.rowKey" [(ngModel)]="row.item.check" placeholder="Enter observations...">
+                    <div *ngIf="hasInlineOptions(row.item)" class="rc-inline-options">
+                      <label *ngFor="let opt of getChecklistOptionList(row.item); let j = index" class="rc-inline-opt">
+                        <input type="checkbox" [name]="'opt_' + row.rowKey + '_' + j" [(ngModel)]="row.item.optionChecks[j]">
+                        {{ opt }}
+                      </label>
+                      <input *ngIf="row.item.hasOtherOption" type="text" class="rc-inline-text" [name]="'opt_other_' + row.rowKey" [(ngModel)]="row.item.otherOption" placeholder="Other (specify)">
+                    </div>
+                  </td>
+                  <td class="rc-ans-cell" *ngIf="!isObservationsRow(row.item)">
+                    <ng-container *ngIf="po_status!='Reject / Return' || po_status=='Rejected'">
+                    <input *ngIf="row.item.evl_pr=='1'" type="text" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+
+                    <div *ngIf="row.item.evl_pr=='2'" class="rc-yesno-group">
+                      <label class="rc-yesno-label"><input type="radio" [name]="'check_' + row.rowKey" value="Yes" [(ngModel)]="row.item.check" required> Yes</label>
+                      <label class="rc-yesno-label"><input type="radio" [name]="'check_' + row.rowKey" value="No" [(ngModel)]="row.item.check" required> No</label>
+                    </div>
+
+                    <select *ngIf="row.item.evl_pr=='3'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>OK</option><option>Not Ok</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='4'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Satisfactory</option><option>Not Satisfactory</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='5'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Applicable</option><option>Not Applicable</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='6'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Cleaned</option><option>Not Cleaned</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='7'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Sealed</option><option>Unsealed</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='8'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Verified</option><option>Not Verfied</option><option>NA</option>
+                    </select>
+                    <select *ngIf="row.item.evl_pr=='9'" [name]="'check_' + row.rowKey" [(ngModel)]="row.item.check" required class="rc-answer-input">
+                      <option></option><option>Covered</option><option>Uncovered</option><option>NA</option>
+                    </select>
+                    </ng-container>
+                  </td>
+                </tr>
+              </ng-container>
+
+              <tr *ngIf="!hasChecklistFooterInData()" class="rc-footer-note">
+                <td colspan="2"><strong>Contact Purchasing Associate if any of the above items do not meet requirements.</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </form>
+        </div>
+     </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-success" (click)="receiveMaterial(receivingForm, checkList)" *ngIf="lev != 'NotTriggred'">Send For Plant Head Approval</button>
+    <button class="btn btn-primary" (click)="receiveMaterial(receivingForm, checkList)" *ngIf="po_status!='Reject / Return'  &&  po_status!='Rejected' && lev == 'NotTriggred'">{{'common.submit' | translate}}</button>
+    <button  class="btn btn-primary" (click)="receiveMaterial(receivingForm, checkList)" *ngIf="po_status=='Reject / Return'  || po_status=='Rejected'">{{'common.reject' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false;">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<clr-modal [(clrModalOpen)]="isDeviation" clrModalSize="xl" >
+  <div class="modal-body">
+    <header class="card-header mef-panel-header">
+      <h2 class="mef-panel-header__title">Deviation Details:(For Non Receipt Of Material COA)</h2>
+    </header>
+    <div class="card-block">
+      <form #deviationForm="ngForm">
+        <div class="clr-row">
+            <div class="clr-col-12">
+                <table class="table table-border recv-kv-table">
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Identified By</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text"  name="identifiedBy" [(ngModel)]="identifiedBy"  readonly  >
+                        </td>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Occurred Date</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="date" name="devOccuredDate" ngModel required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Occurred In Dept.</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="devOccuredDept" [(ngModel)]="department_name" readonly>
+
+                        </td>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Identified Date</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="date" name="devIdentifiedDate" ngModel required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Time Of Deviation</td>
+                        <td colspan="3" style="text-align: left;margin: 0;padding: 0;">
+                            <input type="time" name="timeOfDev" ngModel required>
+                        </td>
+                    </tr>
+                </table>
+                <div></div>
+                <table class="table table-border recv-kv-table">
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Type Of Dev.</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="typeOfDev" [(ngModel)]="typeOfDev"  readonly>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Scope</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                          <input type="text" name="devScope" [(ngModel)]="devScope"  readonly>
+                        </td>
+                    </tr>
+                    <tr >
+                        <td  colspan="2"  style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="scopeItem" [(ngModel)]="scopeItem"  readonly  > 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="width: 70%; text-align: left;margin: 0;padding: 0;"> <b> Details Of The Deviation</b> <br>
+                            <textarea name="detailsOfDev" [(ngModel)]="detailsOfDev"   required ></textarea>
+                        </td> 
+                        <td  style="width: 30%; text-align: left;margin: 0;padding: 0;"> 
+                            <input type="file" name="devDetDoc" (change)="onFileChanged0($event)"   ngModel>
+                        </td> 
+                    </tr>
+                    <tr>
+                        <td  style="width: 70%; text-align: left;margin: 0;padding: 0;"> <b> Standard Procedure / System</b><br>
+                            <textarea name="standProcedureSystem" [(ngModel)]="standProcedureSystem"   required ></textarea>
+                        </td> 
+                        <td  style="width: 30%; text-align: left;margin: 0;padding: 0;"> 
+                            <input type="file"   name="standProceSysDoc" (change)="onFileChanged00($event)"   ngModel>
+                        </td> 
+                    </tr>
+                </table>
+            </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" (click)="saveDeviation(deviationForm)">{{'common.save' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+ 
+
+ 
+ 

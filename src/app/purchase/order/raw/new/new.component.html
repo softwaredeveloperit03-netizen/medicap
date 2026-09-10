@@ -1,0 +1,533 @@
+<!-- Purchase Order form (direct) -->
+<div class="ponew ponew--form card">
+  <div id="contentToConvert">
+    <div class="ponew__header card-header">
+      <h2 class="ponew__title">Purchase Order</h2>
+      <button type="button" class="btn btn-sm btn-danger" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <form #poform="ngForm" class="ponew__form">
+          <div class="clr-row ponew__form-row ponew__form-row--primary">
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 ponew__field-wrap">    
+                  <label class="ponew__label"><strong>PO Type <span class="ponew__required">*</span></strong></label>                
+                  <select name="po_type" class="ponew__select ponew__select--primary" [(ngModel)]="po_type" required (change)="sub_type()" aria-label="PO type">
+                      <option value="">Select</option>
+                      <option>Raw Material</option>
+                      <option>Packing Material</option>
+                      <option>Engg Store Mech</option>
+                      <option>Engg Store Elect</option>
+                      <option>Stationary</option>
+                      <option>Housekeeping</option>
+                      <option>Canteen</option>
+                      <option>Building Material</option>
+                      <option>Machine Spares (Dedicated)</option>
+                      <option>Machine Spares (Common)</option>
+                      <option>QC Materials</option>
+                      <option>IT Materials</option>
+                      <option>Others</option>
+                      <option>Service</option>
+                      <option>Equipment</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 ponew__field-wrap">    
+                  <label class="ponew__label"><strong>Vendor Name <span class="ponew__required">*</span></strong></label>                
+                  <select name="vendor_no" class="ponew__select ponew__select--primary" [(ngModel)]="vendor_no" (ngModelChange)="onVendorChange($event)" required aria-label="Vendor">
+                      <option value="">Select vendor</option>
+                      <option *ngFor="let ven of vendors" [value]="ven.vendor_no">{{ ven.vendor_name }} ({{ ven.vendor_no }})</option>
+                  </select>
+              </div>
+          </div>
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 ponew__bill-ship-wrap">
+              <table class="table table-border">
+                <tr>
+                  <td class="ponew__billto-header" colspan="4">Bill To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left;padding: 0%;" colspan="3">
+                    <select style="margin:0px" name="billcompany_code" [(ngModel)]="billcompany_code" required
+                      (change)="getBillToShippToDetails($event.target.selectedIndex,'BILLTO')">
+                      <option></option>
+                      <option *ngFor="let com of companies" [value]="com.company_code">{{com.company_name}}</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedBill['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;">{{ selectedBill['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedBill['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedBill['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedBill['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 ponew__bill-ship-wrap">
+              <table class="table table-border">
+                <tr>
+                  <td class="ponew__shipto-header" colspan="4">Ship To
+                    <input type="checkbox" name="sameaddress" [(ngModel)]="sameaddress" (change)="onCheckboxChange()">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left;padding: 0%;" colspan="3">
+                    <select style="margin:0px" name="shipcompany_code" [(ngModel)]="shipcompany_code" required
+                      (change)="getBillToShippToDetails($event.target.selectedIndex,'SHIPTO')">
+                      <option></option>
+                      <option *ngFor="let company of companies" [value]="company.company_code">{{company.company_name}}
+                      </option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedShip['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;">{{ selectedShip['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedShip['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedShip['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedShip['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div><br>
+
+    
+          <div class="clr-row">
+
+            <div style="background-color:green;color: white;" class="clr-col-lg-2">
+              <label><strong>Purchase Order Date :</strong> <span style="color:red;"><strong>*</strong></span></label>
+              <input type="date" name="po_date" [(ngModel)]="po_date" [max]="maxDate" required>
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2">
+              <label>Discount In:</label>
+              <select name="discount_In" [(ngModel)]="discount_In" >
+                <option>Percentage</option>
+                <option>{{'common.amount' | translate}}</option>
+              </select>
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 remove-side-arrow-container"
+              *ngIf="discount_In == 'Percentage'">
+              <label>Discount %:</label>
+              <input type="number" name="po_discount_per" (keyup)="applyDiscpuntToAll()" ngModel [(ngModel)]="po_discount_per"
+                min="0" max="100">
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 remove-side-arrow-container"
+              *ngIf="discount_In == 'Amount'">
+              <label>Discount Amount:</label>
+              <input type="number" name="po_discount_amt" (change)="applyDiscpuntToAll()" ngModel
+                [(ngModel)]="po_discount_amt">
+            </div>
+            
+            <div style="background-color:burlywood"  class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 remove-side-arrow-container" >
+              <label>Shipping/Handling/Trans. Charges :</label>
+               <select name="shipping_type" [(ngModel)]="shipping_type" required>
+                <option></option>
+                <option>Vendor Account</option>
+                <option>Company Account</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 remove-side-arrow-container" >
+                <br><button class="btn btn-success" (click)="openAddMaterialModal()">Add Materials</button>
+            </div>
+ 
+
+          </div>
+          <h3 class="ponew__section-title">Materials</h3>
+          <div class="ponew__table-wrap unique-table-wrapper">
+            <table class="table table-border ponew__table unique-table">
+              <thead>
+                <tr>
+                  <th class="ponew__th">Select</th>
+                  <th class="ponew__th ponew__th--left">{{'common.table.srNo' | translate}}</th>
+                  <th class="ponew__th ponew__th--left">Material Code</th>
+                  <th class="ponew__th ponew__th--left">Material Name</th>
+                  <th class="ponew__th">Discount %</th>
+                  <th class="ponew__th">Qty</th>
+                  <th class="ponew__th">Quotation Amt.</th>
+                  <th class="ponew__th">Gross Total</th>
+                  <th class="ponew__th">Discount Amt.</th>
+                  <th class="ponew__th">Taxable</th>
+                  <th class="ponew__th">TAX %</th>
+                  <th class="ponew__th">Tax Total</th>
+                  <th class="ponew__th">Net Total</th>
+                  <th class="ponew__th">SGST</th>
+                  <th class="ponew__th">CGST</th>
+                  <th class="ponew__th">IGST</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of (selectedPO?.indends || []); let i = index">
+                  <td class="ponew__td"><input type="checkbox" name="check{{i}}" (change)="getTaxSplitUp()" [(ngModel)]="user['check']" class="ponew__checkbox" aria-label="Select row {{ i + 1 }}"></td>
+                  <td class="ponew__td ponew__td--left">{{ i + 1 }}</td>
+                  <td class="ponew__td ponew__td--left">{{ user.material_code }}</td>
+                  <td class="ponew__td ponew__td--left">{{ user.material_name }}</td>
+                  <td class="ponew__td"><input type="text" [(ngModel)]="user['disc_per']" required name="disc_per{{i}}" (keyup)="applyDiscount(user)" class="ponew__input ponew__input--cell" min="0" max="100" inputmode="decimal"></td>
+                  <td class="ponew__td">{{ user.order_qty }} {{ user.unit }}</td>
+                  <td class="ponew__td">{{ user.quotation_amt }} / {{ user.unit }}</td>
+                  <td class="ponew__td">{{ user.gross_total }}</td>
+                  <td class="ponew__td"><input type="text" [(ngModel)]="user['disc_amt']" (change)="applyDiscountOnAmt(user)" name="disc_amt{{i}}" class="ponew__input ponew__input--cell" inputmode="decimal"></td>
+                  <td class="ponew__td">{{ user.taxable_amt }}</td>
+                  <td class="ponew__td">{{ user.gst }} %</td>
+                  <td class="ponew__td">{{ user.tax_total }}</td>
+                  <td class="ponew__td">{{ user.net_total }}</td>
+                  <td class="ponew__td">{{ user.sgst }}</td>
+                  <td class="ponew__td">{{ user.cgst }}</td>
+                  <td class="ponew__td">{{ user.igst }}</td>
+                </tr>
+                <tr *ngIf="!(selectedPO?.indends?.length)">
+                  <td class="ponew__empty" colspan="16">No data</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="ponew__amount-in-words"><strong>Total Payable (In Words) :</strong> {{ getTotalPayableInWords() }}</p>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <h3>Tax Splitup:</h3>
+                <table class="table table-border ponew__tax-table">
+                  <tr>
+                    <th>Percentage</th>
+                    <th>Taxable</th>
+                    <th>IGST</th>
+                    <th>SGST</th>
+                    <th>CGST</th>
+                    <th>TOTAL GST</th>
+                  </tr>
+                  <tr *ngFor="let item of gstSplitData; let i = index">
+                    <td>{{ item.percentage }}%</td>
+                    <td>{{ item.taxable_amt }}</td>
+                    <td>{{ item.igst }}</td>
+                    <td>{{ item.sgst }}</td>
+                    <td>{{ item.cgst }}</td>
+                    <td>{{ item.totalGST }}</td>
+                  </tr>
+                  <tr *ngIf="!gstSplitData?.length">
+                    <td colspan="6" class="ponew__empty">No data</td>
+                  </tr>
+                </table>
+
+                <table class="table table-border ponew__shipping-table" *ngIf="shipping_type == 'Company Account'">
+                  <tr>
+                    <th>Shipping Amount</th>
+                    <th>GST %</th>
+                    <th>GST Amount</th>
+                    <th>Shipping Total</th>
+                  </tr>
+                  <tr>
+                    <td style="padding:0;margin: 0;">
+                      <input type="text" name="shipping_handling" [(ngModel)]="shipping_handling" (keyup)="calulateShipping()" required style="padding:0;margin: 0;" onkeypress='return event.charCode >= 48 && event.charCode <= 57'>
+                    </td>
+                    <td style="padding:0;margin: 0;">
+                      <select style="padding:0;margin: 0;" name="shipping_gst" [(ngModel)]="shipping_gst" (change)="calulateShipping()" required>
+                        <option value="5">5 %</option>
+                        <option value="12">12 %</option>
+                        <option value="18">18 %</option>
+                        <option value="24">24 %</option>
+                        <option value="28">28 %</option>
+                      </select>
+                    </td>
+                    <td style="padding:0;margin: 0;">
+                      <input type="text" name="shipping_Gst_amt" [(ngModel)]="shipping_Gst_amt" required readonly style="padding:0;margin: 0;" >
+                      </td>
+                    <td style="padding:0;margin: 0;">
+                        <input type="text" name="shipping_total" [(ngModel)]="shipping_total" required readonly style="padding:0;margin: 0;" >
+                    </td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <div class="ponew__section-wrap">
+                  <h3 class="ponew__section-title">Delivery Schedule</h3>
+                  <table class="ponew__section-table ponew__schedule-table table">
+                    <colgroup>
+                      <col><col><col><col><col>
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>{{'common.table.srNo' | translate}}</th>
+                        <th>Material Name</th>
+                        <th class="ponew__th--center">Qty. <span class="ponew__required">*</span></th>
+                        <th class="ponew__th--center">Schedule Del. Dt. <span class="ponew__required">*</span></th>
+                        <th class="ponew__th--center">{{'common.table.action' | translate}}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of schedule_data; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td class="ponew__td--left">{{ item.material_name }} - {{ item.material_code }}</td>
+                        <td class="ponew__td--num"><input type="number" name="qty{{i}}" [(ngModel)]="item.qty" (blur)="onScheduleQtyChange(item, i)" min="0" step="0.01" required> {{ item.unit }}</td>
+                        <td class="ponew__td--date"><input type="date" name="delivery_schedule_date{{i}}" [min]="today" [(ngModel)]="item.delivery_schedule_date" required placeholder="Select date"></td>
+                        <td class="ponew__td--action">
+                          <button type="button" *ngIf="item.isAdded == 'NO'" class="btn btn-sm btn-success" [disabled]="!(item.qty > 0 && item.qty < item.splitQty)" (click)="addSchedule(item,i)">{{'common.add' | translate}}</button>
+                          <button type="button" *ngIf="item.isAdded == 'YES'" class="btn btn-sm btn-danger" (click)="delSchedule(item,i)">DEL</button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="!schedule_data?.length">
+                        <td colspan="5" class="ponew__empty">No data</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+            </div>
+          </div>
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                 <h3>Terms & Conditions : &nbsp;&nbsp;&nbsp; 
+                    <button class="btn btn-sm btn-success" (click)="isTerm=true">{{'common.add' | translate}}</button>
+                    <button class="btn btn-sm btn-danger" (click)="isEdit=true">{{'common.delete' | translate}}</button>
+                 </h3><br>
+
+
+                <table class="table table-border ponew__terms-table">
+                  <tr>
+                    <th class="ponew__th--sr">Select</th>
+                    <th class="ponew__th--left">Term Heading</th>
+                    <th class="ponew__th--left">Terms & Conditions</th>
+                  </tr>
+                  <tr *ngFor="let term of terms; let i = index">
+                    <td class="ponew__td-check"><input type="checkbox" name="selected{{ i }}" [(ngModel)]="term['selected']" [attr.aria-label]="'Select term ' + (i + 1)"></td>
+                    <td class="ponew__td--left">{{ term.term_heading }}</td>
+                    <td class="ponew__td--left">{{ term.term }}</td>
+                  </tr>
+                  <tr *ngIf="!terms?.length">
+                    <td colspan="3" class="ponew__empty">No data</td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="ponew__section-wrap">
+                <h3 class="ponew__payment-title">Payment Terms : Total Payable : <span class="ponew__total-payable">{{ getTotalPayable() }}</span></h3>
+                <table class="ponew__section-table ponew__payment-table table">
+                  <colgroup>
+                    <col><col><col>
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Payment %</th>
+                      <th>Payment Conditions</th>
+                      <th>Amount <button type="button" class="btn btn-success btn-sm" [disabled]="getPaymentTermsSum() >= getTotalPayable()" (click)="addRowToPaymentTerms()">Add Row</button></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of paymentTerms; let i = index">
+                      <td>
+                        <input *ngIf="i < paymentTerms.length - 1 || paymentTerms.length === 1" type="number" name="pay_per{{i}}" class="ponew__input ponew__input--cell" [(ngModel)]="item.pay_per" (input)="calculatePerAmt(i)" min="0" step="0.01" required>
+                        <span *ngIf="i === paymentTerms.length - 1 && paymentTerms.length > 1" class="ponew__balance-label">(Balance)</span>
+                      </td>
+                      <td><input type="text" name="term{{i}}" class="ponew__input" [(ngModel)]="item.term" required></td>
+                      <td class="ponew__td--amount">{{ item.pay_amt || 0 }} {{ item.currency }} <clr-icon class="is-error" shape="trash" (click)="removePaymentTerm(i)" role="button" aria-label="Remove row"></clr-icon></td>
+                    </tr>
+                    <tr *ngIf="!paymentTerms?.length">
+                      <td colspan="3" class="ponew__empty">No data. Use "Add Row" to add payment terms.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label><strong>Narration :- </strong></label>
+              <textarea name="narration" ngModel rows="3"></textarea>
+            </div>
+          </div>
+
+        </form>
+   
+      </div>
+    </div>
+  </div>
+  <div class="card-footer" id="remove-element">
+    <button class="btn btn-primary" (click)="sendPO(poform); clicked = true;"
+      [disabled]="poform.invalid || clicked">Submit PO</button>
+    <button type="button" class="btn btn-danger" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+    <!-- <button class="btn btn-success" (click)="generatePDF()">{{'common.download' | translate}}</button> -->
+  </div>
+</div>
+
+
+
+ <clr-modal [(clrModalOpen)]="isAddNewMaterial" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Add Material To PO</h3>
+  <div class="modal-body add-material-modal">
+    <p class="add-material-modal__hint">Only materials mapped to the selected vendor and matching PO type (Raw / Packing) are shown. Select material; choose a quotation from the dropdown or, if none is available, enter Quotation Amt. and Per manually. Then add to the list and to the main form.</p>
+    <form #materialFOrm="ngForm" class="add-material-modal__form">
+      <div class="add-material-modal__row add-material-modal__row--oneline">
+        <div class="add-material-modal__field add-material-modal__field--material">
+          <label class="add-material-modal__label" for="add-mat-material">Item Name <span class="add-material-modal__required">*</span></label>
+          <select id="add-mat-material" class="add-material-modal__select" name="material_code" [(ngModel)]="selMat.material_code" (change)="selectedMat($event.target.selectedIndex)">
+            <option value=""></option>
+            <option *ngFor="let mat of materials" [value]="mat.material_code">{{mat.material_name}} ({{mat.material_code}})</option>
+          </select>
+        </div>
+        <div class="add-material-modal__field add-material-modal__field--quotation">
+          <label class="add-material-modal__label">Quotation Amt. <span class="add-material-modal__required">*</span></label>
+          <div class="add-material-modal__quotation-inline">
+            <select *ngIf="quotationList && quotationList.length > 0" id="add-mat-quotation" class="add-material-modal__select add-material-modal__select--from-log" name="quotation_from_log" (change)="onQuotationSelect($event.target.selectedIndex)">
+              <option value="">From log</option>
+              <option *ngFor="let q of quotationList; let qi = index" [value]="qi">{{ (q.vendor_quotation_no || q.quotation_no || '') }} - {{ q.quotation_amt }}/{{ (q.quotation_per || q.uom || '') }}</option>
+            </select>
+            <span class="add-material-modal__quotation-spacer" *ngIf="!quotationList || quotationList.length === 0"></span>
+            <input id="add-mat-quotation-amt" type="number" class="add-material-modal__input add-material-modal__input--amt" name="quotation_amt" [(ngModel)]="addMaterialQuotationAmt" min="0" step="0.01" placeholder="Amt">
+            <select id="add-mat-currency" class="add-material-modal__select add-material-modal__select--currency" name="quotation_currency" [(ngModel)]="addMaterialCurrency">
+              <option *ngFor="let c of quotationCurrencies" [value]="c">{{ c }}</option>
+            </select>
+            <select id="add-mat-quotation-per" class="add-material-modal__select add-material-modal__select--uom" name="quotation_per" [(ngModel)]="addMaterialQuotationPer">
+              <option *ngFor="let u of quotationUomOptions" [value]="u">{{ u }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="add-material-modal__field add-material-modal__field--qty">
+          <label class="add-material-modal__label" for="add-mat-qty">Qty <span class="add-material-modal__required">*</span></label>
+          <input id="add-mat-qty" type="number" class="add-material-modal__input" name="order_qty" [(ngModel)]="addMaterialOrderQty" min="0.0001" step="any" placeholder="0">
+        </div>
+        <div class="add-material-modal__field add-material-modal__field--unit">
+          <label class="add-material-modal__label" for="add-mat-unit">{{'common.unit' | translate}}</label>
+          <input id="add-mat-unit" type="text" class="add-material-modal__input add-material-modal__input--readonly" name="unit" [(ngModel)]="addMaterialUnit" readonly placeholder="—">
+        </div>
+        <div class="add-material-modal__field add-material-modal__field--action">
+          <label class="add-material-modal__label add-material-modal__label--invisible" for="add-mat-btn">{{'common.table.action' | translate}}</label>
+          <button id="add-mat-btn" type="button" class="add-material-modal__btn add-material-modal__btn--add" (click)="addOneToPendingList()">Add to list</button>
+        </div>
+      </div>
+      <div class="add-material-modal__table-wrap">
+        <table class="add-material-modal__table">
+          <colgroup>
+            <col class="add-material-modal__col-sr">
+            <col class="add-material-modal__col-code">
+            <col class="add-material-modal__col-name">
+            <col class="add-material-modal__col-quot">
+            <col class="add-material-modal__col-qty">
+            <col class="add-material-modal__col-unit">
+            <col class="add-material-modal__col-action">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="add-material-modal__th add-material-modal__th--sr">Sr.</th>
+              <th class="add-material-modal__th add-material-modal__th--left">Material Code</th>
+              <th class="add-material-modal__th add-material-modal__th--left">Material Name</th>
+              <th class="add-material-modal__th">Quot. Amt.</th>
+              <th class="add-material-modal__th">Qty</th>
+              <th class="add-material-modal__th">{{'common.unit' | translate}}</th>
+              <th class="add-material-modal__th add-material-modal__th--action">{{'common.table.action' | translate}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pendingMaterialsToAdd; let i = index" class="add-material-modal__tr">
+              <td class="add-material-modal__td">{{ i + 1 }}</td>
+              <td class="add-material-modal__td add-material-modal__td--left">{{ row.material_code }}</td>
+              <td class="add-material-modal__td add-material-modal__td--left">{{ row.material_name }}</td>
+              <td class="add-material-modal__td">{{ row.quotation_amt }} / {{ row.quotation_per || '—' }}</td>
+              <td class="add-material-modal__td">{{ row.order_qty }}</td>
+              <td class="add-material-modal__td">{{ row.unit }}</td>
+              <td class="add-material-modal__td add-material-modal__td--action">
+                <button type="button" class="add-material-modal__btn add-material-modal__btn--remove" (click)="removeFromPendingList(i)">Remove</button>
+              </td>
+            </tr>
+            <tr *ngIf="!pendingMaterialsToAdd.length" class="add-material-modal__tr add-material-modal__tr--empty">
+              <td class="add-material-modal__empty" colspan="7">No materials in list. Add using the fields above.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer add-material-modal__footer">
+    <button type="button" class="btn btn-primary add-material-modal__footer-btn" (click)="addAllPendingToPO()">Add all to PO</button>
+    <button type="button" class="btn btn-danger add-material-modal__footer-btn" (click)="isAddNewMaterial=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+ 
+
+
+
+<clr-modal [(clrModalOpen)]="isTerm">
+  <h3 class="modal-title">Terms & Conditions:</h3>
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <table class="table ponew__modal-terms-table">
+        <tr>
+          <th class="ponew__th--sr">Sr.</th>
+          <th class="ponew__th--left">Terms Heading</th>
+          <th class="ponew__th--left">Terms</th>
+        </tr>
+        <tr>
+          <td>0.</td>
+          <td style="padding: 0px;">
+            <input type="text" id="term_heading" name="term_heading" ngModel required
+              style="margin: 0px; height: 33px;">
+          </td>
+          <td style="padding: 0px;">
+            <input type="text" id="term" name="term" ngModel required style="margin: 0px; height: 33px;">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveTerm(termForm)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isTerm = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isEdit">
+  <h3 class="modal-title">Delete Terms:</h3>
+  <div class="modal-body">
+    <table class="table ponew__modal-terms-table">
+      <tr>
+        <th class="ponew__th--left">Terms Heading</th>
+        <th class="ponew__th--left">Terms & Conditions</th>
+        <th class="ponew__th--left">Delete</th>
+      </tr>
+      <tr *ngFor="let term of terms; let i = index">
+        <td style="text-align: left;">{{ term.term_heading }}</td>
+        <td style="text-align: left;">{{ term.term }}</td>
+        <td style="text-align: left;">
+          <clr-icon class="is-error" shape="trash" (click)="delTerm(term.id)"></clr-icon>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

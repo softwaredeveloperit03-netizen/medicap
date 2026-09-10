@@ -1,0 +1,287 @@
+<div class="approval__card card" *ngIf="!isView">
+  <div class="approval__header card-header">
+    <span class="approval__title">Purchase Order For Dept. Head Approval</span>
+    <button class="btn btn-sm" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">
+      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+    </button>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="approval__toolbar">
+        <div class="approval__filter-row">
+          <div class="approval__filter-group">
+            <label>Material Type<span class="approval__required">*</span></label>
+            <select name="material_type" [(ngModel)]="po_type" required (change)="getAllPendingPO()" aria-label="Material Type">
+              <option>All</option>
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Engg Store Mech</option>
+              <option>Engg Store Elect</option>
+              <option>Stationary</option>
+              <option>Housekeeping</option>
+              <option>Canteen</option>
+              <option>Building Material</option>
+              <option>Machine Spares (Dedicated)</option>
+              <option>Machine Spares (Common)</option>
+              <option>QC Materials</option>
+              <option>IT Materials</option>
+              <option>Others</option>
+              <option>Service</option>
+              <option>Equipment</option>
+            </select>
+          </div>
+          <div class="approval__search-wrap">
+            <clr-icon shape="search"></clr-icon>
+            <input type="text" class="approval__search-input" placeholder="Search PO No, Vendor, Material, Status..." [(ngModel)]="searchQuery">
+          </div>
+          <div class="approval__toolbar-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="clearFilter()">Clear Filter</button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="downloadExcel()" [disabled]="!(results?.length)">Download Excel</button>
+          </div>
+        </div>
+      </div>
+      <div class="approval__datagrid-wrap datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" >
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>PO No.</clr-dg-column>
+          <clr-dg-column>Po Dt.</clr-dg-column>
+          <clr-dg-column>Materials</clr-dg-column>
+          <clr-dg-column>Entered By</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <ul class="approval__materials-list">
+                <li *ngFor="let item of result.materials">{{ item.material_name }},</li>
+              </ul>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_by }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} records
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="approval__view-card card" *ngIf="isView">
+  <div id="contentToConvert">
+    <div class="approval__view-header card-header">Purchase Order</div>
+    <div class="card-block">
+      <div class="card-text approval__view-content">
+        <div class="approval__summary-section">
+          <table class="approval__table approval__table-summary table table-border">
+            <tr>
+              <td class="approval__label-cell">PO No./Date:</td>
+              <td class="approval__value-cell">{{ selectedPO?.['po_no'] }} // {{ selectedPO?.['entry_date'] | date:'dd-MM-yyyy' }}</td>
+              <td class="approval__value-cell approval__vendor-cell">{{ selectedPO?.['vendor_name'] }} - {{ selectedPO?.['vendor_no'] }}</td>
+              <td class="approval__label-cell">PO Type:</td>
+              <td class="approval__value-cell">{{ selectedPO?.['marketType'] }}</td>
+            </tr>
+          </table>
+        </div>
+
+        <form #poform="ngForm">
+          <div class="clr-row approval__bill-ship-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="approval__table-wrap">
+                <table class="approval__table approval__table-bill table table-border">
+                  <thead><tr><td class="approval__billto-header" colspan="2">Bill To</td></tr></thead>
+                  <tbody>
+                    <tr><td class="approval__label-cell">Name Of Company<span class="approval__required">*</span></td><td class="approval__value-cell">{{ selectedBill?.['company_name'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Address:</td><td class="approval__value-cell">{{ selectedBill?.['address'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Location:</td><td class="approval__value-cell">{{ selectedBill?.['area'] }}</td></tr>
+                    <tr><td class="approval__label-cell">State/Province:</td><td class="approval__value-cell">{{ selectedBill?.['present_state'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Postal Code:</td><td class="approval__value-cell">{{ selectedBill?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="approval__table-wrap">
+                <table class="approval__table approval__table-ship table table-border">
+                  <thead><tr><td class="approval__shipto-header" colspan="2">Ship To</td></tr></thead>
+                  <tbody>
+                    <tr><td class="approval__label-cell">Name Of Company<span class="approval__required">*</span></td><td class="approval__value-cell">{{ selectedShip?.['company_name'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Address:</td><td class="approval__value-cell">{{ selectedShip?.['address'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Location:</td><td class="approval__value-cell">{{ selectedShip?.['area'] }}</td></tr>
+                    <tr><td class="approval__label-cell">State/Province:</td><td class="approval__value-cell">{{ selectedShip?.['present_state'] }}</td></tr>
+                    <tr><td class="approval__label-cell">Postal Code:</td><td class="approval__value-cell">{{ selectedShip?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="approval__materials-section">
+            <h3 class="approval__section-title">Materials:</h3>
+            <div class="approval__table-wrap approval__materials-wrap">
+              <div class="approval__scroll-container">
+                <table class="approval__table approval__table-materials table table-border">
+                  <thead>
+                    <tr>
+                      <th class="approval__th approval__th-sr">{{'common.table.srNo' | translate}}</th>
+                      <th class="approval__th approval__th-code">Material Code</th>
+                      <th class="approval__th approval__th-name">Material Name</th>
+                      <th class="approval__th approval__th-num">Discount %.</th>
+                      <th class="approval__th approval__th-num">Qty</th>
+                      <th class="approval__th approval__th-num">Quotation Amt.</th>
+                      <th class="approval__th approval__th-num">Gross Total</th>
+                      <th class="approval__th approval__th-num">Discount Amt.</th>
+                      <th class="approval__th approval__th-num">Taxable</th>
+                      <th class="approval__th approval__th-num">TAX %</th>
+                      <th class="approval__th approval__th-num">Tax Total</th>
+                      <th class="approval__th approval__th-num">Net Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let user of selectedPO?.['materials'] || []; let i = index">
+                      <td class="approval__value-cell approval__cell-sr">{{ i + 1 }}</td>
+                      <td class="approval__value-cell approval__cell-code">{{ user.material_code }}</td>
+                      <td class="approval__value-cell approval__cell-name">{{ user.material_name }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.disc_per }} %</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.qty }} {{ user.unit }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.gross_total }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.disc_amt }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.taxable_amt }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.gst }} %</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.tax_total }}</td>
+                      <td class="approval__value-cell approval__cell-num">{{ user.net_total }}</td>
+                    </tr>
+                    <tr *ngIf="!(selectedPO?.['materials']?.length)">
+                      <td colspan="12" class="approval__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-row approval__details-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="approval__table-wrap" *ngIf="selectedPO?.['shipping_type'] == 'Company Account'">
+                <table class="approval__table approval__table-shipping table table-border">
+                  <thead>
+                    <tr>
+                      <th class="approval__th">Shipping Amount</th>
+                      <th class="approval__th">GST %</th>
+                      <th class="approval__th">GST Amount</th>
+                      <th class="approval__th">Shipping Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="approval__value-cell">{{ selectedPO?.['shipping_handling'] || '-' }}</td>
+                      <td class="approval__value-cell">{{ selectedPO?.['shipping_gst'] || '-' }}</td>
+                      <td class="approval__value-cell">{{ selectedPO?.['shipping_Gst_amt'] || '-' }}</td>
+                      <td class="approval__value-cell">{{ selectedPO?.['shipping_total'] || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="approval__section-title">Delivery Schedule:</h3>
+              <div class="approval__table-wrap">
+                <table class="approval__table approval__table-schedule table table-border">
+                  <thead>
+                    <tr>
+                      <th class="approval__th">{{'common.table.srNo' | translate}}</th>
+                      <th class="approval__th">Material Name</th>
+                      <th class="approval__th">Qty. <span class="approval__required">*</span></th>
+                      <th class="approval__th">Schedule Dil. Dt. <span class="approval__required">*</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of selectedPO?.['schedule_data'] || []; let i = index">
+                      <td class="approval__value-cell">{{ i + 1 }}</td>
+                      <td class="approval__value-cell">{{ item.material_name }} - {{ item.material_code }}</td>
+                      <td class="approval__value-cell">{{ item.qty }} - {{ item.unit }}</td>
+                      <td class="approval__value-cell">{{ item.delivery_schedule_date | date:'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr *ngIf="!(selectedPO?.['schedule_data']?.length)">
+                      <td colspan="4" class="approval__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-row approval__terms-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="approval__section-title">Terms & Conditions:</h3>
+              <div class="approval__table-wrap">
+                <table class="approval__table approval__table-terms table table-border">
+                  <thead>
+                    <tr>
+                      <th class="approval__th">Term Heading</th>
+                      <th class="approval__th">Terms & Conditions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let term of selectedPO?.['terms_conditions'] || []">
+                      <td class="approval__value-cell">{{ term.term_heading }}</td>
+                      <td class="approval__value-cell">{{ term.term }}</td>
+                    </tr>
+                    <tr *ngIf="!(selectedPO?.['terms_conditions']?.length)">
+                      <td colspan="2" class="approval__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="approval__section-title">Payment Terms: Total Payable: <span class="approval__total-payable">{{ selectedPO?.['rounding'] }}</span></h3>
+              <div class="approval__table-wrap">
+                <table class="approval__table approval__table-payment table table-border">
+                  <thead>
+                    <tr>
+                      <th class="approval__th">Payment %</th>
+                      <th class="approval__th">Payment Conditions</th>
+                      <th class="approval__th">{{'common.amount' | translate}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let term of selectedPO?.['paymentTerms'] || []">
+                      <td class="approval__value-cell">{{ term.pay_per }}</td>
+                      <td class="approval__value-cell">{{ term.term }}</td>
+                      <td class="approval__value-cell">{{ term.pay_amt }} {{ term.currency }}</td>
+                    </tr>
+                    <tr *ngIf="!(selectedPO?.['paymentTerms']?.length)">
+                      <td colspan="3" class="approval__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label class="approval__narration"><strong>Narration :-</strong> <span class="approval__value-cell">{{ selectedPO?.['narration'] || '-' }}</span></label>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer approval__footer">
+    <button type="button" class="btn btn-success" (click)="updatePO(selectedPO?.['firstApprover'])" [disabled]="!selectedPO?.['firstApprover']">Sent {{ selectedPO?.['firstApprover'] }} Approval</button>
+    <button type="button" class="btn btn-danger" (click)="updatePO('Rejected')">{{'common.reject' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+

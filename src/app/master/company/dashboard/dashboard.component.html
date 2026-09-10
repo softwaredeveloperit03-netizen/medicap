@@ -1,0 +1,214 @@
+<div class="co-page" *ngIf="!isView">
+  <div class="co-card card">
+    <header class="co-card__header co-card__header--list">
+      <div class="co-card__title co-card__title--bar">
+        <h1 class="co-card__heading co-card__heading--bar">
+          Company Name - Bill to Ship to Information
+        </h1>
+      </div>
+      <div class="co-card__actions co-card__actions--bar" role="toolbar" aria-label="Company actions">
+        <button type="button" class="btn btn-sm co-btn co-btn--toolbar co-btn--new" routerLink="new" *ngIf="isuser == 'Yes'">
+          <clr-icon shape="plus"></clr-icon> New
+        </button>
+        <button type="button" class="btn btn-sm co-btn co-btn--toolbar co-btn--excel" (click)="downloadCompanyExcel()">
+          <clr-icon shape="file"></clr-icon> Excel
+        </button>
+        <a class="btn btn-sm co-btn co-btn--toolbar co-btn--ghost" routerLink="/master/commercial">{{'common.close' | translate}}</a>
+      </div>
+    </header>
+
+    <div class="co-card__body">
+      <div class="co-toolbar">
+        <label class="co-search">
+          <span class="co-search__lbl">Filter by name</span>
+          <input
+            type="search"
+            class="co-search__input"
+            [(ngModel)]="company_name"
+            (ngModelChange)="filterCompany()"
+            placeholder="Search company name…"
+          />
+        </label>
+        <button type="button" class="btn btn-sm co-btn co-btn--toolbar co-btn--muted" (click)="AllRecord()">Show all</button>
+      </div>
+
+      <div class="co-grid-wrap">
+        <clr-datagrid [clrDgLoading]="loading" class="co-datagrid">
+          <clr-dg-column class="co-col co-col-num">Sr. no.</clr-dg-column>
+          <clr-dg-column [clrDgField]="'company_code'" class="co-col co-col-code">Company code</clr-dg-column>
+          <clr-dg-column [clrDgField]="'company_name'" class="co-col co-col-name">Company name</clr-dg-column>
+          <clr-dg-column [clrDgField]="'person'" class="co-col co-col-person">Contact person</clr-dg-column>
+          <clr-dg-column [clrDgField]="'p_email'" class="co-col co-col-email">{{'common.email' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgField]="'mobile_no'" class="co-col co-col-phone">Contact no.</clr-dg-column>
+          <clr-dg-column [clrDgField]="'country'" class="co-col co-col-country">Country</clr-dg-column>
+          <clr-dg-column [clrDgField]="'present_state'" class="co-col co-col-state">State</clr-dg-column>
+          <clr-dg-column class="co-col co-col-action">View</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let item of companies; let i = index" [clrDgItem]="item">
+            <clr-dg-cell class="co-cell co-cell-num">{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-code">{{ item.company_code }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-name">{{ item.company_name }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-person">{{ item.person }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-email">{{ item.p_email }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-phone">{{ (item.mobile_no  | canadianPhone)}}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-country">{{ item.country }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-state">{{ item.present_state }}</clr-dg-cell>
+            <clr-dg-cell class="co-cell co-cell-action">
+              <button
+                type="button"
+                class="btn btn-sm co-btn co-btn--toolbar co-btn--icon"
+                (click)="viewItem(item)"
+                title="View details"
+              >
+                <clr-icon shape="eye"></clr-icon>
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer>
+            <clr-dg-pagination
+              #pagination
+              [(clrDgPageSize)]="pageSize"
+              (clrDgPageChange)="onPageChange($event)"
+            >
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Rows per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} – {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} entries
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="co-page" *ngIf="isView">
+  <div class="co-card card co-card--detail">
+    <header class="co-card__header co-card__header--detail co-card__header--detail-bar">
+      <div class="co-card__title co-card__title--detail-bar">
+        <h1 class="co-card__heading co-card__heading--detail-one-line">
+          <span class="co-card__heading-detail-label">Company details</span>
+          <span class="co-card__heading-detail-sep" aria-hidden="true"> — </span>
+          <span class="co-card__heading-detail-name">{{ dv('company_name') }}</span>
+        </h1>
+      </div>
+      <div class="co-card__actions co-card__actions--bar">
+        <button type="button" class="btn btn-sm co-btn co-btn--toolbar co-btn--ghost" (click)="viewf()">{{'common.close' | translate}}</button>
+      </div>
+    </header>
+    <div class="co-card__body co-detail-body">
+      <section class="co-detail-sheet" aria-label="Company information">
+        <div class="co-detail-row">
+          <div class="co-detail-k">Company / unit</div>
+          <div class="co-detail-v co-detail-v--wide">{{ dv('company_name') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">Company code</div>
+          <div class="co-detail-v">{{ dv('company_code') }}</div>
+          <div class="co-detail-k">Mobile</div>
+          <div class="co-detail-v">{{ dv('mobile_no') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">Alt. mobile</div>
+          <div class="co-detail-v">{{ dv('mobile_no1') }}</div>
+          <div class="co-detail-k">Country</div>
+          <div class="co-detail-v">{{ dv('country') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">State</div>
+          <div class="co-detail-v">{{ dv('present_state') }}</div>
+          <div class="co-detail-k">City</div>
+          <div class="co-detail-v">{{ dv('present_city') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">Area</div>
+          <div class="co-detail-v">{{ dv('area') }}</div>
+          <div class="co-detail-k">Postal Code</div>
+          <div class="co-detail-v">{{ dv('pin') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">{{'common.address' | translate}}</div>
+          <div class="co-detail-v co-detail-v--wide">{{ dv('address') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">Address line 2</div>
+          <div class="co-detail-v co-detail-v--wide">{{ dv('address1') }}</div>
+        </div>
+        <div class="co-detail-row" *ngIf="isIndiaCompany(selectedClient)">
+          <div class="co-detail-k">GST category</div>
+          <div class="co-detail-v">{{ dv('gst_registered') }}</div>
+          <div class="co-detail-k">GST no.</div>
+          <div class="co-detail-v">{{ dv('gst_no') }}</div>
+        </div>
+        <div class="co-detail-row" *ngIf="!isIndiaCompany(selectedClient)">
+          <div class="co-detail-k">Tax category</div>
+          <div class="co-detail-v">{{ dv('gst_registered') }}</div>
+          <div class="co-detail-k">Tax ID / ref.</div>
+          <div class="co-detail-v">{{ dv('gst_no') }}</div>
+        </div>
+        <div class="co-detail-row">
+          <div class="co-detail-k">Contact person</div>
+          <div class="co-detail-v">{{ dv('person') }}</div>
+          <div class="co-detail-k">{{'common.email' | translate}}</div>
+          <div class="co-detail-v">{{ dv('p_email') }}</div>
+        </div>
+      </section>
+    </div>
+    <footer class="co-card__footer co-card__footer--compact">
+      <button type="button" class="btn btn-sm co-btn co-btn--toolbar co-btn--danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </footer>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isEdit" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Update company</h3>
+  <div class="modal-body co-modal-body">
+    <form #companyForm="ngForm" class="co-modal-form">
+      <div class="clr-row">
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">Company code</label>
+          <input class="co-modal-input" type="text" name="company_code" [(ngModel)]="selectedResult['company_code']" />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">Company name</label>
+          <input class="co-modal-input" type="text" name="company_name" [(ngModel)]="selectedResult['company_name']" />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">Contact person</label>
+          <input class="co-modal-input" type="text" name="person" [(ngModel)]="selectedResult['person']" required />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">{{'common.email' | translate}}</label>
+          <input class="co-modal-input" type="email" name="p_email" [(ngModel)]="selectedResult['p_email']" required />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">Contact no.</label>
+          <input class="co-modal-input" type="number" name="mobile_no" [(ngModel)]="selectedResult['mobile_no']" required />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">Country</label>
+          <select
+            class="co-modal-input co-modal-select"
+            name="country"
+            [(ngModel)]="selectedResult['country']"
+            required
+            (change)="getState($any($event.target).value)"
+          >
+            <option></option>
+            <option *ngFor="let c of countries">{{ c.country }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 co-modal-field">
+          <label class="co-modal-label">State</label>
+          <select class="co-modal-input co-modal-select" name="present_state" [(ngModel)]="selectedResult['present_state']">
+            <option></option>
+            <option *ngFor="let state of states">{{ state.state_name }}</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="editCompany()">{{'common.update' | translate}}</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,231 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface RndCard {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  isLogin = false;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  readonly cards: RndCard[] = [
+    { id: 'Rm/PM Material', title: 'Rm/PM Material', route: 'master/material', icon: 'fa-plus-circle', category: 'R&D', gradient: 'linear-gradient(135deg, #334155 0%, #475569 100%)' },
+    { id: 'product-dev', title: 'Initiate New Project', route: 'product-dev', icon: 'fa-plus-circle', category: 'R&D', gradient: 'linear-gradient(135deg, #334155 0%, #475569 100%)' },
+    { id: 'product', title: 'Dev. Requirement', route: 'product', icon: 'fa-file-alt', category: 'R&D', gradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' },
+    { id: 'predevelopment', title: 'Pre-Dev. Study', route: 'predevelopment', icon: 'fa-book', category: 'R&D', gradient: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)' },
+    { id: 'dev-trial', title: 'Development Trial', route: 'dev-trial', icon: 'fa-flask', category: 'R&D', gradient: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' },
+    { id: 'optimisation', title: 'Optimisation Batches', route: 'optimisation', icon: 'fa-cogs', category: 'R&D', gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)' },
+    { id: 'scaleup', title: 'Scale-up Study', route: 'scaleup', icon: 'fa-chart-line', category: 'R&D', gradient: 'linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%)' },
+    { id: 'stability', title: 'Stability Study', route: 'stability', icon: 'fa-flask', category: 'R&D', gradient: 'linear-gradient(135deg, #c2410c 0%, #ea580c 100%)' },
+    { id: 'development', title: 'Dev. Report', route: 'development', icon: 'fa-file-alt', category: 'R&D', gradient: 'linear-gradient(135deg, #3730a3 0%, #6366f1 100%)' },
+    { id: 'unitformula', title: 'Master Formula Rec.', route: '/unitformula', icon: 'fa-file-prescription', category: 'R&D', gradient: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)' },
+    { id: 'technology', title: 'Technology Transfer', route: 'technology', icon: 'fa-exchange-alt', category: 'R&D', gradient: 'linear-gradient(135deg, #334155 0%, #64748b 100%)' },
+    { id: 'purVendor', title: 'Purchase Vendor', route: 'purVendor', icon: 'fa-truck', category: 'Purchase', gradient: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)' },
+  ];
+
+  constructor(private service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit() {
+    this.validateUser();
+    this.get_rights();
+    const savedPalette = localStorage.getItem('rnd_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find((p) => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  getCategories(): string[] {
+    return ['All', ...Array.from(new Set(this.cards.map((c) => c.category)))];
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-flask'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  getFilteredCards(): RndCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter((c) => {
+      const matchCat = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q);
+      return matchCat && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: RndCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('rnd_dashboard_palette', palette.name);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights;
+  loggedInDept;
+  trainig_cordinator = 'No';
+
+  get_rights() {
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          localStorage.getItem('emp_id') +
+          '&dep_name=' +
+          this.loggedInDept
+      )
+      .subscribe((response) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+        this.ischecker = this.rights[0].ischecker;
+        this.isapprover = this.rights[0].isapprover;
+        this.qms_approver = this.rights[0].qms_approver;
+        this.dept_head = this.rights[0].dept_head;
+        this.isauditor = this.rights[0].isauditor;
+        this.plant_head = this.rights[0].plant_head;
+        this.shift_allocator = this.rights[0].shift_allocator;
+        this.trainig_cordinator = this.rights[0].trainig_cordinator;
+      });
+  }
+
+  checkLogin(formData) {
+    const data = formData.value;
+    this.service
+      .post(
+        'checkLogin.php?type=newLogin&username=' +
+          data['username'] +
+          '&password=' +
+          data['password'],
+        JSON.stringify(data)
+      )
+      .subscribe((response) => {
+        if (response['status'] === 'success') {
+          localStorage.setItem('token', response['token']);
+          localStorage.setItem('department', response['department']);
+          localStorage.setItem('designation', response['designation']);
+          localStorage.setItem('user', response['user']);
+          localStorage.setItem('checker', response['checker']);
+          localStorage.setItem('approver', response['approver']);
+          localStorage.setItem('username', response['username']);
+
+          if (response['department'] == 'RND') {
+            this.isLogin = true;
+          }
+        } else {
+          this.isLogin = false;
+        }
+      });
+  }
+
+  validateUser() {
+    if (
+      localStorage.getItem('token') !== null &&
+      localStorage.getItem('department') == 'RND'
+    ) {
+      this.isLogin = true;
+    } else {
+      this.isLogin = false;
+    }
+  }
+}

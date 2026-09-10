@@ -1,0 +1,131 @@
+<div class="pem-shell">
+  <div class="pem-page">
+    <div class="pem-header card pem-card-elevated">
+      <div class="pem-header-row">
+        <div class="pem-title">Packing eBMR — stage / step master</div>
+        <div class="pem-actions">
+          <button type="button" class="btn btn-sm" routerLink=".." [disabled]="busy">Back</button>
+        </div>
+      </div>
+      <p class="pem-intro">
+        Master tree uses the same <code>Stages</code> → <code>Steps</code> → <code>Substeps</code> shape as production eBMR so packing proceed / fill screens can reuse the same JSON plumbing later.
+      </p>
+      <div
+        *ngIf="banner"
+        class="pem-banner"
+        [class.pem-banner-ok]="banner.kind === 'ok'"
+        [class.pem-banner-err]="banner.kind === 'err'"
+        [class.pem-banner-info]="banner.kind === 'info'"
+      >
+        {{ banner.text }}
+      </div>
+    </div>
+
+    <div class="clr-row pem-grid">
+      <div class="clr-col-lg-4 pem-side">
+        <div class="card pem-card pem-card-elevated">
+          <div class="card-header">Product</div>
+          <div class="card-block">
+            <label>Product <span class="req">*</span> <span class="pem-hint">(from product master)</span></label>
+            <input
+              class="pem-input pem-filter"
+              type="search"
+              name="productFilter"
+              placeholder="Type to filter by name or code…"
+              [(ngModel)]="productFilter"
+              [disabled]="busy || productsLoading"
+              autocomplete="off"
+            />
+            <select
+              class="pem-select"
+              name="productSelect"
+              [(ngModel)]="selectedProduct"
+              [compareWith]="compareProducts"
+              (ngModelChange)="onProductSelected($event)"
+              [disabled]="busy || productsLoading"
+            >
+              <option [ngValue]="null">— Select product —</option>
+              <option *ngFor="let p of filteredProducts" [ngValue]="p">
+                {{ p.product_name }} ({{ productCode(p) }})
+              </option>
+            </select>
+            <p class="pem-inline-meta" *ngIf="productsLoading">Loading products…</p>
+            <p class="pem-inline-meta" *ngIf="!productsLoading && !products.length">No products returned. Check product master / rights.</p>
+            <div class="pem-readonly-pair" *ngIf="product_code">
+              <span class="pem-k">Code</span><span class="pem-v">{{ product_code }}</span>
+              <span class="pem-k">Name</span><span class="pem-v">{{ product_name || '—' }}</span>
+            </div>
+
+            <div class="pem-btn-row">
+              <button type="button" class="btn btn-sm btn-primary" (click)="loadFromServer()" [disabled]="busy">Load from server</button>
+              <button type="button" class="btn btn-sm btn-success" (click)="saveToServer()" [disabled]="busy">Save to server</button>
+            </div>
+            <div class="pem-btn-row">
+              <button type="button" class="btn btn-sm" (click)="loadTemplate()" [disabled]="busy">Load pharma template</button>
+              <button type="button" class="btn btn-sm" (click)="addStage()" [disabled]="busy">Add stage</button>
+            </div>
+            <div class="pem-meta" *ngIf="revision !== null || updated_at">
+              <span *ngIf="revision !== null">Revision {{ revision }}</span>
+              <span *ngIf="updated_at"> · {{ updated_at }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card pem-card pem-card-elevated">
+          <div class="card-header">Saved masters (this plant)</div>
+          <div class="card-block pem-list">
+            <button type="button" class="btn btn-sm btn-link" (click)="refreshList()" [disabled]="busy">Refresh list</button>
+            <div class="pem-master-row" *ngFor="let m of masters">
+              <button type="button" class="btn btn-link btn-sm pem-master-btn" (click)="applyQuickSelect(m)">
+                {{ m.product_code }} <span class="pem-rev">r{{ m.revision }}</span>
+              </button>
+              <span class="pem-mute">{{ m.product_name }}</span>
+            </div>
+            <p class="pem-mute" *ngIf="!masters.length">No masters yet — define product code and save.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-col-lg-8 pem-main">
+        <div class="card pem-card pem-card-elevated">
+          <div class="card-header pem-tabs">
+            <button type="button" class="btn btn-sm" [class.btn-primary]="editMode === 'tree'" (click)="setEditMode('tree')">Tree editor</button>
+            <!-- <button type="button" class="btn btn-sm" [class.btn-primary]="editMode === 'json'" (click)="setEditMode('json')">Raw JSON</button> -->
+            <!-- <button type="button" class="btn btn-sm" (click)="exportJson()" [disabled]="busy">Copy JSON</button> -->
+          </div>
+          <div class="card-block" *ngIf="editMode === 'tree'">
+            <div class="pem-empty" *ngIf="!tree.length">No stages — use “Load pharma template”, “Add stage”, or load from server.</div>
+
+            <div class="pem-stage" *ngFor="let st of tree; let si = index; trackBy: trackStage">
+              <div class="pem-stage-head">
+                <span class="pem-stage-label">Stage</span>
+                <input class="pem-input pem-grow" type="text" [(ngModel)]="st.stages" (ngModelChange)="onTreeFieldChange()" [name]="'st_' + si" />
+                <button type="button" class="btn btn-sm btn-danger-outline" (click)="removeStage(si)">Remove stage</button>
+                <button type="button" class="btn btn-sm btn-primary-outline" (click)="addStep(si)">Add step</button>
+              </div>
+              <div class="pem-step" *ngFor="let tp of st.Steps; let ti = index; trackBy: trackStep">
+                <div class="pem-step-head">
+                  <label class="pem-id-label">Step ID</label>
+                  <input class="pem-input pem-id" type="text" [(ngModel)]="tp.id" (ngModelChange)="onTreeFieldChange()" [name]="'id_' + si + '_' + ti" />
+                  <input class="pem-input pem-grow" type="text" placeholder="Step description" [(ngModel)]="tp.step" (ngModelChange)="onTreeFieldChange()" [name]="'step_' + si + '_' + ti" />
+                  <button type="button" class="btn btn-sm" (click)="addSubstep(si, ti)">+ sub</button>
+                  <button type="button" class="btn btn-sm btn-danger-outline" (click)="removeStep(si, ti)">Remove</button>
+                </div>
+                <div class="pem-sub" *ngFor="let su of tp.Substeps; let ui = index; trackBy: trackSub">
+                  <label class="pem-id-label">Sub ID</label>
+                  <input class="pem-input pem-id" type="text" [(ngModel)]="su.id" (ngModelChange)="onTreeFieldChange()" />
+                  <input class="pem-input pem-grow" type="text" placeholder="Substep" [(ngModel)]="su.substep" (ngModelChange)="onTreeFieldChange()" />
+                  <button type="button" class="btn btn-sm btn-danger-outline" (click)="removeSubstep(si, ti, ui)">×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-block" *ngIf="editMode === 'json'">
+            <textarea class="pem-json" [(ngModel)]="rawJson" name="rawJson" rows="28" [disabled]="busy"></textarea>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyRawJson()">Apply JSON to tree</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

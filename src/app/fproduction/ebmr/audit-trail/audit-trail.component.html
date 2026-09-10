@@ -1,0 +1,201 @@
+<div class="eb-page at-page">
+  <div class="eb-header at-header noprint">
+    <h1>
+      <i class="fas fa-clipboard-list"></i>
+      BMR Audit Trail
+      <span class="eb-sub">21 CFR Part 11 / EU Annex 11 — complete chronological traceability</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-outline" type="button" (click)="exportCsv()" [disabled]="!rows.length">
+        <i class="fas fa-file-csv"></i> Export CSV
+      </button>
+      <button class="eb-btn eb-btn-outline" type="button" (click)="printTrail()">
+        <i class="fas fa-print"></i> Print
+      </button>
+      <button class="eb-btn eb-btn-ghost" type="button" (click)="close()">
+        <i class="fas fa-arrow-left"></i> Back
+      </button>
+    </div>
+  </div>
+
+  <div class="at-cfr-banner">
+    <div class="at-cfr-title">
+      <i class="fas fa-shield-halved"></i>
+      Electronic records &amp; signatures — Audit Trail (read-only)
+    </div>
+    <ul>
+      <li>Records are system-generated and not editable from this screen.</li>
+      <li>Each event captures <b>who</b> (user ID / name / department), <b>what</b> (action / detail), <b>when</b> (date-time), and <b>where</b> (IP address / host).</li>
+      <li>Electronic signatures include meaning, auth method, and signature token / hash for verification.</li>
+      <li>SHA-256 record hash supports integrity verification of logged events.</li>
+    </ul>
+  </div>
+
+  <div class="eb-toolbar at-filters noprint">
+    <div class="eb-field">
+      <span class="eb-field-label">From</span>
+      <input class="eb-input" type="date" [(ngModel)]="filters.from_date" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">To</span>
+      <input class="eb-input" type="date" [(ngModel)]="filters.to_date" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Medicap Lot No</span>
+      <input class="eb-input" [(ngModel)]="filters.batch_no" placeholder="Batch…" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Product</span>
+      <input class="eb-input" [(ngModel)]="filters.product" placeholder="Code / name…" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Action</span>
+      <select class="eb-select" [(ngModel)]="filters.action">
+        <option value="">All actions</option>
+        <option *ngFor="let a of actionList" [value]="a">{{ a }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">User</span>
+      <input class="eb-input" [(ngModel)]="filters.emp" placeholder="Emp ID / name…" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">IP address</span>
+      <input class="eb-input" [(ngModel)]="filters.ip" placeholder="e.g. 192.168…" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="filters.q" placeholder="Detail / hash / token…" (keyup.enter)="load()" />
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Limit</span>
+      <select class="eb-select" [(ngModel)]="filters.limit">
+        <option [ngValue]="200">200</option>
+        <option [ngValue]="500">500</option>
+        <option [ngValue]="1000">1000</option>
+        <option [ngValue]="2000">2000</option>
+      </select>
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-outline" type="button" (click)="resetFilters()">Reset</button>
+    <button class="eb-btn eb-btn-solid" type="button" (click)="load()" [disabled]="loading">
+      <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-search'"></i> Search
+    </button>
+  </div>
+
+  <div class="at-meta noprint">
+    <span><b>{{ rows.length }}</b> event(s)</span>
+    <span *ngIf="generatedAt">Generated: {{ generatedAt }}</span>
+    <span class="at-ro"><i class="fas fa-lock"></i> Read-only</span>
+  </div>
+
+  <div class="at-print-title print-only">
+    <h2>BMR Audit Trail — 21 CFR Part 11</h2>
+    <p>Period: {{ filters.from_date || '—' }} to {{ filters.to_date || '—' }} · Generated: {{ generatedAt }}</p>
+  </div>
+
+  <div class="eb-table-wrap at-table-wrap">
+    <table class="eb-table at-table">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Date / Time</th>
+          <th>Batch</th>
+          <th>Product</th>
+          <th>Action</th>
+          <th>Detail</th>
+          <th>User ID</th>
+          <th>User name</th>
+          <th>Department</th>
+          <th>IP address</th>
+          <th>Auth</th>
+          <th>Signature / Hash</th>
+          <th class="noprint" style="width:70px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rows; let i = index; trackBy: trackByRow" (click)="openDetail(r)" class="at-row">
+          <td>{{ i + 1 }}</td>
+          <td class="at-nowrap">{{ r.at_time || '—' }}</td>
+          <td>
+            <div class="eb-strong">{{ r.batch_no || ('#' + r.batch_id) }}</div>
+            <div class="eb-hint" *ngIf="r.stage_name || r.step_name">{{ r.stage_name }}<span *ngIf="r.step_name"> / {{ r.step_name }}</span></div>
+          </td>
+          <td>
+            <div>{{ r.product_name || '—' }}</div>
+            <div class="eb-hint">{{ r.product_code || '' }}</div>
+          </td>
+          <td><span class="eb-badge eb-badge-type">{{ r.action || '—' }}</span></td>
+          <td class="at-detail">{{ r.detail || '—' }}</td>
+          <td>{{ r.by_emp || '—' }}</td>
+          <td>{{ r.emp_name || '—' }}</td>
+          <td>{{ r.department || '—' }}</td>
+          <td class="at-ip">{{ r.ip_address || '—' }}</td>
+          <td>
+            <span *ngIf="r.auth_type || r.meaning; else noAuth">
+              <div class="eb-hint">{{ r.meaning || '' }}</div>
+              <div>{{ r.auth_type || r.auth_method || '—' }}</div>
+            </span>
+            <ng-template #noAuth><span class="eb-hint">—</span></ng-template>
+          </td>
+          <td class="at-mono">
+            <div *ngIf="r.signature_token" title="{{ r.signature_token }}">Tok {{ shortToken(r.signature_token) }}</div>
+            <div *ngIf="r.record_hash" class="eb-hint" title="{{ r.record_hash }}">Hash {{ shortToken(r.record_hash) }}</div>
+            <span *ngIf="!r.signature_token && !r.record_hash">—</span>
+          </td>
+          <td class="noprint">
+            <button type="button" class="eb-icon-btn" title="View full event" (click)="openDetail(r); $event.stopPropagation()">
+              <i class="fas fa-eye"></i>
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="!loading && !rows.length">
+          <td colspan="13" class="eb-empty">No audit events for the selected filters.</td>
+        </tr>
+        <tr *ngIf="loading">
+          <td colspan="13" class="eb-empty"><i class="fas fa-spinner fa-spin"></i> Loading audit trail…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Event detail modal -->
+<div class="eb-modal-backdrop noprint" *ngIf="selected" (click)="closeDetail()">
+  <div class="eb-modal lg at-modal" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3><i class="fas fa-fingerprint"></i> Audit event detail</h3>
+      <button type="button" class="eb-modal-close" (click)="closeDetail()">&times;</button>
+    </div>
+    <div class="eb-modal-body">
+      <div class="at-detail-grid">
+        <div><span class="k">Date / Time</span><span class="v">{{ selected.at_time }}</span></div>
+        <div><span class="k">Action</span><span class="v">{{ selected.action }}</span></div>
+        <div><span class="k">Batch</span><span class="v">{{ selected.batch_no || selected.batch_id }}</span></div>
+        <div><span class="k">Product</span><span class="v">{{ selected.product_name }} ({{ selected.product_code }})</span></div>
+        <div><span class="k">Stage / Step</span><span class="v">{{ selected.stage_name || '—' }} / {{ selected.step_name || '—' }}</span></div>
+        <div><span class="k">Module</span><span class="v">{{ selected.module || '—' }}</span></div>
+        <div><span class="k">User ID</span><span class="v">{{ selected.by_emp }}</span></div>
+        <div><span class="k">User name</span><span class="v">{{ selected.emp_name || '—' }}</span></div>
+        <div><span class="k">Department</span><span class="v">{{ selected.department || '—' }}</span></div>
+        <div><span class="k">Designation</span><span class="v">{{ selected.designation || '—' }}</span></div>
+        <div><span class="k">IP address</span><span class="v at-ip">{{ selected.ip_address || '—' }}</span></div>
+        <div><span class="k">Host</span><span class="v">{{ selected.host_name || '—' }}</span></div>
+        <div><span class="k">Meaning</span><span class="v">{{ selected.meaning || '—' }}</span></div>
+        <div><span class="k">Auth method</span><span class="v">{{ selected.auth_method || selected.auth_type || '—' }}</span></div>
+        <div class="full"><span class="k">Detail</span><span class="v">{{ selected.detail || '—' }}</span></div>
+        <div class="full" *ngIf="selected.reason"><span class="k">Reason</span><span class="v">{{ selected.reason }}</span></div>
+        <div class="full" *ngIf="selected.old_value"><span class="k">Previous value</span><span class="v at-mono">{{ selected.old_value }}</span></div>
+        <div class="full" *ngIf="selected.new_value"><span class="k">New value</span><span class="v at-mono">{{ selected.new_value }}</span></div>
+        <div class="full" *ngIf="selected.signature_token"><span class="k">Signature token</span><span class="v at-mono">{{ selected.signature_token }}</span></div>
+        <div class="full" *ngIf="selected.record_hash"><span class="k">Record hash (SHA-256)</span><span class="v at-mono">{{ selected.record_hash }}</span></div>
+        <div class="full" *ngIf="selected.user_agent"><span class="k">User agent</span><span class="v at-mono">{{ selected.user_agent }}</span></div>
+        <div><span class="k">Source</span><span class="v">{{ selected.event_source || 'batch_log' }}</span></div>
+        <div><span class="k">E-sign ID</span><span class="v">{{ selected.esign_id || '—' }}</span></div>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button type="button" class="eb-btn eb-btn-outline" (click)="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>

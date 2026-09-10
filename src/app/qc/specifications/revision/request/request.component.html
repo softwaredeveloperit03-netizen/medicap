@@ -1,0 +1,89 @@
+<div class="logs-shell">
+  <div class="logs-header">
+    <div class="title-block">
+      <h2>Revision Status</h2>
+      <p>Live status table for specification revision workflow</p>
+    </div>
+    <div class="actions">
+      <div class="filter-row">
+        <button
+          type="button"
+          class="filter-btn"
+          *ngFor="let f of filters"
+          [class.active]="activeFilter === f.id"
+          (click)="setFilter(f.id)"
+        >
+          {{ f.label }}
+        </button>
+      </div>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search in logs" />
+      </div>
+      <button class="btn btn-sm btn-primary" routerLink="/master/specification/specification-revision">Back To Revision</button>
+      <button class="btn btn-sm btn-danger" routerLink="/master/specification/specification-revision">Close</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <clr-datagrid [clrDgLoading]="loading" >
+      <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column>Spec. No.</clr-dg-column>
+      <clr-dg-column>Spec. Type</clr-dg-column>
+      <clr-dg-column>Item Code</clr-dg-column>
+      <clr-dg-column>Item Name</clr-dg-column>
+      <clr-dg-column>Version No.</clr-dg-column>
+      <clr-dg-column>Supersede No.</clr-dg-column>
+      <clr-dg-column>Effective Date</clr-dg-column>
+      <clr-dg-column>Next Review Date</clr-dg-column>
+      <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      <clr-dg-column>Revision Status</clr-dg-column>
+      <clr-dg-column>View Specification</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let result of filteredLogs; let i = index" [clrDgItem]="result">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.specification_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.spec_type }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.version_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.supersede_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.effective_date || result.approve_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.review_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm status-tab" [ngClass]="isRevisionDue(result) ? 'status-due revision-blink' : 'status-not-due'">
+            {{ isRevisionDue(result) ? 'REVISION DUE' : 'NOT DUE' }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm" [ngClass]="getRealtimeStatus(result).cls">{{ getRealtimeStatus(result).label }}</button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="viewSpecification(result)">
+            {{ isChangeControlApproved(result) ? 'View Implemented Specification' : 'View Draft Specification' }}
+          </button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="viewModalOpen" clrModalSize="xl">
+  <h3 class="modal-title">View Specification</h3>
+  <div class="modal-body" *ngIf="selectedSpecData as s">
+    <p><strong>Specification No:</strong> {{ s.specification_no || '-' }}</p>
+    <p><strong>Version:</strong> {{ s.version_no || s.draft_version_no || '-' }}</p>
+    <p><strong>Type:</strong> {{ s.spec_type || '-' }}</p>
+    <p><strong>Item:</strong> {{ s.material_name || '-' }} ({{ s.material_code || '-' }})</p>
+    <h5>Tests</h5>
+    <table class="table table-bordered table-sm">
+      <tr><th>Type</th><th>Test</th><th>Subtest</th><th>Limits</th></tr>
+      <tr *ngFor="let t of (s.spectTests || [])">
+        <td>{{ t.test_type }}</td><td>{{ t.test }}</td><td>{{ t.subtest }}</td><td>{{ t.limits }}</td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="viewModalOpen = false">Close</button>
+  </div>
+</clr-modal>

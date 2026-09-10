@@ -1,0 +1,413 @@
+<div *ngIf="!isView">Loading Data...</div>
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: left;">{{ details['stage_no'] }}. {{ details['stage'] }}:</div>
+    <div class="card-block">
+        <div class="card-text">
+            <h3>Product Details:</h3>
+            <table class="table" style="border: 1px solid black;">
+                <tr>
+                    <td style="text-align: left;border: 1px solid black;"> <b>Product Name:</b> </td>
+                    <td style="text-align: left; border: 1px solid black;" colspan="3">{{ details['product_name'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;border: 1px solid black;"> <b> Generic Name: </b></td>
+                    <td style="text-align: left;border: 1px solid black;" colspan="3">{{ details['generic_name'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 15%;border: 1px solid black;">Product Code:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['product_code'] }}</td>
+                    <td style="text-align: left;width: 15%; border: 1px solid black;">Grade:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['grade'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 15%; border: 1px solid black;">MFR No.:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['mfr_no'] }}</td>
+                    <td style="text-align: left;width: 15%; border: 1px solid black;">Medicap Lot No:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['batch_no'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 15%; border: 1px solid black;">BMR No:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['std_bmr_no'] }}</td>
+                    <td style="text-align: left;width: 15%; border: 1px solid black;">Standard Shelf Life:</td>
+                    <td style="text-align: left; border: 1px solid black;">{{ details['shelf_life'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 15%;border: 1px solid black;">label Claim:</td>
+                    <td style="text-align: left; border: 1px solid black;" colspan="3">{{ details['label claim'] }}</td>
+                </tr>
+            </table>
+
+            <div *ngFor="let item of details['data']; let i = index">
+                <div *ngIf="item['option'] == 'instruction'">
+                    <h5>{{ item['name'] }}</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th style="text-align: left;">{{ item['name'] }}</th>
+                        </tr>
+                        <tr *ngFor="let list of item['list']; let k = index">
+                            <td>{{ k + 1 }}.</td>
+                            <td style="text-align: left;">{{ list.test_description }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div *ngIf="item['option'] == 'enviornmental_checks' || item['option'] == 'inprocess_checks'">
+                    <h5>{{ item['name'] }}</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th style="text-align: left;">Checkpoint</th>
+                        </tr>
+                        <tr *ngFor="let list of item['list']; let k = index">
+                            <td>{{ k + 1 }}.</td>
+                            <td style="text-align: left;">{{ list.test_description }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h3>Instruction:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">Instruction</th>
+                </tr>
+                <tr *ngFor="let result of details['instructions'];let i = index">
+                    <td>{{ i+1 }}.</td>
+                    <td style="text-align: left;">{{ result.instruction }}</td>
+                </tr>
+            </table>
+
+            <div *ngIf="details['isclearance'] == 'yes'">
+                <form #clearanceForm="ngForm">
+                    <h3>Clearances:</h3>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th style="text-align: left;">Clearances</th>
+                            <th>Condition</th>
+                            <th>Remark</th>
+                        </tr>
+                        <tr *ngFor="let result of details['clearances'];let i = index">
+                            <td>{{ i+1 }}.</td>
+                            <td style="text-align: left;">{{ result.checkpoint }}</td>
+                            <td style="padding: 0%;">
+                                <select name="status" [(ngModel)]="result.status" style="margin: 0%;" required>
+                                    <option></option>
+                                    <option value="Ok">Ok</option>
+                                    <option value="Not Ok">Not Ok</option>
+                                </select>
+                            </td>
+                            <td style="padding: 0%;">
+                                <input type="text" name="remark" [(ngModel)]="result.remark" style="margin: 0%;" required>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: right;">
+                        <br>
+                        <button class="btn btn-primary" (click)="saveClerance(clearanceForm)">CALL FOR LINE CLERANCE</button>
+                    </div>
+                </form>
+            </div>
+
+            <div *ngIf="details['isclearance'] == 'inprocess'  || details['isclearance'] == 'active'">
+                <form #clearanceForm="ngForm">
+                    <h3>Clearances:</h3>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th style="text-align: left;">Clearances</th>
+                            <th style="text-align: left;">Condition</th>
+                            <th style="text-align: left;">Remark</th>
+                        </tr>
+                        <tr *ngFor="let result of details['clearances'];let i = index">
+                            <td>{{ i+1 }}.</td>
+                            <td style="text-align: left;">{{ result.checkpoint }}</td>
+                            <td style="text-align: left;">{{ result.status }}</td>
+                            <td style="text-align: left;">{{ result.remark }}</td>
+                        </tr>
+                    </table>
+                    <br>
+                    <table class="table">
+                        <tr>
+                            <td>Request By:</td>
+                            <td>{{ details.clearance_request_by }}</td>
+                            <td>Request Date</td>
+                            <td>{{ details.clearance_request_date }}</td>
+                        </tr>
+                        <tr>
+                            <td>Clearance By</td>
+                            <td>{{ details.clearance_by }}</td>
+                            <td>Clearance Date</td>
+                            <td>{{ details.clearance_date }}</td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+
+            <span style="text-align: center;" *ngIf="details['isclearance'] == 'inprocess'">
+                <h3 style="color:red;">Line Clearance Pending In QA Department!</h3>
+            </span>
+
+            <div *ngIf="details['isclearance'] == '' || details['isclearance'] == 'active'">
+
+            <!-- <div *ngIf="details['isclearance'] == 'false' || details['isclearance'] == 'active'"> -->
+                <h3>Procedures:</h3>
+                <form #equipmentForm="ngForm">
+                    <div class="card">
+                        <div class="card-block" *ngFor="let procedure of details['procedures']; let i = index">
+                            <div class="card-title">{{ i + 1 }}. {{ procedure.test_description }}</div>
+                            <div class="card-text">
+                                <div *ngIf="details['equipments'] == undefined || details['equipments']?.length == 0">
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                            <label>Operator:</label>
+                                            <select name="operator{{ i }}" [(ngModel)]="procedure.operator" required>
+                                                <option></option>
+                                                <option *ngFor="let operator of operators" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <h4>Start Time & Stop Time:</h4>
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                            <button class="btn btn-primary" (click)="updateSamplingTime('start', i)" style="margin-top: 9px;">START</button>
+                                        </div>
+                                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                            <input type="text" name="start_time{{ i }}" [(ngModel)]="procedure.start_time" required readonly tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="isStart">
+                                            <button class="btn btn-primary" (click)="updateSamplingTime('stop', i)" style="margin-top: 9px;">STOP</button>
+                                        </div>
+                                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="isStart">
+                                            <input type="text" name="end_time{{ i }}" [(ngModel)]="procedure.stop_time" readonly tabindex="-1">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="clr-row" *ngIf="details['equipments']?.length > 0">
+                                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                        <label>Equipment:</label>
+                                        <select name="equipment_name{{ i }}" [(ngModel)]="procedure.equipment_name" required (change)="getEquipments($event.target.selectedIndex)">
+                                            <option></option>
+                                            <option *ngFor="let equipment of details['equipments']">{{ equipment.equipment_name }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                        <label>Equipment ID:</label>
+                                        <select name="equipment_code{{ i }}" [(ngModel)]="procedure.equipment_code" required>
+                                            <option></option>
+                                            <option *ngFor="let equipment of equipments">{{ equipment.equipment_code }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                        <label>Operator:</label>
+                                        <select name="operator{{ i }}" [(ngModel)]="procedure.operator" required>
+                                            <option></option>
+                                            <option *ngFor="let operator of operators" [value]="operator.labour_no">{{ operator.labour_name }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                        <button class="btn btn-primary" (click)="updateSamplingTime('start', i)">START</button>
+                                    </div>
+                                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="isStart">
+                                        <input type="text" name="start_time{{ i }}" [(ngModel)]="procedure.start_time" required readonly tabindex="-1">
+                                    </div>
+                                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                        <button class="btn btn-primary" (click)="updateSamplingTime('stop', i)">STOP</button>
+                                    </div>
+                                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="isStop">
+                                        <input type="text" name="end_time{{ i }}" [(ngModel)]="procedure.stop_time" readonly tabindex="-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <div *ngIf="details['isweighing'] == 'yes'">
+                    <form #yieldForm="ngForm">
+                        <div class="card">
+                            <div class="card-block">
+                                <div class="card-text">
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-3">
+                                            <label>Previous Stage Yield Qty:</label>
+                                            <input type="text" name="prev_yield_qty" ngModel="{{ details['prev_yield_qty'] }}" required readonly tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3">
+                                            <label>Previous Stage Yield Per:(%)</label>
+                                            <input type="text" name="prev_yield_per" ngModel="{{ details['prev_yield_per'] }}" required readonly tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-3">
+                                            <label>Yield Qty:</label>
+                                            <input type="text" name="yield_qty" [(ngModel)]="yield_qty" required>
+                                        </div>
+                                        <div class="clr-col-lg-3">
+                                            <label>Yield Percentage:(%)</label>
+                                            <input type="text" name="yield_per" [(ngModel)]="yield_per" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div style="text-align: right;">
+                        <br>
+                        <button class="btn btn-primary" (click)="saveEquipment(equipmentForm)">SUBMIT</button>
+                    </div>
+                </div>
+                <div *ngIf="details['isweighing'] == 'false'" style="text-align: right;">
+                    <br>
+                    <button class="btn btn-primary" (click)="saveEquipment(equipmentForm)">SUBMIT</button>
+                </div>
+
+                <div *ngIf="details['isenviornmental'] == 'yes'">
+                    <form #tempForm="ngForm">
+                    <h3>Temperature/Humidity Log:</h3>
+                    <table class="table">
+                        <tr>
+                            <th>Date</th>
+                            <th>time</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                            <th>Action</th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td style="padding: 0%;">
+                                <input type="text" name="temperature" ngModel style="margin: 0%;" required>
+                            </td>
+                            <td style="padding: 0%;">
+                                <input type="text" name="humidity" ngModel style="margin: 0%;" required>
+                            </td>
+                            <td style="padding: 0%;">
+                                <button class="btn btn-sm btn-primary" (click)="saveTemperature(tempForm)" style="margin: 0%;">SAVE</button> 
+                            </td>
+                        </tr>
+                        <tr *ngFor="let user of enviornmentals;let i = index">
+                            <td>{{ user.entry_date }}</td>
+                            <td>{{ user.entry_time }}</td>
+                            <td>{{ user.temperature }}</td>
+                            <td>{{ user.humidity }}</td>
+                            <td>#</td>
+                        </tr>
+                        <tr *ngIf="enviornmentals?.length == 0">
+                            <td colspan="5">No Record Found!</td>
+                        </tr>
+                    </table>
+                    </form>
+
+                    <br>
+
+                    <form #pressureForm="ngForm">
+                    <h3>Pressure Differential Record:</h3>
+                    <table class="table">
+                        <tr>
+                            <th>Date</th>
+                            <th>time</th>
+                            <th>Pressure Reading</th>
+                            <th>Action</th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td style="padding: 0%;">
+                                <input type="text" name="pressure" ngModel style="margin: 0%;" required>
+                            </td>
+                            <td style="padding: 0%;">
+                                <button class="btn btn-sm btn-primary" (click)="savePressure(pressureForm)" style="margin: 0%;">SAVE</button> 
+                            </td>
+                        </tr>
+                        <tr *ngFor="let user of enviornmentes;let i = index">
+                            <td>{{ user.entry_date }}</td>
+                            <td>{{ user.entry_time }}</td>
+                            <td>{{ user.pressure }}</td>
+                            <td>#</td>
+                        </tr>
+                        <tr *ngIf="enviornmentes?.length == 0">
+                            <td colspan="4">No Record Found!</td>
+                        </tr>
+                    </table>
+                    </form>
+                </div>
+
+                <form #inprocessForm='ngForm'>
+                    <div class="card" *ngIf="details['ischeck'] == 'yes'">
+                        <div class="card-header">Inprocess Checks</div>
+                        <div class="card-block">
+                            <div class="card-text">
+                                <div class="clr-row">
+                                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngFor="let head of checkpoints">
+                                        <label>{{ head.name }}</label>
+                                        <div *ngIf="head.tag_name == 'input'">
+                                            <input [type]="head.tag_type" [name]="head.name" ngModel required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary" (click)="saveInprocess(inprocessForm)">SAVE</button>
+                        </div>
+                        <div class="card-block">
+                            <div class="card-text">
+                                <table class="table">
+                                    <tr>
+                                        <th *ngFor="let head of checkpoints">{{ head.name }}</th>
+                                    </tr>
+                                    <tr *ngFor="let inprocess of inprocesses; let i = index">
+                                        <td *ngFor="let head of checkpoints">{{ inprocess[head.name] }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="card" *ngIf="details['istest'] == 'yes'">
+                    <div class="card-block">
+                        <div class="card-title">Technical Information Sheet:(Sampling Intimation And Result)</div>
+                        <div class="card-text">
+                            <table class="table" style="border: 1px solid black;">
+                                <tr>
+                                    <td style="text-align: left;border: 1px solid black;"> <b>Product Name:</b> </td>
+                                    <td style="text-align: left; border: 1px solid black;" colspan="3">{{ details['product_name'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;border: 1px solid black;"> <b> Product Code: </b></td>
+                                    <td style="text-align: left;border: 1px solid black;" colspan="3">{{ details['product_code'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;width: 15%; border: 1px solid black;">Medicap Lot No:</td>
+                                    <td style="text-align: left; border: 1px solid black;">{{ details['batch_no'] }}</td>
+                                    <td style="text-align: left;width: 15%; border: 1px solid black;">Batch Size:</td>
+                                    <td style="text-align: left; border: 1px solid black;">{{ details['batch_size'] }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;width: 15%; border: 1px solid black;">Stage:</td>
+                                    <td style="text-align: left; border: 1px solid black;">{{ details['stage'] }}</td>
+                                    <td style="text-align: left;width: 15%; border: 1px solid black;">Step:</td>
+                                    <td style="text-align: left; border: 1px solid black;">{{ details['step'] }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- <div class="card-footer" *ngIf="details['intimation'] == 'no'">
+                        <button class="btn btn-primary" (click)="saveIntimation()">SEND INTIMATION</button>
+                    </div> -->
+                    <div class="card-footer">
+                        <button class="btn btn-primary" (click)="saveIntimation()">Sampling Intimation Send to QA Department</button>
+                    </div>
+                    <div class="card-footer" *ngIf="details['intimation'] == 'send'">
+                        <h3 style="text-align: center;">Sampling Intimation Send to QA Department</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" routerLink="/batch/inprocess">close</button>
+    </div>
+</div>

@@ -1,0 +1,108 @@
+<div class="card rmpm-indent-log">
+  <div class="card-header rmpm-indent-log-header">
+    <div class="rmpm-indent-log-title">Indent Log</div>
+    <div class="rmpm-indent-log-subtitle">
+      Confirmed &amp; sent from Planning → Confirm Indent (Purchase queue)
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="search-container">
+      <label for="indentLogSearch">Search</label>
+      <input type="text" id="indentLogSearch"
+        placeholder="Request no, indent no, material, work order, product…"
+        [(ngModel)]="searchText"
+        (ngModelChange)="onSearchChange()"
+        [disabled]="loading">
+    </div>
+
+    <div class="rmpm-summary" *ngIf="!loading">
+      Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} -
+      {{ calculateStartSrNo() + (Results?.length || 0) }} of {{ totalRecords }} indent(s)
+    </div>
+
+    <div class="card-text">
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+          <clr-dg-column [style.min-width.px]="95">Request No</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="120">Indent No</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="200">Material</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="120">Type</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="90">Indent Qty</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="110">FO / Order No</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="110">Work Order No</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="180">Product</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="90">Batch Qty</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="140">Client</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="90">Req Qty</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="100">Indent Status</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="150">Live Status</clr-dg-column>
+          <clr-dg-column [style.min-width.px]="150">Sent By / On</clr-dg-column>
+
+          <clr-dg-row *ngFor="let wo of Results; let i = index"
+            [ngClass]="{ 'rmpm-row-first': wo.first_of_indent }">
+            <clr-dg-cell>{{ wo.first_of_indent ? (wo.request_no || '—') : '' }}</clr-dg-cell>
+            <clr-dg-cell>{{ wo.first_of_indent ? (wo.indent_no || '—') : '' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <ng-container *ngIf="wo.first_of_indent">
+                <strong>{{ wo.material_name || '—' }}</strong>
+                <div class="rmpm-sub">{{ wo.material_code || '—' }}</div>
+              </ng-container>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <ng-container *ngIf="wo.first_of_indent">
+                {{ wo.material_type || '—' }}
+              </ng-container>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              {{ wo.first_of_indent ? (wo.indent_qty || 0) + ' ' + (wo.unit || '') : '' }}
+            </clr-dg-cell>
+
+            <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ wo.work_order_no || '—' }}</clr-dg-cell>
+            <clr-dg-cell>
+              {{ wo.product_name || '—' }}
+              <div class="rmpm-sub">{{ wo.product_code || '—' }}</div>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ wo.batch_qty || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ wo.client_name || wo.client_code || '—' }}</clr-dg-cell>
+            <clr-dg-cell>{{ wo.req_qty || 0 }} {{ wo.req_unit || '' }}</clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="label" [ngClass]="statusClass(wo.status)" *ngIf="wo.first_of_indent">
+                {{ wo.status || 'pending' }}
+              </span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="label" [ngClass]="statusClass(wo.live_status)" *ngIf="wo.first_of_indent">
+                {{ wo.live_status || '—' }}
+              </span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <ng-container *ngIf="wo.first_of_indent">
+                {{ formatSentInfo(wo) }}
+                <div class="rmpm-sub">{{ wo.sent_on || wo.entry_date || '—' }}</div>
+              </ng-container>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>
+            No indents confirmed and sent from Confirm Indent yet.
+          </clr-dg-placeholder>
+
+          <clr-dg-footer *ngIf="totalRecords > 0">
+            <clr-dg-pagination
+              #paginationLog
+              [clrDgPage]="currentPage"
+              [clrDgPageSize]="pageSize"
+              [clrDgTotalItems]="totalRecords"
+              (clrDgPageChange)="onPageChange($event)"
+              (clrDgPageSizeChange)="onPageSizeChange($event)">
+              <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Indents per page</clr-dg-page-size>
+              {{ paginationLog.firstItem + 1 }} - {{ paginationLog.lastItem + 1 }} of {{ paginationLog.totalItems }} indents
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>

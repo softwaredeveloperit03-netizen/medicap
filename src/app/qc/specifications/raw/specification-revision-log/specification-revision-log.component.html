@@ -1,0 +1,297 @@
+<div class="logs-shell">
+  <div class="logs-header">
+    <div class="title-block">
+      <h2>Specification Revision</h2>
+      <p>Unified logs table for revision workflow</p>
+    </div>
+
+    <div class="actions">
+      <div class="filter-row">
+        <button
+          type="button"
+          class="filter-btn"
+          *ngFor="let f of filters"
+          [class.active]="activeFilter === f.id"
+          (click)="setFilter(f.id)"
+        >
+          {{ f.label }}
+        </button>
+      </div>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search in logs"
+          aria-label="Search specification revision logs"
+        />
+      </div>
+      <button class="btn btn-sm btn-primary" routerLink="/master/specification/specification-revision">
+        Back To Revision
+      </button>
+      <button class="btn btn-sm btn-danger" routerLink="/master/specification/specification-revision">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <clr-datagrid [clrDgLoading]="loading" >
+      <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column>Spec. No.</clr-dg-column>
+      <clr-dg-column>Spec. Type</clr-dg-column>
+      <clr-dg-column>Item Code</clr-dg-column>
+      <clr-dg-column>Item Name</clr-dg-column>
+      <clr-dg-column>Version No.</clr-dg-column>
+      <clr-dg-column>Supersede No.</clr-dg-column>
+      <clr-dg-column>Effective Date</clr-dg-column>
+      <clr-dg-column>Next Review Date</clr-dg-column>
+      <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      <clr-dg-column>Revision Request</clr-dg-column>
+      <clr-dg-column>Draft Specification</clr-dg-column>
+      <clr-dg-column>Revision Status</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let result of filteredLogs; let i = index" [clrDgItem]="result">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.specification_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.spec_type }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ getDisplayVersionNo(result) }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.supersede_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ getEffectiveDate(result) | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ getNextReviewDate(result) | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <strong [class.status-revision-due]="getDisplayStatus(result) === 'Revision Due'" [class.revision-blink]="isStatusBlinking(result)">
+            {{ getDisplayStatus(result) | uppercase }}
+          </strong>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button
+            class="btn btn-sm"
+            [ngClass]="getRevisionButtonClass(result)"
+            [class.bw-inactive]="isRevisionButtonDisabled(result)"
+            [disabled]="isRevisionButtonDisabled(result)"
+            (click)="onRevisionAction(result)"
+          >
+            {{ getRevisionButtonLabel(result) }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button
+            class="btn btn-sm"
+            [ngClass]="getDraftButtonClass(result)"
+            [class.bw-inactive]="isDraftButtonDisabled(result)"
+            [disabled]="isDraftButtonDisabled(result)"
+            (click)="openDraftSpecification(result)"
+          >
+            {{ getDraftButtonLabel(result) }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <span [class.blocked-status]="getRevisionWorkflowStatus(result) === 'Blocked'" [class.released-status]="getRevisionWorkflowStatus(result) === 'Released Under Change Control'">
+            {{ getRevisionWorkflowStatus(result) }}
+          </span>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+
+    <div class="empty-state" *ngIf="!loading && filteredLogs.length === 0">
+      No specification logs found.
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="revisionModalOpen" [clrModalClosable]="true" clrModalSize="md">
+  <h3 class="modal-title">Revision Request Form</h3>
+  <div class="modal-body" *ngIf="selectedSpec">
+    <form #revForm="ngForm">
+      <div class="clr-form-group">
+        <label for="rev-reason">Reason for Revision <span class="required">*</span></label>
+        <input id="rev-reason" type="text" class="clr-input" name="reason" [(ngModel)]="revisionForm.reason" required placeholder="Enter reason" aria-label="Reason for revision">
+      </div>
+      <div class="clr-form-group">
+        <label for="rev-remarks">{{'common.remarks' | translate}}</label>
+        <textarea id="rev-remarks" class="clr-textarea" name="remarks" [(ngModel)]="revisionForm.remarks" rows="3" placeholder="Remarks (optional)" aria-label="Remarks"></textarea>
+      </div>
+      <div class="clr-form-group" *ngIf="selectedSpec">
+        <label>Specification</label>
+        <p class="static-value">{{ selectedSpec.specification_no || 'NA' }} - {{ selectedSpec.material_name || 'NA' }}</p>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()" [disabled]="!revisionForm.reason">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeRevisionModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="draftModalOpen" [clrModalClosable]="true" clrModalSize="xl" class="draft-spec-modal">
+  <h3 class="modal-title">Draft Specification</h3>
+  <div class="modal-body draft-spec-modal__body" *ngIf="draftLoading">
+    Loading draft...
+  </div>
+  <div class="modal-body draft-spec-modal__body" *ngIf="!draftLoading">
+    <form #draftSpecForm="ngForm" class="draft-spec-form">
+      <div class="card draft-spec-card">
+        <div class="card-header draft-spec-card__header">
+          <strong>Version Control</strong>
+        </div>
+        <div class="card-block">
+          <div class="clr-row">
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Specification No. :</strong></label>
+              <input type="text" name="specification_no" class="form-control" [(ngModel)]="draftForm.specification_no" readonly>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Current Version :</strong></label>
+              <input type="text" name="source_version_no" class="form-control" [(ngModel)]="draftForm.source_version_no" readonly>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Draft Version :</strong></label>
+              <input type="text" name="draft_version_no" class="form-control" [(ngModel)]="draftForm.draft_version_no" [readonly]="draftReadOnly">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Supersede No. :</strong></label>
+              <input type="text" name="supersede_no" class="form-control" [(ngModel)]="draftForm.supersede_no" [readonly]="draftReadOnly">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Effective Date :</strong></label>
+              <input type="date" name="effective_date" class="form-control" [(ngModel)]="draftForm.effective_date" [readonly]="draftReadOnly">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+              <label><strong>Next Review Date :</strong></label>
+              <input type="date" name="review_date" class="form-control" [(ngModel)]="draftForm.review_date" [readonly]="draftReadOnly">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card draft-spec-card">
+        <div class="card-header draft-spec-card__header">
+          <strong>Item Details</strong>
+        </div>
+        <div class="card-block">
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Item :</strong></label>
+              <input type="text" name="material_name" class="form-control" [(ngModel)]="draftForm.material_name" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Item Code :</strong></label>
+              <input type="text" name="material_code" class="form-control" [(ngModel)]="draftForm.material_code" readonly>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Spec Type :</strong></label>
+              <input type="text" name="spec_type" class="form-control" [(ngModel)]="draftForm.spec_type" [readonly]="draftReadOnly">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card draft-spec-card">
+        <div class="card-header draft-spec-card__header">
+          <strong>General Information</strong>
+        </div>
+        <div class="card-block">
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Storage Condition :</strong></label>
+              <textarea name="storage_condition" class="form-control" rows="3" [(ngModel)]="draftForm.storage_condition" [readonly]="draftReadOnly"></textarea>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Sampling Details :</strong></label>
+              <textarea name="samplingDetails" class="form-control" rows="3" [(ngModel)]="draftForm.samplingDetails" [readonly]="draftReadOnly"></textarea>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Hazard &amp; Precautions :</strong></label>
+              <textarea name="hazardAndPrecautions" class="form-control" rows="3" [(ngModel)]="draftForm.hazardAndPrecautions" [readonly]="draftReadOnly"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card draft-spec-card">
+        <div class="card-header draft-spec-card__header draft-spec-card__header--split">
+          <strong>Specification Tests</strong>
+          <button type="button" class="btn btn-sm btn-primary" *ngIf="!draftReadOnly" (click)="addDraftTest()">Add Test</button>
+        </div>
+        <div class="card-block">
+          <div class="table-responsive draft-spec-table-wrap">
+            <table class="table table-bordered draft-spec-table">
+              <thead>
+                <tr>
+                  <th>Test Type</th>
+                  <th>Test</th>
+                  <th>Subtest</th>
+                  <th>Limit Type</th>
+                  <th>Limits</th>
+                  <th>Method</th>
+                  <th *ngIf="!draftReadOnly">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let t of draftTests; let i = index">
+                  <td><input type="text" class="form-control" [(ngModel)]="t.test_type" [name]="'test_type_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="t.test" [name]="'test_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="t.subtest" [name]="'subtest_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="t.limit_type" [name]="'limit_type_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="t.limits" [name]="'limits_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="t.test_method_no" [name]="'test_method_no_' + i" [readonly]="draftReadOnly"></td>
+                  <td *ngIf="!draftReadOnly">
+                    <button type="button" class="btn btn-sm btn-danger" (click)="removeDraftTest(i)">Del</button>
+                  </td>
+                </tr>
+                <tr *ngIf="draftTests.length === 0">
+                  <td [attr.colspan]="draftReadOnly ? 6 : 7" class="draft-spec-empty">No tests added.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card draft-spec-card">
+        <div class="card-header draft-spec-card__header draft-spec-card__header--split">
+          <strong>Revision History</strong>
+          <button type="button" class="btn btn-sm btn-primary" *ngIf="!draftReadOnly" (click)="addDraftRevision()">Add Revision</button>
+        </div>
+        <div class="card-block">
+          <div class="table-responsive draft-spec-table-wrap">
+            <table class="table table-bordered draft-spec-table">
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>Change Control</th>
+                  <th>Reason</th>
+                  <th>Effective Date</th>
+                  <th *ngIf="!draftReadOnly">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of draftRevisions; let i = index">
+                  <td><input type="text" class="form-control" [(ngModel)]="r.version_no" [name]="'rev_version_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="r.change_mode" [name]="'rev_change_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="text" class="form-control" [(ngModel)]="r.reason" [name]="'rev_reason_' + i" [readonly]="draftReadOnly"></td>
+                  <td><input type="date" class="form-control" [(ngModel)]="r.effective_date" [name]="'rev_effective_' + i" [readonly]="draftReadOnly"></td>
+                  <td *ngIf="!draftReadOnly">
+                    <button type="button" class="btn btn-sm btn-danger" (click)="removeDraftRevision(i)">Del</button>
+                  </td>
+                </tr>
+                <tr *ngIf="draftRevisions.length === 0">
+                  <td [attr.colspan]="draftReadOnly ? 4 : 5" class="draft-spec-empty">No revision history added.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer draft-spec-modal__footer">
+    <button type="button" class="btn btn-primary" *ngIf="!draftReadOnly" (click)="saveDraftSpecification()" [disabled]="draftSaving">
+      {{ draftSaving ? 'Saving...' : 'Save Draft' }}
+    </button>
+    <button type="button" class="btn btn-outline" (click)="closeDraftModal()">Close</button>
+  </div>
+</clr-modal>

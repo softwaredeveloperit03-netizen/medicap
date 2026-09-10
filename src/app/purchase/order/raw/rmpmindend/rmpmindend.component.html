@@ -1,0 +1,424 @@
+<div class="vapp vapp--page" *ngIf="!isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Pending Purchase Requisitions For Purchase Order</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+      <div class="vapp__toolbar vapp__toolbar--filters">
+        <div class="vapp__filter-group">
+          <label>Material Type<span class="vapp__required">*</span></label>
+          <select name="material_type" class="vapp__control" [(ngModel)]="material_type" required (change)="getPendingIndends()" aria-label="Material Type">
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+
+        <div class="vapp__filter-group" style="flex:1; max-width:320px;">
+          <label>Search</label>
+          <input type="text" class="vapp__search" style="max-width:none;" placeholder="Search Purchase Requisition No, Vendor, Material..." [(ngModel)]="searchQuery">
+        </div>
+
+        <div class="vapp__toolbar-actions">
+          <button type="button" class="vapp__btn vapp__btn--outline" (click)="clearFilter()">Clear Filter</button>
+          <button type="button" class="vapp__btn vapp__btn--primary" (click)="downloadExcel()" [disabled]="!(results?.length)">Download Excel</button>
+        </div>
+      </div>
+
+      <div class="vapp__table-wrap">
+        <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading" >
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Purchase Requisition No.</clr-dg-column>
+          <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column>Materials</clr-dg-column>
+          <clr-dg-column>Entered By</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.indend_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell class="rmpmindend__wrap">{{ materialsDisplay(result) }}</clr-dg-cell>
+            <clr-dg-cell>{{ entryByDisplay(result) }}</clr-dg-cell>
+            <clr-dg-cell class="rmpmindend__wrap">{{ vendorDisplay(result) }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="vapp__btn vapp__btn--view" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} records
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vapp vapp--page" *ngIf="isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Purchase Order</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+        <!-- split into 2 rows to prevent overlap on smaller widths -->
+        <div class="rmpmindend__table-wrap">
+          <table class="rmpmindend__table rmpmindend__table-summary table table-border">
+            <tr>
+              <td class="rmpmindend__label-cell">Purchase Requisition By/No.:</td>
+              <td class="rmpmindend__value-cell">{{ entryByDisplay(selectedPO) }} / {{ selectedPO?.['indend_no'] }}</td>
+              <td class="rmpmindend__label-cell">Vendor:</td>
+              <td class="rmpmindend__value-cell rmpmindend__vendor-cell">{{ selectedPO?.['vendor_name'] }} - {{ selectedPO?.['vendor_no'] }}</td>
+            </tr>
+            <tr>
+              <td class="rmpmindend__label-cell">PO Type:</td>
+              <td class="rmpmindend__value-cell" colspan="3">{{ marketType }}</td>
+            </tr>
+          </table>
+        </div>
+
+        <form #poform="ngForm">
+          <div class="clr-row rmpmindend__bill-ship-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="rmpmindend__table-wrap">
+                <table class="rmpmindend__table rmpmindend__table-bill table table-border">
+                  <thead>
+                    <tr><td class="rmpmindend__billto-header" colspan="4">Bill To</td></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="rmpmindend__label-cell">Name Of Company<span class="rmpmindend__required">*</span></td>
+                      <td class="rmpmindend__value-cell" colspan="3">
+                        <select
+                          name="billcompany_code"
+                          [(ngModel)]="billcompany_code"
+                          required
+                          (change)="getBillToShippToDetails($event.target.selectedIndex,'BILLTO')"
+                          class="rmpmindend__select"
+                          aria-label="Bill To Company"
+                        >
+                          <option></option>
+                          <option *ngFor="let com of companies" [value]="com.company_code">{{ com.company_name }}</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr><td class="rmpmindend__label-cell">Address:</td><td class="rmpmindend__value-cell rmpmindend__wrap" colspan="3">{{ selectedBill?.['address'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">Country:</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedBill?.['country'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getLocationLabel(selectedBill) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ getCompanyLocation(selectedBill) }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getStateLabel(selectedBill) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedBill?.['present_state'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getPostalLabel(selectedBill) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedBill?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <div class="rmpmindend__table-wrap">
+                <table class="rmpmindend__table rmpmindend__table-ship table table-border">
+                  <thead>
+                    <tr>
+                      <td class="rmpmindend__shipto-header" colspan="4">
+                        Ship To
+                        <label class="rmpmindend__same-address">
+                          <input type="checkbox" name="sameaddress" [(ngModel)]="sameaddress" (change)="onCheckboxChange()"> Same as Bill To
+                        </label>
+                      </td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="rmpmindend__label-cell">Name Of Company</td>
+                      <td class="rmpmindend__value-cell" colspan="3">
+                        <select
+                          name="shipcompany_code"
+                          [(ngModel)]="shipcompany_code"
+                          (change)="getBillToShippToDetails($event.target.selectedIndex,'SHIPTO')"
+                          class="rmpmindend__select"
+                          aria-label="Ship To Company"
+                        >
+                          <option></option>
+                          <option *ngFor="let company of companies" [value]="company.company_code">{{ company.company_name }}</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr><td class="rmpmindend__label-cell">Address:</td><td class="rmpmindend__value-cell rmpmindend__wrap" colspan="3">{{ selectedShip?.['address'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">Country:</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedShip?.['country'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getLocationLabel(selectedShip) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ getCompanyLocation(selectedShip) }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getStateLabel(selectedShip) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedShip?.['present_state'] }}</td></tr>
+                    <tr><td class="rmpmindend__label-cell">{{ getPostalLabel(selectedShip) }}</td><td class="rmpmindend__value-cell" colspan="3">{{ selectedShip?.['pin'] }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-row rmpmindend__options-row">
+            <div class="rmpmindend__option-block rmpmindend__option-block--green clr-col-lg-2 clr-col-md-4 clr-col-sm-12">
+              <label><strong>Purchase Order Date:</strong> <span class="rmpmindend__required">*</span></label>
+              <input type="date" name="po_date" [(ngModel)]="po_date" [max]="maxDate" required>
+            </div>
+
+            <div class="rmpmindend__option-block rmpmindend__option-block--tan clr-col-lg-2 clr-col-md-4 clr-col-sm-12">
+              <label>Discount In:</label>
+              <select name="discount_In" [(ngModel)]="discount_In">
+                <option>Percentage</option>
+                <option>{{'common.amount' | translate}}</option>
+              </select>
+            </div>
+
+            <div class="rmpmindend__option-block rmpmindend__option-block--tan clr-col-lg-2 clr-col-md-4 clr-col-sm-12" *ngIf="discount_In == 'Percentage'">
+              <label>Discount %:</label>
+              <input type="number" name="po_discount_per" (keyup)="applyDiscpuntToAll()" [(ngModel)]="po_discount_per" min="0" max="100">
+            </div>
+
+            <div class="rmpmindend__option-block rmpmindend__option-block--tan clr-col-lg-2 clr-col-md-4 clr-col-sm-12" *ngIf="discount_In == 'Amount'">
+              <label>Discount Amount:</label>
+              <input type="number" name="po_discount_amt" (change)="applyDiscpuntToAll()" [(ngModel)]="po_discount_amt">
+            </div>
+
+            <div class="rmpmindend__option-block rmpmindend__option-block--tan clr-col-lg-3 clr-col-md-8 clr-col-sm-12">
+              <label>Shipping/Handling/Trans. Charges:</label>
+              <select name="shipping_type" [(ngModel)]="shipping_type" required>
+                <option></option>
+                <option>Vendor Account</option>
+                <option>Company Account</option>
+              </select>
+            </div>
+          </div>
+
+          <h3 class="rmpmindend__section-title">Materials:</h3>
+          <div class="rmpmindend__table-wrap rmpmindend__materials-wrap">
+            <table class="rmpmindend__table rmpmindend__table-materials table table-border">
+              <thead>
+                <tr>
+                  <th class="rmpmindend__th">{{'common.table.action' | translate}}</th>
+                  <th class="rmpmindend__th rmpmindend__th--left">Material Code</th>
+                  <th class="rmpmindend__th rmpmindend__th--left">Material Name</th>
+                  <th class="rmpmindend__th rmpmindend__th--left">Vendor</th>
+                  <th class="rmpmindend__th">Discount %.</th>
+                  <th class="rmpmindend__th">Qty</th>
+                  <th class="rmpmindend__th">Quotation Amt.</th>
+                  <th class="rmpmindend__th">Gross Total</th>
+                  <th class="rmpmindend__th">Discount Amt.</th>
+                  <th class="rmpmindend__th">Taxable</th>
+                  <th class="rmpmindend__th">TAX %</th>
+                  <th class="rmpmindend__th">Tax Total</th>
+                  <th class="rmpmindend__th">Net Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of selectedPO?.['indends'] || []; let i = index">
+                  <td><input type="checkbox" name="check{{i}}" (change)="getTaxSplitUp()" [(ngModel)]="user['check']" class="rmpmindend__checkbox"></td>
+                  <td class="rmpmindend__value-cell">{{ user.material_code }}</td>
+                  <td class="rmpmindend__value-cell rmpmindend__wrap">{{ user.material_name }}</td>
+                  <td class="rmpmindend__value-cell rmpmindend__wrap">{{ materialVendor(user) }}</td>
+                  <td><input type="text" [(ngModel)]="user['disc_per']" required name="disc_per{{i}}" (keyup)="applyDiscount(user)" class="rmpmindend__input rmpmindend__input--small" min="0" max="5"></td>
+                  <td class="rmpmindend__value-cell">{{ user.order_qty }} {{ user.unit }}</td>
+                  <td class="rmpmindend__value-cell">{{ user.quotation_amt }} / {{ user.unit }}</td>
+                  <td class="rmpmindend__value-cell">{{ user.gross_total }}</td>
+                  <td><input type="text" [(ngModel)]="user['disc_amt']" required (change)="applyDiscountOnAmt(user)" name="disc_amt{{i}}" class="rmpmindend__input rmpmindend__input--small"></td>
+                  <td class="rmpmindend__value-cell">{{ user.taxable_amt }}</td>
+                  <td class="rmpmindend__value-cell">{{ user.gst }} %</td>
+                  <td class="rmpmindend__value-cell">{{ user.tax_total }}</td>
+                  <td class="rmpmindend__value-cell">{{ user.net_total }}</td>
+                </tr>
+                <tr *ngIf="!(selectedPO?.['indends']?.length)">
+                  <td colspan="13" class="rmpmindend__no-data">NO DATA</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="clr-row">
+            
+
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <h3 class="rmpmindend__section-title">Delivery Schedule:</h3>
+              <div class="rmpmindend__table-wrap">
+                <table class="rmpmindend__table rmpmindend__table-schedule table table-border">
+                  <thead>
+                    <tr>
+                      <th class="rmpmindend__th">{{'common.table.srNo' | translate}}</th>
+                      <th class="rmpmindend__th rmpmindend__th--left">Material Name</th>
+                      <th class="rmpmindend__th">Qty. <span class="rmpmindend__required">*</span></th>
+                      <th class="rmpmindend__th">Schedule Dil. Dt.</th>
+                      <th class="rmpmindend__th">{{'common.table.action' | translate}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of schedule_data; let i = index">
+                      <td class="rmpmindend__value-cell">{{ i + 1 }}</td>
+                      <td class="rmpmindend__value-cell rmpmindend__wrap">{{ item.material_name }} - {{ item.material_code }}</td>
+                      <td>
+                        <input type="text" name="qty{{i}}" [(ngModel)]="item.qty" required class="rmpmindend__input rmpmindend__input--small">
+                        {{ item.unit }}
+                      </td>
+                      <td><input type="date" name="delivery_schedule_date{{i}}" [min]="today" [(ngModel)]="item.delivery_schedule_date" [ngModelOptions]="{standalone: true}" class="rmpmindend__input"></td>
+                      <td>
+                        <button type="button" *ngIf="item.isAdded == 'NO'" class="btn btn-sm btn-success" [disabled]="item.qty >= item.splitQty" (click)="addSchedule(item,i)">{{'common.add' | translate}}</button>
+                        <button type="button" *ngIf="item.isAdded == 'YES'" class="btn btn-sm btn-danger" (click)="delSchedule(item,i)">DEL</button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="!schedule_data?.length">
+                      <td colspan="5" class="rmpmindend__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="rmpmindend__section-title">
+                Terms & Conditions:
+                <button type="button" class="btn btn-sm btn-success" (click)="isTerm=true">{{'common.add' | translate}}</button>
+                <button type="button" class="btn btn-sm btn-danger" (click)="isEdit=true">{{'common.delete' | translate}}</button>
+              </h3>
+              <div class="rmpmindend__table-wrap">
+                <table class="rmpmindend__table rmpmindend__table-terms table table-border">
+                  <thead>
+                    <tr>
+                      <th class="rmpmindend__th rmpmindend__th--left">Select</th>
+                      <th class="rmpmindend__th rmpmindend__th--left">Term Heading</th>
+                      <th class="rmpmindend__th rmpmindend__th--left">Terms & Conditions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let term of terms; let i = index">
+                      <td class="rmpmindend__value-cell rmpmindend__wrap"><input type="checkbox" name="selected{{ i }}" [(ngModel)]="term['selected']"></td>
+                      <td class="rmpmindend__value-cell rmpmindend__wrap">{{ term.term_heading }}</td>
+                      <td class="rmpmindend__value-cell rmpmindend__wrap">{{ term.term }}</td>
+                    </tr>
+                    <tr *ngIf="!terms?.length">
+                      <td colspan="3" class="rmpmindend__no-data">NO DATA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3 class="rmpmindend__section-title">
+                Payment Terms: Total Payable:
+                <span class="rmpmindend__total-payable">{{ getTotalPayable() }} {{ getPaymentCurrency() }}</span>
+                <button type="button" class="btn btn-sm btn-success rmpmindend__add-row-btn" (click)="addRowToPaymentTerms()">Add Row</button>
+              </h3>
+              <div class="rmpmindend__table-wrap">
+                <table class="rmpmindend__table rmpmindend__table-payment table table-border">
+                  <thead>
+                    <tr>
+                      <th class="rmpmindend__th">Payment %</th>
+                      <th class="rmpmindend__th rmpmindend__th--left">Payment Conditions</th>
+                      <th class="rmpmindend__th rmpmindend__th--left">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of paymentTerms; let i = index">
+                      <td>
+                        <input
+                          type="number"
+                          name="pay_per{{i}}"
+                          [(ngModel)]="item.pay_per"
+                          (ngModelChange)="calculatePerAmt(i)"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          required
+                          class="rmpmindend__input"
+                          aria-label="Payment percent"
+                        >
+                      </td>
+                      <td><input type="text" name="term{{i}}" [(ngModel)]="item.term" required class="rmpmindend__input"></td>
+                      <td class="rmpmindend__value-cell rmpmindend__wrap">
+                        {{ item.pay_amt || 0 }} {{ item.currency || getPaymentCurrency() }}
+                        <clr-icon class="is-error" shape="trash" (click)="paymentTerms.splice(i,1)" role="button" aria-label="Remove payment term"></clr-icon>
+                      </td>
+                    </tr>
+                    <tr *ngIf="!paymentTerms?.length">
+                      <td colspan="3" class="rmpmindend__no-data">No data. Use "Add Row" to add payment terms.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label class="rmpmindend__narration"><strong>Narration:</strong></label>
+              <textarea name="narration" ngModel rows="3" class="rmpmindend__textarea"></textarea>
+            </div>
+          </div>
+        </form>
+    </div>
+  </div>
+</div>
+
+<div class="card-footer" id="remove-element" *ngIf="isView">
+  <button type="button" class="btn btn-primary" (click)="sendPO(poform); clicked = true" [disabled]="isFormInvalid || clicked">Submit PO</button>
+  <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+</div>
+
+<clr-modal [(clrModalOpen)]="isTerm" clrModalSize="md" class="rmpmindend__modal">
+  <h3 class="modal-title">Terms & Conditions:</h3>
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <div class="rmpmindend__table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th  >Sr.</th>
+              <th >Terms Heading</th>
+              <th  >Terms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1.</td>
+              <td><input type="text" id="term_heading" name="term_heading" ngModel required class="rmpmindend__input"></td>
+              <td><input type="text" id="term" name="term" ngModel required class="rmpmindend__input"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveTerm(termForm)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isTerm = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isEdit" clrModalSize="md" class="rmpmindend__modal">
+  <h3 class="modal-title">Delete Terms:</h3>
+  <div class="modal-body">
+    <div class="rmpmindend__table-wrap">
+      <table class="rmpmindend__table rmpmindend__table-modal table">
+        <thead>
+          <tr>
+            <th class="rmpmindend__th rmpmindend__th--left">Terms Heading</th>
+            <th class="rmpmindend__th rmpmindend__th--left">Terms & Conditions</th>
+            <th class="rmpmindend__th">Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let term of terms; let i = index">
+            <td class="rmpmindend__value-cell rmpmindend__wrap">{{ term.term_heading }}</td>
+            <td class="rmpmindend__value-cell rmpmindend__wrap">{{ term.term }}</td>
+            <td><clr-icon class="is-error" shape="trash" (click)="delTerm(term.id)"></clr-icon></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+

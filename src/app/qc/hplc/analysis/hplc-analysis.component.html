@@ -1,0 +1,53 @@
+<app-hplc-page-shell title="HPLC Analysis" subtitle="Worksheet upload · peak table · assay calculations" [backLink]="back">
+  <div class="hplc-tabs">
+    <button type="button" [class.active]="activeTab === 'worksheet'" (click)="activeTab = 'worksheet'">Worksheet</button>
+    <button type="button" [class.active]="activeTab === 'results'" (click)="activeTab = 'results'">Results &amp; calculations</button>
+    <button type="button" [class.active]="activeTab === 'log'" (click)="activeTab = 'log'">Run log</button>
+  </div>
+
+  <div *ngIf="activeTab === 'worksheet'" class="hplc-section">
+    <h3>New analysis / upload worksheet</h3>
+    <div class="hplc-form">
+      <div><label>HPLC unit</label><select [(ngModel)]="form.hplc_id"><option *ngFor="let h of demo.getInstruments()" [value]="h.id">{{ h.id }} — {{ h.name }}</option></select></div>
+      <div><label>Method</label><input [(ngModel)]="form.method" /></div>
+      <div><label>Product</label><input [(ngModel)]="form.product" /></div>
+      <div><label>Batch no.</label><input [(ngModel)]="form.batch" /></div>
+      <div><label>Column ID</label><input [(ngModel)]="form.column_id" /></div>
+      <div><label>Injection sequence</label><input [(ngModel)]="form.sequence" placeholder="Blank, Std×5, Sample×6" /></div>
+      <div class="full"><label>Upload chromatography worksheet (PDF / CSV / .txt)</label><input type="file" (change)="onFileSelect($event)" accept=".pdf,.csv,.txt,.xlsx" /></div>
+    </div>
+    <p *ngIf="worksheetUploaded" class="hplc-pass"><i class="fas fa-check"></i> Loaded: {{ fileName }} — peaks parsed (demo)</p>
+    <div class="hplc-actions"><button type="button" class="hplc-btn hplc-btn--primary" (click)="saveRun()">Save run</button></div>
+  </div>
+
+  <div *ngIf="activeTab === 'results'" class="hplc-section">
+    <h3>Peak results table</h3>
+    <table class="hplc-table">
+      <tr><th>Peak</th><th>RT (min)</th><th>Area</th><th>% Area</th><th>RRT</th><th>Resolution</th><th>Tailing</th></tr>
+      <tr *ngFor="let p of peaks"><td>{{ p.peak }}</td><td>{{ p.rt }}</td><td>{{ p.area | number }}</td><td>{{ p.pct }}</td><td>{{ p.rrt }}</td><td>{{ p.resolution }}</td><td>{{ p.tailing }}</td></tr>
+    </table>
+
+    <h3>Assay calculation (USP)</h3>
+    <table class="hplc-table" *ngIf="calc">
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Standard area</td><td>{{ calc.std_area | number }}</td></tr>
+      <tr><td>Sample area</td><td>{{ calc.samp_area | number }}</td></tr>
+      <tr><td>Std concentration (mg/mL)</td><td>{{ calc.std_conc }}</td></tr>
+      <tr><td>Sample weight (mg)</td><td>{{ calc.samp_wt }}</td></tr>
+      <tr><td>Dilution factor</td><td>{{ calc.dilution }}</td></tr>
+      <tr><td>Label claim (mg)</td><td>{{ calc.label_claim }}</td></tr>
+      <tr><td><strong>Assay %</strong></td><td [class.hplc-pass]="calc.pass" [class.hplc-fail]="!calc.pass"><strong>{{ calc.assay_pct }}%</strong></td></tr>
+      <tr><td>%RSD (repeatability)</td><td>{{ calc.rsd_pct }}%</td></tr>
+      <tr><td>Specification</td><td>{{ calc.spec }}</td></tr>
+      <tr><td>Result</td><td [class.hplc-pass]="calc.pass">{{ calc.pass ? 'Complies' : 'OOS' }}</td></tr>
+    </table>
+    <p><small>Formula: Assay% = (As/ASTD)×(WSTD/W)×(DSTD/D)×(LC)×100 — per method SOP</small></p>
+  </div>
+
+  <div *ngIf="activeTab === 'log'" class="hplc-section">
+    <table class="hplc-table">
+      <tr><th>Run No</th><th>Method</th><th>Batch</th><th>HPLC</th><th>Column</th><th>Worksheet</th><th>Status</th></tr>
+      <tr *ngFor="let r of runs"><td>{{ r.run_no }}</td><td>{{ r.method }}</td><td>{{ r.batch }}</td><td>{{ r.hplc_id }}</td><td>{{ r.column_id }}</td><td>{{ r.worksheet }}</td><td>{{ r.status }}</td></tr>
+    </table>
+  </div>
+</app-hplc-page-shell>

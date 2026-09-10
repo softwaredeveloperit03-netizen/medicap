@@ -1,0 +1,228 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card mef-panel">
+    <header class="card-header mef-panel-header">
+      <h1 class="mef-panel-header__title">Employee Approval</h1>
+      <button type="button" class="mef-panel-header__close" routerLink="/hr/employees">{{'common.close' | translate}}</button>
+    </header>
+    <div class="card-block mef-panel-body">
+      <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-5">
+                <label>Search </label>
+                <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Emp. Id</clr-dg-column>
+                    <clr-dg-column>Emp. Name</clr-dg-column>
+                    <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+                    <clr-dg-column>{{'common.designation' | translate}}</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let emp of filteredMaterials;let i=index" [clrDgItem]="emp">
+                      <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.emp_id)}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue((emp.firstname ? emp.firstname + ' ' : '') + (emp.lastname || ''))}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.department)}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.designation)}}</clr-dg-cell>
+                      <clr-dg-cell><strong>{{displayValue(emp.status | uppercase)}}</strong></clr-dg-cell>
+                      <clr-dg-cell>{{formatDate(emp.entry_date)}}</clr-dg-cell>
+                      <clr-dg-cell >
+                          <button class="btn btn-sm btn-primary" (click)="view(emp)">{{'common.view' | translate}}</button>
+                      </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vdetail vdetail--card mef-panel" *ngIf="isView">
+  <header class="vdetail__header mef-panel-header">
+    <h1 class="vdetail__name mef-panel-header__title">{{ displayValue((selectedResult['firstname'] ? selectedResult['firstname'] + ' ' : '') + (selectedResult['lastname'] || '')) }}</h1>
+    <button type="button" class="vdetail__close mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="vdetail__body mef-panel-body">
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Employee Registration</h2>
+      <div class="vdetail__table-wrap">
+        <table class="table table-border unique-table">
+          <tr>
+            <th>Employment Source</th>
+            <td>{{ displayValue(selectedResult['employement_type']) }}</td>
+            <th>Employee Code</th>
+            <td>{{ displayValue(selectedResult['emp_id']) }}</td>
+          </tr>
+          <tr>
+            <th>Employee Type</th>
+            <td>{{ displayValue(selectedResult['employee_type']) }}</td>
+            <th>First Name</th>
+            <td>{{ displayValue(selectedResult['firstname']) }}</td>
+          </tr>
+          <tr>
+            <th>Middle Name</th>
+            <td>{{ displayValue(selectedResult['middlename']) }}</td>
+            <th>Last Name</th>
+            <td>{{ displayValue(selectedResult['lastname']) }}</td>
+          </tr>
+          <tr>
+            <th>Contact No (Mobile)</th>
+            <td>{{ displayValue(selectedResult['contact_no'] | canadianPhone) }}</td>
+            <th>Emergency Contact</th>
+            <td>{{ displayValue(getEmergencyContact(selectedResult) | canadianPhone) }}</td>
+          </tr>
+          <tr>
+            <th>Email Id</th>
+            <td>{{ displayValue(selectedResult['emp_email']) }}</td>
+            <th>Department</th>
+            <td>{{ displayValue(selectedResult['department']) }}</td>
+          </tr>
+          <tr>
+            <th>Position</th>
+            <td>{{ displayValue(selectedResult['designation']) }}</td>
+            <th>Joining Status</th>
+            <td>{{ displayValue(selectedResult['joining_status']) }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['joining_status']=='Trainee'">
+            <th>Training Period (Month)</th>
+            <td colspan="3">{{ displayValue(selectedResult['trainee_period']) }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['joining_status']=='Probation'">
+            <th>Probation Period (Month)</th>
+            <td colspan="3">{{ displayValue(selectedResult['probation_period']) }}</td>
+          </tr>
+          <tr>
+            <th>Gender</th>
+            <td>{{ displayValue(selectedResult['gender']) }}</td>
+            <th>Date Of Birth</th>
+            <td>{{ formatDate(selectedResult['birthdate']) }}</td>
+          </tr>
+          <tr>
+            <th>Joining Date</th>
+            <td>{{ formatDate(selectedResult['joining_date']) }}</td>
+            <th>Employee Level</th>
+            <td>{{ displayValue(selectedResult['emp_level']) }}</td>
+          </tr>
+          <tr>
+            <th>Government Issued ID</th>
+            <td>{{ displayValue(selectedResult['adhar']) }}</td>
+            <th>Disable</th>
+            <td>{{ displayValue(selectedResult['handicap']) }}</td>
+          </tr>
+          <tr *ngIf="isIndiaCountry(selectedResult['permanent_country'])">
+            <th>PAN No (India only)</th>
+            <td>{{ displayValue(getPan(selectedResult)) }}</td>
+            <th>Nationality</th>
+            <td>{{ displayValue(selectedResult['nationality']) }}</td>
+          </tr>
+          <tr *ngIf="isCanadaCountry(selectedResult['permanent_country'])">
+            <th>SIN No</th>
+            <td>{{ displayValue(getSin(selectedResult)) }}</td>
+            <th>Nationality</th>
+            <td>{{ displayValue(selectedResult['nationality']) }}</td>
+          </tr>
+          <tr *ngIf="!isIndiaCountry(selectedResult['permanent_country']) && !isCanadaCountry(selectedResult['permanent_country'])">
+            <th>Nationality</th>
+            <td colspan="3">{{ displayValue(selectedResult['nationality']) }}</td>
+          </tr>
+          <tr>
+            <th>Marital Status</th>
+            <td>{{ displayValue(selectedResult['marital_status']) }}</td>
+            <th>Induction Training</th>
+            <td>{{ displayValue(selectedResult['isinduction']) }}</td>
+          </tr>
+          <ng-container *ngIf="isIndiaCountry(selectedResult['permanent_country'])">
+            <tr>
+              <th>EPF Applicable (India)</th>
+              <td>{{ displayValue(selectedResult['epf_app']) }}</td>
+              <th>UAN No</th>
+              <td>{{ selectedResult['epf_app']=='Yes' ? displayValue(selectedResult['pf_no']) : '—' }}</td>
+            </tr>
+            <tr>
+              <th>ESIC Applicable (India)</th>
+              <td>{{ displayValue(selectedResult['esic_app']) }}</td>
+              <th>ESIC No</th>
+              <td>{{ selectedResult['esic_app']=='Yes' ? displayValue(selectedResult['esic_no']) : '—' }}</td>
+            </tr>
+          </ng-container>
+          <tr>
+            <th>References Name</th>
+            <td colspan="3">{{ displayValue(selectedResult['referenceName']) }}</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Address (Permanent)</h2>
+      <div class="vdetail__table-wrap">
+        <table class="table table-border unique-table">
+          <tr>
+            <th>Flat/House No/ Area</th>
+            <td colspan="3">{{ displayValue(selectedResult['permanent_flat']) }}</td>
+                            </tr>
+          <tr>
+            <th>Country</th>
+            <td>{{ displayValue(selectedResult['permanent_country']) }}</td>
+            <th>State</th>
+            <td>{{ displayValue(selectedResult['permanent_state']) }}</td>
+                            </tr>
+          <tr>
+            <th>City</th>
+            <td>{{ displayValue(selectedResult['permanent_city']) }}</td>
+            <th>{{ isCanadaCountry(selectedResult['permanent_country']) ? 'Postal Code' : 'Postal Code' }}</th>
+            <td>{{ displayValue(selectedResult['permanent_pincode']) }}</td>
+                            </tr>
+                        </table>
+                    </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Bank Account Details</h2>
+      <div class="vdetail__table-wrap">
+        <table class="table table-border unique-table">
+          <tr>
+            <th>Bank Name</th>
+            <td>{{ displayValue(selectedResult['bank_name']) }}</td>
+            <th>Transit #</th>
+            <td>{{ displayValue(getTransitNo(selectedResult)) }}</td>
+          </tr>
+          <tr>
+            <th>Institution #</th>
+            <td>{{ displayValue(getInstitutionNo(selectedResult)) }}</td>
+            <th>Account #</th>
+            <td>{{ displayValue(selectedResult['acc_no']) }}</td>
+          </tr>
+        </table>
+                </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Documents</h2>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="docsLoading">
+          <clr-dg-column>Document Name</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-row *clrDgItems="let data of (selectedResult['documents'] || [])" [clrDgItem]="data">
+            <clr-dg-cell>{{ displayValue(data.documentName) }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-primary" [disabled]="!data.fileName" (click)="viewDoc(data.fileName)">Uploaded Document</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+        <p *ngIf="!docsLoading && !(selectedResult['documents'] || []).length">No records found.</p>
+      </div>
+    </section>
+    </div>
+  <div class="mef-panel-footer">
+    <button type="button" class="btn btn-success" (click)="updateEmployee('Active')">{{'common.approve' | translate}}</button>
+    <button type="button" class="btn btn-primary" (click)="updateEmployee('ON_HOLD')">On Hold</button>
+    <button type="button" class="btn btn-danger" (click)="updateEmployee('Rejected')">{{'common.reject' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+  </div>
+</div>

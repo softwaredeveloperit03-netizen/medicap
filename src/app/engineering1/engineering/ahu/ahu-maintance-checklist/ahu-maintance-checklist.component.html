@@ -1,0 +1,267 @@
+﻿<div class="card">
+    <div class="card-header">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-8" style="color: aliceblue;margin-top: -2px;text-align: left;">Ahu Maintenance Checklist
+            </div>
+            <div class="clr-col-lg-4" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button *ngIf="isuser == 'Yes'" class="btn btn-sm" (click)="openNew()"
+                    style="background-color: green;color: white;">
+                    New
+                </button>
+                <button class="btn btn-sm" routerLink="/engineering/ahu" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <clr-datagrid [clrDgLoading]="loading">
+                <clr-dg-column>SR No</clr-dg-column>
+                <clr-dg-column>AHU</clr-dg-column>
+                <clr-dg-column>Maintenance Type</clr-dg-column>
+                <clr-dg-column>Completed By</clr-dg-column>
+                <clr-dg-column>Completed Date</clr-dg-column>
+                <clr-dg-column>Reviewed By</clr-dg-column>
+                <clr-dg-column>Entry Date</clr-dg-column>
+                <clr-dg-column>View</clr-dg-column>
+                <clr-dg-row *clrDgItems="let row of result; let i = index" [clrDgItem]="row">
+                    <clr-dg-cell>{{i + 1}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.ahu}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.maintance_type}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.completed_by}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.completed_date}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.reviewed_by}}</clr-dg-cell>
+                    <clr-dg-cell>{{row.entry_date}}</clr-dg-cell>
+                    <clr-dg-cell>
+                        <button class="btn btn-sm btn-info" (click)="View(i)">{{'common.view' | translate}}</button>
+                    </clr-dg-cell>
+                </clr-dg-row>
+                <clr-dg-footer>
+                    <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Rows per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}} of {{pagination.totalItems}}
+                    </clr-dg-pagination>
+                </clr-dg-footer>
+            </clr-datagrid>
+        </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isNew" [clrModalSize]="'xl'">
+    <h3 class="modal-title">AHU Maintenance Checklist</h3>
+    <div class="modal-body">
+        <form #ahuForm="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-4">
+                    <label>AHU:</label>
+                    <select [(ngModel)]="selectedAhu" name="Ahu" required>
+                        <option value=""></option>
+                        <option *ngFor="let item of Ahu" [value]="item.equipment_name">
+                            {{ item.equipment_name }}{{ item.equipment_code ? ' - ' + item.equipment_code : '' }}
+                        </option>
+                    </select>
+                </div>
+                <div class="clr-col-4">
+                    <label>Maintenance To Be Performed</label>
+                    <select name="Maintance" [(ngModel)]="selectedDays" required>
+                        <option value=""></option>
+                        <option>Monthly</option>
+                        <option>Quarterly</option>
+                        <option>Annual</option>
+                    </select>
+                </div>
+            </div>
+
+            <h4 *ngIf="selectedDays=='Monthly'">Monthly</h4>
+            <table class="table table-border" *ngIf="selectedDays=='Monthly'">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr No</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Description Of Maintenance Activity</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Complete</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Comments</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Add</th>
+                </tr>
+                <tr>
+                    <td>0</td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <input name="description" ngModel type="text" style="margin-top:5px;">
+                    </td>
+                    <td>
+                        <select [ngModel]="'Yes'" name="complete">
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input ngModel name="comment" type="text">
+                    </td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <button type="button" class="btn btn-sm btn-info" (click)="add(ahuForm)">{{'common.add' | translate}}</button>
+                    </td>
+                </tr>
+                <tr *ngFor="let checkpoint of monthlyList; let i = index">
+                    <td>{{i+1}}</td>
+                    <td style="text-align: left;">{{ checkpoint.description }}</td>
+                    <td style="text-align: left;">{{ checkpoint.complete}}</td>
+                    <td style="text-align: left;">{{ checkpoint.comment }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger-outline btn-icon" (click)="del(i)">
+                            <clr-icon shape="trash" class="is-error"></clr-icon>
+                        </button>
+                    </td>
+                </tr>
+            </table>
+
+            <h4 *ngIf="selectedDays=='Quarterly'">Quarterly</h4>
+            <table class="table table-border" *ngIf="selectedDays=='Quarterly'">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr No</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Description Of Maintenance Activity</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Complete</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Comments</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Add</th>
+                </tr>
+                <tr>
+                    <td>0</td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <input name="description" ngModel type="text" style="margin-top:5px;">
+                    </td>
+                    <td>
+                        <select [ngModel]="'Yes'" name="complete">
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input ngModel name="comment" type="text">
+                    </td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <button type="button" class="btn btn-sm btn-info" (click)="add(ahuForm)">{{'common.add' | translate}}</button>
+                    </td>
+                </tr>
+                <tr *ngFor="let checkpoint of quarterlyList; let i = index">
+                    <td>{{i+1}}</td>
+                    <td style="text-align: left;">{{ checkpoint.description }}</td>
+                    <td style="text-align: left;">{{ checkpoint.complete}}</td>
+                    <td style="text-align: left;">{{ checkpoint.comment }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger-outline btn-icon" (click)="del(i)">
+                            <clr-icon shape="trash" class="is-error"></clr-icon>
+                        </button>
+                    </td>
+                </tr>
+            </table>
+
+            <h4 *ngIf="selectedDays=='Annual'">Annual</h4>
+            <table class="table table-border" *ngIf="selectedDays=='Annual'">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr No</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Description Of Maintenance Activity</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Complete</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Comments</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Add</th>
+                </tr>
+                <tr>
+                    <td>0</td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <input name="description" ngModel type="text" style="margin-top:5px;">
+                    </td>
+                    <td>
+                        <select [ngModel]="'Yes'" name="complete">
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input ngModel name="comment" type="text">
+                    </td>
+                    <td style="padding: 0px;vertical-align: middle;">
+                        <button type="button" class="btn btn-sm btn-info" (click)="add(ahuForm)">{{'common.add' | translate}}</button>
+                    </td>
+                </tr>
+                <tr *ngFor="let checkpoint of annualList; let i = index">
+                    <td>{{i+1}}</td>
+                    <td style="text-align: left;">{{ checkpoint.description }}</td>
+                    <td style="text-align: left;">{{ checkpoint.complete}}</td>
+                    <td style="text-align: left;">{{ checkpoint.comment }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger-outline btn-icon" (click)="del(i)">
+                            <clr-icon shape="trash" class="is-error"></clr-icon>
+                        </button>
+                    </td>
+                </tr>
+            </table>
+
+            <h4>Additional Comments</h4>
+            <textarea rows="2" name="remark" ngModel></textarea>
+
+            <h4>Work Has Been Completed</h4>
+            <div class="clr-row">
+                <div class="clr-col-6">
+                    <label>Name and Print</label>
+                    <input type="text" name="completed_by" ngModel required>
+                </div>
+                <div class="clr-col-6">
+                    <label>{{'common.date' | translate}}</label>
+                    <input type="date" name="completed_date" ngModel required>
+                </div>
+            </div>
+
+            <h4>Reviewed By</h4>
+            <div class="clr-row">
+                <div class="clr-col-6">
+                    <label>Name and Print</label>
+                    <input type="text" name="reviewed_by" ngModel required>
+                </div>
+                <div class="clr-col-6">
+                    <label>{{'common.date' | translate}}</label>
+                    <input type="date" name="reviewed_date" ngModel required>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="save(ahuForm)">{{'common.save' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+    <h3 class="modal-title">AHU Maintenance Checklist Details</h3>
+    <div class="modal-body" *ngIf="selectedResult">
+        <p><b>AHU:</b> {{selectedResult.ahu}}</p>
+        <p><b>Maintenance Type:</b> {{selectedResult.maintance_type}}</p>
+        <p><b>Additional Comments:</b> {{selectedResult.remark}}</p>
+        <p><b>Completed By:</b> {{selectedResult.completed_by}} on {{selectedResult.completed_date}}</p>
+        <p><b>Reviewed By:</b> {{selectedResult.reviewed_by}} on {{selectedResult.reviewed_date}}</p>
+
+        <table class="table table-border" *ngIf="selectedResult.monthly?.length">
+            <tr>
+                <th>Sr</th><th>Description</th><th>Complete</th><th>Comments</th>
+            </tr>
+            <tr *ngFor="let a of selectedResult.monthly; let i = index">
+                <td>{{i+1}}</td><td>{{a.description}}</td><td>{{a.complete}}</td><td>{{a.comment}}</td>
+            </tr>
+        </table>
+        <table class="table table-border" *ngIf="selectedResult.quarterly?.length">
+            <tr>
+                <th>Sr</th><th>Description</th><th>Complete</th><th>Comments</th>
+            </tr>
+            <tr *ngFor="let a of selectedResult.quarterly; let i = index">
+                <td>{{i+1}}</td><td>{{a.description}}</td><td>{{a.complete}}</td><td>{{a.comment}}</td>
+            </tr>
+        </table>
+        <table class="table table-border" *ngIf="selectedResult.annual?.length">
+            <tr>
+                <th>Sr</th><th>Description</th><th>Complete</th><th>Comments</th>
+            </tr>
+            <tr *ngFor="let a of selectedResult.annual; let i = index">
+                <td>{{i+1}}</td><td>{{a.description}}</td><td>{{a.complete}}</td><td>{{a.comment}}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>

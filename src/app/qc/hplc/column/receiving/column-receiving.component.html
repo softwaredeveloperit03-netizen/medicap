@@ -1,0 +1,71 @@
+<app-hplc-page-shell title="Column Receiving" subtitle="Inward, COA, visual & pressure qualification" [backLink]="back">
+  <div class="hplc-actions">
+    <button type="button" class="hplc-btn" (click)="reload()">Refresh</button>
+    <button type="button" class="hplc-btn hplc-btn--primary" (click)="showForm = !showForm">{{ showForm ? 'Cancel' : 'Receive column' }}</button>
+  </div>
+
+  <div class="hplc-section">
+    <h3>Open orders (awaiting receive)</h3>
+    <p class="hplc-hint" *ngIf="!orders.length">No open orders loaded. Create a Column Order first, then click Refresh.</p>
+    <table class="hplc-table" *ngIf="orders.length">
+      <tr><th>Order No</th><th>Master</th><th>Type</th><th>Qty</th><th>Vendor</th><th>PO</th><th>Order date</th><th>Status</th><th>Action</th></tr>
+      <tr *ngFor="let o of orders">
+        <td>{{ o.order_no }}</td>
+        <td>{{ o.master_ref }}</td>
+        <td>{{ o.column_type || '—' }}</td>
+        <td>{{ o.qty }}</td>
+        <td>{{ o.vendor }}</td>
+        <td>{{ o.po }}</td>
+        <td>{{ o.order_date }}</td>
+        <td>{{ o.status }}</td>
+        <td><button type="button" class="hplc-btn hplc-btn--primary" (click)="startReceive(o)">Receive</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <div *ngIf="showForm" class="hplc-section">
+    <h3>Column receiving form</h3>
+    <div class="hplc-form">
+      <div>
+        <label>PO / Order no.</label>
+        <select [(ngModel)]="form.order_no" (ngModelChange)="onOrderChange()" [disabled]="!orders.length">
+          <option value="">— Select order —</option>
+          <option *ngFor="let o of orders" [value]="o.order_no">{{ o.order_no }} — {{ o.master_ref }}</option>
+        </select>
+      </div>
+      <div><label>Serial number</label><input [(ngModel)]="form.serial" /></div>
+      <div><label>Column ID (internal)</label><input [(ngModel)]="form.column_id" /></div>
+      <div><label>Master reference</label><input [(ngModel)]="form.master_ref" /></div>
+      <div><label>Receipt date</label><input type="date" [(ngModel)]="form.recv_date" /></div>
+      <div><label>COA acceptable</label><select [(ngModel)]="form.coa_ok"><option>Yes</option><option>No</option></select></div>
+      <div><label>Visual inspection</label><select [(ngModel)]="form.visual_ok"><option>Yes</option><option>No</option></select></div>
+      <div><label>Pressure test (bar)</label><input type="number" [(ngModel)]="form.pressure_test_bar" /></div>
+      <div><label>Storage location</label><input [(ngModel)]="form.location" /></div>
+      <div class="full"><label>Receiving remarks</label><textarea rows="2" [(ngModel)]="form.remarks"></textarea></div>
+    </div>
+    <div class="hplc-sign">
+      <div><label>Received by</label><input [(ngModel)]="form.received_by" /></div>
+      <div><label>Verified by</label><input [(ngModel)]="form.verified_by" /></div>
+      <div><label>QA release</label><input [(ngModel)]="form.qa_release" /></div>
+    </div>
+    <div class="hplc-actions">
+      <button type="button" class="hplc-btn hplc-btn--primary" [disabled]="saving || !orders.length" (click)="save()">{{ saving ? 'Saving…' : 'Save receiving' }}</button>
+    </div>
+  </div>
+
+  <div class="hplc-section">
+    <h3>Receiving log</h3>
+    <p class="hplc-hint" *ngIf="!rows.length">No receiving entries yet. Use Receive on an open order above.</p>
+    <table class="hplc-table" *ngIf="rows.length">
+      <tr><th>Recv No</th><th>Order</th><th>Serial</th><th>Column ID</th><th>Date</th><th>COA</th><th>Visual</th><th>Pressure</th><th>Status</th><th>Action</th></tr>
+      <tr *ngFor="let r of rows">
+        <td>{{ r.recv_no }}</td><td>{{ r.order_no }}</td><td>{{ r.serial }}</td><td>{{ r.column_id }}</td>
+        <td>{{ r.recv_date }}</td><td>{{ r.coa_ok }}</td><td>{{ r.visual_ok }}</td><td>{{ r.pressure_test_bar }}</td><td>{{ r.status }}</td>
+        <td>
+          <button type="button" class="hplc-btn hplc-btn--primary" *ngIf="isQuarantine(r)" [disabled]="releasingId === r.id" (click)="release(r)">Release</button>
+          <span *ngIf="!isQuarantine(r)">—</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+</app-hplc-page-shell>

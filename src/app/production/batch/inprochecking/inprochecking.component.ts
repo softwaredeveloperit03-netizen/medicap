@@ -1,0 +1,648 @@
+﻿import { DatePipe } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify: any;
+@Component({
+  selector: 'app-inprochecking',
+  templateUrl: './inprochecking.component.html',
+  styleUrls: ['./inprochecking.component.css'],
+  providers: [DatePipe]
+})
+export class InprocheckingComponent implements OnInit {
+
+  from_time;
+  to_time;
+  start_time;
+  end_time;
+  isTime = false;
+  isView = false;
+  show_Iqpc_Test = false;
+  results;
+  selectedIndex = -1;
+  selectedResult = [];
+  selectedStage = [];
+  units;
+  selectedPage = 3;
+  isNewIncident = false;
+  bmr_lots = [];
+  bmr_common_lots = [];
+  equipments;
+  isNewMaintenance = false;
+  isNewDeviation = false;
+  isPowerFailure = false;
+  isEnvironmentCheck = false;
+  isEquipmentUsage = false;
+  isYieldStatement = false;
+  yield_unit = '';
+  actual_yieldwt = 0;
+  selectedDispensing = [];
+  isViewshow = false;
+  selectedContainer = [];
+  selectedMaterial = [];
+  isNewTI = false;
+  equip;
+  equipment_id = '';
+  bmr_checllist = [];
+  bmr_info;
+  selectedEquip = [];
+  isTechnicalInfo = false;
+  selectedSpecification = [];
+  specificationTest = [];
+  specTest = [];
+  isNewshowProcessForm = false;
+  isShowYeild = false;
+  isNewshowIqpc = false;
+  selected_ipqc = null;
+  operators;
+  _product_code = '';
+  _index = 0;
+  _lot_no = 0;
+  batch_yeild_min = 0;
+  batch_yeild_max = 0;
+  bath_commencent_date = '';
+  bath_complete_date = '';
+  actual_yeild = 0;
+  yeild_percent = '0';
+  total_days: number;
+  stage_yield:number=0;
+  expected_yield:number=0;
+  constructor(public service: DataAccessService, private router: Router, private datePipe: DatePipe) {
+    this.bath_commencent_date = this.datePipe.transform(Date.now(), 'yyyy-MM-01');
+    this.bath_complete_date = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+  }
+
+  ngOnInit() {
+    this.getSamplingType();
+    this.getInprocessBatches();
+    this.getEquipments();
+    this.getOperator();
+    this.service.observableUnit.subscribe(response => {
+      this.units = response;
+    });
+
+    this.getEquipments();
+  }
+
+
+  stage_yield_percent = 0;
+  yieldDiffrence = 0;
+
+  yieldPercent(){
+
+    this.stage_yield_percent = 0;
+    this.yieldDiffrence = 0;
+
+    if(this.outputQty > 0 && this.inputQty > 0){
+
+    this.stage_yield = parseFloat(((this.outputQty / this.inputQty) * 100).toFixed(2));
+    this.stage_yield_percent = parseFloat(((this.stage_yield / this.selected_ipqc['exp_yeild_percent']) * 100).toFixed(2));
+    this.yieldDiffrence = parseFloat((this.stage_yield - this.selected_ipqc['exp_yeild_percent']).toFixed(2));
+
+    }
+  }
+
+  outputQty = 0;
+  inputQty = 0;
+
+
+  samplingType = '';
+ 
+  getSamplingType() {
+    this.service.get("production/stage.php?type=getSamplingType&field=samplingType").subscribe((response) => {
+        this.samplingType = response['samplingType'];
+       });
+  }
+
+
+  getInprocessBatches() {
+    //this.service.get('store/dispensing.php?type=get_Dispensing_Requests_For_Production_Activity_Formulation&material_type=Raw Material').subscribe(response => {
+    this.service.get('production/product.php?type=getReadyBatchPlansForChecking&material_type=Raw Material').subscribe(response => {
+      this.results = response;
+      this.results = response;
+      if (this.selectedIndex !== -1 && this.results?.length > 0) {
+        this.view(this.selectedIndex);
+      } else {
+        this.isView = false;
+      }
+    });
+  }
+
+
+
+
+
+  ti_sheet;
+  yieldsData;
+  eq_usage;
+
+  no_of_days;
+  batch_complete_date;
+  batch_commence_date;
+  yeild_percentage;
+    
+
+
+  getBmrCheckList(product_code, index) {
+    var stage_wise_lot_data = [];
+    this.bmr_lots = [];
+    this.bmr_checllist = []
+  
+    this.bmr_common_lots = [];
+    var no_of_lots: number = 0
+    this._product_code = product_code;
+    this._index = index;
+    this.selectedIndex = index;
+    this.selectedResult = this.results[index];
+    this.batch_yeild_min = this.selectedResult['min_yeild'];
+    //  this.selectedSpecification = this.selectedResult['ti_sheet'];
+    this.batch_yeild_max = this.selectedResult['max_yeild'];
+    this.no_of_days = this.selectedResult['no_of_days'];
+    this.batch_complete_date = this.selectedResult['batch_complete_date'];
+    this.batch_commence_date = this.selectedResult['batch_commence_date'];
+    this.yeild_percentage = this.selectedResult['yeild_percentage'];
+    this.actual_yeild = this.selectedResult['actual_yeild'];
+    this.service.get('store/dispensing.php?type=get_bmr_checklist_by_product_Code&product_code=' + product_code +'&plan_no='+this.selectedResult['plan_no']).subscribe(response => {
+      this.bmr_info = response;
+      this.isView = true;
+      no_of_lots = this.selectedResult['no_of_lots'];
+       this.bmr_checllist = this.bmr_info['bmr_checklist'];
+      stage_wise_lot_data = this.bmr_info['stage_process_details'];
+       this.ti_sheet = this.bmr_info['ti_sheet'];
+       this.yieldsData = this.bmr_info['yieldsData'];
+       this.eq_usage = this.bmr_info['eq_usage'];
+      for (var x = 0; this.bmr_checllist.length; x++) {
+        if (this.bmr_checllist[x] == undefined || this.bmr_checllist[x] == null) {
+          break;
+        }
+        this.bmr_checllist[x]['batch_stage_id'] = 0;
+        this.bmr_checllist[x]['remarks_entry_by'] = '';
+        this.bmr_checllist[x]['process_entry_by'] = '';
+        this.bmr_checllist[x]['yeild_entry_by'] = '';
+        this.bmr_checllist[x]['ipqc_status'] = '';
+      }
+      var temp_array = [];
+      for (var i = 0; i < no_of_lots; i++) {
+
+        for (var j = 0; j < this.bmr_checllist.length; j++) {
+          if (this.bmr_checllist[j]['split_into_lots'] == 'Yes') {
+            temp_array.push(this.bmr_checllist[j])
+          }
+        }
+        let obj = {
+          "lot_no": i + 1,
+          "lots": temp_array
+        };
+        this.bmr_lots.push(obj);
+        temp_array = [];
+
+      }
+
+      var temp_array = [];
+
+
+      for (var j = 0; j < this.bmr_checllist.length; j++) {
+        if (this.bmr_checllist[j]['split_into_lots'] == 'No') {
+          this.bmr_common_lots.push(this.bmr_checllist[j])
+        }
+      }
+
+
+      for (var i = 0; i < stage_wise_lot_data.length; i++) {
+        var stage_dtl_id: number = +stage_wise_lot_data[i]['stage_dtl_id'];
+        var b_lot_no = +stage_wise_lot_data[i]['lot_no'];
+        for (var j = 0; j < this.bmr_lots.length; j++) {
+          var lotNo = this.bmr_lots[j]['lot_no']
+          if (b_lot_no != lotNo) {
+            continue;
+          }
+          var itemIndex = this.bmr_lots[j]['lots'].findIndex(x => x.id == stage_dtl_id);
+          if (itemIndex != null && itemIndex != undefined) {
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], batch_stage_id: stage_wise_lot_data[i]['batch_stage_id'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], remarks_entry_by: stage_wise_lot_data[i]['remarks_entry_by'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], process_entry_by: stage_wise_lot_data[i]['process_entry_by'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], yeild_entry_by: stage_wise_lot_data[i]['yeild_entry_by'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], ipqc_status: stage_wise_lot_data[i]['test_result_status'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], test_result: stage_wise_lot_data[i]['test_result'] };
+            this.bmr_lots[j]['lots'][itemIndex] = { ... this.bmr_lots[j]['lots'][itemIndex], stage_status: stage_wise_lot_data[i]['stage_status']  };
+          }
+         
+        }
+      }
+    
+
+      this.isView = true;
+    });
+  }
+  view(index) {
+
+     this.selectedStage = this.selectedResult['stage'];
+  
+     
+      this.isView = true;
+  }
+  showYeildForm(idx, lot_idx) {
+    this.selected_ipqc = this.bmr_lots[lot_idx]['lots'][idx];
+    this._lot_no = this.bmr_lots[lot_idx]['lot_no'];
+    this.isShowYeild = true;
+  }
+  showProcessForm(idx, lot_idx) {
+    this.selected_ipqc = this.bmr_lots[lot_idx]['lots'][idx];
+    this._lot_no = this.bmr_lots[lot_idx]['lot_no'];
+    this.selected_ipqc['range'] = this.selected_ipqc['lower_limit'] + '-' + this.selected_ipqc['upper_limit'] + ' ' + this.selected_ipqc['unit'];
+    this.isNewshowProcessForm = true;
+  }
+  showIqpcTest(idx, lot_idx) {
+    this.selected_ipqc = this.bmr_lots[lot_idx]['lots'][idx];
+    this._lot_no = this.bmr_lots[lot_idx]['lot_no'];
+
+    console.log(this.selected_ipqc);
+
+
+
+    if (this.selected_ipqc['result_type'] == 'Range') {
+      this.selected_ipqc['range'] = this.selected_ipqc['lower_limit'] + '-' + this.selected_ipqc['upper_limit'] + ' ' + this.selected_ipqc['unit'];
+    } else if (this.selected_ipqc['result_type'] == 'Not Less Than') {
+      this.selected_ipqc['range'] = '< ' + this.selected_ipqc['less_than_value'];
+    } else if (this.selected_ipqc['result_type'] == 'Not More Than') {
+      this.selected_ipqc['range'] = '>' + this.selected_ipqc['more_than_value'];
+    } else {
+      this.selected_ipqc['range'] = this.selected_ipqc['result_type'];
+    }
+     this.show_Iqpc_Test = true;
+    // this.isNewTI= true;
+  }
+  saveBmrData(data) {
+
+  }
+ 
+
+  viewshow(index) {
+    let material = this.selectedDispensing['materials'];
+    this.selectedMaterial = material[index];
+    this.selectedContainer = this.selectedMaterial['containers'];
+    console.log(this.selectedContainer);
+    this.isViewshow = true;
+  }
+
+
+  selectPage(index) {
+    this.selectedPage = index;
+  }
+
+  tisheet() {
+    this.isNewTI = true;
+  }
+
+  getEquipments() {
+    this.service.get('common.php?type=getEquipments').subscribe(response => {
+      this.equip = response;
+    });
+  }
+
+  getEquipmentsbycode(index) {
+    this.selectedEquip = this.equip[index];
+    console.log('ff', this.selectedEquip);
+  }
+
+
+  start() {
+    this.service.get('production/manufacturing.php?type=startStage&id=' + this.selectedStage['id'] + '&bmr_no=' + this.selectedResult['bmr_no'] + '&stage=' + this.selectedResult['current_stage']).subscribe(response => {
+      if (response['status'] == 'success') {
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.success(response['msg']);
+      }
+    });
+  }
+
+  callforclearance() {
+    this.service.post('production/manufacturing.php?type=callforclearance&id=' + this.selectedStage['id'] + '&bmr_no=' + this.selectedResult['bmr_no'] + '&batch_no=' + this.selectedResult['batch_no'] + '&stage=' + this.selectedResult['current_stage'], JSON.stringify(this.selectedStage['clearances'])).subscribe(response => {
+      if (response['status'] == 'success') {
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.success(response['msg']);
+      }
+    });
+  }
+
+  saveEnvironmentCheck() {
+    this.service.post('production/manufacturing.php?type=saveEnvironmentCheck&id=' + this.selectedStage['id'] + '&bmr_no=' + this.selectedResult['bmr_no'] + '&batch_no=' + this.selectedResult['batch_no'] + '&stage=' + this.selectedResult['current_stage'], JSON.stringify(this.selectedStage['environments'])).subscribe(response => {
+      if (response['status'] == 'success') {
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.success(response['msg']);
+      }
+    });
+  }
+
+ 
+  calculate_diff_days() {
+    var date1 = new Date(this.bath_commencent_date);
+    var date2 = new Date(this.bath_complete_date);
+    if (date2.getTime() < date1.getTime()) {
+      alertify.error('Batch Complete date should be greater than Batch Commencement date');
+      this.total_days =0;
+      return;
+    }
+    var Time = date2.getTime() - date1.getTime();
+    this.total_days = Time / (1000 * 3600 * 24);
+  }
+  saveInprocessCheck() {
+    this.service.post('production/manufacturing.php?type=saveInprocessCheck&id=' + this.selectedStage['id'] + '&bmr_no=' + this.selectedResult['bmr_no'] + '&batch_no=' + this.selectedResult['batch_no'] + '&stage=' + this.selectedResult['current_stage'], JSON.stringify(this.selectedStage['checks'])).subscribe(response => {
+      if (response['status'] == 'success') {
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.error(response['msg']);
+      }
+    });
+  }
+
+ 
+
+  equipment_ids: any = [];
+  getEquipmentIDs(index) {
+    index = index - 1;
+    let equipments = this.selectedStage['equipments'];
+    let temp = equipments[index];
+    this.equipment_ids = temp['equipments'];
+  }
+
+  selectedFile:File;
+
+  onFileChanged(event) {
+    if(event.target.files.length === 1) {
+      this.selectedFile = event.target.files[0];
+    }
+  }
+
+  remark = '';
+  
+  transferStock(data) {   
+
+    if(!data.valid){
+      alertify.error("All feild Required!!!!!!!!!!");
+      return;
+    }
+ 
+    const uploadData = new FormData();
+
+    if (this.selectedFile !== undefined) {
+      uploadData.append('document', this.selectedFile, this.selectedFile.name);
+    }
+
+    uploadData.append("remark",this.remark);
+  
+    this.service.post('production/manufacturing.php?type=transfer_workorder_pk_dept_FromChecking&id='+this.selectedResult['id'], uploadData ).subscribe(response => {
+      if (response['status'] == 'success') {
+        data.resetForm();
+        this.isView= false;
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.success(response['msg']);
+      }
+    });
+  }
+
+  gross_total = 0;
+  tare_total = 0;
+  net_total = 0;
+
+
+  calculateFinalYield() {
+    let batch_size = Number(this.selectedResult['batch_size']);
+    this.yeild_percent = ((batch_size * 100) / this.actual_yeild).toFixed(2);
+
+  }
+  calculateYield() {
+    this.gross_total = 0;
+    this.tare_total = 0;
+    this.net_total = 0;
+    let yields = this.selectedStage['yields'];
+
+    for (let i = 0; i < yields.length; i++) {
+      let temp = yields[i];
+      let net = +temp['gross'] - +temp['tare'];
+      temp['net'] = net;
+
+      if (temp['gross'] !== '' && temp['tare'] !== '') {
+        this.gross_total += +temp['gross'];
+        this.tare_total += +temp['tare'];
+        this.net_total += +temp['net'];
+      }
+
+      yields[i] = temp;
+
+    }
+    this.selectedStage['yields'] = yields;
+    console.log('nettotaal', this.net_total);
+  }
+
+  addYieldColumn() {
+    let yields = this.selectedStage['yields'];
+    let temp = {};
+    let count = yields.length + 1;
+    temp['yield'] = 'DRUM ' + count;
+    temp['gross'] = 0;
+    temp['tare'] = 0;
+    temp['net'] = 0;
+    yields[yields.length] = temp;
+  }
+
+  completeStage() {
+    let temp = this.selectedStage;
+    temp['yields'] = this.selectedStage['yields'];
+    temp['yield_unit'] = this.yield_unit;
+    temp['actual_wt'] = this.net_total;
+    temp['yield_qty'] = this.net_total;
+
+    this.service.post('production/manufacturing.php?type=completeStage&id=' + this.selectedStage['id'] + '&bmr_no=' + this.selectedResult['bmr_no'] + '&batch_no=' + this.selectedResult['batch_no'] + '&stage=' + this.selectedResult['current_stage'] + '&last_stage=' + this.selectedResult['last_stage'], JSON.stringify(temp)).subscribe(response => {
+      if (response['status'] == 'success') {
+        this.getInprocessBatches();
+        alertify.success(response['msg']);
+      } else {
+        alertify.success(response['msg']);
+      }
+    });
+  }
+   
+
+  calculate() {
+
+    let raw_materials = this.selectedResult['raw_materials'];
+    for (let i = 0; i < raw_materials.length; i++) {
+      let material = raw_materials[i];
+      if (material['unit'] == "mg") {
+        material["batch_qty"] = +parseFloat((material["qty"] * (this.selectedResult['batch_size'] / 1000000)) + '').toFixed(2);
+        material['batch_unit'] = "Kg";
+      } else {
+        material["batch_qty"] = (material["qty"] * this.selectedResult['batch_size']).toFixed(2);
+        material['batch_unit'] = material['unit'];
+      }
+
+      let batch_qty = +material["batch_qty"];
+      
+      raw_materials[i] = material;
+    }
+    this.selectedResult['raw_materials'] = raw_materials;
+
+     
+
+    let packing_materials = this.selectedResult['packing_materials'];
+    for (let i = 0; i < packing_materials.length; i++) {
+      let material = packing_materials[i];
+      if (material['unit'] == "mg") {
+        material["batch_qty"] = +parseFloat((material["qty"] * (this.selectedResult['batch_size'] / 1000000)) + '').toFixed(2);
+        material['batch_unit'] = "Kg";
+      } else {
+        material["batch_qty"] = (material["qty"] * this.selectedResult['batch_size']).toFixed(2);
+        material['batch_unit'] = material['unit'];
+      }
+
+      let batch_qty = +material["batch_qty"];
+  
+      packing_materials[i] = material;
+    }
+    this.selectedResult['packing_materials'] = packing_materials;
+  }
+
+  getOperator() {
+    this.service.get('common.php?type=getOperators').subscribe(response => {
+      this.operators = response;
+    })
+  }
+  setEquipment(data) {
+    this.equipment_id = data;
+  }
+
+  saveIqpcTestData(data) {
+    if (!data.valid) {
+      alertify.error("Please Enter Remarks");
+      return;
+    }
+    data.value['bfr_no'] = this.selectedResult['bfr_no'];
+    data.value['batch_no'] = this.selectedResult['batch_number'];
+    data.value['batch_size'] = this.selectedResult['batch_size'];
+    data.value['plan_no'] = this.selectedResult['plan_no'];
+    data.value['product_code'] = this.selectedResult['product_code'];
+    data.value['stage_hdr_id'] = this.selected_ipqc['stage_hdr_id'];
+    data.value['stage_dtl_id'] = this.selected_ipqc['id'];
+    data.value['step'] = this.selected_ipqc['stage'];
+    data.value['samplingType'] = this.samplingType;
+    data.value['remarks'] = data.value['remarks'];
+    data.value['lot_no'] = this._lot_no;
+    data.value['samplingType'] = this.samplingType;
+    data.value['batch_stage_id'] = this.selected_ipqc['batch_stage_id'];
+    this.service.post('production/manufacturing.php?type=save_test_remarks&batch_stage_id='+this.selected_ipqc['batch_stage_id']+'&id=' + this.selected_ipqc['id'], JSON.stringify(data.value)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success(this.service.t('common.savedSuccess'));
+        this.getBmrCheckList(this._product_code, this._index);
+        this.show_Iqpc_Test = false;
+      } else {
+        alertify.success(response['status']);
+      }
+    });
+  }
+
+  saveIqpcTestData1(data) {
+    if (!data.valid) {
+      alertify.error("Please Enter Remarks");
+      return;
+    }
+    data.value['bfr_no'] = this.selectedResult['bfr_no'];
+    data.value['batch_no'] = this.selectedResult['batch_number'];
+    data.value['batch_size'] = this.selectedResult['batch_size'];
+    data.value['plan_no'] = this.selectedResult['plan_no'];
+    data.value['product_code'] = this.selectedResult['product_code'];
+    data.value['stage_hdr_id'] = this.selected_ipqc['stage_hdr_id'];
+    data.value['stage_dtl_id'] = this.selected_ipqc['id'];
+    data.value['step'] = this.selected_ipqc['stage'];
+    data.value['remarks'] = data.value['remarks'];
+    data.value['lot_no'] = this._lot_no;
+    data.value['samplingType'] = this.samplingType;
+    data.value['batch_stage_id'] = this.selected_ipqc['batch_stage_id'];
+    this.service.post('production/manufacturing.php?type=save_test_remarks1&batch_stage_id='+this.selected_ipqc['batch_stage_id']+'&id=' + this.selected_ipqc['id'], JSON.stringify(data.value)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success(this.service.t('common.savedSuccess'));
+        this.getBmrCheckList(this._product_code, this._index);
+        this.show_Iqpc_Test = false;
+      } else {
+        alertify.success(response['status']);
+      }
+    });
+  }
+ 
+
+
+  saveshowProcess(data) {  
+    if (!data.valid) {
+      alertify.error("Please Enter Remarks");
+      return;
+    }
+    if (Number(this.selected_ipqc['batch_stage_id']) <= 0) {
+      alertify.error("Please Enter Send TI Sheet information first");
+      return;
+    }
+    data.value['bfr_no'] = this.selectedResult['bfr_no'];
+    data.value['plan_no'] = this.selectedResult['plan_no'];
+    data.value['stage_hdr_id'] = this.selected_ipqc['stage_hdr_id'];
+    data.value['stage_dtl_id'] = this.selected_ipqc['id'];
+    data.value['lot_no'] = this._lot_no;
+    data.value['batch_stage_id'] = this.selected_ipqc['batch_stage_id'];
+    this.service.post('production/manufacturing.php?type=save_process_data&id=' + this.selected_ipqc['batch_stage_id'], JSON.stringify(data.value)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success(this.service.t('common.savedSuccess'));
+        this.getBmrCheckList(this._product_code, this._index);
+        this.isNewshowProcessForm = false;
+      } else {
+        alertify.success(response['status']);
+      }
+    });
+  }
+
+  saveYeildData(data) {
+    if (!data.valid) {
+      alertify.error("Please Enter Remarks");
+      return;
+    }
+    if (Number(this.selected_ipqc['batch_stage_id']) <= 0) {
+      alertify.error("Please Enter Send TI Sheet information first");
+      return;
+    }
+    data.value['bfr_no'] = this.selectedResult['bfr_no'];
+    data.value['plan_no'] = this.selectedResult['plan_no'];
+    data.value['stage_hdr_id'] = this.selected_ipqc['stage_hdr_id'];
+    data.value['stage_dtl_id'] = this.selected_ipqc['id'];
+    data.value['lot_no'] = this._lot_no;
+    data.value['batch_stage_id'] = this.selected_ipqc['batch_stage_id'];
+    this.service.post('production/manufacturing.php?type=save_yeild_data&id=' + this.selected_ipqc['batch_stage_id'], JSON.stringify(data.value)).subscribe(response => {
+      if (response['status'] == 'success') {
+        alertify.success(this.service.t('common.savedSuccess'));
+        this.getBmrCheckList(this._product_code, this._index);
+        this.isShowYeild = false;
+      } else {
+        alertify.success(response['status']);
+      }
+    });
+  }
+
+  getCurrentTime(action, value) {
+    var d = new Date(),
+    h = (d.getHours()<10?'0':'') + d.getHours(),
+    m = (d.getMinutes()<10?'0':'') + d.getMinutes();
+  if (value =="area_clean") {
+      if (action == 'from_time') {
+        this.start_time = h + ':' + m;
+        this.isTime=true;
+      } else {
+        this.end_time = h + ':' + m;
+      }
+    } 
+  }
+
+}

@@ -1,0 +1,188 @@
+<div class="card" *ngIf="!isview">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-8" style="color: aliceblue;margin-top: -2px;text-align: left;">Packing eBMR Batch Log</div>
+          <div class="clr-col-lg-4" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="packing-ebmr-master" style="background-color: #0e4370;color: white;">Packing eBMR master</button>
+            <button class="btn btn-sm" routerLink="new" style="background-color: green;color: white;" *ngIf="isuser == 'Yes'">Proceed / Fill</button>
+            <button class="btn btn-sm" routerLink="/packing" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+            <div class="clr-col-lg-3">
+                <label>Product code</label>
+                <input type="text" name="product_code" [(ngModel)]="product_code">
+            </div>
+            <div class="clr-col-lg-3">
+                <label>Batch number</label>
+                <input type="text" name="batch_number" [(ngModel)]="batch_number">
+            </div>
+            <div class="clr-col-lg-3">
+                <label>Status</label>
+                <select name="status_filter" [(ngModel)]="status_filter">
+                  <option value="">All</option>
+                  <option value="Started">Started</option>
+                  <option value="Completed">Completed</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-3">
+                <button class="btn btn-danger" (click)="getTechnicalLog()" style="margin-top: 31px;"> search</button>
+            </div>
+        </div>
+        <div class="card-text">
+           <table class="table">
+                <tr>
+                    <th>{{'common.table.srNo' | translate}}</th>
+                    <th style="text-align: left;">Product Code</th>
+                    <th style="text-align: left;">Work Order</th>
+                    <th style="text-align: left;">Medicap Lot No</th>
+                    <th style="text-align: left;">Status</th>
+                    <th style="text-align: left;">Saved Rows</th>
+                    <th style="text-align: left;">Last Saved</th>
+                    <th style="text-align: left;">Completed At</th>
+                    <th style="text-align: left;">View </th>
+                </tr>
+                <tr *ngFor="let res of results;let i=index">
+                    <td>{{ i+1 }}</td>
+                    <td style="text-align: left;">{{ res.product_code}}</td>
+                    <td style="text-align: left;">{{ res.work_order_no}}</td>
+                    <td style="text-align: left;">{{ res.batch_number}}</td>
+                    <td style="text-align: left;">{{ res.status}}</td>
+                    <td style="text-align: left;">{{ res.saved_rows || 0}}</td>
+                    <td style="text-align: left;">{{ res.last_saved_at || 'NA'}}</td>
+                    <td style="text-align: left;">{{ res.approved_at || 'NA'}}</td>
+                    <td><button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button></td>
+                </tr>
+                <tr *ngIf="!results?.length">
+                  <td colspan="10">{{ loading ? 'Loading...' : ('common.noRecords' | translate) }}</td>
+                </tr>
+           </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadLog()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card" *ngIf="isview">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Filled / Saved Packing eBMR Data</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="isview=false" style="background-color: red;color: white;">
+             CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Product Code:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult?.product_code}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">Work Order:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult?.work_order_no}}</td>
+                </tr>
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Batch Number:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult?.batch_number}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">Status:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult?.status}}</td>
+                </tr>
+            </table>
+            <h3>Saved Entries:</h3>
+            <ng-container *ngFor="let g of sopViewGroups; let gi = index">
+              <div class="ebmr-check-stage-block">
+                <h5 class="ebmr-check-stage-title">
+                  Stage {{ gi + 1 }} — {{ g.stageTitle }}
+                </h5>
+                <ng-container *ngFor="let s of g.steps; let si = index">
+                  <div class="ebmr-check-step-block">
+                    <div class="ebmr-check-step-heading">
+                      <span class="ebmr-check-idx">Step {{ gi + 1 }}.{{ si + 1 }}</span>
+                      <span class="ebmr-check-id">ID {{ s.stepId }}</span>
+                      <span class="ebmr-check-name">{{ s.stepName || '—' }}</span>
+                    </div>
+
+                    <div *ngIf="mainStepRow(s) as main" class="ebmr-check-step-body">
+                      <p class="ebmr-check-meta-line" *ngIf="main.savedAt">Saved: {{ main.savedAt }}</p>
+                      <div class="ebmr-check-payload-cell">
+                        <table class="table table-bordered table-sm ebmr-nested-table" *ngIf="hasPayloadTable(main)">
+                          <thead>
+                            <tr>
+                              <th>Sr. No.</th>
+                              <th *ngFor="let c of payloadTableColumns(main)">{{ c.label }}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let r of getPayloadRows(main); let ri = index">
+                              <td>{{ ri + 1 }}</td>
+                              <td *ngFor="let c of payloadTableColumns(main)">{{ formatCell(r[c.key]) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <table class="table table-bordered table-sm ebmr-meta-table" *ngIf="!hasPayloadTable(main)">
+                          <tbody>
+                            <tr *ngFor="let kv of getPayloadKvPairs(main)">
+                              <td class="ebmr-meta-label">{{ kv.key }}</td>
+                              <td>{{ kv.value }}</td>
+                            </tr>
+                            <tr *ngIf="!getPayloadKvPairs(main).length"><td colspan="2">No data</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <ng-container *ngFor="let sub of substepRows(s); let subi = index">
+                      <div class="ebmr-check-substep-block">
+                        <div class="ebmr-check-substep-heading">
+                          <span class="ebmr-check-idx">Substep {{ gi + 1 }}.{{ si + 1 }}.{{ subi + 1 }}</span>
+                          <span class="ebmr-check-id">ID {{ sub.substepId }}</span>
+                          <span class="ebmr-check-name">{{ sub.substepName || '—' }}</span>
+                        </div>
+                        <p class="ebmr-check-meta-line" *ngIf="sub.savedAt">Saved: {{ sub.savedAt }}</p>
+                        <div class="ebmr-check-payload-cell">
+                          <table class="table table-bordered table-sm ebmr-nested-table" *ngIf="hasPayloadTable(sub)">
+                            <thead>
+                              <tr>
+                                <th>Sr. No.</th>
+                                <th *ngFor="let c of payloadTableColumns(sub)">{{ c.label }}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let r of getPayloadRows(sub); let ri = index">
+                                <td>{{ ri + 1 }}</td>
+                                <td *ngFor="let c of payloadTableColumns(sub)">{{ formatCell(r[c.key]) }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <table class="table table-bordered table-sm ebmr-meta-table" *ngIf="!hasPayloadTable(sub)">
+                            <tbody>
+                              <tr *ngFor="let kv of getPayloadKvPairs(sub)">
+                                <td class="ebmr-meta-label">{{ kv.key }}</td>
+                                <td>{{ kv.value }}</td>
+                              </tr>
+                              <tr *ngIf="!getPayloadKvPairs(sub).length"><td colspan="2">No data</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+                </ng-container>
+              </div>
+            </ng-container>
+            <table class="table table-border" *ngIf="!sopViewGroups?.length">
+              <tr>
+                <td>{{'common.noRecords' | translate}}</td>
+              </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadRecord()">{{'common.download' | translate}}</button>
+    </div>
+</div>

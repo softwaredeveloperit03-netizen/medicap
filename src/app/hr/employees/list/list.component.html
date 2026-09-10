@@ -1,0 +1,371 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Employee List</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/hr/employees" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-5">
+                <label>Search </label>
+                <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="emp_id">Emp. Id</clr-dg-column>
+                    <clr-dg-column clrDgField="firstname">Emp. Name</clr-dg-column>
+                    <clr-dg-column clrDgField="department">{{'common.department' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="designation">{{'common.designation' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="status">{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+                    <clr-dg-column>Edit</clr-dg-column>
+                    <clr-dg-column>Status Change</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let emp of filteredMaterials;let i=index" [clrDgItem]="emp">
+                      <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.emp_id)}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue((emp.firstname ? emp.firstname + ' ' : '') + (emp.lastname || ''))}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.department)}}</clr-dg-cell>
+                      <clr-dg-cell>{{displayValue(emp.designation)}}</clr-dg-cell>
+                      <clr-dg-cell><strong
+                        [ngStyle]="{'color': emp.status === 'Active' ? 'green' : emp.status === 'IN-ACTIVE' ? 'red' : 'black'}">
+                        {{displayValue(emp.status | uppercase)}}</strong></clr-dg-cell>
+                      <clr-dg-cell>{{formatDate(emp.entry_date)}}</clr-dg-cell>
+                      <clr-dg-cell >
+                          <button class="btn btn-sm btn-icon" (click)="view(emp)">
+                            <clr-icon shape="eye"></clr-icon>
+                          </button>
+                      </clr-dg-cell>
+                      <clr-dg-cell >
+                          <button class="btn btn-sm btn-icon" (click)="ediEMp(emp)" >
+                            <clr-icon shape="note" class="is-warning"></clr-icon>
+                          </button>
+                      </clr-dg-cell>
+                      <clr-dg-cell >
+                          <button *ngIf="emp.status == 'Active'" class="btn btn-sm btn-danger" [disabled]="isapprover != 'Yes'"
+                            (click)="activateInActivatedEmployee(emp,'IN-ACTIVE')"> Make In-Active</button>
+
+                          <button *ngIf="emp.status == 'IN-ACTIVE'" class="btn btn-sm btn-success" [disabled]="isapprover != 'Yes'"
+                            (click)="activateInActivatedEmployee(emp,'Active')"> Make Active</button>
+
+                      </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadPDF()">Download PDF</button>
+      <button class="btn btn-primary" (click)="exportToExcel()">Export To EXCEL</button>
+      <button class="btn btn-danger" routerLink="/hr/employees">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Employee Details</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-primary" (click)="downloadEmployeePDF()">Download</button>
+          <button class="btn btn-sm btn-danger" (click)="isView = false">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+              <div class="card" style="margin-bottom: 30px;">
+                  <div class="card-header" style="text-align: center">
+                      <div class="clr-row" style="margin-bottom: -10px;">
+                          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                              Employee Registration Mandatory Fields
+                          </div>
+                      </div>
+                  </div>
+                  <div class="card-block">
+                      <div class="card-text">
+                          <div class="clr-row">
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employment Source : </strong></label>
+                              <span> {{ displayValue(selectedResult['employement_type']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Code : </strong></label>
+                              <span> {{ displayValue(selectedResult['emp_id']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Type : </strong></label>
+                              <span> {{ displayValue(selectedResult['employee_type']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>First Name : </strong></label>
+                              <span> {{ displayValue(selectedResult['firstname']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Middle Name : </strong></label>
+                              <span> {{ displayValue(selectedResult['middlename']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Last Name : </strong></label>
+                              <span> {{ displayValue(selectedResult['lastname']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Contact No (Mobile) : </strong></label>
+                              <span> {{ displayValue(selectedResult['contact_no'] | canadianPhone) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Emergency Contact : </strong></label>
+                              <span> {{ displayValue(getEmergencyContact(selectedResult) | canadianPhone) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Email Id : </strong></label>
+                              <span> {{ displayValue(selectedResult['emp_email']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Departments : </strong></label>
+                              <span> {{ displayValue(selectedResult['department']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Position : </strong></label>
+                              <span> {{ displayValue(selectedResult['designation']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Joining Status : </strong></label>
+                              <span> {{ displayValue(selectedResult['joining_status']) }}</span>
+                            </div>
+
+                            <div *ngIf="selectedResult['joining_status']=='Trainee'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Training Period In Month : </strong></label>
+                              <span> {{ displayValue(selectedResult['trainee_period']) }}</span>
+                            </div>
+
+                            <div *ngIf="selectedResult['joining_status']=='Probation'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Probation Period In Month : </strong></label>
+                              <span> {{ displayValue(selectedResult['probation_period']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Gender : </strong></label>
+                              <span> {{ displayValue(selectedResult['gender']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Date Of Birth : </strong></label>
+                              <span> {{ formatDate(selectedResult['birthdate']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Joining Date : </strong></label>
+                              <span> {{ formatDate(selectedResult['joining_date']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Employee Level : </strong></label>
+                              <span> {{ displayValue(selectedResult['emp_level']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Goverment Issued ID : </strong></label>
+                              <span> {{ displayValue(selectedResult['adhar']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Disable : </strong></label>
+                              <span> {{ displayValue(selectedResult['handicap']) }}</span>
+                            </div>
+
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isIndiaCountry(selectedResult['permanent_country'])">
+                <label><strong>PAN No (India only) : </strong></label>
+                <span> {{ displayValue(getPan(selectedResult)) }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isCanadaCountry(selectedResult['permanent_country'])">
+                <label><strong>SIN No : </strong></label>
+                <span> {{ displayValue(getSin(selectedResult)) }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Nationality : </strong></label>
+                <span> {{ displayValue(selectedResult['nationality']) }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Marital Status : </strong></label>
+                <span> {{ displayValue(selectedResult['marital_status']) }}</span>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Induction Training : </strong></label>
+                <span> {{ displayValue(selectedResult['isinduction']) }}</span>
+              </div>
+
+              <ng-container *ngIf="isIndiaCountry(selectedResult['permanent_country'])">
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>EPF Applicable (India) : </strong></label>
+                  <span> {{ displayValue(selectedResult['epf_app']) }}</span>
+                </div>
+
+                <div *ngIf="selectedResult['epf_app']=='Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>UAN No : </strong></label>
+                  <span> {{ displayValue(selectedResult['pf_no']) }}</span>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>ESIC Applicable (India) : </strong></label>
+                  <span> {{ displayValue(selectedResult['esic_app']) }}</span>
+                </div>
+
+                <div *ngIf="selectedResult['esic_app']=='Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>ESIC No : </strong></label>
+                  <span> {{ displayValue(selectedResult['esic_no']) }}</span>
+                </div>
+              </ng-container>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>References Name : </strong></label>
+                <span> {{ displayValue(selectedResult['referenceName']) }}</span>
+              </div>
+
+          </div>
+
+          <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <h3>Address (Permanent)  : </h3>
+                  <div class="clr-row">
+
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Flat/House No/ Area : </strong></label>
+                        <span> {{ displayValue(selectedResult['permanent_flat']) }}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Present Country : </strong></label>
+                        <span> {{ displayValue(selectedResult['permanent_country']) }}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>State : </strong></label>
+                        <span> {{ displayValue(selectedResult['permanent_state']) }}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>City : </strong></label>
+                        <span> {{ displayValue(selectedResult['permanent_city']) }}</span>
+                      </div>
+
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>{{ isCanadaCountry(selectedResult['permanent_country']) ? 'Postal Code' : 'Postal Code' }} : </strong></label>
+                        <span> {{ displayValue(selectedResult['permanent_pincode']) }}</span>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+
+        <div class="card">
+            <div class="card-header"
+                style="text-align: center;background-color: rgb(14, 67, 112); color: white;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Bank Account Details</div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div class="row container-fluid" id="system">
+                        <div class="clr-row">
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Bank Name : </strong></label>
+                              <span> {{ displayValue(selectedResult['bank_name']) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Transit # : </strong></label>
+                              <span> {{ displayValue(getTransitNo(selectedResult)) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Institution # : </strong></label>
+                              <span> {{ displayValue(getInstitutionNo(selectedResult)) }}</span>
+                            </div>
+
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label><strong>Account # : </strong></label>
+                              <span> {{ displayValue(selectedResult['acc_no']) }}</span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="text-align: center;background-color: burlywood;color: black;">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;color:black">Documents
+                    </div>
+                </div>
+            </div>
+            <div class="card-block">
+                <div class="card-text">
+                    <div class="row container-fluid" id="in">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="font-weight: bolder;background-color:aquamarine;">Document Name</td>
+                                <td style="font-weight: bolder;background-color:aquamarine;">View Documents</td>
+                            </tr>
+                            <tr *ngFor="let data of selectedResult['documents']">
+                                <td>{{ displayValue(data.documentName) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" (click)="viewDoc(data.fileName)">Uploaded Document</button>
+                                </td>
+                            </tr>
+                            <tr *ngIf="!selectedResult['documents'] || selectedResult['documents'].length === 0">
+                                <td colspan="2">No Records Found</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      </div>
+    </div>
+     <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadEmployeePDF()">Download PDF</button>
+      <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

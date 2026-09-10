@@ -1,0 +1,173 @@
+﻿<div class="card" *ngIf="!isView"> 
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Planned Batches For Medicap Lot No Allocation</div>
+        <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <!-- <button class="btn btn-sm btn-success" routerLink="new">NEW PLAN</button> -->
+          <button class="btn btn-sm btn-danger" routerLink="/production/">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+              <label>Product Name:<span style="color: red;"><b>*</b></span></label>
+              <input type="text" name="product_name" [(ngModel)]="product_name" required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+            <label>From Date</label>
+            <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+            <label>To Date</label>
+            <input type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+        </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+              <button class="btn btn-danger" (click)="getPlans()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+          </div>
+        </div>
+      <div class="card-text">
+        <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">{{'common.date' | translate}}</th>
+              <th style="text-align: left;">Plan No.</th>
+              <th style="text-align: left;">BOM Type</th>
+              <th style="text-align: left;">Product code</th>
+              <th style="text-align: left;">Product Name</th>
+              <th>Planned Qty</th>
+              <th>No. of Batches Planned</th>
+              <th>No. of Tailing Batches</th>
+              <!-- <th>No. of Fresh Batches</th> -->
+              <th>{{'common.status' | translate}}</th>
+              <th style="width:6rem;">{{'common.table.action' | translate}}</th>
+          </tr>
+          <tr *ngFor="let res of results;let i=index">
+            <td>{{i+1}}.</td>
+            <td style="text-align: left;">{{ res.entry_date | date: 'dd-MM-yyyy' }}</td>
+            <td style="text-align: left;">{{ res.plan_no }}</td>
+            <td style="text-align: left;">{{ res.bom_type }}</td>
+            <td style="text-align: left;">{{ res.product_code }}</td>
+            <td style="text-align: left;">{{ res.product_name }} {{ res.grade }}</td>
+            <td>{{ res.planned_qty }} {{ res.unit }}</td>
+            <td>{{ res.total_batches }}</td>
+            <td>{{ res.tailing_batches }}</td>
+            <!-- <td>{{ res.fresh_batches }}</td> -->
+            <td>{{ res.status }}</td>
+            <td style="width:15%;">
+                <button class="btn btn-sm btn-info" (click)="proceed(i)">Proceed</button>
+            </td>
+          </tr>
+          <tr *ngIf="results?.length==0">
+            <td colspan="10">No Record Found!</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+  </div>
+  
+  <div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Plan Details</div>
+        <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <table class="table table-border">
+          <tr>
+            <th style="text-align: left;">Plan No.</th>
+            <th style="text-align: left;">Plan Date</th>
+            <th style="text-align: left;">Product Name</th>
+            <th>Planned Qty</th>
+            <th>No. of Batches Planned</th>
+            <th *ngIf="selectedResult['tailing_batches']">No. of Tailing Batches</th>
+            <!-- <th>No. of Fresh Batches</th> -->
+            <th>{{'common.status' | translate}}</th>
+          </tr>
+          <tr>
+            <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+            <td style="text-align: left;">{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+            <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+            <td>{{ selectedResult['planned_qty'] }} {{ selectedResult['unit'] }}</td>
+            <td>{{ selectedResult['total_batches'] }}</td>
+            <td *ngIf="selectedResult['tailing_batches']">{{ selectedResult['tailing_batches'] }}</td>
+            <!-- <td>{{ selectedResult['fresh_batches'] }}</td> -->
+            <td>{{ selectedResult['status'] }}</td>
+          </tr>
+        </table>
+  
+        <form #batchPlan="ngForm">
+        <h3 *ngIf="selectedResult['bom_type']=='Fresh Batch'">Fresh Batches Details:</h3>
+        <table *ngIf="selectedResult['bom_type']=='Fresh Batch'" class="table table-border">
+          <tr>
+            <th>Select</th>
+            <th>BOM No.</th>
+            <th>BATCH/LOT No.</th>
+            <th>Expected Start Date</th>
+            <th>Expected Complete Date</th>
+            <th>Hard Copy BMR Issue</th>
+            <th>Issue By</th>
+            <th>Issue To</th>
+            <th>Issue Date</th>
+            <th>BMR Recieved By</th>
+            <th>BMR Recieved Date</th>
+            <!-- <th>{{'common.status' | translate}}</th> -->
+          </tr>
+          <tr *ngFor="let batch of selectedResult['batches1']; let i = index">
+            <td><input type="checkbox" name="checked" [(ngModel)]="selectedResult['batches1'][i].checked"></td>
+            <td>{{ batch.bmr_no }}</td>
+            <td>{{ batch.batch_no }}</td>
+            <td>{{ batch.expected_start_date }}</td>
+            <td>{{ batch.expected_end_date }}</td>
+            <td><button class="btn btn-sm">Recieve</button></td>
+            <td>{{ batch.issue_by }}</td>
+            <td>{{ batch.issue_to }}</td>
+            <td>{{ batch.issue_date }}</td>
+            <td><select name="issueby" [(ngModel)]="selectedResult['batches1'][i].bmr_received_by">
+              <option></option>    
+              <option *ngFor="let employee of production_employees" [value]="employee.firstname"> {{ employee.firstname }}</option>
+                         
+          </select>
+          </td>
+          <td><input type="date"  name="issue_date" [(ngModel)]="selectedResult['batches1'][i].bmr_received_on" ></td>
+            <!-- <td><button class="btn btn-sm btn-primary">Proceed for Production</button></td> -->
+          </tr>
+        </table>
+         </form>
+  
+        <h3 *ngIf="selectedResult['bom_type']=='Blending Batch'">Tailing Batches Details:</h3>
+        <table *ngIf="selectedResult['bom_type']=='Blending Batch'" class="table table-border">
+          <tr>
+            <th>Sr.</th>
+            <th>BATCH/LOT No.</th>
+            <th>Expected Output Qty ({{ selectedResult['unit'] }})</th>
+            <th>Expected Start Date</th>
+            <th>Expected Complete Date</th>
+            <th>Actual Start Date</th>
+            <th>Actual Complete Date</th>
+            <th>{{'common.status' | translate}}</th>
+          </tr>
+          <tr *ngFor="let batch of selectedResult['batches2']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ batch.bmr_no }}</td>
+            <td>TO BE ALLOCATED</td>
+            <td><input type="date" name="exp_start_date{{i}}" ngModel></td>
+            <td><input type="date" name="exp_end_date{{i}}" ngModel></td>
+            <td>NA</td>
+            <td>NA</td>
+            <td>{{ batch.status }}</td>
+          </tr>
+        </table>
+        <br>
+        <button  class="btn btn-primary"(click)="saveApprovedBatches(batchPlan)">{{'common.approve' | translate}}</button>
+        <br>
+      </div>
+    </div>
+  </div>

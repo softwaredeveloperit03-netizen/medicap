@@ -1,0 +1,146 @@
+﻿<div class="rmcust-wrap">
+  <header class="rmcust-header">
+    <h1 class="rmcust-title">Material Master — Form layout customisation</h1>
+    <div class="rmcust-header-actions">
+      <button type="button" class="btn-close" (click)="cancel()">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
+  </header>
+
+  <main class="rmcust-main">
+    <p class="gmp-form-hint">
+      Define <strong>labels</strong>, <strong>visibility</strong> (Applicable / Not Applicable), <strong>field type</strong> (Standard / Text / Checkbox — radios, no dropdown),
+      and <strong>priority</strong> (sort order within each row group). After approval, the layout applies to
+      <strong>Master → Material → New</strong>.
+    </p>
+
+    <form #f="ngForm" class="rmcust-form" (ngSubmit)="submit(f)">
+      <section class="gmp-add-field">
+        <h2 class="gmp-layout-section-title">Add more fields</h2>
+        <div class="gmp-add-field-row">
+          <input type="text" class="gmp-in-text" [(ngModel)]="customFieldKey" name="customFieldKey" placeholder="field_name (snake_case)" />
+          <input type="text" class="gmp-in-text" [(ngModel)]="customFieldLabel" name="customFieldLabel" placeholder="Field label" />
+          <select class="gmp-in-text" [(ngModel)]="customFieldGroup" name="customFieldGroup">
+            <option value="core">Core row</option>
+            <option value="full">Full width</option>
+            <option value="grid">Main grid</option>
+            <option value="other">Other information</option>
+          </select>
+          <select class="gmp-in-text" [(ngModel)]="customFieldType" name="customFieldType">
+            <option value="TEXT">Text input</option>
+            <option value="CHECKBOX">Checkbox</option>
+          </select>
+          <button type="button" class="btn-save gmp-btn-add" (click)="addCustomFieldRow()">Add field</button>
+        </div>
+      </section>
+
+      <ng-container *ngFor="let grp of layoutGroups">
+        <section class="gmp-layout-section" *ngIf="rowsForGroup(grp).length">
+          <h2 class="gmp-layout-section-title">
+            <span *ngIf="grp === 'core'">Core row</span>
+            <span *ngIf="grp === 'full'">Full width</span>
+            <span *ngIf="grp === 'grid'">Main grid</span>
+            <span *ngIf="grp === 'other'">Other information</span>
+          </h2>
+          <div class="gmp-table-card">
+            <table class="rmcust-table gmp-layout-table">
+              <thead>
+                <tr>
+                  <th class="gmp-th-pri">Priority</th>
+                  <th class="gmp-th-key">Field name</th>
+                  <th class="gmp-th-lab">Field label</th>
+                  <th class="gmp-th-app">Applicable?</th>
+                  <th class="gmp-th-type">Field type</th>
+                  <th class="gmp-th-act">{{'common.table.action' | translate}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of rowsForGroup(grp); trackBy: trackByKey">
+                  <td>
+                    <input
+                      type="number"
+                      class="gmp-in-num"
+                      [(ngModel)]="row.sort_order"
+                      [name]="'so-' + row.field_key"
+                      required
+                    />
+                  </td>
+                  <td><code class="gmp-code">{{ row.field_key }}</code></td>
+                  <td>
+                    <input
+                      type="text"
+                      class="gmp-in-text"
+                      [(ngModel)]="row.field_label"
+                      [name]="'lb-' + row.field_key"
+                      required
+                    />
+                  </td>
+                  <td>
+                    <div class="gmp-radio-row">
+                      <label class="gmp-radio">
+                        <input
+                          type="radio"
+                          [name]="'app-' + row.field_key"
+                          [checked]="row.applicable === 'Applicable'"
+                          (change)="setApplicable(row, 'Applicable')"
+                        />
+                        Applicable
+                      </label>
+                      <label class="gmp-radio">
+                        <input
+                          type="radio"
+                          [name]="'app-' + row.field_key"
+                          [checked]="row.applicable === 'Not Applicable'"
+                          (change)="setApplicable(row, 'Not Applicable')"
+                        />
+                        Not Applicable
+                      </label>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="gmp-radio-col">
+                      <label class="gmp-radio" *ngFor="let t of typeOptions">
+                        <input
+                          type="radio"
+                          [name]="'ft-' + row.field_key"
+                          [value]="t"
+                          [checked]="row.field_type === t"
+                          [disabled]="!row.allowTypeOverride && t !== 'STANDARD'"
+                          (change)="setFieldType(row, t)"
+                        />
+                        <span *ngIf="t === 'STANDARD'">Standard (native)</span>
+                        <span *ngIf="t === 'TEXT'">Text input</span>
+                        <span *ngIf="t === 'CHECKBOX'">Checkbox</span>
+                      </label>
+                    </div>
+                    <small class="gmp-locked" *ngIf="!row.allowTypeOverride">Type fixed (select / block)</small>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn-cancel gmp-btn-remove"
+                      *ngIf="!isDefaultRow(row)"
+                      (click)="removeCustomFieldRow(row)"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </ng-container>
+
+      <div class="rmcust-actions">
+        <button type="submit" class="btn-save">
+          <i class="fas fa-save"></i> Save &amp; Send for Approval
+        </button>
+        <button type="button" class="btn-cancel" (click)="cancel()">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </form>
+  </main>
+</div>

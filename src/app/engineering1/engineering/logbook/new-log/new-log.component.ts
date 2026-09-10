@@ -1,0 +1,16 @@
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-new-log',
+  templateUrl: './new-log.component.html',
+  styleUrls: ['./new-log.component.css']
+})
+export class NewLogComponent implements OnInit {
+  dept_report;
+  equip_report;
+  constructor() { }
+
+  ngOnInit(): void {
+  }
+
+}

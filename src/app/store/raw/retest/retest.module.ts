@@ -1,0 +1,42 @@
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { CalenderComponent } from './calender/calender.component';
+import { LogComponent } from './log/log.component';
+import { AwaitingComponent } from './awaiting/awaiting.component';
+import { RetestDetailComponent } from './retest-detail/retest-detail.component';
+import { ExpiredMaterialsComponent } from './expired-materials/expired-materials.component';
+import { FormsModule } from '@angular/forms';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { ClarityModule } from '@clr/angular';
+import { RouterModule, Routes } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+
+const routes: Routes = [
+  { path: '', component: DashboardComponent },
+  { path: 'awaiting', component: AwaitingComponent },
+  { path: 'calender', component: CalenderComponent },
+  { path: 'retest-detail', component: RetestDetailComponent },
+  { path: 'expired-materials', component: ExpiredMaterialsComponent },
+  { path: 'log', component: LogComponent },
+];
+
+@NgModule({
+  declarations: [
+    DashboardComponent,
+    CalenderComponent,
+    LogComponent,
+    AwaitingComponent,
+    RetestDetailComponent,
+    ExpiredMaterialsComponent,
+  ],
+  imports: [
+    SharedModule,
+    TranslateModule,
+    CommonModule,
+    FormsModule,
+    ClarityModule,
+    RouterModule.forChild(routes),
+  ],
+})
+export class RetestModule {}

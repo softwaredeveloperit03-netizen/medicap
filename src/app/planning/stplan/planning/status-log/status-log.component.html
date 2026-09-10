@@ -1,0 +1,169 @@
+<div class="card psl-page">
+  <div class="card-header psl-page-header">
+    <div class="psl-header-row">
+      <div class="psl-header-title">
+        <i class="fas fa-stream psl-title-icon"></i>
+        Planning Status Log
+      </div>
+      <div class="psl-header-actions">
+        <button type="button" class="btn btn-sm btn-outline" (click)="loadLog()" [disabled]="loading">
+          <span *ngIf="loading" class="spinner spinner-inline"></span>
+          Refresh
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <p class="psl-subtitle">
+      End-to-end trace: Receive FO/PO → Generated WO → WO Wise Shortage → Shortage Analysis → Confirm Indent → Purchase PO → Process Plan
+    </p>
+
+    <div class="psl-toolbar">
+      <div class="psl-search">
+        <label for="pslSearch">Search</label>
+        <input type="text" id="pslSearch" class="psl-search-input"
+          placeholder="Forecast, client, WO, material, indent, PO…"
+          [(ngModel)]="searchText"
+          (ngModelChange)="applyFilter()"
+          [disabled]="loading">
+      </div>
+      <div class="psl-filters">
+        <span class="psl-filter-label">Show:</span>
+        <button type="button" class="btn btn-sm"
+          [class.btn-primary]="stageFilter === 'all'"
+          [class.btn-outline]="stageFilter !== 'all'"
+          (click)="onStageChange('all')">All</button>
+        <button type="button" class="btn btn-sm"
+          [class.btn-primary]="stageFilter === 'shortage'"
+          [class.btn-outline]="stageFilter !== 'shortage'"
+          (click)="onStageChange('shortage')">With Shortage</button>
+        <button type="button" class="btn btn-sm"
+          [class.btn-primary]="stageFilter === 'indent'"
+          [class.btn-outline]="stageFilter !== 'indent'"
+          (click)="onStageChange('indent')">Indent Stage</button>
+        <button type="button" class="btn btn-sm"
+          [class.btn-primary]="stageFilter === 'plan'"
+          [class.btn-outline]="stageFilter !== 'plan'"
+          (click)="onStageChange('plan')">Plan Stage</button>
+      </div>
+      <div class="psl-count" *ngIf="!loading">
+        {{ visibleRows.length }} row(s)
+      </div>
+    </div>
+
+    <div class="psl-loading" *ngIf="loading">
+      <span class="spinner"></span>
+      <span>Loading planning status log…</span>
+    </div>
+
+    <div class="psl-empty" *ngIf="!loading && visibleRows.length === 0">
+      No planning records found for the selected filter.
+    </div>
+
+    <div class="psl-table-wrap" *ngIf="!loading && visibleRows.length > 0">
+      <table class="psl-table">
+        <thead>
+          <tr>
+            <th class="psl-col-sr">Sr</th>
+            <th>Forecast / FO</th>
+            <th>Client</th>
+            <th>Product</th>
+            <th>Bulk</th>
+            <th>WO No</th>
+            <th>Material</th>
+            <th>Type</th>
+            <th>FO/PO Receive</th>
+            <th>WO Generated</th>
+            <th>Analysis</th>
+            <th>Shortage</th>
+            <th>Shortage Status</th>
+            <th>Indent No</th>
+            <th>Indent Status</th>
+            <th>Purchase PO</th>
+            <th>PO Status</th>
+            <th>Stock Book</th>
+            <th>Plan Status</th>
+            <th>WO Status</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of visibleRows; let i = index; trackBy: trackByRow">
+            <td class="psl-col-sr">{{ i + 1 }}</td>
+            <td class="psl-cell-left">
+              <div class="psl-primary">{{ getForecastNo(row) }}</div>
+              <div class="psl-sub" *ngIf="row.fo_code && row.forecast_no">{{ row.fo_code }}</div>
+            </td>
+            <td class="psl-cell-left">
+              <div>{{ row.client_name || '—' }}</div>
+              <div class="psl-sub" *ngIf="row.client_code">({{ row.client_code }})</div>
+            </td>
+            <td class="psl-cell-left">
+              <div>{{ row.product_name || '—' }}</div>
+              <div class="psl-sub" *ngIf="row.product_code">{{ row.product_code }}</div>
+            </td>
+            <td>{{ row.bulk_code || '—' }}</td>
+            <td class="psl-wo">{{ row.workorder_no || '—' }}</td>
+            <td class="psl-cell-left">
+              <div>{{ row.material_name || '—' }}</div>
+              <div class="psl-sub">{{ row.material_code }}</div>
+            </td>
+            <td>{{ row.mat_type || '—' }}</td>
+            <td>
+              <span class="psl-badge psl-badge-neutral">{{ row.fo_receive_status || 'Pending' }}</span>
+              <div class="psl-date" *ngIf="row.fo_received_on">{{ formatDate(row.fo_received_on) }}</div>
+            </td>
+            <td>
+              <span class="psl-badge" [ngClass]="row.wo_gen_status === 'Generated' ? 'psl-badge-ok' : 'psl-badge-neutral'">
+                {{ row.wo_gen_status }}
+              </span>
+              <div class="psl-date" *ngIf="row.wo_gen_date">{{ formatDate(row.wo_gen_date) }}</div>
+            </td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('analysis', row.analysis_status)">
+                {{ row.analysis_status }}
+              </span>
+              <div class="psl-date" *ngIf="row.analysis_date">{{ formatDate(row.analysis_date) }}</div>
+            </td>
+            <td class="psl-qty" [class.psl-qty-short]="row.has_shortage">{{ row.shortage | number:'1.0-3' }}</td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('shortage', row.shortage_status)">
+                {{ row.shortage_status }}
+              </span>
+            </td>
+            <td>{{ row.indent_display_no || '—' }}</td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('indent', row.indent_workflow_status)">
+                {{ row.indent_workflow_status }}
+              </span>
+              <div class="psl-date" *ngIf="row.indent_raised_on">{{ formatDate(row.indent_raised_on) }}</div>
+            </td>
+            <td>{{ row.purchase_po_no || '—' }}</td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('po', row.purchase_po_status)">
+                {{ row.purchase_po_status }}
+              </span>
+            </td>
+            <td>
+              <span class="psl-badge psl-badge-neutral">{{ row.stock_book_status }}</span>
+            </td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('plan', row.plan_status)">
+                {{ row.plan_status }}
+              </span>
+              <div class="psl-date" *ngIf="row.line_booking_date">{{ formatDate(row.line_booking_date) }}</div>
+            </td>
+            <td>
+              <span class="psl-badge" [ngClass]="badgeClass('wo', row.wo_status)">
+                {{ row.wo_status || '—' }}
+              </span>
+            </td>
+            <td class="psl-cell-left psl-remark">{{ row.planning_indent_remark || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

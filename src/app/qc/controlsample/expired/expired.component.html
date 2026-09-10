@@ -1,0 +1,446 @@
+﻿<div class="container-fluid" *ngIf="!isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> Expired Control Sample </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/qc/controlsample" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+
+        <div class="clr-col-4">
+          <label><strong>Material Type: </strong></label>
+          <select name="material_type" [(ngModel)]="material_type" (change)="getControlsamples($event.target.value)" required>
+            <option> </option>
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+            <!-- <option>Finish Product</option> -->
+           </select>
+        </div>
+
+        <table class="table">
+          <tr>
+            <th style="width: 40px;">Sr.</th>
+            <th style="text-align: left;">Sample ID</th>
+            <th style="text-align: left;">Name of Product</th>
+            <th style="text-align: left;">Medicap Lot No</th>
+            <th style="text-align: left;">MFG Date</th>
+            <th style="text-align: left;">EXP Date</th>
+            <th style="text-align: left;">Sample Qty</th>
+            <th style="text-align: left;">Avl Qty</th>
+            <th style="text-align: left;">Expired</th>
+            <th style="text-align: left;">Destruction</th>
+          </tr>
+          <tr *ngFor="let entry of entries; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ entry.cs_id || 'NA' }}</td>
+            <td style="text-align: left;">{{ entry.material_name || 'NA' }}</td>
+            <td style="text-align: left;">{{ entry.batch_no || 'NA' }}</td>
+           <td style="text-align: left;">{{ formatExpDate(entry.mfg_date) }}</td>
+           <td style="text-align: left;">{{ formatExpDate(entry.exp_date) }}</td>
+           <td style="text-align: left;">{{ entry.sample_quantity || 'NA' }}</td>
+           <td style="text-align: left;">{{ entry.balance || 'NA' }}</td>
+            <td style="text-align: left;">
+              <span *ngIf="entry.expiry == 'true'" style="color: red; font-weight: bold;">{{ formatExpDate(entry.exp_date) }}</span>
+              <span *ngIf="entry.expiry != 'true'">{{ formatExpDate(entry.exp_date) }}</span>
+            </td>
+            <td style="text-align: left;">
+              <button style="background-color: blue; color:white" class="btn btn-sm btn-info" type="button" (click)="onDestroyed(i)">Destroy</button>
+            </td> 
+          </tr>
+          <tr *ngIf="entries?.length == 0">
+            <td colspan="6" style="text-align: center;">{{'common.noRecords' | translate}}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="getprint()">{{'common.download' | translate}}</button>&nbsp;
+      <!-- <button class="btn btn-danger" (click)="close()">{{'common.close' | translate}}</button> -->
+    </div>
+  </div>
+</div>
+
+
+
+  
+
+
+
+
+<div class="container-fluid" *ngIf="!isDestroyed && !isView && isNew">
+  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+    <div class="card">
+      <div class="card-header">Destruction</div>
+      <div class="card-block">
+        <div class="card-text">
+              <form #distruction="ngForm">
+                  <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Reason: </strong></label>
+                      <input type="text" name="reason" ngModel required>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label *ngIf="material_type == 'Finish Product'"><strong>Product Name: </strong></label>
+                      <label *ngIf="material_type !== 'Finish Product'"><strong>Material Name: </strong></label>
+                      <input type="text" name="product_name" [(ngModel)]="selectedResult['material_name']" readonly>
+                    </div>
+      
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Medicap Lot No: </strong></label>
+                      <input type="text" name="batch_no" readonly [(ngModel)]="selectedResult['batch_no']">
+                    </div>
+      
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Quantity to Destroy:</strong></label>
+                      <input type="text" name="quantity" ngModel>
+                    </div>
+      
+          
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                      <label><strong>Destroyed By Employee: </strong></label>
+                      <select name="request_by_employee" [(ngModel)]="request_by_employee" required>
+                        <option disabled> </option>
+                        <option *ngFor="let emp of employee">{{ emp.firstname }}</option>
+                      </select>
+                    </div>
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Add Distruction Steps:</strong> </label>
+                    <table class="table" style="margin-top: 0px;">
+                        <tr>
+                            <th style="width: 90%;">Steps</th>
+                            <th>Add</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0px;">
+                                <input type="text" style="margin: 0px; height: 33px;" name="step_name" [(ngModel)]="step_name">
+                            </td>
+                            <td style="padding: 0px;vertical-align: middle;">
+                                <button class="btn btn-sm btn-info" (click)="addSteps()">{{'common.add' | translate}}</button>
+                            </td>
+                        </tr>
+                        <tr *ngFor="let step of steps; let i = index">
+                            <td>{{ step.step_name }}</td>
+                            <td><clr-icon shape="trash" class="is-error" (click)="deleteSteps(i)"></clr-icon></td>
+                        </tr>
+                    </table>
+                    <br>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Equipment Used For Distruction:</strong></label>
+                    <input type="text" name="equipment" ngModel>
+                  </div>
+    
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Distruction Location:</strong></label>
+                    <input type="text" name="distruction_loc" ngModel>
+                  </div>
+                </div>
+              </form>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn btn-primary" type="button" (click)="saveForm(distruction)" [disabled]="distruction.form.invalid">{{'common.submit' | translate}}</button>
+        <button class="btn btn-danger" type="button" (click)="isNew = false; isDestruction = false; getControlsamples(material_type)">{{'common.close' | translate}}</button>
+    </div>
+    </div>
+
+
+
+
+    <!-- <div class="container-fluid" *ngIf="destructionForm">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card">
+          <div class="card-header">Distruction Form </div>
+          <div class="card-block">
+            <div class="card-text">
+              <form #distruction="ngForm">
+                <div class="clr-row">
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Product Name: </strong></label>
+                    <select name="product_name"  (change)="getBatch()" [(ngModel)]="product_name" required>
+                      <option disabled></option>
+                      <option *ngFor="let product of sample_product">{{ product.material_name }}</option>
+                    </select>
+                  </div>
+    
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Medicap Lot No: </strong></label>
+                    <select name="batch_no"  [(ngModel)]="batch_no" required>
+                      <option disabled></option>
+                      <option *ngFor="let No of batch">{{ No.batch_no }}</option>
+                    </select>
+                  </div>
+    
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Quantity to Destroy:</strong></label>
+                    <input type="text" name="quantity" ngModel>
+                  </div>
+    
+        
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Destroyed By Employee: </strong></label>
+                    <select name="request_by_employee" [(ngModel)]="request_by_employee" required>
+                      <option disabled> </option>
+                      <option *ngFor="let emp of employee">{{ emp.firstname }}</option>
+                    </select>
+                  </div>
+    
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Add Distruction Steps:</strong> </label>
+                    <table class="table" style="margin-top: 0px;">
+                        <tr>
+                            <th style="width: 90%;">Steps</th>
+                            <th>Add</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0px;">
+                                <input type="text" style="margin: 0px; height: 33px;" name="step_name" [(ngModel)]="step_name">
+                            </td>
+                            <td style="padding: 0px;vertical-align: middle;">
+                                <button class="btn btn-sm btn-info" (click)="addSteps()">{{'common.add' | translate}}</button>
+                            </td>
+                        </tr>
+                        <tr *ngFor="let step of steps; let i = index">
+                            <td>{{ step }}</td>
+                            <td><clr-icon shape="trash" class="is-error" (click)="deleteSteps(i)"></clr-icon></td>
+                        </tr>
+                    </table>
+                </div>
+                <br> <br>
+    
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Equipment Used For Distruction:</strong></label>
+                    <input type="text" name="equipment" ngModel>
+                  </div>
+    
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Distruction Location:</strong></label>
+                    <input type="text" name="distruction_loc" ngModel>
+                  </div>
+    
+                </div>
+              </form>
+            </div>
+          </div>
+    
+          <div class="card-footer">
+              <button class="btn btn-primary" (click)="saveForm(distruction)" [disabled]="distruction.form.invalid">{{'common.submit' | translate}}</button>
+              <button class="btn btn-danger" (click)="isNew = false && getControlsamples()">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+  
+  
+    
+        <div class="card">
+          <div class="card-header">Distruction Records</div>
+          <div class="card-block">
+            <div class="card-text">
+              <clr-datagrid>
+                <clr-dg-column>Sr</clr-dg-column>
+                <clr-dg-column>Control Sample ID</clr-dg-column>
+                <clr-dg-column>Product Name</clr-dg-column>
+                <clr-dg-column>Medicap Lot No</clr-dg-column>
+                <clr-dg-column>Destroyed Quantity</clr-dg-column>
+                <clr-dg-column>Department Name</clr-dg-column>
+                <clr-dg-column>Destroyed By Employee</clr-dg-column>
+                <clr-dg-column>Equipment</clr-dg-column>
+                <clr-dg-column>Distruction Location</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column style="text-align: left;">View</clr-dg-column>
+    
+                <clr-dg-row *ngFor="let item of dist_entries; let i = index">
+                  <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.cs_id}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.product_name}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.batch_no}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.quantity}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.department_name}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.request_by_employee}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.equipment}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.distruction_loc}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.action}}</clr-dg-cell>
+                  <clr-dg-cell>
+                    <button class="btn btn-sm btn-info" (click)="viewEntry(i)">{{'common.view' | translate}}</button>
+                  </clr-dg-cell>
+                  </clr-dg-row>
+              </clr-datagrid>
+    
+            </div>
+          </div>
+          <div class="card-footer">
+          <button class="btn btn-danger" (click)="close()">{{'common.close' | translate}}</button>
+        </div>
+        </div>
+      </div>
+    </div> -->
+    
+
+
+
+
+
+
+
+
+
+<!--     
+
+    <div class="card">
+      <div class="card-header">Distruction Records</div>
+      <div class="card-block">
+        <div class="card-text">
+          <clr-datagrid>
+            <clr-dg-column>Sr</clr-dg-column>
+            <clr-dg-column>Control Sample ID</clr-dg-column>
+            <clr-dg-column>Product Name</clr-dg-column>
+            <clr-dg-column>Medicap Lot No</clr-dg-column>
+            <clr-dg-column>Destroyed Quantity</clr-dg-column>
+            <clr-dg-column>Department Name</clr-dg-column>
+            <clr-dg-column>Destroyed By Employee</clr-dg-column>
+            <clr-dg-column>Equipment</clr-dg-column>
+            <clr-dg-column>Distruction Location</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column style="text-align: left;">View</clr-dg-column>
+
+            <clr-dg-row *ngFor="let item of dist_entries; let i = index">
+              <clr-dg-cell>{{i+1}}</clr-dg-cell>
+              <clr-dg-cell>{{item.cs_id}}</clr-dg-cell>
+              <clr-dg-cell>{{item.product_name}}</clr-dg-cell>
+              <clr-dg-cell>{{item.batch_no}}</clr-dg-cell>
+              <clr-dg-cell>{{item.quantity}}</clr-dg-cell>
+              <clr-dg-cell>{{item.department_name}}</clr-dg-cell>
+              <clr-dg-cell>{{item.request_by_employee}}</clr-dg-cell>
+              <clr-dg-cell>{{item.equipment}}</clr-dg-cell>
+              <clr-dg-cell>{{item.distruction_loc}}</clr-dg-cell>
+              <clr-dg-cell>{{item.action}}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="viewEntry(i)">{{'common.view' | translate}}</button>
+              </clr-dg-cell>
+              </clr-dg-row>
+          </clr-datagrid>
+
+        </div>
+      </div>
+      <div class="card-footer">
+      <button class="btn btn-danger" (click)="close()">{{'common.close' | translate}}</button>
+    </div>
+    </div>
+  </div>
+</div>
+ -->
+
+
+
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+      <div class="card-header">Distruction Record View</div>
+      <div class="card-block">
+          <div class="card-text">
+              <table class="table">
+                <tr>
+                  <td style="text-align: left;width: 20%;">Control Sample ID:</td>
+                  <td style="text-align: left;">{{ selectedEntry['cs_id'] }}</td>
+                </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;">Product Name:</td>
+                    <td style="text-align: left;">{{ selectedEntry['product_name'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;">Medicap Lot No:</td>
+                    <td style="text-align: left;">{{ selectedEntry['batch_no'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;">Destroyed Quantity:</td>
+                    <td style="text-align: left;">{{ selectedEntry['quantity'] }}</td>
+                 </tr>
+                  <tr>
+                      <td style="text-align: left;width: 20%;">Department Name:</td>
+                      <td style="text-align: left;">{{ selectedEntry['department_name'] }}</td>
+                  </tr>
+                  <tr>
+                      <td style="text-align: left;width: 20%;">Destroyed By Employee:</td>
+                      <td style="text-align: left;">{{ selectedEntry['request_by_employee'] }}</td>
+                  </tr>
+
+                  <tr>
+                      <td style="text-align: left;width: 20%;">Equipment:</td>
+                      <td style="text-align: left;">{{ selectedEntry['equipment'] }}</td>
+                  </tr>
+                  <tr>
+                      <td style="text-align: left;width: 20%;">Distruction Location:</td>
+                      <td style="text-align: left;">{{ selectedEntry['distruction_loc'] }}</td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;width: 20%;">Status:</td>
+                    <td style="text-align: left;">{{ selectedEntry['action'] }}</td>
+                  </tr>
+              </table>
+              <br>
+              <clr-datagrid>
+                <clr-dg-column style="width: 150px;"><strong>Distruction ID</strong> </clr-dg-column>
+                <clr-dg-column> <strong>Steps For Distruction</strong></clr-dg-column>
+
+                <clr-dg-row *ngFor="let item of selectedEntry['steps']; let i = index">
+                  <clr-dg-cell>{{item.distruction_id}}</clr-dg-cell>
+                  <clr-dg-cell>{{item.step_name}}</clr-dg-cell>
+                  </clr-dg-row>
+              </clr-datagrid>
+          </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" *ngIf="isChecker && selectedEntry['action'] == 'pending'" (click)="updateDistruction('Inprocess')">{{'common.check' | translate}}</button>
+        <button class="btn btn-primary" *ngIf="isApprover && selectedEntry['action'] == 'Inprocess'" (click)="updateDistruction('Destroyed')">Destroy</button>
+        <button class="btn btn-primary" *ngIf="isApprover && selectedEntry['action'] == 'Inprocess'" (click)="updateDistruction('Reject')">{{'common.reject' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+  </div>
+</div>
+
+
+<div class="card" *ngIf="isDestroyed && !isView">
+  <div class="card-header">Distruction Records</div>
+  <div class="card-block">
+    <div class="card-text">
+      <clr-datagrid>
+        <clr-dg-column>Sr</clr-dg-column>
+        <clr-dg-column>Control Sample ID</clr-dg-column>
+        <clr-dg-column>Product Name</clr-dg-column>
+        <clr-dg-column>Medicap Lot No</clr-dg-column>
+        <clr-dg-column>Destroyed Quantity</clr-dg-column>
+        <clr-dg-column>Department Name</clr-dg-column>
+        <clr-dg-column>Destroyed By Employee</clr-dg-column>
+        <clr-dg-column>Equipment</clr-dg-column>
+        <clr-dg-column>Distruction Location</clr-dg-column>
+        <clr-dg-column style="text-align: left;">View</clr-dg-column>
+
+        <clr-dg-row *ngFor="let item of dist_entries; let i = index">
+          <clr-dg-cell>{{i+1}}</clr-dg-cell>
+          <clr-dg-cell>{{item.cs_id}}</clr-dg-cell>
+          <clr-dg-cell>{{item.product_name}}</clr-dg-cell>
+          <clr-dg-cell>{{item.batch_no}}</clr-dg-cell>
+          <clr-dg-cell>{{item.quantity}}</clr-dg-cell>
+          <clr-dg-cell>{{item.department_name}}</clr-dg-cell>
+          <clr-dg-cell>{{item.request_by_employee}}</clr-dg-cell>
+          <clr-dg-cell>{{item.equipment}}</clr-dg-cell>
+          <clr-dg-cell>{{item.distruction_loc}}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewEntry(i)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+          </clr-dg-row>
+      </clr-datagrid>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="close()">{{'common.close' | translate}}</button>
+</div>
+</div>

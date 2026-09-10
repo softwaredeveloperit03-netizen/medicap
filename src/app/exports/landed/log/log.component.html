@@ -1,0 +1,505 @@
+<div class="container-fluid">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+            Complete Log (All Components Data)
+          </div>
+          <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+           
+            <button class="btn btn-sm" routerLink="/Exports/landed" style="background-color: red; color: white;">
+              CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row" style="margin-bottom: 15px;">
+            <div class="clr-col-lg-12" style="text-align: right;">
+              <button class="btn btn-sm btn-info" (click)="refresh()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+          </div>
+  
+          <div class="datagrid-wrapper">
+            <clr-datagrid [clrDgLoading]="loading" >
+              <clr-dg-column>Sr. No</clr-dg-column>
+              <clr-dg-column>PO No</clr-dg-column>
+              <clr-dg-column>Packaging Slip</clr-dg-column>
+              <clr-dg-column>Receiving no</clr-dg-column>
+              <clr-dg-column>Item Code</clr-dg-column>
+              <clr-dg-column>Item Description</clr-dg-column>
+              <clr-dg-column>{{'common.quantity' | translate}}</clr-dg-column>
+              <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+              <clr-dg-column>Download Excel</clr-dg-column>
+
+              <clr-dg-row *clrDgItems="let record of importData; let i = index" [clrDgItem]="record">
+                <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.po_no || 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.challan_no || 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.grn_no || 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.item_code || record.material_code || 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.item_description || record.material_name || 'N/A' }}</clr-dg-cell>
+                <clr-dg-cell>{{ record.quantity || record.qty || 0 }}</clr-dg-cell>
+                <clr-dg-cell>
+                  <button type="button" class="btn btn-sm btn-info" (click)="view(i)" title="View Complete Log">
+                    <i class="fas fa-eye"></i> View Log
+                  </button>
+                </clr-dg-cell>
+                <clr-dg-cell>
+                  <button type="button" class="btn btn-sm btn-success" (click)="downloadExcelForRecord(record)" title="Download Excel">
+                    <i class="fas fa-file-excel"></i> Download Excel
+                  </button>
+                </clr-dg-cell>
+              </clr-dg-row>
+  
+              <clr-dg-footer>
+                <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                  <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                  {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                  of {{ pagination.totalItems }} records
+                </clr-dg-pagination>
+              </clr-dg-footer>
+            </clr-datagrid>
+          </div>
+  
+          <div *ngIf="importData.length === 0 && !loading" style="text-align: center; padding: 20px;">
+            <p>No records found</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- View Complete Log Modal -->
+  <clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+    <h3 class="modal-title">Complete Log - All Components Data</h3>
+    <div class="modal-body" *ngIf="selectedRecord" style="max-height: 70vh; overflow-y: auto;">
+      
+      <!-- Basic Information -->
+      <div class="section-header">
+        <h4>Basic Information</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>PO No:</label>
+          <input type="text" [value]="getValue(selectedRecord.po_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Packaging Slip:</label>
+          <input type="text" [value]="getValue(selectedRecord.challan_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Receiving no:</label>
+          <input type="text" [value]="getValue(selectedRecord.grn_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Item Code:</label>
+          <input type="text" [value]="getValue(selectedRecord.item_code || selectedRecord.material_code)" readonly>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Item Description:</label>
+          <input type="text" [value]="getValue(selectedRecord.item_description || selectedRecord.material_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Quantity:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.quantity || selectedRecord.qty)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>UOM:</label>
+          <input type="text" [value]="getValue(selectedRecord.uom || selectedRecord.unit)" readonly>
+        </div>
+      </div>
+
+      <!-- Import Details -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Import Details</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.grn_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Supplier Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.supplier_name || selectedRecord.import_supplier_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Invoice Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.inv_date || selectedRecord.invDate)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Invoice No:</label>
+          <input type="text" [value]="getValue(selectedRecord.inv_no || selectedRecord.invNo)" readonly>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Basic Invoice Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.basic_invoice_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Invoice Value in RS:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.inv_value_in_rs)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Port of Loading:</label>
+          <input type="text" [value]="getValue(selectedRecord.port_of_loading)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Port of Discharge:</label>
+          <input type="text" [value]="getValue(selectedRecord.port_of_discharge)" readonly>
+        </div>
+      </div>
+
+      <!-- International Logistics -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>International Logistics</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Ocean/Air Freight Amount:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.ocean_air_freight_amount)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Insurance Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.insurance_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Miscellaneous Charge:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.miscellaneous_charge)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>CIF Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cif_value)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Customs Import -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Customs Import</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Assessable Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.assessable_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>BCD Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.bcd_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>SWS Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.sws_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Duty Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_duty_value)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>GST Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.gst_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Paid Custom Duty:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_paid_custom_duty)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Agency Bills -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Agency Bills</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Agency Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Agency Bill No:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_bill_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bill Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.bill_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bill Amount:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.bill_amount)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>GST %:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.agency_gst_percent)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>CIF Term Amount with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cif_term_amount_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- CFS -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>CFS (Container Freight Station)</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>CFS Agency Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.cfs_agency_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bill Count:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cfs_bill_count)" readonly step="1">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bill Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.cfs_bill_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Bill Amount:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cfs_total_bill_amount)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>GST %:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cfs_gst_percent)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>CIF Term Amount with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cfs_cif_term_amount_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Freight Forwarder -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Freight Forwarder</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Forwarder Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.forwarder_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Forwarder Inv Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.forwarder_inv_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Forwarder Inv No:</label>
+          <input type="text" [value]="getValue(selectedRecord.forwarder_inv_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Origin Charges:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.origin_charges)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Ocean Freight:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.ocean_freight)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Destination Charges:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.destination_charges)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Forwarder Amount:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_forwarder_amount)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Destination Clearing -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Destination Clearing (CHA)</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>CHA Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.cha_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Inv Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.destination_clearing_inv_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Inv No:</label>
+          <input type="text" [value]="getValue(selectedRecord.destination_clearing_inv_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>CHA/Clearing Agent Fees:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.cha_clearing_agent_fees)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Document Fee:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.document_fee)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Loading and Unloading:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.loading_and_unloading)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Stamp Duty:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.stamp_duty)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total CHA with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_cha_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Transport -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Transport</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Transport Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.transport_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Transport Bill No:</label>
+          <input type="text" [value]="getValue(selectedRecord.transport_bill_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Transport Bill Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.transport_bill_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Inland Transportation:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.inland_transportation)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Unloading Charges:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.unloading_charges)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Transport Amount with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_transport_amount_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Payment Bank -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Payment Bank</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Ref Document No:</label>
+          <input type="text" [value]="getValue(selectedRecord.ref_document_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bank Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.payment_bank_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Paid Amount:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.paid_amount)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Paid Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.paid_date)" readonly>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Total Paid With GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_paid_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Warehousing -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Warehousing</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Agency Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.warehousing_agency_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Agency Bill No:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_bill_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Agency Bill Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_bill_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Bill Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.bill_value)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Total Warehouse Amount with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_warehouse_amount_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Inhand -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Inhand</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Agency Name:</label>
+          <input type="text" [value]="getValue(selectedRecord.inhand_agency_name)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Agency Bill No:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_bill_no)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Agency Bill Date:</label>
+          <input type="text" [value]="getValue(selectedRecord.agency_bill_date)" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Inspection / Survey Fees:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.inspection_survey_fees)" readonly step="0.01">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-3">
+          <label>Total Amount with GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.total_amount_with_gst)" readonly step="0.01">
+        </div>
+      </div>
+
+      <!-- Final Calculations -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Final Calculations (Auto-calculated)</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-4">
+          <label>Total Basic Value:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.calculated_total_basic_value)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Total GST:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.calculated_total_gst)" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Landed Cost Per Unit:</label>
+          <input type="number" [value]="getNumberValue(selectedRecord.calculated_landed_cost_per_unit)" readonly step="0.01">
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" (click)="downloadViewLogExcel()" [disabled]="!selectedRecord">
+        <i class="fas fa-file-excel"></i> Download Excel
+      </button>
+      <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+    </div>
+  </clr-modal>

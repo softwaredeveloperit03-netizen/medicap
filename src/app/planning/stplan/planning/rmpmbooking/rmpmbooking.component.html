@@ -1,0 +1,186 @@
+<p>rmpmbooking works!</p>
+<div class="card">
+  <div class="card-header" style="text-align: center; background-color: #007cbb; color: white;">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        <h4 style="margin: 0;">RM/PM Booked Stock</h4>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="goBack()">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card-block">
+    <!-- Summary Cards -->
+    <div class="clr-row" style="margin-bottom: 20px;">
+      <div class="clr-col-lg-4">
+        <div class="card summary-card" style="background-color: #e8f4f8; border-left: 4px solid #007cbb;">
+          <div class="card-block">
+            <h6 style="margin: 0; color: #666;">Total Work Orders</h6>
+            <h3 style="margin: 5px 0 0 0; color: #007cbb;">{{ totalWorkOrders }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="clr-col-lg-4">
+        <div class="card summary-card" style="background-color: #fff3e0; border-left: 4px solid #ff9800;">
+          <div class="card-block">
+            <h6 style="margin: 0; color: #666;">Total Booked RM</h6>
+            <h3 style="margin: 5px 0 0 0; color: #ff9800;">{{ totalBookedRM | number:'1.2-2' }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="clr-col-lg-4">
+        <div class="card summary-card" style="background-color: #f3e5f5; border-left: 4px solid #9c27b0;">
+          <div class="card-block">
+            <h6 style="margin: 0; color: #666;">Total Booked PM</h6>
+            <h3 style="margin: 5px 0 0 0; color: #9c27b0;">{{ totalBookedPM | number:'1.2-2' }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header" style="background-color: #f5f5f5;">
+        <h5 style="margin: 0;">Filters</h5>
+      </div>
+      <div class="card-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-3">
+            <label>Material Type:</label>
+            <select class="form-control" [(ngModel)]="materialTypeFilter" (change)="applyFilters()">
+              <option value="All">All (RM & PM)</option>
+              <option value="RM">Raw Material Only</option>
+              <option value="PM">Packing Material Only</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Work Order No:</label>
+            <input type="text" class="form-control" [(ngModel)]="workOrderFilter" 
+                   (input)="applyFilters()" placeholder="Search work order...">
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Material Code:</label>
+            <input type="text" class="form-control" [(ngModel)]="materialCodeFilter" 
+                   (input)="applyFilters()" placeholder="Search material code...">
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Material Name:</label>
+            <input type="text" class="form-control" [(ngModel)]="materialNameFilter" 
+                   (input)="applyFilters()" placeholder="Search material name...">
+          </div>
+        </div>
+        <div class="clr-row" style="margin-top: 10px;">
+          <div class="clr-col-lg-12" style="text-align: right;">
+            <button class="btn btn-sm btn-secondary" (click)="clearFilters()">Clear Filters</button>
+            <button class="btn btn-sm btn-primary" (click)="refresh()" [disabled]="loading">
+              <span *ngIf="loading">Loading...</span>
+              <span *ngIf="!loading">Refresh</span>
+            </button>
+            <button class="btn btn-sm btn-success" (click)="exportToExcel()">Export Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Booked Stock Table -->
+    <div class="card">
+      <div class="card-header" style="background-color: #f5f5f5;">
+        <h5 style="margin: 0;">Booked Stock Details</h5>
+      </div>
+      <div class="card-block">
+        <div *ngIf="loading" class="text-center" style="padding: 20px;">
+          <span class="spinner spinner-lg"></span>
+          <p>Loading booked stock data...</p>
+        </div>
+        
+        <div *ngIf="!loading">
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover" style="font-size: 12px;">
+              <thead style="background-color: #007cbb; color: white;">
+                <tr>
+                  <th>Sr. No.</th>
+                  <th>Work Order No</th>
+                  <th>Product Code</th>
+                  <th>Product Name</th>
+                  <th>Material Type</th>
+                  <th>Material Code</th>
+                  <th>Material Name</th>
+                  <th>Material Grade</th>
+                  <th>Required Qty</th>
+                  <th>Booked Qty</th>
+                  <th>Unit</th>
+                  <th>Available Stock</th>
+                  <th>Shortage</th>
+                  <th>Status</th>
+                  <th>Booking Date</th>
+                  <th>Booked By</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of filteredData; let i = index" 
+                    [style.background-color]="(item.material_type === 'Raw Material' || item.mat_type === 'RM') ? '#fff3e0' : '#f3e5f5'">
+                  <td>{{ i + 1 }}</td>
+                  <td><strong>{{ item.workorder_no || '-' }}</strong></td>
+                  <td>{{ item.product_code || '-' }}</td>
+                  <td style="text-align: left;">{{ item.product_name || '-' }}</td>
+                  <td>
+                    <span *ngIf="item.material_type === 'Raw Material' || item.mat_type === 'RM'" 
+                          class="badge badge-info">RM</span>
+                    <span *ngIf="item.material_type === 'Packing Material' || item.mat_type === 'PM'" 
+                          class="badge badge-warning">PM</span>
+                    <span *ngIf="!item.material_type && !item.mat_type">-</span>
+                  </td>
+                  <td>{{ item.material_code || '-' }}</td>
+                  <td style="text-align: left;">{{ item.material_name || '-' }}</td>
+                  <td>{{ item.grade || item.m_grade || '-' }}</td>
+                  <td style="text-align: right;">{{ item.required_qty || item.plan_qty || '0' | number:'1.2-2' }}</td>
+                  <td style="text-align: right; font-weight: bold; color: #007cbb;">
+                    {{ item.booked_qty || item.deducted_from_RM || item.deducted_from_MC || '0' | number:'1.2-2' }}
+                  </td>
+                  <td>{{ item.unit || '-' }}</td>
+                  <td style="text-align: right;">
+                    <span [style.color]="(item.available_stock || 0) > 0 ? 'green' : 'red'">
+                      {{ item.available_stock || item.avbl_stock || '0' | number:'1.2-2' }}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <span *ngIf="(item.shortage || 0) > 0" style="color: red; font-weight: bold;">
+                      {{ item.shortage | number:'1.2-2' }}
+                    </span>
+                    <span *ngIf="(item.shortage || 0) === 0" style="color: green;">0</span>
+                  </td>
+                  <td>
+                    <span *ngIf="item.qty_status === 'Booked'" class="badge badge-success">Booked</span>
+                    <span *ngIf="item.status === 'CAN_PLAN'" class="badge badge-info">Can Plan</span>
+                    <span *ngIf="item.status === 'CANNOT_PLAN'" class="badge badge-danger">Cannot Plan</span>
+                    <span *ngIf="!item.qty_status && !item.status" class="badge badge-secondary">Pending</span>
+                  </td>
+                  <td>{{ item.entry_date ? (item.entry_date | date: 'dd-MM-yyyy') : '-' }}</td>
+                  <td>{{ item.entry_by || item.booked_by || '-' }}</td>
+                </tr>
+                <tr *ngIf="filteredData.length === 0">
+                  <td colspan="16" class="text-center" style="padding: 20px;">
+                    <strong>No booked stock records found</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="clr-row" style="margin-top: 15px;">
+            <div class="clr-col-lg-12">
+              <p style="margin: 0; color: #666;">
+                <strong>Total Records:</strong> {{ filteredData.length }} 
+                <span style="margin-left: 20px;">
+                  <strong>Showing:</strong> {{ filteredData.length }} of {{ bookedStockData.length }}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

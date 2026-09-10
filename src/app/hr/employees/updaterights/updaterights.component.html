@@ -1,0 +1,158 @@
+﻿<div class="card">
+  <div class="card-header update-rights-card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-3" style="color: aliceblue; margin-top: -2px; text-align: left;">Update User Rights</div>
+      <div class="clr-col-lg-9" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/hr/user" style="color: white; border: 1px solid red;">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="filter-header-panel">
+      <div class="filter-item">
+        <label class="filter-label"><strong>Select Department</strong></label>
+        <select name="search_department" [(ngModel)]="search_department" (change)="getRights()" class="form-control filter-select">
+          <option value="ALL EMP">ALL EMP</option>
+          <option *ngFor="let dept of departments" [value]="dept.department_name">{{ dept.department_name }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="datagrid-wrapper">
+      <clr-datagrid>
+        <clr-dg-column>Emp Id</clr-dg-column>
+        <clr-dg-column>{{'common.name' | translate}}</clr-dg-column>
+        <clr-dg-column>Position</clr-dg-column>
+        <clr-dg-column>Rights Department</clr-dg-column>
+        <clr-dg-column>User Rights</clr-dg-column>
+        <clr-dg-column>View/Change</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of results; trackBy: trackByEmpId" [clrDgItem]="user">
+          <clr-dg-cell>{{ user.emp_id }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.firstname }} {{ user.lastname }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.designation || user.department || 'N/A' }}</clr-dg-cell>
+          <clr-dg-cell>{{ rightsDepartmentLabel(user) }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.isuser || 'No' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-primary" type="button" (click)="viewChangeRights(user)" title="View and Change User Rights">
+              View/Change
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-placeholder>No data available</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<!-- View/Change User Rights Modal -->
+<clr-modal [(clrModalOpen)]="isViewChange" clrModalSize="lg">
+  <h3 class="modal-title view-change-title">View / Change User Rights</h3>
+  <div class="modal-body view-change-modal-body" *ngIf="selectedEmployeeForViewChange">
+    <div class="employee-info-grid">
+      <div class="info-card">
+        <span class="info-label">Employee Name</span>
+        <span class="info-value">{{ selectedEmployeeForViewChange.firstname }} {{ selectedEmployeeForViewChange.lastname }}</span>
+      </div>
+      <div class="info-card">
+        <span class="info-label">Employee ID</span>
+        <span class="info-value">{{ selectedEmployeeForViewChange.emp_id }}</span>
+      </div>
+      <div class="info-card">
+        <span class="info-label">Primary Department</span>
+        <span class="info-value">{{ selectedEmployeeForViewChange.department || 'N/A' }}</span>
+      </div>
+      <div class="info-card">
+        <span class="info-label">Rights Department (editing)</span>
+        <span class="info-value">{{ rightsDepartmentLabel(selectedResult) }}</span>
+      </div>
+      <div class="info-card">
+        <span class="info-label">Position</span>
+        <span class="info-value">{{ selectedEmployeeForViewChange.designation || 'N/A' }}</span>
+      </div>
+    </div>
+
+    <form #rightForm="ngForm" class="rights-form">
+      <h5 class="subsection-title">Assign Rights</h5>
+      <div class="rights-grid">
+        <div class="rights-field">
+          <label for="isuser">User Rights</label>
+          <select id="isuser" name="isuser" [(ngModel)]="selectedResult.isuser" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="ischecker">Checker Rights</label>
+          <select id="ischecker" name="ischecker" [(ngModel)]="selectedResult.ischecker" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="isapprover">Approver Rights</label>
+          <select id="isapprover" name="isapprover" [(ngModel)]="selectedResult.isapprover" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="qms_approver">QMS Approver</label>
+          <select id="qms_approver" name="qms_approver" [(ngModel)]="selectedResult.qms_approver" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="isauditor">Auditor</label>
+          <select id="isauditor" name="isauditor" [(ngModel)]="selectedResult.isauditor" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="dept_head">Dept Head</label>
+          <select id="dept_head" name="dept_head" [(ngModel)]="selectedResult.dept_head" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="trainig_cordinator">Training Coordinator</label>
+          <select id="trainig_cordinator" name="trainig_cordinator" [(ngModel)]="selectedResult.trainig_cordinator" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="shift_allocator">Shift Management</label>
+          <select id="shift_allocator" name="shift_allocator" [(ngModel)]="selectedResult.shift_allocator" class="rights-select" required>
+            <option value="No">No</option>
+            <option value="Allocator">Allocator</option>
+            <option value="Reviewer">Reviewer</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+
+        <div class="rights-field">
+          <label for="task_assigner">Task Assigner</label>
+          <select id="task_assigner" name="task_assigner" [(ngModel)]="selectedResult.task_assigner" class="rights-select" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer view-change-modal-footer">
+    <button type="button" class="btn btn-primary btn-save-change" (click)="updateRightsFromModal()">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-outline btn-cancel-change" (click)="closeViewChangeModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>

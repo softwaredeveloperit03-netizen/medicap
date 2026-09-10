@@ -1,0 +1,142 @@
+<div class="card compact-card material-log-page recv-page">
+  <header class="card-header compact-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Receiving of Material Log</h2>
+    <button type="button" class="btn btn-danger btn-micro mef-panel-header__close" routerLink="/store/raw/receiving">
+      {{ 'common.close' | translate }}
+    </button>
+  </header>
+
+  <div class="card-block compact-body">
+    <div class="card-text">
+      <div class="toolbar-grid">
+        <div class="field-inline">
+          <label>Material Type</label>
+          <select
+            name="material_type"
+            [(ngModel)]="material_type"
+            (change)="getMaterialLog(); onFiltersChanged()"
+          >
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+
+        <div class="field-inline">
+          <label>From Date</label>
+          <input type="date" [(ngModel)]="from_date" (change)="getMaterialLog()" />
+        </div>
+
+        <div class="field-inline">
+          <label>To Date</label>
+          <input type="date" [(ngModel)]="to_date" (change)="getMaterialLog()" />
+        </div>
+
+        <div class="field-inline field-search">
+          <label>Search</label>
+          <input
+            type="text"
+            placeholder="Lot, code, material, supplier..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onFiltersChanged()"
+          />
+        </div>
+
+        <div class="field-inline field-rows">
+          <label>Rows</label>
+          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+            <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+          </select>
+        </div>
+
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-primary btn-micro" (click)="exportPdf()">Export PDF</button>
+          <button type="button" class="btn btn-success btn-micro" (click)="exportCsv()">Export CSV</button>
+          <button type="button" class="btn btn-outline btn-micro" routerLink="/store/raw/receiving">Back</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" [class.is-loading]="loading">
+        <table class="material-log-table" aria-label="Receiving material log">
+          <colgroup>
+            <col class="col-sr" />
+            <col class="col-lot" />
+            <col class="col-code" />
+            <col class="col-name" />
+            <col class="col-qty" />
+            <col class="col-recv" />
+            <col class="col-supplier" />
+            <col class="col-sup-lot" />
+            <col class="col-assigned" />
+          </colgroup>
+          <thead>
+            <tr class="header-row-main">
+              <th rowspan="2">Sr.</th>
+              <th rowspan="2">LOT NUMBER<br /><span class="sub-hint">(YYMM000)</span></th>
+              <th rowspan="2">CODE<br />NUMBER</th>
+              <th rowspan="2">NAME OF MATERIAL /<br />DESCRIPTION</th>
+              <th rowspan="2">QUANTITY</th>
+              <th rowspan="2">RECEIVING NUMBER<br /><span class="sub-hint">(000000)</span></th>
+              <th colspan="2">SUPPLIER</th>
+              <th rowspan="2">ASSIGNED BY<br /><span class="sub-hint">(Initial / Date)</span></th>
+            </tr>
+            <tr class="header-row-sub">
+              <th>NAME</th>
+              <th>LOT NO.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="loading">
+              <td colspan="9" class="empty-cell">Loading...</td>
+            </tr>
+            <tr *ngIf="!loading && !filteredRows.length">
+              <td colspan="9" class="empty-cell">No records found for selected filters.</td>
+            </tr>
+            <tr
+              *ngFor="let row of filteredRows | slice: (currentPage - 1) * pageSize : currentPage * pageSize; let i = index"
+            >
+              <td class="cell-center">{{ getSrNo(i) }}</td>
+              <td class="cell-center cell-mono">{{ formatLotNumber(row) }}</td>
+              <td class="cell-center cell-mono">{{ row.material_code || '-' }}</td>
+              <td class="cell-left">{{ row.material_name || '-' }}</td>
+              <td class="cell-center">{{ formatQuantity(row) }}</td>
+              <td class="cell-center cell-mono">{{ formatReceivingNo(row.receiving_no) }}</td>
+              <td class="cell-left">{{ row.vendor_name || '-' }}</td>
+              <td class="cell-center cell-mono">{{ row.supplier_batch_no || '-' }}</td>
+              <td class="cell-center assigned-cell">
+                <span class="assigned-initials">{{ getAssignedInitials(row) }}</span>
+                <span class="assigned-date">{{ formatDate(row.receiving_date) }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-bar" *ngIf="filteredRows.length">
+        <span class="pagination-label">
+          Showing
+          {{ filteredRows.length ? (currentPage - 1) * pageSize + 1 : 0 }}
+          –
+          {{ currentPage * pageSize > filteredRows.length ? filteredRows.length : currentPage * pageSize }}
+          of {{ filteredRows.length }}
+        </span>
+        <div class="pager">
+          <button
+            class="btn btn-micro btn-outline"
+            [disabled]="currentPage <= 1"
+            (click)="currentPage = currentPage - 1"
+          >
+            Prev
+          </button>
+          <span>Page {{ currentPage }} / {{ Math.ceil(filteredRows.length / pageSize) || 1 }}</span>
+          <button
+            class="btn btn-micro btn-outline"
+            [disabled]="currentPage * pageSize >= filteredRows.length"
+            (click)="currentPage = currentPage + 1"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

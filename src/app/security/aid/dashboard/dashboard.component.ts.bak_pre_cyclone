@@ -1,0 +1,127 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  dashboardTitle = 'First Aid';
+  sectionLabel = 'First Aid Section';
+  dept_head = 'No';
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  categories: string[] = ['All'];
+  filteredCards: DeptCard[] = [];
+
+  private allCards: DeptCard[] = [
+    { id: 'form', title: 'First Aid Form', description: 'First aid incident form', route: 'form', icon: 'fa-first-aid', category: 'First Aid', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'requistion', title: 'First Aid Item Requisition', description: 'Requisition for first aid items', route: 'requistion', icon: 'fa-cart-plus', category: 'First Aid', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'consumption', title: 'First Aid Consumption Record', description: 'Consumption log', route: 'consumption', icon: 'fa-file-medical', category: 'First Aid', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.categories = ['All', ...Array.from(new Set(this.allCards.map(c => c.category)))];
+    this.get_rights();
+    this.updateFilteredCards();
+    const savedPalette = localStorage.getItem('aid_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.cdr.markForCheck();
+    });
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('aid_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

@@ -1,0 +1,226 @@
+
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Awaiting Damage Containers</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw/damage">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block damage-awaiting__body">
+    <div class="card-text">
+      <div class="damage-awaiting__toolbar">
+        <div class="damage-awaiting__field">
+          <label>Material Type</label>
+          <select name="material_type" [(ngModel)]="material_type" (change)="getPendingDamages()">
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+        <div class="damage-awaiting__field damage-awaiting__field--search">
+          <label>Search</label>
+          <input type="text" name="damageSearch" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+
+      <div class="datagrid-wrapper damage-awaiting__grid-wrap">
+        <clr-datagrid [clrDgLoading]="loading" aria-label="Awaiting damage containers">
+
+          <clr-dg-column class="damage-awaiting__col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Receiving No./Dt.</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Inward Dt.</clr-dg-column>
+          <clr-dg-column>PO No./Dt.</clr-dg-column>
+          <clr-dg-column>Payment Slip No.</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column class="damage-awaiting__col-num">Containers</clr-dg-column>
+          <clr-dg-column class="damage-awaiting__col-num">Damage Cont.</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell class="damage-awaiting__col-sr">{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.receiving_no }} / {{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.inward_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_no }} / {{ result.po_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.ch_no }} / {{ result.challan_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell class="damage-awaiting__col-num">{{ result.containers }}</clr-dg-cell>
+            <clr-dg-cell class="damage-awaiting__col-num">{{ result.outer_damage }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.damage }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" routerLink="/store/raw/damage">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<div class="card recv-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Awaiting Damage Containers</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border unique-table recv-kv-table">
+        <tr>
+          <th>Material Name</th>
+          <td colspan="3">{{ selectedReport['material_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Vendor Name</th>
+          <td colspan="3">{{ selectedReport['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Payment Slip No</th>
+          <td>{{ selectedReport['ch_no'] }}</td>
+          <th>Payment Slip Date</th>
+          <td>{{ selectedReport['challan_date'] }}</td>
+        </tr>
+        <tr>
+          <th>PO No.</th>
+          <td>{{ selectedReport['po_no'] }}</td>
+          <th>PO Date</th>
+          <td>{{ selectedReport['po_date'] | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <th>Material Type</th>
+          <td>{{ selectedReport['material_type'] }}</td>
+          <th>Material Subtype</th>
+          <td>{{ selectedReport['material_subtype'] }}</td>
+        </tr>
+        <tr>
+          <th>Material Code</th>
+          <td>{{ selectedReport['material_code'] }}</td>
+          <th>Material Grade</th>
+          <td>{{ selectedReport['grade'] }}</td>
+        </tr>
+        <tr>
+          <th>PO Qty</th>
+          <td colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+        </tr>
+      </table>
+
+
+        <form #damageForm="ngForm">
+          
+          <h3>Labeling Details:</h3>
+          <div class="clr-row">
+              <div class="clr-col-4">
+              <label>Medicap Lot No:</label>
+              <input type="text" name="batch_no" [ngModel]="getBatchNo()" readonly tabindex="-1">
+              </div>
+
+              <div class="clr-col-4">
+                <label>Upload Img.:</label>
+                  <label for="damageCameraInput1" class="btn btn-sm btn-primary" style="margin-bottom: 3px;">📸 Capture</label>
+                  <input id="damageCameraInput1" type="file" accept="image/*" capture="environment" (change)="onFileChangedpsb($event)" style="display: none;">
+                  <!-- 🖼 Upload from Files -->
+                  <label for="damageFileInput1" class="btn btn-sm btn-secondary" style="margin-bottom: 3px;">🖼 Choose File</label>
+                  <input id="damageFileInput1" type="file" accept=".pdf,image/*" (change)="onFileChangedpsb($event)" style="display: none;">  
+                  <!-- 👁️ Preview -->
+                  <div *ngIf="previewUrl1" style="margin-top: 5px;">
+                      <img [src]="previewUrl1" alt="Preview" style="width: 100px; border-radius: 5px; border: 1px solid #ccc;">
+                  </div>
+              </div>
+
+              <div class="clr-col-4">
+                <label>Upload Image (if needed).:</label>
+                  <label for="damageCameraInput2" class="btn btn-sm btn-primary" style="margin-bottom: 3px;">📸 Capture</label>
+                  <input id="damageCameraInput2" type="file" accept="image/*" capture="environment" (change)="onFileChangedpsb2($event)" style="display: none;">
+                  <!-- 🖼 Upload from Files -->
+                  <label for="damageFileInput2" class="btn btn-sm btn-secondary" style="margin-bottom: 3px;">🖼 Choose File</label>
+                  <input id="damageFileInput2" type="file" accept=".pdf,image/*" (change)="onFileChangedpsb2($event)" style="display: none;">  
+                  <!-- 👁️ Preview -->
+                  <div *ngIf="previewUrl2" style="margin-top: 5px;">
+                      <img [src]="previewUrl2" alt="Preview" style="width: 100px; border-radius: 5px; border: 1px solid #ccc;">
+                  </div>
+              </div>
+          </div>
+
+          <h3>Damage Containers Details:</h3>
+          <table class="table table-border unique-table recv-data-table">
+              <thead>
+              <tr>
+                  <th>Container No.</th>
+                  <th>Condition <span style="color:red"><b>*</b></span></th>
+                  <th>Remark <span style="color:red"><b>*</b></span></th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr *ngFor="let damage of damages; let i = index">
+                  <td>{{ damage.container_no }}</td>
+                  <td style="padding: 0px;">
+                      <select name="status{{i}}" [(ngModel)]="damage.status" required style="margin:0px; height: 33px;">
+                          <option></option>
+                          <option>Outer Damage</option>
+                          <option>Inner Damage</option>
+                      </select>
+                  </td>
+                  <td style="padding: 0px;">
+                      <input type="text" name="remark" [(ngModel)]="damage.remark" style="margin: 0px;height: 33px;" required>
+                  </td>
+              </tr>
+              <tr *ngIf="damages?.length==0">
+                  <td colspan="3">No Record Found!</td>
+              </tr>
+              </tbody>
+          </table>
+
+          <!-- Damage Containers Checklist section hidden as requested
+          <h3>Damage Containers Checklist:</h3>
+          
+          <div class="clr-row">
+            <table class="table table-border"  >
+              <tr >
+                <th style="background-color:#144196;color:white;font-size:15px">{{'common.table.srNo' | translate}}</th>
+                <th style="background-color:#144196;color:white;font-size:15px;text-align:left;">Parameters</th>
+                <th style="background-color:#144196;color:white;font-size:15px">Remarks <span style="color:red"><b>*</b></span></th>
+              </tr>
+              <tr *ngFor="let hr of checkPointData;let i = index" >
+                <td >{{i+1.}}</td>
+                <td style="text-align:left;">{{hr.check_point}}</td>
+                <td  style="margin: 0;padding:0;">
+                    <input *ngIf="hr.evl_pr=='1'"  type="text" min="0" name="check{{i}}" [(ngModel)]="hr.check" required  style="margin: 0;">
+
+                    <select  name="check{{i}}" [(ngModel)]="hr.check" required *ngIf="hr.evl_pr !='1'" style="margin: 0;">
+                      <option *ngIf="hr.evl_pr=='2'">Yes</option>
+                      <option *ngIf="hr.evl_pr=='2'">No</option>
+                      <option *ngIf="hr.evl_pr=='3'">OK</option>
+                      <option *ngIf="hr.evl_pr=='3'">Not Ok</option>
+                      <option *ngIf="hr.evl_pr=='4'">Satisfactory</option>
+                      <option *ngIf="hr.evl_pr=='4'">Not Satisfactory</option>
+                      <option *ngIf="hr.evl_pr=='5'">Applicable</option>
+                      <option *ngIf="hr.evl_pr=='5'">Not Applicable</option>
+                      <option *ngIf="hr.evl_pr=='6'">Cleaned</option>
+                      <option *ngIf="hr.evl_pr=='6'">Not Cleaned</option>
+                      <option *ngIf="hr.evl_pr=='7'">Sealed </option>
+                      <option *ngIf="hr.evl_pr=='7'">Unsealed</option>
+                      <option *ngIf="hr.evl_pr=='8'">Verified</option>
+                      <option *ngIf="hr.evl_pr=='8'">Not Verfied</option>
+                      <option *ngIf="hr.evl_pr=='9'">Covered</option>
+                      <option *ngIf="hr.evl_pr=='9'">Uncovered</option>
+                      <option>NA</option>
+                    </select>
+                </td>
+              </tr>
+            </table>
+          </div>
+          -->
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-primary" (click)="save(damageForm)">{{'common.submit' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</div>

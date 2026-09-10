@@ -1,0 +1,168 @@
+<div class="card">
+  <div class="card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-7 clr-col-md-7 clr-col-sm-12" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Visitor Pass Log
+      </div>
+      <div class="clr-col-lg-5 clr-col-md-5 clr-col-sm-12" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        <button class="btn btn-sm btn-info" (click)="generateQRCode()" title="Generate QR Code for Visitor Form">
+          <clr-icon shape="barcode"></clr-icon> QR Code
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="openPlantDetailsModal()" title="Plant details for visitor SMS">
+          <clr-icon shape="cog"></clr-icon> Plant Details
+        </button>
+        <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" routerLink="new">NEW GATEPASS</button>
+        <button class="btn btn-sm btn-danger" routerLink="/admin">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="clr-row" style="margin-bottom: 1rem; align-items: flex-end;">
+      <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+        <label>Month</label>
+        <input type="month" [(ngModel)]="selectedMonthYear" (ngModelChange)="onMonthYearChange()" class="month-picker">
+      </div>
+      <div class="clr-col-lg-5">
+        <label>Search </label>
+        <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+      </div>
+    </div>
+    <div class="card-text">
+      <div class="datagrid-wrapper" style="overflow-x: auto;">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+          <clr-dg-column style="width: 40px;">#</clr-dg-column>
+          <clr-dg-column>Visit Date</clr-dg-column>
+          <clr-dg-column>Contact</clr-dg-column>
+          <clr-dg-column>{{'common.name' | translate}}</clr-dg-column>
+          <!-- <clr-dg-column>{{'common.email' | translate}}</clr-dg-column> -->
+          <clr-dg-column>{{'common.category/Purpose' | translate}}</clr-dg-column>
+          <!-- <clr-dg-column>Company</clr-dg-column> -->
+          <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+          <!-- <clr-dg-column>Meeting With</clr-dg-column> -->
+          <clr-dg-column>In Time</clr-dg-column>
+          <clr-dg-column>Out Time</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column>Print</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+  
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.visitDate | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ (result.phoneNumber  | canadianPhone)|| result.mobile }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.visitorName || result.name }}</clr-dg-cell>
+            <!-- <clr-dg-cell>{{ result.email }}</clr-dg-cell> -->
+            <clr-dg-cell>{{ result.category }}</clr-dg-cell>
+            <!-- <clr-dg-cell>{{ result.company }}</clr-dg-cell> -->
+            <clr-dg-cell>{{ result.department_name || result.department }}</clr-dg-cell>
+            <!-- <clr-dg-cell>
+              <ng-container *ngIf="hasMeetingWith(result); else noMeetingWith">
+                {{ result.meetingwithName || result.meetingWithName || result.firstname }}
+              </ng-container>
+              <ng-template #noMeetingWith>
+                <button type="button" class="btn btn-sm btn-primary" (click)="openAssignMeetingModal(result)">
+                  Assign Meeting Person
+                </button>
+              </ng-template>
+            </clr-dg-cell> -->
+            <clr-dg-cell>
+              <ng-container *ngIf="(result.in_time || result.inTime); else noIn">
+                {{ ((result.in_time || result.inTime) | date:'HH:mm') }}
+              </ng-container>
+              <ng-template #noIn>-</ng-template>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <ng-container *ngIf="(result.out_time || result.outTime); else noOut">
+                {{ ((result.out_time || result.outTime) | date:'HH:mm') }}
+              </ng-container>
+              <ng-template #noOut>-</ng-template>
+            </clr-dg-cell>
+            <clr-dg-cell>{{ result.status }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-outline" (click)="printGatepass(result.id)" title="Print gate pass">
+                <clr-icon shape="print"></clr-icon> Print
+              </button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-success"
+                      *ngIf="!hasInTime(result)"
+                      (click)="visitorIn(result)"
+                      [disabled]="isProcessingIn(result.id)"
+                      title="Record visitor in time">
+                In
+              </button>
+              <button type="button" class="btn btn-sm btn-warning"
+                      *ngIf="hasInTime(result) && !hasOutTime(result)"
+                      (click)="exitVisitor(result)"
+                      [disabled]="isProcessingOut(result.id)"
+                      title="Record visitor out time">
+                Out
+              </button>
+              <span *ngIf="hasOutTime(result)" class="badge">Done</span>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button type="button" class="btn btn-primary" (click)="exportToExcel()">
+      <clr-icon shape="export"></clr-icon> Export to Excel
+    </button>
+  </div>
+</div>
+
+<!-- Modal for Assigning Meeting Person -->
+<clr-modal [(clrModalOpen)]="assignMeetingModalOpen" [clrModalClosable]="true" [clrModalSize]="'md'">
+  <h3 class="modal-title">Assign Meeting Person</h3>
+  <div class="modal-body" *ngIf="selectedVisitor">
+    <div class="clr-form-group">
+      <label><strong>Visitor:</strong> {{ selectedVisitor.visitorName }}</label>
+    </div>
+    <div class="clr-form-group">
+      <label for="departmentSelect">Select Department <span style="color: red;">*</span></label>
+      <select id="departmentSelect" [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()" class="clr-select" style="width: 100%;" required>
+        <option value="">Select department</option>
+        <option *ngFor="let dept of departments" [value]="dept.department_name">
+          {{ dept.department_name }}
+        </option>
+      </select>
+    </div>
+    <div class="clr-form-group">
+      <label for="meetingWithSelect">Select Meeting Person <span style="color: red;">*</span></label>
+      <select id="meetingWithSelect" [(ngModel)]="selectedMeetingWith" class="clr-select" style="width: 100%;" [disabled]="!selectedDepartment">
+        <option value="">Select employee</option>
+        <option *ngFor="let emp of employees" [value]="emp.emp_id">
+          {{ emp.firstname }} {{ emp.lastname }} ({{ emp.emp_id }})
+        </option>
+      </select>
+      <span *ngIf="!selectedDepartment" class="help-text" style="color: #666; font-size: 12px;">Please select department first</span>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="assignMeetingModalOpen = false">{{'common.cancel' | translate}}</button>
+    <button type="button" class="btn btn-primary" (click)="assignMeetingWith()" [disabled]="!selectedDepartment || !selectedMeetingWith">Assign</button>
+  </div>
+</clr-modal>
+
+<!-- Modal for Plant Details (safety, GMP, visit video link) -->
+<clr-modal [(clrModalOpen)]="plantDetailsModalOpen" [clrModalClosable]="true" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Plant Details</h3>
+  <div class="modal-body">
+    <div class="clr-form-group">
+      <label for="saftyInstruction">Safety Instruction</label>
+      <textarea id="saftyInstruction" [(ngModel)]="plantDetails.saftyInstruction" class="clr-textarea" rows="4" placeholder="Safety instruction for visitors"></textarea>
+    </div>
+    <div class="clr-form-group">
+      <label for="GMPInstruction">GMP Instruction</label>
+      <textarea id="GMPInstruction" [(ngModel)]="plantDetails.GMPInstruction" class="clr-textarea" rows="4" placeholder="GMP instruction for visitors"></textarea>
+    </div>
+    <div class="clr-form-group">
+      <label for="visitVideoLink">Visit Video Link</label>
+      <input type="text" id="visitVideoLink" [(ngModel)]="plantDetails.visitVideoLink" class="clr-input" placeholder="https://...">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="plantDetailsModalOpen = false">{{'common.cancel' | translate}}</button>
+    <button type="button" class="btn btn-primary" (click)="updatePlantDetails()" [disabled]="plantDetailsLoading">{{'common.update' | translate}}</button>
+  </div>
+</clr-modal>

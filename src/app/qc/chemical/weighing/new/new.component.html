@@ -1,0 +1,155 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing of Containers</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" routerLink="/qc/chemical/weighing" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material Type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th style="text-align: left;">Chemical Name</th>
+              <th>Grade</th>
+              <th>Medicap Lot No</th>
+              <th>Containers</th>
+              <th>view</th>
+            </tr>
+            <tr *ngFor="let result of results; let i = index">
+              <td>{{ i+1 }}</td>
+              <td style="text-align: left;">{{ result.material_type }}</td>
+              <td style="text-align: left;">{{ result.material_code }}</td>
+              <td style="text-align: left;" (change)=getbatches($event.target.value)>{{ result.chemical_name }}</td>
+              <td>{{ result.grade }}</td>
+              <td>{{ result.batch_no }}</td>
+              <td>{{ result.containers }}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="viewResult(i)">{{'common.view' | translate}}</button>
+              </td>
+            </tr>
+            <tr *ngIf="results?.length == 0">
+              <td colspan="9">{{'common.noRecords' | translate}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header">Weighing of Containers</div>
+      <div class="card-block">
+        <div class="card-text">
+          <h3>Challan Details:</h3>
+          <table class="table" style="border: 1px solid black;">
+            <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Chemical Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedResult['chemical_name'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;border: 1px solid;"><b>Vendor Name:</b></td>
+            <td colspan="3" style="text-align: left;border: 1px solid;">{{ selectedResult['vendor_name'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['challan_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_date'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_subtype'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedResult['grade'] }}</td>
+            </tr>
+            <tr>
+            <td style="text-align: left;"><b>PO Qty:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;" colspan="3">{{ selectedResult['qty'] }} {{ selectedResult['unit'] }}</td>
+            </tr>
+          </table>
+          <br>
+          <h3>Labeling Details:</h3>
+          <table class="table">
+            <tr>
+              <th>Sr.</th>
+              <th>Medicap Lot No</th>
+              <th>Qty</th>
+              <th>No Of Containers</th>
+              <th>Mfg Date</th>
+              <th>Exp Date</th>
+              <th>Quantity Verified</th>
+            </tr>
+            <tr *ngFor="let list of selectedResult['batches'];let i=index">
+              <td>{{i+1}}</td>
+              <td>{{list.batch_no}}</td>
+              <td>{{list.qty_received}}</td>
+              <td>{{list.total_containers}}</td>
+              <td>{{list.mfg_date}}</td>
+              <td>{{list.exp_date}}</td>
+              <td style="padding: 0px;"><select name="quantity" style="margin: 0px;">
+                <option>ok</option>
+                <option>Not ok</option>
+              </select></td>
+            </tr>
+            <tr *ngIf="selectedReport['batches']?.length == 0">
+                <td colspan="5">No Record Found!</td>
+            </tr>
+          </table>
+          <form #weighingForm="ngForm">
+            <div class="clr-row">
+    
+            </div>
+            <div *ngIf="this.selectedBalance['status'] == 'approve'">
+              <h3>Container Weighing/Counting Details(Verifird From Label):</h3>
+              <table class="table">
+                <tr>
+                  <th>Sr.</th>
+                  <th>Container No.</th>
+                  <th>Gross Wt. ({{ selectedResult['unit'] }})</th>
+                  <th>Tare Wt. ({{ selectedResult['unit'] }})</th>
+                  <th>Net Wt. ({{ selectedResult['unit'] }})</th>
+                </tr>
+                <tr *ngFor="let container of selectedResult['weight_containers']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ container.container_no }}</td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="gross_wt" [(ngModel)]="container.gross_wt" (keypress)="number($event.target.value)" required style="margin: 0px;height: 33px;">
+                  </td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="tare_wt" [(ngModel)]="container.tare_wt" (keypress)="number($event.target.value)" required style="margin: 0px;height: 33px;">
+                  </td>
+                  <td>{{ container.gross_wt - container.tare_wt }}</td>
+                </tr>
+              </table>
+    
+             
+            </div>
+            <!-- <h3  style="color: red;text-align: center;">Balance Calibration not Done</h3> -->
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="saveWeighings(weighingForm)">{{'common.save' | translate}}</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>

@@ -1,0 +1,227 @@
+<!-- NEW FORM -->
+<div class="card rcd-form" *ngIf="!isLog">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Biennial Review Log ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/standard-operating-documents/biennial/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/standard-operating-documents" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <form #biennialForm="ngForm">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">TITLE:</td>
+          <td colspan="3" class="rcd-form__title-cell">BIENNIAL REVIEW LOG</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+        </tr>
+      </table>
+
+      <table class="rcd-form__sheet-table">
+        <!-- <tr>
+          <td class="rcd-form__label-cell">SOP Number <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="sop_number" [(ngModel)]="sopNumber" required />
+          </td>
+          <td class="rcd-form__label-cell">SOP Title <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="sop_title" [(ngModel)]="sopTitle" required />
+          </td>
+        </tr> -->
+        <!-- <tr>
+          <td class="rcd-form__label-cell">SOP Revision Form Issued by QA - Initial/Date</td>
+          <td colspan="3" class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="issued_by_qa" [(ngModel)]="issuedByQaInitialDate" />
+          </td>
+        </tr> -->
+      </table>
+
+      <div class="rcd-form__scroll-wrap">
+        <table class="rcd-form__sheet-table">
+          <tr>
+            <th style="width:8%">Revision No.</th>
+            <th style="width:11%">Effective Date</th>
+            <th style="width:12%">Review Dept</th>
+            <th style="width:14%">Review By</th>
+            <th style="width:11%">Change Control No.</th>
+            <th style="width:22%">Comment</th>
+            <th style="width:11%">Initial/Date</th>
+            <th style="width:5%"></th>
+          </tr>
+          <tr *ngFor="let row of reviewRows; let i = index">
+            <td>
+              <input class="rcd-form__input" type="text" [name]="'rev_no_' + i" [(ngModel)]="row.revision_no" />
+            </td>
+            <td>
+              <input class="rcd-form__input" type="date" [name]="'eff_date_' + i" [(ngModel)]="row.effective_date" />
+            </td>
+            <td>
+              <select
+                class="rcd-form__select"
+                [name]="'review_dept_' + i"
+                [ngModel]="row.review_dept"
+                (ngModelChange)="onDeptChange(i, $event)"
+              >
+                <option value="">-- Select Dept --</option>
+                <option *ngFor="let dept of departments" [value]="getDepartmentName(dept)">{{ getDepartmentName(dept) }}</option>
+              </select>
+            </td>
+            <td>
+              <select
+                class="rcd-form__select"
+                [name]="'review_by_' + i"
+                [ngModel]="row.review_by_emp_id"
+                (ngModelChange)="onEmployeeChange(i, $event)"
+                [disabled]="!row.review_dept"
+              >
+                <option value="">-- Select Employee --</option>
+                <option *ngFor="let emp of getEmployeesForRow(i)" [value]="emp.emp_id">{{ getEmployeeLabel(emp) }}</option>
+              </select>
+            </td>
+            <td>
+              <input class="rcd-form__input" type="text" [name]="'cc_no_' + i" [(ngModel)]="row.change_control_no" />
+            </td>
+            <td>
+              <input class="rcd-form__input" type="text" [name]="'comment_' + i" [(ngModel)]="row.comment" />
+            </td>
+            <td>
+              <input class="rcd-form__input" type="date" [name]="'initial_' + i" [(ngModel)]="row.initial_date" />
+            </td>
+            <td style="text-align:center">
+              <button type="button" class="btn btn-sm btn-danger" (click)="removeRow(i)" *ngIf="reviewRows.length > 1">×</button>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <button type="button" class="btn btn-sm btn-secondary" (click)="addRow()">+ Add Row</button>
+
+      <div class="rcd-form__confidential">Confidential Information: Do Not Disclose without Authorization</div>
+    </form>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="save(biennialForm)">{{ 'common.submit' | translate }}</button>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="card rcd-form" *ngIf="isLog && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Biennial Review Log
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/standard-operating-documents/biennial/new" style="margin-right: 0.35rem">New</button>
+        <button class="btn btn-sm" routerLink="/qa/standard-operating-documents" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>From Date</label>
+        <input type="date" class="rcd-form__readonly" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>To Date</label>
+        <input type="date" class="rcd-form__readonly" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" style="display:flex; align-items:flex-end;">
+        <button class="btn btn-primary" (click)="getLog()">{{ 'common.search' | translate }}</button>
+      </div>
+    </div>
+
+    <clr-datagrid>
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>SOP Number</clr-dg-column>
+      <clr-dg-column>SOP Title</clr-dg-column>
+      <clr-dg-column>Entry By</clr-dg-column>
+      <clr-dg-column>Entry Date</clr-dg-column>
+      <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.sop_number }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.sop_title }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_by }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_date | date: 'dd-MM-yyyy HH:mm' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button class="btn btn-sm btn-primary" (click)="downloadForm(row.id)">{{ 'common.download' | translate }}</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isLog && isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Biennial Review Log View
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" (click)="isView = false" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr><th>Form No.</th><td>{{ selectedRecord?.form_no }}</td><th>Ref</th><td>{{ selectedRecord?.sop_ref }}</td></tr>
+      <tr><th>SOP Number</th><td>{{ selectedRecord?.sop_number }}</td><th>SOP Title</th><td>{{ selectedRecord?.sop_title }}</td></tr>
+      <tr><th>Issued by QA - Initial/Date</th><td colspan="3">{{ selectedRecord?.issued_by_qa_initial_date }}</td></tr>
+      <tr><th>Entry By</th><td>{{ selectedRecord?.entry_by }}</td><th>Entry Date</th><td>{{ selectedRecord?.entry_date | date: 'dd-MM-yyyy HH:mm' }}</td></tr>
+    </table>
+
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <th>Revision No.</th>
+        <th>Effective Date</th>
+        <th>Review Dept</th>
+        <th>Review By</th>
+        <th>Change Control No.</th>
+        <th>Comment</th>
+        <th>Initial/Date</th>
+      </tr>
+      <tr *ngFor="let row of selectedRecord?.review_rows">
+        <td>{{ row.revision_no }}</td>
+        <td>{{ row.effective_date | date: 'dd-MM-yyyy' }}</td>
+        <td>{{ getReviewDeptDisplay(row) }}</td>
+        <td>{{ getReviewByDisplay(row) }}</td>
+        <td>{{ row.change_control_no }}</td>
+        <td>{{ row.comment }}</td>
+        <td>{{ formatRowDate(row.initial_date) }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadForm(selectedRecord?.id)">{{ 'common.download' | translate }}</button>
+  </div>
+</div>

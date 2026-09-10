@@ -1,0 +1,194 @@
+﻿<div class="card" *ngIf="isEdit==false">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Preventive Maintanance
+        Calendar</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isEdit=true">SET Last Dates</button>
+        <button class="btn btn-sm btn-danger" routerLink="/engineering/preventive">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+          <div class="btn-group">
+            <div class="btn btn-primary" mwlCalendarPreviousView [view]="view" [(viewDate)]="viewDate"
+              (viewDateChange)="closeOpenMonthViewDay()">
+              Previous
+            </div>
+            <div class="btn btn-outline-secondary" mwlCalendarToday [(viewDate)]="viewDate"   (viewDateChange)="closeOpenMonthViewDay()">
+              Today
+            </div>
+            <div class="btn btn-primary" mwlCalendarNextView [view]="view" [(viewDate)]="viewDate"
+              (viewDateChange)="closeOpenMonthViewDay()">
+              Next
+            </div>
+          </div>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12"> 
+          <h3>{{ viewDate | calendarDate:(view + 'ViewTitle'):'en' }}</h3>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+          <div class="btn-group">
+            <div class="btn btn-primary" (click)="setView(CalendarView.Month)"
+              [class.active]="view === CalendarView.Month">
+              Month
+            </div>
+            <div class="btn btn-primary" (click)="setView(CalendarView.Week)"
+              [class.active]="view === CalendarView.Week">
+              Week
+            </div>
+            <div class="btn btn-primary" (click)="setView(CalendarView.Day)" [class.active]="view === CalendarView.Day">
+              Day
+            </div>
+          </div>
+        </div>
+      </div>
+      <br />
+      <div [ngSwitch]="view">
+
+        
+        <mwl-calendar-month-view *ngSwitchCase="CalendarView.Month" [viewDate]="viewDate" [events]="events"
+          [refresh]="refresh" [activeDayIsOpen]="activeDayIsOpen" (dayClicked)="dayClicked($event.day)"
+          (eventClicked)="handleEvent('Clicked', $event.event)" (eventTimesChanged)="eventTimesChanged($event)">
+        </mwl-calendar-month-view>
+
+
+
+        <mwl-calendar-week-view *ngSwitchCase="CalendarView.Week" [viewDate]="viewDate" [events]="events"
+          [refresh]="refresh" (eventClicked)="handleEvent('Clicked', $event.event)"
+          (eventTimesChanged)="eventTimesChanged($event)">
+        </mwl-calendar-week-view>
+        <mwl-calendar-day-view *ngSwitchCase="CalendarView.Day" [viewDate]="viewDate" [events]="events"
+          [refresh]="refresh" (eventClicked)="handleEvent('Clicked', $event.event)"
+          (eventTimesChanged)="eventTimesChanged($event)">
+        </mwl-calendar-day-view>
+      </div>
+
+      <!-- Everything you see below is just for the demo, you don't need to include it in your app -->
+
+      
+    </div>
+  </div>
+  <div class="card-footer"> <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button> </div>
+</div>
+<div class="card" *ngIf="isEdit==true">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Update Last Maintenance
+        Dates</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isEdit=false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column clrDgField="department">{{'common.department' | translate}}</clr-dg-column>
+        <clr-dg-column clrDgField="location">location</clr-dg-column>
+        <clr-dg-column clrDgField="equipment_code">Equipment Code/ID</clr-dg-column>
+        <clr-dg-column clrDgField="equipment_name">Equipment Name</clr-dg-column>
+        <clr-dg-column clrDgField="status">{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let result of equipments; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.department }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.location }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.equipment_code }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.equipment_name }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-icon btn-outline-danger" (click)="showEditForm(result)">
+              <clr-icon class="is-warning" shape="pencil"> </clr-icon>View
+            </button>
+
+
+
+          </clr-dg-cell>
+
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+            {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+            of {{pagination.totalItems}} users
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+
+
+</div>
+
+<clr-modal [(clrModalOpen)]="isUpdates" clrModalSize="small" clrModalClosable="false">
+  <h3 class="modal-title">Update Equipment Last Maintenance Dates</h3>
+  <div class="modal-body">
+    <table class="table table-border">
+      <tr>
+        <td colspan="3">Inspection Dates</td>
+      </tr>
+      <tr *ngFor="let res of result?.inpection_freequency; let j = index">
+        <td>{{ j + 1 }}</td>
+        <td>{{ res.particular }}</td>
+        <td> <input type="date" name="inspection_date" [(ngModel)]="res.last_insp_date"></td>
+      </tr>
+      <tr>
+        <td colspan="3">Prev. Maint. Dates</td>
+      </tr>
+      <tr *ngFor="let res of result?.prev_maint_frequency; let j = index">
+        <td>{{ j + 1 }}</td>
+        <td>{{ res.particular }}</td>
+        <td> <input type="date" name="last_prevent_date" [(ngModel)]="res.last_prevent_date"></td>
+
+      </tr>
+
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="editEquipment()">{{'common.update' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isUpdates = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isChecklist" clrModalSize="xl" clrModalClosable="false">
+  <h3 class="modal-title">Frequency of Equipment Inspection: {{ selectedResult['equipment_name'] }}</h3>
+  <div class="modal-body">
+    <table class="table table-border">
+      <tr>
+        <td style="width: 70%;text-align: left;"><b>Format No.:</b> {{ selectedResult['inspection_format'] }}</td>
+        <td style="text-align: left;"><b>Year:</b></td>
+      </tr>
+      <tr>
+        <td style="width: 70%;text-align: left;"><b>Plant:</b></td>
+        <td style="text-align: left;"><b>Equipment ID No.:</b></td>
+      </tr>
+      <tr>
+       
+        <td style="width: 70%;text-align: left;"><b>Frequency:</b> Quarterly (On or before 7 days of last P.M.)</td>
+        
+        <td style="text-align: left;"><b>Date:</b></td>
+      </tr>
+    </table>
+    <table class="table table-border">
+      <tr>
+        <th style="text-align: left;">CHECKPOINT</th>
+        <th style="text-align: left;">OBSERVATION</th>
+        <th style="text-align: left;">ACTION TAKEN</th>
+      </tr>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary">{{'common.save' | translate}}</button>
+    <button class="btn btn-danger" (click)="isChecklist = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

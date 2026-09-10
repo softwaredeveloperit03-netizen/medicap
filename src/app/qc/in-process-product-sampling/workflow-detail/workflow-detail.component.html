@@ -1,0 +1,93 @@
+<div class="ipps-page-wrap" *ngIf="!loading && record">
+  <div class="card ipps-form-card">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">{{ formTitle }} — {{ isViewOnly() ? 'View' : step }}</div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+          <button class="btn btn-sm btn-danger" [routerLink]="backRoute()">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <app-ipps-form-display [record]="record"></app-ipps-form-display>
+
+      <div class="action-panel" *ngIf="step === 'qc-receive' && !isViewOnly()">
+        <h4>QC Sample Receiving (§2.1)</h4>
+        <p class="hint">Verify sample against container label. Assign sequential QC lab number per WI-QC-005-06.</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>QC Lab Number</label><input type="text" [(ngModel)]="labNumber" /></div>
+          <div class="clr-col-lg-2" style="padding-top:1.4rem"><button type="button" class="btn btn-sm btn-secondary" (click)="getNextLabNumber()">Auto #</button></div>
+        </div>
+        <label>Receiving Remark</label>
+        <textarea rows="2" [(ngModel)]="receiveRemark"></textarea>
+        <button class="btn btn-primary" (click)="qcReceive()" [disabled]="processing">Confirm QC Receive</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'testing' && !isViewOnly()">
+        <h4>Sample Testing (§3)</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-6"><label>Test Specification Reference</label><input type="text" [(ngModel)]="testSpecRef" /></div>
+        </div>
+        <label>Test Method Notes</label>
+        <textarea rows="2" [(ngModel)]="testingData.test_method_notes"></textarea>
+        <div *ngIf="record.sample_type === 'in_process'" class="blend-block">
+          <h5>Blend Uniformity (§3.1.3)</h5>
+          <div class="clr-row">
+            <div class="clr-col-lg-3"><label>Bottle + Sample (g)</label><input type="text" [(ngModel)]="testingData.blend_bottle_with_sample_g" (ngModelChange)="calcBlendWeight()" /></div>
+            <div class="clr-col-lg-3"><label>Empty Bottle (g)</label><input type="text" [(ngModel)]="testingData.blend_empty_bottle_g" (ngModelChange)="calcBlendWeight()" /></div>
+            <div class="clr-col-lg-3"><label>Sample Weight (g)</label><input type="text" [(ngModel)]="testingData.blend_sample_weight_g" readonly /></div>
+          </div>
+        </div>
+        <label>Other Tests Notes</label>
+        <textarea rows="2" [(ngModel)]="testingData.other_tests_notes"></textarea>
+        <button class="btn btn-primary" (click)="submitTesting()" [disabled]="processing">Complete Testing</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'qc-review' && !isViewOnly()">
+        <h4>QC Review of Raw Data (§4.1)</h4>
+        <label>Review Remark</label>
+        <textarea rows="3" [(ngModel)]="reviewRemark" placeholder="Review of raw data, notebooks, logbooks and audit trail"></textarea>
+        <button class="btn btn-primary" (click)="submitQcReview()" [disabled]="processing">Complete QC Review</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'analyst-entry' && !isViewOnly()">
+        <h4>Analyst Results Entry (§4.2)</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-6"><label>Specification Form Ref</label><input type="text" [(ngModel)]="resultsData.specification_form_ref" /></div>
+          <div class="clr-col-lg-3"><label>Conforms?</label><select [(ngModel)]="resultsData.conforms"><option value="">—</option><option>Yes</option><option>No</option></select></div>
+        </div>
+        <label>Results Summary</label>
+        <textarea rows="4" [(ngModel)]="resultsData.results_summary"></textarea>
+        <button class="btn btn-primary" (click)="submitAnalystEntry()" [disabled]="processing">Submit Results</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'qc-approval' && !isViewOnly()">
+        <h4>QC Management Approval (§4.3)</h4>
+        <label>Approval Remark</label>
+        <textarea rows="3" [(ngModel)]="approvalRemark"></textarea>
+        <button class="btn btn-success" (click)="submitQcApproval()" [disabled]="processing">Approve &amp; Close</button>
+      </div>
+
+      <div class="log-panel" *ngIf="workflowLog.length">
+        <h4>Workflow Log</h4>
+        <table class="table table-compact">
+          <thead><tr><th>Action</th><th>From</th><th>To</th><th>By</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let l of workflowLog">
+              <td>{{ l.action }}</td>
+              <td>{{ l.from_status }}</td>
+              <td>{{ l.to_status }}</td>
+              <td>{{ l.action_by_name || l.action_by }}</td>
+              <td>{{ l.action_date | date:'dd-MM-yyyy HH:mm' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading"><div class="card-block">Loading...</div></div>
+<div class="card" *ngIf="!loading && !record"><div class="card-block">Record not found.</div></div>

@@ -1,0 +1,555 @@
+<div class="vlog vlog--card card" *ngIf="!isView">
+  <header class="vlog__header card-header mef-panel-header">
+    <h1 class="vlog__title mef-panel-header__title">Vendor Log</h1>
+    <a class="vlog__header-close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Vendor Registration' }">{{'common.close' | translate}}</a>
+  </header>
+  <div class="vlog__body">
+    <div class="vlog__filter">
+      <label class="vlog__search-label" for="vlog-search">Search</label>
+      <input id="vlog-search" type="text" class="vlog__search" placeholder="Vendor no., name, status, material type…" [(ngModel)]="searchQuery" aria-label="Search vendors">
+    </div>
+    <div class="vlog__table-wrap">
+      <clr-datagrid class="vlog__datagrid" [clrDgLoading]="loading">
+        <clr-dg-column class="vlog__col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor/Division</clr-dg-column>
+        <clr-dg-column class="vlog__col-mat">Material Type</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column class="vlog__col-name">Vendor Name</clr-dg-column>
+        <clr-dg-column class="vlog__col-status">{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column class="vlog__col-remark">Status remark</clr-dg-column>
+        <clr-dg-column class="vlog__col-actions vlog__col-actions--view">View</clr-dg-column>
+        <clr-dg-column class="vlog__col-actions vlog__col-actions--bank">Bank</clr-dg-column>
+        <clr-dg-column class="vlog__col-actions vlog__col-actions--status">Status</clr-dg-column>
+        <clr-dg-column class="vlog__col-actions vlog__col-actions--terms">T &amp; C / Pay</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of filteredMaterials; let i = index" [clrDgItem]="user">
+          <clr-dg-cell class="vlog__cell-sr">{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_Is || '-' }}</clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-mat">{{ user.material_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_no || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-name">{{ user.vendor_name || '-' }}</clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-status"><span class="vlog__status" [class.vlog__status--approved]="user.status === 'Approved'" [class.vlog__status--block]="user.status === 'BlackList' || user.status === 'Temparory Block'" [title]="user.status || ''">{{ user.status }}</span></clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-remark" [title]="statusRemarkText(user)">{{ formatStatusRemark(user) }}</clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-actions vlog__cell-actions--view">
+            <div class="vlog__action-group">
+              <button type="button" class="vlog__btn vlog__btn--view" (click)="view(user)">{{'common.view' | translate}}</button>
+            </div>
+          </clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-actions vlog__cell-actions--bank">
+            <div class="vlog__action-group">
+              <button type="button" class="vlog__btn vlog__btn--bank" [class.vlog__btn--bank-done]="hasBankDetails(user)" (click)="openBankModal(user)">Bank</button>
+            </div>
+          </clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-actions vlog__cell-actions--status">
+            <div class="vlog__action-group">
+              <button type="button" class="vlog__btn vlog__btn--status" [disabled]="user.status !== 'Approved'" (click)="changesStatus(user)">Change</button>
+            </div>
+          </clr-dg-cell>
+          <clr-dg-cell class="vlog__cell-actions vlog__cell-actions--terms">
+            <div class="vlog__action-group vlog__action-group--stack">
+              <button type="button" class="vlog__btn vlog__btn--tc" [class.vlog__btn--tc-done]="user.terms_conditions?.length > 0" (click)="addTAndC(user)">T &amp; C</button>
+              <button type="button" class="vlog__btn vlog__btn--pay" [class.vlog__btn--pay-done]="user.paymentTerms?.length > 0" (click)="addPayTerms(user)">Payment</button>
+            </div>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50]">Vendors per page</clr-dg-page-size>
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} vendors
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+  <footer class="vlog__footer">
+    <div class="vlog__footer-actions">
+      <button type="button" class="vlog__btn vlog__btn--download" (click)="download()">{{'common.download' | translate}}</button>
+      <button type="button" class="vlog__btn vlog__btn--excel" (click)="exportToExcel()">Export to Excel</button>
+    </div>
+  </footer>
+</div>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isStatus" [clrModalSize]="'xl'" (clrModalOpenChange)="onStatusModalOpenChange($event, gradeForm)">
+  <h3 class="modal-title">Vendor status change</h3>
+  <div class="modal-body">
+    <form #gradeForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+          <label for="vlog-curr-status">Current status</label>
+          <input id="vlog-curr-status" type="text" class="clr-input" [value]="statusModalSnapshot" readonly>
+        </div>
+
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12">
+          <label for="vlog-new-status">New status <span class="vlog__req">*</span></label>
+          <select id="vlog-new-status" class="clr-select" name="change_status" [(ngModel)]="pendingChangeStatus" required>
+            <option value="">Select…</option>
+            <option *ngIf="selectedResult['status'] !== 'BlackList'" value="BlackList">BlackList</option>
+            <option *ngIf="selectedResult['status'] !== 'Temparory Block'" value="Temparory Block">Temporary block</option>
+            <option *ngIf="selectedResult['status'] !== 'In Active'" value="In Active">In active</option>
+            <option *ngIf="selectedResult['status'] !== 'Approved'" value="Approved">Active (approved)</option>
+          </select>
+        </div>
+
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+          <label for="vlog-status-remark">Remark / reason <span class="vlog__hint">(optional, saved with this change)</span></label>
+          <textarea id="vlog-status-remark" class="clr-textarea" name="status_remark" ngModel rows="3" placeholder="e.g. reason for block, reference ticket, etc." maxlength="2000"></textarea>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" [disabled]="!gradeForm.valid || !pendingChangeStatus" (click)="promptStatusPassword(gradeForm)">Save status</button>
+    <button type="button" class="btn btn-danger" (click)="closeStatusModal(gradeForm)">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isStatusPasswordModal" [clrModalSize]="'md'" (clrModalOpenChange)="onStatusPasswordModalOpenChange($event)">
+  <h3 class="modal-title">Confirm status change</h3>
+  <div class="modal-body">
+    <p class="vlog__password-hint">Enter your password to save the new vendor status.</p>
+    <label for="vlog-status-password">Password <span class="vlog__req">*</span></label>
+    <input
+      id="vlog-status-password"
+      type="password"
+      class="clr-input"
+      name="status_change_password"
+      [(ngModel)]="statusChangePassword"
+      (keyup.enter)="confirmStatusPassword()"
+      autocomplete="off"
+      placeholder="Enter password">
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" [disabled]="!statusChangePassword?.trim()" (click)="confirmStatusPassword()">Confirm</button>
+    <button type="button" class="btn btn-danger" (click)="closeStatusPasswordModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isBankModal" clrModalSize="lg" class="vlog-bank-modal" (clrModalOpenChange)="onBankModalOpenChange($event)">
+  <h3 class="modal-title vlog-bank-modal__title">Bank &amp; payment details</h3>
+  <div class="modal-body vlog-bank-modal__body" *ngIf="bankModalRow">
+    <p class="vlog-bank-modal__vendor">
+      <strong>{{ bankModalRow?.vendor_no }}</strong> — {{ bankModalRow?.vendor_name }}
+    </p>
+    <p class="vlog__bank-hint" *ngIf="bankModalRow['c_country']">
+      <strong>Corporate country:</strong> {{ bankModalRow['c_country'] }} — <em>{{ bankRoutingLabelForRow(bankModalRow) }}</em>
+    </p>
+    <form class="vlog-bank-form" (submit)="$event.preventDefault()">
+      <div class="vlog-bank-form__grid">
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-bank-name">Bank name</label>
+          <input id="vlog-bank-name" class="vlog-bank-form__control clr-input" type="text" [(ngModel)]="bankForm.bank_name" name="bf_bank_name" maxlength="200" autocomplete="off">
+        </div>
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-branch">Branch name &amp; address</label>
+          <input id="vlog-branch" class="vlog-bank-form__control clr-input" type="text" [(ngModel)]="bankForm.branch_address" name="bf_branch" maxlength="500" autocomplete="off">
+        </div>
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-acc-holder">Account holder</label>
+          <input id="vlog-acc-holder" class="vlog-bank-form__control clr-input" type="text" [(ngModel)]="bankForm.account_holder" name="bf_holder" maxlength="200" autocomplete="off">
+        </div>
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-acc-no">Account number</label>
+          <input id="vlog-acc-no" class="vlog-bank-form__control clr-input" type="text" [(ngModel)]="bankForm.account_number" name="bf_acct" maxlength="34" autocomplete="off">
+        </div>
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-ifsc">{{ bankRoutingLabelForRow(bankModalRow) }}</label>
+          <input id="vlog-ifsc" class="vlog-bank-form__control clr-input" type="text" [(ngModel)]="bankForm.ifsc_code" (input)="bankForm.ifsc_code = (bankForm.ifsc_code || '').toUpperCase()" name="bf_ifsc" maxlength="25" autocomplete="off">
+        </div>
+        <div class="vlog-bank-form__field">
+          <label class="vlog-bank-form__label" for="vlog-pay-mode">Preferred payment method</label>
+          <select id="vlog-pay-mode" class="vlog-bank-form__control clr-select" [(ngModel)]="bankForm.payment_mode" name="bf_paymode">
+            <option value="">Select</option>
+            <option value="EFT">EFT</option>
+            <option value="Wire">Wire transfer</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Others">Other</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer vlog-bank-modal__footer">
+    <button type="button" class="btn btn-primary" (click)="saveBankDetails()">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="closeBankModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+<!-- Vendor Details View (Log) -->
+<div class="vdetail vdetail--card mef-panel" *ngIf="isView">
+  <header class="vdetail__header mef-panel-header">
+    <h1 class="vdetail__name mef-panel-header__title">{{ selectedResult['vendor_name'] || 'Vendor' }} — View Entry</h1>
+    <button type="button" class="vdetail__btn vdetail__btn--close mef-panel-header__close" (click)="isView = false" aria-label="Close">{{'common.close' | translate}}</button>
+  </header>
+  <div class="vdetail__body vdetail__body--scroll mef-panel-body">
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Basic Information</h2>
+      <div class="vdetail__grid vdetail__grid--4 mef-grid mef-grid--4">
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Vendor Type</span><span class="vdetail__value">{{ selectedResult['vendor_type'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Material Type</span><span class="vdetail__value">{{ selectedResult['material_type'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Vendor No.</span><span class="vdetail__value">{{ selectedResult['vendor_no'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Contact Person</span><span class="vdetail__value">{{ selectedResult['contact_person'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Contact Number</span><span class="vdetail__value">{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">{{'common.email' | translate}}</span><span class="vdetail__value">{{ selectedResult['contact_email'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Vendor For</span><span class="vdetail__value">{{ selectedResult['vendorFor'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Qualified By</span><span class="vdetail__value">{{ selectedResult['qualifiedBy'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Client</span><span class="vdetail__value">{{ selectedResult['client_code'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Status remark</span><span class="vdetail__value">{{ formatStatusRemark(selectedResult) }}</span></div>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section" *ngIf="(selectedResult['other_contact'] || []).length">
+      <h2 class="vdetail__section-title mef-section-head">Other Contacts</h2>
+      <div class="vdetail__table-wrap">
+        <table class="vdetail__table">
+          <tr>
+            <th>Contact Type</th>
+            <th>{{'common.name' | translate}}</th>
+            <th>Telephone</th>
+            <th>{{'common.email' | translate}}</th>
+          </tr>
+          <tr *ngFor="let item of selectedResult['other_contact'] || []">
+            <td>{{ item.contactType || '-' }}</td>
+            <td>{{ item.cPersonName || '-' }}</td>
+            <td>{{ (item.cPersonMob  | canadianPhone)|| '-' }}</td>
+            <td>{{ item.cPersonEmail || '-' }}</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Addresses</h2>
+      <div class="vdetail__split">
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Vendor Address</h3>
+          <div class="vdetail__grid vdetail__grid--1">
+            <div class="vdetail__field"><span class="vdetail__label">Unit Name</span><span class="vdetail__value">{{ selectedResult['vendor_name'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{'common.address' | translate}}</span><span class="vdetail__value">{{ selectedResult['address'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Country</span><span class="vdetail__value">{{ selectedResult['country'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Province/State</span><span class="vdetail__value">{{ selectedResult['permanent_state'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">City</span><span class="vdetail__value">{{ selectedResult['city'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Postal Code</span><span class="vdetail__value">{{ selectedResult['pincode'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Mobile No.</span><span class="vdetail__value">{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</span></div>
+            <!-- <div class="vdetail__field"><span class="vdetail__label">State Code</span><span class="vdetail__value">{{ selectedResult['scode'] || '-' }}</span></div> -->
+            <!-- <div class="vdetail__field"><span class="vdetail__label">GST No.</span><span class="vdetail__value">{{ selectedResult['gst_no'] || '-' }}</span></div> -->
+            <!-- <div class="vdetail__field"><span class="vdetail__label">PAN No.</span><span class="vdetail__value">{{ selectedResult['panNo'] || '-' }}</span></div> -->
+          </div>
+        </div>
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Corporate Address</h3>
+          <div class="vdetail__grid vdetail__grid--1">
+            <div class="vdetail__field"><span class="vdetail__label">Office Name</span><span class="vdetail__value">{{ selectedResult['c_unit_name'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">{{'common.address' | translate}}</span><span class="vdetail__value">{{ selectedResult['c_address'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Country</span><span class="vdetail__value">{{ selectedResult['c_country'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Province/State</span><span class="vdetail__value">{{ selectedResult['c_state'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">City</span><span class="vdetail__value">{{ selectedResult['c_city'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Postal Code</span><span class="vdetail__value">{{ selectedResult['c_pincode'] || '-' }}</span></div>
+            <div class="vdetail__field"><span class="vdetail__label">Mobile No.</span><span class="vdetail__value">{{ (selectedResult['c_mobile_no'] | canadianPhone) || '-' }}</span></div>
+            <!-- <div class="vdetail__field"><span class="vdetail__label">State Code</span><span class="vdetail__value">{{ selectedResult['c_scode'] || '-' }}</span></div> -->
+            <!-- <div class="vdetail__field"><span class="vdetail__label">GST No.</span><span class="vdetail__value">{{ selectedResult['c_gst_no'] || '-' }}</span></div> -->
+            <!-- <div class="vdetail__field"><span class="vdetail__label">PAN No.</span><span class="vdetail__value">{{ selectedResult['c_panNo'] || '-' }}</span></div> -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Banking &amp; Payment</h2>
+      <div class="vdetail__grid vdetail__grid--4 mef-grid mef-grid--4">
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Bank Name</span><span class="vdetail__value">{{ selectedResult['bank_name'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Branch &amp; Address</span><span class="vdetail__value">{{ selectedResult['branch_address'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Account Holder</span><span class="vdetail__value">{{ selectedResult['account_holder'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Account Number</span><span class="vdetail__value">{{ selectedResult['account_number'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">{{ bankRoutingLabelForRow(selectedResult) }}</span><span class="vdetail__value">{{ selectedResult['ifsc_code'] || '-' }}</span></div>
+        <div class="vdetail__field mef-field"><span class="vdetail__label mef-label">Payment Mode</span><span class="vdetail__value">{{ selectedResult['payment_mode'] || '-' }}</span></div>
+      </div>
+    </section>
+
+    <section class="vdetail__section vdetail__signature mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Digitally Signed By</h2>
+      <div class="vdetail__signature-grid">
+        <div class="vdetail__signature-item">
+          <span class="vdetail__signature-label">Added By</span>
+          <span class="vdetail__signature-check">&#10003;</span>
+          <span class="vdetail__signature-value">{{ selectedResult['entry_by'] || '-' }}</span>
+          <span class="vdetail__signature-label">Added on</span>
+          <span class="vdetail__signature-value">{{ selectedResult['entry_date'] | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="vdetail__signature-item">
+          <span class="vdetail__signature-label">Purchase App. By</span>
+          <span class="vdetail__signature-check">&#10003;</span>
+          <span class="vdetail__signature-value">{{ selectedResult['approve_by'] || '-' }}</span>
+          <span class="vdetail__signature-label">Purchase App. On</span>
+          <span class="vdetail__signature-value">{{ selectedResult['approve_date'] | date:'dd/MM/yyyy' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Mapped Material</h2>
+      <div class="vdetail__table-wrap">
+        <table class="vdetail__table">
+          <tr>
+            <th>Sr</th>
+            <th>Material / Item Code</th>
+            <th>Material / Item Type</th>
+            <th>Sub Type</th>
+            <th>Material / Item Name</th>
+          </tr>
+          <tr *ngFor="let record of (materials || []); let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ record.material_code || 'NA' }}</td>
+            <td>{{ record.material_type || 'NA' }}</td>
+            <td>{{ record.material_subtype || 'NA' }}</td>
+            <td>{{ record.material_name || 'NA' }}</td>
+          </tr>
+        </table>
+        <p class="vdetail__empty" *ngIf="!(materials || []).length">No data available</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+
+
+<clr-modal [(clrModalOpen)]="isdash" clrModalSize="xl" clrModalClosable="true">
+  <h3 class="modal-title">View Divisions :- </h3>
+  <div class="modal-body">
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <table class="table table-border">
+                <tr>
+                  <td style="background-color: rgb(110, 2, 2); color:white; text-align:left;"><strong>Vendor Type</strong></td>
+                  <td style="background-color: rgb(110, 2, 2); color:white; text-align:left;"><strong>Vendor No.</strong></td>
+                  <td style="background-color: rgb(110, 2, 2); color:white; text-align:left;"><strong>Material Type</strong></td>
+                  <td style="background-color: rgb(110, 2, 2); color:white; text-align:left;"><strong>Vendor Name</strong></td>
+                  <td style="background-color: rgb(110, 2, 2); color:white; text-align:left;"><strong>{{'common.status' | translate}}</strong></td>
+                </tr>
+                <tr>
+                  <td style=" text-align:left;"><strong>{{selectedResult['vendor_type']}}</strong></td>
+                  <td style=" text-align:left;"><strong>{{selectedResult['vendor_no']}}</strong></td>
+                  <td style=" text-align:left;"><strong>{{selectedResult['material_type']}}</strong></td>
+                  <td style=" text-align:left;"><strong>{{selectedResult['vendor_name']}}</strong></td>
+                  <td style=" text-align:left;"><strong>{{selectedResult['status']}}</strong></td>
+                </tr>
+              </table>
+        </div>
+        <h3> &nbsp; Divisions :- </h3>
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <table class="table table-border">
+                <tr>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>Vendor Type</strong></td>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>Divison No.</strong></td>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>Material Type</strong></td>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>Division Name</strong></td>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>{{'common.status' | translate}}</strong></td>
+                  <td style="background-color:rgb(30, 60, 126);color:white; text-align:left;"><strong>Entry By/Dt.</strong></td>
+                </tr>
+                <tr *ngFor="let ven of selectedResult['divisions']">
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.vendor_type}}</strong></td>
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.vendor_no}}</strong></td>
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.material_type}}</strong></td>
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.vendor_name}}</strong></td>
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.status}}</strong></td>
+                  <td style="color:blue; text-align:left;  font-size:10px;"><strong>{{ven.entry_by}} / {{ven.entry_date}}</strong></td>
+                </tr>
+              </table>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isdash = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+<clr-modal [(clrModalOpen)]="isAddTerm" clrModalSize="xl" clrModalClosable="true">
+  <h3 class="modal-title">Vendor PO Terms & Conditions :- </h3>
+  <div class="modal-body">
+      <div class="clr-row" >
+
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['terms_conditions']?.length == 0 || isEditTerms">
+            <h3>Terms & Conditions : &nbsp;&nbsp;&nbsp; 
+                <button class="btn btn-sm btn-success" (click)="isTerm=true">{{'common.add' | translate}}</button>
+                <button class="btn btn-sm btn-danger" (click)="isEdit=true">{{'common.delete' | translate}}</button>
+              </h3><br>
+
+
+            <table class="table table-border">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;width: 50px;">Select</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Term Heading</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Terms & Conditions</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Valid Till</th>
+              </tr>
+              <tr *ngFor="let term of terms; let i = index">
+                <td style="margin: 0;padding: 0;">
+                  <input type="checkbox" name="selected{{ i }}" [(ngModel)]="term['selected']">
+                </td>
+                <td style="text-align: left;">{{ term.term_heading }}</td>
+                <td style="text-align: left;">{{ term.term }}</td>
+                <td style="text-align: left;">{{ term.termValidDate | date:'dd-MM-yyyy' }}</td>
+              </tr>
+            </table>
+        </div>
+         
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['terms_conditions']?.length > 0 && !isEditTerms">
+            <h3>Terms & Conditions :- </h3><br>
+            <table class="table table-border">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Term Heading</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Terms & Conditions</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Valid Till</th>
+              </tr>
+              <tr *ngFor="let term of selectedResult['terms_conditions']; let i = index">
+                <td style="text-align: left;">{{ term.term_heading }}</td>
+                <td style="text-align: left;">{{ term.term }}</td>
+                <td style="text-align: left;">{{ term.termValidDate | date:'dd-MM-yyyy' }}</td>
+              </tr>
+            </table>
+        </div>
+ 
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" *ngIf="selectedResult['terms_conditions']?.length == 0 || isEditTerms" (click)="saveTermsAndConditons()">{{'common.save' | translate}}</button>
+    <button class="btn btn-primary" *ngIf="selectedResult['terms_conditions']?.length > 0 " (click)="toggleEditTerms()">{{'common.edit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isAddTerm = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+<clr-modal [(clrModalOpen)]="isAddPayTerms" clrModalSize="xl" clrModalClosable="true">
+  <h3 class="modal-title">Vendor PO Terms & Conditions :- </h3>
+  <div class="modal-body">
+      <div class="clr-row" >
+
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['paymentTerms']?.length == 0 || isEditPayTerms">
+          <h3>Payment Terms : </h3><br>
+            <table class="table table-border">
+              <tr>
+                <td style="background-color: rgb(14, 67, 112); color: white;"><strong>Valid TIll :- <span style="color:red;">*</span></strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;margin: 0;padding:0" colspan="2">
+                      <input type="date" name="termValidDatePay" [(ngModel)]="termValidDatePay" required style="margin: 0;">
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: rgb(14, 67, 112); color: white;"><strong>Payment %</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>Payment Conditions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>{{'common.amount' | translate}}</strong> &nbsp;&nbsp; <button class="btn btn-success btn-sm" (click)="addRowToPaymentTerms()">Add Row</button></td>
+              </tr>
+              <tr *ngFor="let item of paymentTerms;let i=index">
+                <td style="padding: 0;margin: 0;">
+                  <input type="number" name="pay_per{{i}}" [(ngModel)]="item.pay_per" required style="margin: 0;">
+                </td>
+                <td style="padding: 0;margin: 0;text-align: left;">
+                  <input type="text" name="term{{i}}" [(ngModel)]="item.term" required style="margin: 0;" placeholder="Enter Payment Conditions...">
+                </td>
+                <td style="text-align: left;font-weight:bolder;"> XX,XXX,XX.XX
+                      <clr-icon class="is-error" shape="trash" (click)="paymentTerms.splice(i,1)"></clr-icon>
+                </td>
+              </tr>
+            </table>
+        </div>
+
+    
+
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['paymentTerms']?.length > 0  && !isEditPayTerms">
+          <h3>Payment Terms : </h3><br>
+            <table class="table table-border">
+              <tr>
+                <td style="background-color: rgb(14, 67, 112); color: white;"><strong>Payment %</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>Payment Conditions</strong></td>
+                <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>{{'common.amount' | translate}}</strong> &nbsp;&nbsp;</td>
+              </tr>
+              <tr *ngFor="let item of paymentTerms;let i=index">
+                <td style="padding: 0;margin: 0;">
+                  <input type="number" name="pay_per{{i}}" [(ngModel)]="item.pay_per" required style="margin: 0;" readonly>
+                </td>
+                <td style="padding: 0;margin: 0;text-align: left;">
+                  <input type="text" name="term{{i}}" [(ngModel)]="item.term" required style="margin: 0;" placeholder="Enter Payment Conditions..." readonly>
+                </td>
+                <td style="text-align: left;font-weight:bolder;"> XX,XXX,XX.XX</td>
+              </tr>
+            </table>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" *ngIf="selectedResult['paymentTerms']?.length == 0 || isEditPayTerms" (click)="savePaymentTerms()">{{'common.save' | translate}}</button>
+    <button class="btn btn-primary" *ngIf="selectedResult['paymentTerms']?.length > 0 " (click)="toggleEditPayTerms()">{{'common.edit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isAddPayTerms = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+<clr-modal [(clrModalOpen)]="isTerm" clrModalSize="xl" clrModalClosable="true">
+  <h3 class="modal-title">Terms & Conditions:</h3>
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <table class="table table-border">
+        <tr>
+          <th style="width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Terms Heading</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Terms</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Valid Till</th>
+        </tr>
+        <tr>
+          <td>0.</td>
+          <td style="padding: 0;margin: 0;">
+            <input type="text" id="term_heading" name="term_heading" ngModel required style="margin: 0;">
+          </td>
+          <td style="padding: 0;margin: 0;">
+            <input type="text" id="term" name="term" ngModel required style="margin: 0;">
+          </td>
+          <td style="padding: 0;margin: 0;">
+            <input type="date" id="termValidDate" name="termValidDate" ngModel required style="margin: 0;">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveTerm(termForm)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isTerm = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isEdit" clrModalSize="xl" clrModalClosable="true">
+  <h3 class="modal-title">Delete Terms:</h3>
+  <div class="modal-body">
+    <table class="table table-border">
+      <tr>
+        <th style="text-align: left;">Terms Heading</th>
+        <th style="text-align: left;">Terms & Conditions</th>
+        <th style="text-align: left;">Valid Till</th>
+        <th style="text-align: left;">Delete</th>
+      </tr>
+      <tr *ngFor="let term of terms; let i = index">
+        <td style="text-align: left;">{{ term.term_heading }}</td>
+        <td style="text-align: left;">{{ term.term }}</td>
+        <td style="text-align: left;">{{ term.termValidDate | date:'dd-MM-yyyy'}}</td>
+        <td style="text-align: left;">
+          <clr-icon class="is-error" shape="trash" (click)="delTerm(term.id)"></clr-icon>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,67 @@
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Revision Request</span>
+    <button type="button" class="btn btn-sm btn-outline" routerLink="/master/test/revision">{{'common.back' | translate}}</button>
+  </div>
+  <div class="card-block">
+    <div class="clr-row">
+      <div class="clr-col-lg-5">
+        <label for="rev-search">Search</label>
+        <input id="rev-search" type="text" placeholder="Search..." [(ngModel)]="searchQuery" aria-label="Search">
+      </div>
+    </div>
+    <div class="datagrid-wrapper">
+      <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+        <clr-dg-column style="width: 50px;">{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Test Code</clr-dg-column>
+        <clr-dg-column>Test Type</clr-dg-column>
+        <clr-dg-column>Test Name</clr-dg-column>
+        <clr-dg-column>Prepared By/On</clr-dg-column>
+        <clr-dg-column>Approve By/On</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>Test Status</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        <clr-dg-row *clrDgItems="let result of filteredTests; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test_method_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.entry_by || 'NA' }} / {{ (result.entry_date | date:'dd-MM-yyyy') || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span *ngIf="getTestStatus(result) === 'Active'">{{ result.approve_by || '-' }} / {{ (result.approve_date | date:'dd-MM-yyyy') || '-' }}</span>
+            <span *ngIf="getTestStatus(result) !== 'Active'">- / -</span>
+          </clr-dg-cell>
+          <clr-dg-cell>{{ result.status || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ getTestStatus(result) }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button type="button" class="btn btn-sm btn-primary" (click)="openRevisionModal(result)">Revision Request</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="revisionModalOpen" [clrModalClosable]="true" clrModalSize="md">
+  <h3 class="modal-title">Revision Request Form</h3>
+  <div class="modal-body" *ngIf="selectedTest">
+    <form #revForm="ngForm">
+      <div class="clr-form-group">
+        <label for="rev-reason">Reason for Revision <span class="required">*</span></label>
+        <input id="rev-reason" type="text" class="clr-input" name="reason" [(ngModel)]="revisionForm.reason" required placeholder="Enter reason" aria-label="Reason for revision">
+      </div>
+      <div class="clr-form-group">
+        <label for="rev-remarks">{{'common.remarks' | translate}}</label>
+        <textarea id="rev-remarks" class="clr-textarea" name="remarks" [(ngModel)]="revisionForm.remarks" rows="3" placeholder="Remarks (optional)" aria-label="Remarks"></textarea>
+      </div>
+      <div class="clr-form-group" *ngIf="selectedTest">
+        <label>Test</label>
+        <p class="static-value">{{ selectedTest.test || 'NA' }} ({{ selectedTest.test_method_no || 'NA' }})</p>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()" [disabled]="!revisionForm.reason">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeRevisionModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>

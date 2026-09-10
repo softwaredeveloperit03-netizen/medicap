@@ -1,0 +1,253 @@
+﻿
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Initiate Stability Study</div>
+              <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/qa/stability/initiate" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #initiateForm="ngForm">
+                    <div class="clr-row">
+
+
+
+
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Nature of Dose:<span style="color: red">*</span></label>
+                            <select name="dosage_type" [(ngModel)]="dosage_type" required
+                                (change)="getFGMaterials(dosage_type)" >
+                                <option></option>
+                                <option>SOLID</option>
+                                <option>LIQUID</option>
+                                <option>SEMI SOLID</option>
+                                <option>Gases</option>
+                            </select>    
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Dosage Form:<span style="color: red">*</span></label>
+                            <select name="dosage_form" [(ngModel)]="dosage_form" required
+                            (change)="getProducts($event.target.value)">
+                                <option></option>
+                                <option *ngFor="let type of fg_sub_materials">{{type.dosage_form}}</option>
+                            </select>
+                        </div>
+ 
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Name of Product:<span style="color: red">*</span></label>
+                            <select name="product_code" ngModel required (change)="selectproduct($event.target.selectedIndex)">
+                                <option></option>
+                                <option *ngFor="let product of products" [value]="product.product_code">{{ product.product_name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="table" *ngIf="isSelect">
+                   
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Product Code:</td>
+                            <td style="text-align: left;">{{  selectedProduct['product_code'] }}</td>
+                            <td style="text-align: left;width: 20%;">Grade:</td>
+                            <td style="text-align: left;">{{  selectedProduct['grade'] }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;">Specification No:</td>
+                            <td *ngIf="selectedProduct['specification_no'] != 'NA'" style="text-align: left;" colspan="3" >{{  selectedProduct['specification_no'] }}</td>
+                            <td *ngIf="selectedProduct['specification_no'] == 'NA'" style="text-align: left;" colspan="3" > <span style="font-weight: bolder; color: red;">Please Add Specification For this Product !!!!!</span></td>
+                        </tr>
+                    </table>
+                    <br>
+                    <div class="clr-row">
+                        <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Packing:</label>
+                            <input type="text" name="packing" ngModel required>
+                        </div> -->
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Sample Qty For Single Analysis:</label>
+                            <input type="text" name="sample_qty" [(ngModel)]="sample_qty" 
+                            (keyup)="calculatesampleqty()" required>
+                        </div>
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>{{'common.unit' | translate}}</label>
+                            <select name="smqunit" [(ngModel)]="smqunit"  >
+                                <option></option>
+                                <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                            </select>
+                         </div>
+
+
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>No. of Batches to be charged:</label>
+                            <input type="text" name="batch" [(ngModel)]="total_batches" oninput="this.value = this.value.replace(/[^0-9]/g, '')" (keyup)="updatebatches()" required>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                            <label>Stability Type:</label>
+                            <select name="batch_type" ngModel required>
+                                <option>Market</option>
+                                <option>Validation</option>
+                                <option>Investigational</option>
+                                <option>R & D Trails</option>
+                                <option>Scale Up/Pilot</option>
+                                <option>Clinical Trial</option>
+                                <option>DCGI Approval</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <table class="table table2">
+                    <tr>
+                        <th style="text-align: center;">{{'common.table.action' | translate}}</th>
+                        <th>Condition</th>
+                        <th>Parametere</th>
+                        <th>Intervals</th>
+                        <th>Total Intervals</th>
+                        <!-- <th>Sample Qty Single Analysis</th> -->
+                        <th>Total Sample Qty</th>
+                     </tr>
+                    <tr *ngFor="let user of conditions; let i = index">
+                        <td style="text-align: center;">
+                            <input type="checkbox" name="user{{ i }}" ngModel (click)="updateCondition(i, $event)">
+                        </td>
+                        <td>{{user.condition}}</td>
+                        <td>{{user.temperature}}</td>
+                        <td>{{user.intervals}}</td>
+                        <td>{{user.total_intervals}}</td>
+                        <td >{{ sample_qty * user.total_intervals }} {{ smqunit }}</td>
+                      </tr>
+                  
+                </table>
+                <br>
+
+                <div *ngIf="total_batches > 0">
+                    <table class="table table-border">
+                        <thead>
+                            <tr>
+                                <th style="background-color: aquamarine; font-weight: bolder;text-align: left;">Sr. No.</th>
+                                <th style="background-color: aquamarine; font-weight: bolder;text-align: left;">Medicap Lot No</th>
+                                <th style="background-color: aquamarine; font-weight: bolder;text-align: left;">Mfg. Date</th>
+                                <th style="background-color: aquamarine; font-weight: bolder;text-align: left;">Exp. Date</th>
+                                <th style="background-color: aquamarine; font-weight: bolder;text-align: left;">Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let batch of batches; let i = index">
+                                <td>{{ i+1 }}</td>
+                                <td style="padding: 0px;vertical-align: middle;">
+                                    <input style="margin: 0px;" type="text" name="batch_no" [(ngModel)]="batch['batch_no']" required>
+                                </td>
+                                <td style="padding: 0px;vertical-align: middle;">
+                                    <input style="margin: 0px;" type="date" name="mfg_date" [(ngModel)]="batch['mfg_date']" required>
+                                </td>
+                                <td style="padding: 0px;vertical-align: middle;">
+                                    <input style="margin: 0px;" type="date" name="exp_date" [(ngModel)]="batch['exp_date']" required>
+                                </td>
+                                <td style="padding: 0px;vertical-align: middle;">
+                                    <input style="margin: 0px;" type="text" name="purpose" [(ngModel)]="batch['purpose']" required>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button [disabled]="spec" class="btn btn-primary" (click)="saveStability(initiateForm)">{{'common.submit' | translate}}</button>
+            <!-- <button class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button> -->
+            <!-- <button class="btn btn-danger" (click)="test()">test</button>  -->
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Inititated Stability Study Protocol</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Name of Product:</td>
+                        <td style="text-align: left;">{{ selectedStability['product_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Generic Name:</td>
+                        <td style="text-align: left;">{{ selectedStability['generic_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Product Code:</td>
+                        <td style="text-align: left;">{{ selectedStability['product_code'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;">Grade:</td>
+                        <td style="text-align: left;">{{ selectedStability['grade'] }}</td>
+                    </tr>
+                </table>
+                <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Sample Qty.:</label>
+                        <input type="text" name="packing" ngModel="{{ selectedStability['packing']  }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Unit:</label>
+                        <input type="text" name="market" ngModel="{{ selectedStability['unit'] }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>No. of Batches to be charged:</label>
+                        <input type="number" name="batch" ngModel="{{ selectedStability['batches'].length }}" readonly tabindex="-1">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Batch Type:</label>
+                        <input type="text" name="batch_type" ngModel="{{ selectedStability['batch_type'] }}" readonly tabindex="-1">
+                    </div>
+                </div>
+                <h4>Conditions:</h4>
+                <table class="table table2">
+                    <tr>
+                        <th style="width:10%; text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Condition</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Intervals</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Total sample qty</th>
+                    </tr>
+                    <tr *ngFor="let user of selectedStability['conditions']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{user.condition}}</td>
+                        <td style="text-align: left;">{{ user.intervals }}</td>
+                        <td style="text-align: left;">{{ user.sample_qty }}</td>
+                    </tr>
+                </table>
+                
+                <h4>Batches:</h4>
+                <table class="table table-border">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr. No.</th>
+                            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Mfg. Date</th>
+                            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Exp. Date</th>
+                            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let batch of selectedStability['batches']; let i = index">
+                            <td style="text-align: left;">{{ i+1 }}</td>
+                            <td style="text-align: left;">{{ batch.batch_no }}</td>
+                            <td style="text-align: left;">{{ batch.mfg_date | date: 'MMM-yyyy' | uppercase}}</td>
+                            <td style="text-align: left;">{{ batch.exp_date | date: 'MMM-yyyy' | uppercase }}</td>
+                            <td style="text-align: left;">{{ batch.purpose }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="updateStabilityProtocol('approve')" *ngIf="selectedStability['status'] == 'pending'">{{'common.approve' | translate}}</button>
+            <button class="btn btn-primary" (click)="updateStabilityProtocol('reject')" *ngIf="selectedStability['status'] == 'pending' && isChecker || isApprover">{{'common.reject' | translate}}</button>
+            <button class="btn btn-primary" (click)="downloadProtocol()">DOWNLOAD PROTOCOL</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

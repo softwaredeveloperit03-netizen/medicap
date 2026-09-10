@@ -1,0 +1,139 @@
+﻿<div class="card action-card" *ngIf="!isView">
+  <div class="card-header">
+    <div class="clr-row header-row">
+      <div class="clr-col-9 title-col">Pending Complaints</div>
+      <div class="clr-col-lg-3 action-col">
+        <button type="button" class="btn btn-sm btn-close" routerLink="/marketing/complaint">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="table-wrapper">
+        <table class="table table-border list-table">
+          <thead>
+            <tr>
+              <th class="cell-sno">{{ 'common.table.srNo' | translate }}</th>
+              <th class="cell-client">Client Name</th>
+              <th class="cell-date">Complaint Date</th>
+              <th class="cell-nature">Complaint Nature</th>
+              <th class="cell-status">{{ 'common.status' | translate }}</th>
+              <th class="cell-entry">Entry By</th>
+              <th class="cell-date">Entry Date</th>
+              <th class="cell-action">{{ 'common.table.action' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of results; let i = index">
+              <td class="cell-sno">{{ i + 1 }}</td>
+              <td class="cell-client">{{ getClientName(item) }}</td>
+              <td class="cell-date">{{ item.complaint_date | date: 'dd-MM-yyyy' }}</td>
+              <td class="cell-nature">{{ item.complaint_nature || '-' }}</td>
+              <td class="cell-status">{{ item.status || '-' }}</td>
+              <td class="cell-entry">{{ item.entry_by || '-' }}</td>
+              <td class="cell-date">{{ item.entry_date | date: 'dd-MM-yyyy' }}</td>
+              <td class="cell-action">
+                <button type="button" class="btn btn-sm btn-info" (click)="view(i)">Proceed</button>
+              </td>
+            </tr>
+            <tr *ngIf="!results?.length">
+              <td colspan="8" class="no-record">No Record Found!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card action-card" *ngIf="isView">
+  <div class="card-header">
+    <div class="clr-row header-row">
+      <div class="clr-col-9 title-col">Complaint Action</div>
+      <div class="clr-col-lg-3 action-col">
+        <button type="button" class="btn btn-sm btn-close" (click)="isView = false">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <form #f="ngForm" class="action-form">
+        <section class="detail-section">
+          <h3 class="section-title">Complaint Details</h3>
+          <div class="clr-row detail-grid">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 detail-field">
+              <label>Client Name</label>
+              <div class="detail-value">{{ getClientName(selectedClient) }}</div>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 detail-field">
+              <label>Nature Of Complaint</label>
+              <div class="detail-value">{{ selectedClient['complaint_nature'] || 'NA' }}</div>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12 detail-field">
+              <label>Complaint Date</label>
+              <div class="detail-value">{{ selectedClient['complaint_date'] | date: 'dd-MM-yyyy' }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-section" *ngIf="selectedClient['complaint_nature'] === 'Product Related complaint'">
+          <h3 class="section-title">Product Details</h3>
+          <div class="table-wrapper">
+            <table class="table table-border detail-table">
+              <thead>
+                <tr>
+                  <th>Product Name</th>
+                  <th>Medicap Lot No</th>
+                  <th class="cell-date">Mfg Date</th>
+                  <th class="cell-date">Expiry Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ selectedClient['product_name'] || 'NA' }}</td>
+                  <td>{{ selectedClient['batch_no'] || 'NA' }}</td>
+                  <td class="cell-date">{{ selectedClient['mfg_date'] | date: 'dd-MM-yyyy' }}</td>
+                  <td class="cell-date">{{ selectedClient['exp_date'] | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="detail-section">
+          <h3 class="section-title">Complaint Description</h3>
+          <div class="detail-description">
+            {{ selectedClient['complaint_description'] || 'NA' }}
+          </div>
+        </section>
+
+        <section class="detail-section action-section">
+          <h3 class="section-title">Take Action</h3>
+          <div class="clr-row form-row">
+            <div class="clr-col-lg-8 clr-col-md-12 clr-col-sm-12 form-field">
+              <label for="action-action">{{ 'common.table.action' | translate }} <span class="required-asterisk">*</span></label>
+              <textarea id="action-action" name="action" rows="4" ngModel required placeholder="Enter action taken..."></textarea>
+            </div>
+            <div class="clr-col-lg-4 clr-col-md-12 clr-col-sm-12 form-field">
+              <label for="action-status">{{ 'common.status' | translate }} <span class="required-asterisk">*</span></label>
+              <select id="action-status" name="status" ngModel required>
+                <option value="">Select Status</option>
+                <option value="solve">Solve</option>
+                <option value="inprocess">In Process</option>
+                <option value="reject">Reject</option>
+              </select>
+            </div>
+          </div>
+        </section>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button type="button" class="btn btn-primary" (click)="Save(f)">{{ 'common.save' | translate }}</button>
+    <button type="button" class="btn btn-close" (click)="isView = false">{{ 'common.close' | translate }}</button>
+  </div>
+</div>

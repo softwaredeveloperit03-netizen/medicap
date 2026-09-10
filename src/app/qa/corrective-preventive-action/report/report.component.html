@@ -1,0 +1,462 @@
+<!-- NEW / EDIT -->
+<div class="card rcd-form" *ngIf="isNew || isEdit">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        CAPA Report ({{ formNo }})<span *ngIf="isEdit"> — Edit &amp; Resubmit</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/corrective-preventive-action/report/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/corrective-preventive-action" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="alert alert-warning" *ngIf="isEdit && selectedRecord?.dept_reject_reason">
+      <strong>Department Rejection Reason:</strong> {{ selectedRecord.dept_reject_reason }}
+    </div>
+    <div class="alert alert-warning" *ngIf="isEdit && selectedRecord?.qa_reject_reason">
+      <strong>QA Rejection Reason:</strong> {{ selectedRecord.qa_reject_reason }}
+    </div>
+
+    <form #capaForm="ngForm">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">TITLE:</td>
+          <td colspan="3" class="rcd-form__title-cell">CORRECTIVE ACTION / PREVENTATIVE ACTION (CAPA) REPORT</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">1. CAPA Identification</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Document/Event Title <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <input class="rcd-form__input" type="text" name="capa_document_title" [(ngModel)]="form.capa_document_title" required />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Responsible Person</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="responsible_person" [(ngModel)]="form.responsible_person" />
+          </td>
+          <td class="rcd-form__label-cell">Responsible Position</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="responsible_position" [(ngModel)]="form.responsible_position" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Initiation Date</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="date" name="initiation_date" [(ngModel)]="form.initiation_date" />
+          </td>
+          <td class="rcd-form__label-cell">Department Code</td>
+          <td class="rcd-form__value-cell">
+            <select class="rcd-form__select" name="dept_code" [(ngModel)]="form.dept_code">
+              <option *ngFor="let d of deptCodes" [value]="d.code">{{ d.code }} — {{ d.name }}</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Source Reference #</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="source_reference" [(ngModel)]="form.source_reference" />
+          </td>
+          <td class="rcd-form__label-cell">Source Type</td>
+          <td class="rcd-form__value-cell">
+            <select class="rcd-form__select" name="source_type" [(ngModel)]="form.source_type">
+              <option value="">-- Select Source --</option>
+              <option *ngFor="let s of capaSources" [value]="s">{{ s }}</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Classification</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label style="margin-right: 1rem" *ngFor="let c of capaClassifications">
+              <input type="radio" name="classification" [value]="c" [(ngModel)]="form.classification" /> {{ c }}
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Description of Event <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" name="description_of_event" [(ngModel)]="form.description_of_event" rows="3" required></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product/Document/Equipment</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="product_document_equipment" [(ngModel)]="form.product_document_equipment" />
+          </td>
+          <td class="rcd-form__label-cell">Owner Department</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="owner_department" [(ngModel)]="form.owner_department" />
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">2. Action Applicability</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Corrective Action Required?</td>
+          <td class="rcd-form__value-cell">
+            <label style="margin-right: 1rem"><input type="radio" name="corrective_action_flag" value="YES" [(ngModel)]="form.corrective_action_flag" /> YES</label>
+            <label style="margin-right: 1rem"><input type="radio" name="corrective_action_flag" value="NO" [(ngModel)]="form.corrective_action_flag" /> NO</label>
+            <label><input type="radio" name="corrective_action_flag" value="N/A" [(ngModel)]="form.corrective_action_flag" /> N/A</label>
+          </td>
+          <td class="rcd-form__label-cell">Preventative Action Required?</td>
+          <td class="rcd-form__value-cell">
+            <label style="margin-right: 1rem"><input type="radio" name="preventative_action_flag" value="YES" [(ngModel)]="form.preventative_action_flag" /> YES</label>
+            <label style="margin-right: 1rem"><input type="radio" name="preventative_action_flag" value="NO" [(ngModel)]="form.preventative_action_flag" /> NO</label>
+            <label><input type="radio" name="preventative_action_flag" value="N/A" [(ngModel)]="form.preventative_action_flag" /> N/A</label>
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title" *ngIf="form.corrective_action_flag === 'YES'">3. Corrective Action Plan</div>
+      <table class="rcd-form__sheet-table" *ngIf="form.corrective_action_flag === 'YES'">
+        <tr>
+          <td class="rcd-form__label-cell">Corrective Action(s)</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" name="corrective_actions" [(ngModel)]="form.corrective_actions" rows="3"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Target Completion Date</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="date" name="corrective_target_date" [(ngModel)]="form.corrective_target_date" />
+          </td>
+          <td class="rcd-form__label-cell">Follow-up</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="corrective_followup" [(ngModel)]="form.corrective_followup" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Effectiveness Check Required?</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label style="margin-right: 1rem"><input type="radio" name="corrective_effectiveness_required" value="YES" [(ngModel)]="form.corrective_effectiveness_required" /> YES</label>
+            <label><input type="radio" name="corrective_effectiveness_required" value="NO" [(ngModel)]="form.corrective_effectiveness_required" /> NO</label>
+          </td>
+        </tr>
+        <tr *ngIf="form.corrective_effectiveness_required === 'YES'">
+          <td class="rcd-form__label-cell">Effectiveness Check Type(s)</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <clr-checkbox-wrapper *ngFor="let t of effectivenessTypes" style="display: inline-block; margin-right: 1rem">
+              <input
+                type="checkbox"
+                clrCheckbox
+                [checked]="isTypeChecked(form.corrective_effectiveness_types, t)"
+                (change)="toggleEffType(form.corrective_effectiveness_types, t, $event)"
+              />
+              <label>{{ t }}</label>
+            </clr-checkbox-wrapper>
+          </td>
+        </tr>
+        <tr *ngIf="form.corrective_effectiveness_required === 'YES'">
+          <td class="rcd-form__label-cell">Batch/Interval</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="corrective_batch_interval" [(ngModel)]="form.corrective_batch_interval" />
+          </td>
+          <td class="rcd-form__label-cell">Other — Specify</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="corrective_other_specify" [(ngModel)]="form.corrective_other_specify" />
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title" *ngIf="form.preventative_action_flag === 'YES'">4. Preventative Action Plan</div>
+      <table class="rcd-form__sheet-table" *ngIf="form.preventative_action_flag === 'YES'">
+        <tr>
+          <td class="rcd-form__label-cell">Preventative Action(s)</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" name="preventative_actions" [(ngModel)]="form.preventative_actions" rows="3"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Target Completion Date</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="date" name="preventative_target_date" [(ngModel)]="form.preventative_target_date" />
+          </td>
+          <td class="rcd-form__label-cell">Follow-up</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="preventative_followup" [(ngModel)]="form.preventative_followup" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Effectiveness Check Required?</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label style="margin-right: 1rem"><input type="radio" name="preventative_effectiveness_required" value="YES" [(ngModel)]="form.preventative_effectiveness_required" /> YES</label>
+            <label><input type="radio" name="preventative_effectiveness_required" value="NO" [(ngModel)]="form.preventative_effectiveness_required" /> NO</label>
+          </td>
+        </tr>
+        <tr *ngIf="form.preventative_effectiveness_required === 'YES'">
+          <td class="rcd-form__label-cell">Effectiveness Check Type(s)</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <clr-checkbox-wrapper *ngFor="let t of effectivenessTypes" style="display: inline-block; margin-right: 1rem">
+              <input
+                type="checkbox"
+                clrCheckbox
+                [checked]="isTypeChecked(form.preventative_effectiveness_types, t)"
+                (change)="toggleEffType(form.preventative_effectiveness_types, t, $event)"
+              />
+              <label>{{ t }}</label>
+            </clr-checkbox-wrapper>
+          </td>
+        </tr>
+        <tr *ngIf="form.preventative_effectiveness_required === 'YES'">
+          <td class="rcd-form__label-cell">Batch/Interval</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="preventative_batch_interval" [(ngModel)]="form.preventative_batch_interval" />
+          </td>
+          <td class="rcd-form__label-cell">Other — Specify</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="text" name="preventative_other_specify" [(ngModel)]="form.preventative_other_specify" />
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">5. Prepared By</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Prepared By</td>
+          <td class="rcd-form__value-cell">
+            <div class="rcd-form__readonly">{{ prepareBy || '—' }}</div>
+            <button type="button" class="btn btn-sm btn-outline" (click)="stampPrepareBy()">Stamp</button>
+          </td>
+          <td class="rcd-form__label-cell">Date</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" type="date" name="prepare_date" [(ngModel)]="prepareDate" />
+          </td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__note">On save, this CAPA is sent to the Department Head for approval to proceed with execution.</p>
+
+      <div style="text-align: center; margin-top: 0.75rem">
+        <button type="button" class="btn btn-primary" (click)="save(capaForm)" [disabled]="capaForm.invalid">
+          {{ isEdit ? 'Resubmit to Dept Head' : 'Save &amp; Send to Dept Head' }}
+        </button>
+      </div>
+
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose</p>
+    </form>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="card rcd-form" *ngIf="isLog">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">CAPA Report Log ({{ formNo }})</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/corrective-preventive-action/report/new" style="margin-right: 0.35rem">New CAPA</button>
+        <button class="btn btn-sm" routerLink="/qa/corrective-preventive-action" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3">
+        <label>From</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3">
+        <label>To</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3" style="padding-top: 1.2rem">
+        <button class="btn btn-sm btn-primary" (click)="getLog()">Search</button>
+      </div>
+    </div>
+
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>CAPA No</th>
+          <th>Title</th>
+          <th>Classification</th>
+          <th>Status</th>
+          <th>Initiation Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of results; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.capa_no || 'Pending' }}</td>
+          <td>{{ r.capa_document_title }}</td>
+          <td>{{ r.classification }}</td>
+          <td><span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status_label || getStatusLabel(r.status) }}</span></td>
+          <td>{{ r.initiation_date | date: 'dd-MM-yyyy' }}</td>
+          <td>
+            <button class="btn btn-sm btn-info" (click)="viewRecord(r)">View</button>
+            <button class="btn btn-sm btn-warning" *ngIf="canEdit(r)" (click)="editRejected(r)">Edit &amp; Resubmit</button>
+            <button class="btn btn-sm btn-outline" (click)="downloadForm(r.id)">PDF</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length">
+          <td colspan="7" style="text-align: center">No records found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        CAPA Report — View (CAPA # {{ selectedRecord.capa_no || 'Pending' }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/corrective-preventive-action/report/log" style="margin-right: 0.35rem">Back</button>
+        <button class="btn btn-sm btn-outline" (click)="downloadForm(selectedRecord.id)">PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="alert alert-danger" *ngIf="selectedRecord.status === 'rejected' && selectedRecord.dept_reject_reason">
+      <strong>Department Rejection Reason:</strong> {{ selectedRecord.dept_reject_reason }}
+    </div>
+    <div class="alert alert-danger" *ngIf="selectedRecord.status === 'rejected' && selectedRecord.qa_reject_reason">
+      <strong>QA Rejection Reason:</strong> {{ selectedRecord.qa_reject_reason }}
+    </div>
+
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">CAPA #</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.capa_no || 'Pending' }}</td>
+        <td class="rcd-form__label-cell">Status</td>
+        <td class="rcd-form__value-cell">
+          <span class="label" [ngClass]="getStatusClass(selectedRecord.status)">{{ selectedRecord.status_label || getStatusLabel(selectedRecord.status) }}</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Document/Event Title</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.capa_document_title }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Responsible Person / Position</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.responsible_person }} / {{ selectedRecord.responsible_position }}</td>
+        <td class="rcd-form__label-cell">Initiation Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.initiation_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Source Reference # / Type</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.source_reference }} / {{ selectedRecord.source_type }}</td>
+        <td class="rcd-form__label-cell">Classification</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.classification }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Description of Event</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.description_of_event }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Product/Document/Equipment</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.product_document_equipment }}</td>
+        <td class="rcd-form__label-cell">Dept Code / Owner Dept</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.dept_code }} / {{ selectedRecord.owner_department }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title" *ngIf="selectedRecord.corrective_action_flag === 'YES'">Corrective Action Plan</div>
+    <table class="rcd-form__sheet-table" *ngIf="selectedRecord.corrective_action_flag === 'YES'">
+      <tr>
+        <td class="rcd-form__label-cell">Corrective Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.corrective_actions }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Target Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.corrective_target_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Follow-up</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.corrective_followup }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Effectiveness Required</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          {{ selectedRecord.corrective_effectiveness_required }} —
+          {{ parseTypes(selectedRecord.corrective_effectiveness_types).join(', ') }}
+          <span *ngIf="selectedRecord.corrective_batch_interval"> | Batch/Interval: {{ selectedRecord.corrective_batch_interval }}</span>
+          <span *ngIf="selectedRecord.corrective_other_specify"> | Other: {{ selectedRecord.corrective_other_specify }}</span>
+        </td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title" *ngIf="selectedRecord.preventative_action_flag === 'YES'">Preventative Action Plan</div>
+    <table class="rcd-form__sheet-table" *ngIf="selectedRecord.preventative_action_flag === 'YES'">
+      <tr>
+        <td class="rcd-form__label-cell">Preventative Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.preventative_actions }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Target Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.preventative_target_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Follow-up</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.preventative_followup }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Effectiveness Required</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          {{ selectedRecord.preventative_effectiveness_required }} —
+          {{ parseTypes(selectedRecord.preventative_effectiveness_types).join(', ') }}
+          <span *ngIf="selectedRecord.preventative_batch_interval"> | Batch/Interval: {{ selectedRecord.preventative_batch_interval }}</span>
+          <span *ngIf="selectedRecord.preventative_other_specify"> | Other: {{ selectedRecord.preventative_other_specify }}</span>
+        </td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">Approval Stamps</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Prepared By / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.prepare_by }} / {{ selectedRecord.prepare_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Dept Approval / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.dept_approval_by }} / {{ selectedRecord.dept_approval_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">QA Approval / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.qa_approval_by }} / {{ selectedRecord.qa_approval_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Closure Request / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.closure_request_by }} / {{ selectedRecord.closure_request_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Closed By QA / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.closed_by_qa }} / {{ selectedRecord.closed_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Closure Proof</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.closure_proof }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.eff_corrective_result || selectedRecord.eff_preventative_result">
+        <td class="rcd-form__label-cell">Effectiveness — Corrective</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.eff_corrective_result }} — {{ selectedRecord.eff_corrective_additional }}</td>
+        <td class="rcd-form__label-cell">Effectiveness — Preventative</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.eff_preventative_result }} — {{ selectedRecord.eff_preventative_additional }}</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem" *ngIf="canEdit(selectedRecord)">
+      <button class="btn btn-warning" (click)="editRejected(selectedRecord)">Edit &amp; Resubmit</button>
+    </div>
+  </div>
+</div>

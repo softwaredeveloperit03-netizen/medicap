@@ -1,0 +1,417 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
+import { DataAccessService } from 'src/app/data-access.service';
+import { MasterHubReturnService } from '../master-hub-return.service';
+
+/** Department sidebar — each master belongs to exactly one department */
+export interface MasterDepartment {
+  id: string;
+  name: string;
+  icon: string;
+  theme: 'qa' | 'qc' | 'purchase' | 'production' | 'stores' | 'other' | 'forms' | 'hr' | 'engineering';
+}
+
+export interface DashCard {
+  id: string;
+  title: string;
+  description: string;
+  /** App route — always absolute (leading /) for safe navigation */
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  departmentId: string;
+}
+
+export interface GroupedCardsSection {
+  department: MasterDepartment;
+  cards: DashCard[];
+}
+
+/** Professional tile accents (slate / blue / teal — no rainbow) */
+const G = {
+  slate: 'linear-gradient(135deg, #334155 0%, #475569 100%)',
+  blue: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+  teal: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
+  indigo: 'linear-gradient(135deg, #3730a3 0%, #6366f1 100%)',
+  amber: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+  steel: 'linear-gradient(135deg, #1e3a5f 0%, #64748b 100%)',
+  navy: 'linear-gradient(135deg, #172554 0%, #1e3a8a 100%)',
+  copper: 'linear-gradient(135deg, #7c2d12 0%, #c2410c 100%)',
+};
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  closeLink = '/';
+  readonly productDefaultRoute = '/master/product/new-formulation-list';
+  readonly productFormulationRoute = '/master/product/new-formulation-list';
+
+  readonly departments: MasterDepartment[] = [
+    { id: 'qa', name: 'Quality Assurance', icon: 'fa-clipboard-check', theme: 'qa' },
+    { id: 'qc', name: 'Quality Control', icon: 'fa-microscope', theme: 'qc' },
+    { id: 'purchase', name: 'Purchase', icon: 'fa-hand-holding-usd', theme: 'purchase' },
+    { id: 'production', name: 'Production', icon: 'fa-industry', theme: 'production' },
+    { id: 'stores', name: 'Stores', icon: 'fa-warehouse', theme: 'stores' },
+    // { id: 'other', name: 'Other Master', icon: 'fa-th-large', theme: 'other' },
+    { id: 'forms', name: 'Forms Customisation.', icon: 'fa-wpforms', theme: 'forms' }, 
+    { id: 'hr', name: 'Human Resource.', icon: 'fa-users', theme: 'hr' },
+    { id: 'engineering', name: 'Engineering', icon: 'fa-cogs', theme: 'engineering' },
+    { id: 'bmr', name: 'BMR Master', icon: 'fa-cogs', theme: 'production' },
+  ];
+
+  readonly managementCards: DashCard[] = [
+    // Quality Assurance — core material / product
+    { id: 'mattype', title: 'Material / Item Type', description: '', route: '/master/mattype', icon: 'fa-warehouse', category: 'QA', gradient: G.slate, departmentId: 'qa' },
+    { id: 'material', title: 'RM/PM Materials', description: '', route: '/master/material', icon: 'fa-flask', category: 'QA', gradient: G.blue, departmentId: 'qa' },
+    { id: 'storage-condition', title: 'Storage Condition', description: 'Master for material storage dropdown', route: '/master/mmaster/storage_condition', icon: 'fa-thermometer-half', category: 'QA', gradient: G.teal, departmentId: 'qa' },
+    { id: 'product', title: 'Finished Products.', description: '', route: '/master/product/new-formulation-list', icon: 'fa-cube', category: 'QA', gradient: G.teal, departmentId: 'qa' },
+    {
+      id: 'packing-config-master',
+      title: 'Packing Configuration Master',
+      description: 'Reusable packing templates for formulation products',
+      route: '/master/packing-configuration-master',
+      icon: 'fa-boxes',
+      category: 'QA',
+      gradient: G.steel,
+      departmentId: 'qa',
+    },
+    // Quality Control
+    { id: 'test', title: 'Test Master', description: '', route: '/master/test', icon: 'fa-vial', category: 'QC', gradient: G.indigo, departmentId: 'qc' },
+    { id: 'moa-stp-copy', title: 'MOA/STP', description: '', route: '/master/moa-stp-copy/new-moa-stp', icon: 'fa-copy', category: 'QC', gradient: G.navy, departmentId: 'qc' },
+    { id: 'lab', title: 'Lab Master', description: '', route: '/master/lab', icon: 'fa-microscope', category: 'QC', gradient: G.blue, departmentId: 'qc' },
+    { id: 'volumetric', title: 'Volumetric Solution', description: '', route: '/master/volumetric', icon: 'fa-flask', category: 'QC', gradient: G.teal, departmentId: 'qc' },
+    { id: 'hplc-gc-column-master', title: 'HPLC/GC Column Master', description: '', route: '/master/hplc', icon: 'fa-columns', category: 'QC', gradient: G.indigo, departmentId: 'qc' },
+    { id: 'standard-master', title: 'Standard Master', description: '', route: '/master/standard', icon: 'fa-certificate', category: 'QC', gradient: G.navy, departmentId: 'qc' },
+    { id: 'fg-sampling-checklist-master', title: 'Sampling Checklist Master', description: '', route: '/master/fg-sampling-checklist', icon: 'fa-clipboard-list', category: 'QC', gradient: G.steel, departmentId: 'qc' },
+    { id: 'qc-specification', title: 'Specifications', description: '', route: '/master/specification', icon: 'fa-file-contract', category: 'QC', gradient: G.navy, departmentId: 'qc' },
+    // Purchase 
+    { id: 'commercial', title: 'Commercial Master', description: '', route: '/master/commercial', icon: 'fa-building', category: 'Purchase', gradient: G.steel, departmentId: 'purchase' },
+    // { id: 'purchase-vendor', title: 'Vendor', description: '', route: '/purchase/vendor', icon: 'fa-handshake', category: 'Purchase', gradient: G.teal, departmentId: 'purchase' },
+    { id: 'transporter', title: 'Transporter Master', description: '', route: '/admin/transporter', icon: 'fa-truck', category: 'Purchase', gradient: G.amber, departmentId: 'purchase' },
+    // Production
+    { id: 'unitformula', title: 'Master Formula Rec.', description: '', route: '/unitformula', icon: 'fa-flask', category: 'Production', gradient: G.navy, departmentId: 'production' },
+    { id: 'linemaster', title: 'Line Master', description: '', route: '/master/linemaster', icon: 'fa-stream', category: 'Production', gradient: G.slate, departmentId: 'production' },
+    // { id: 'bmr', title: 'BMR Master', description: '', route: '/production/ebmr', icon: 'fa-book-medical', category: 'Production', gradient: G.indigo, departmentId: 'production' },
+    { id: 'productionstage', title: 'Stage Master', description: '', route: '/master/productionstage', icon: 'fa-layer-group', category: 'Production', gradient: G.blue, departmentId: 'production' },
+    { id: 'bmr-checklist', title: 'BMR Checklist', description: '', route: '/production/stages-master', icon: 'fa-clipboard-check', category: 'Production', gradient: G.teal, departmentId: 'production' },
+    { id: 'blister', title: 'Change Part Master', description: '', route: '/master/blister', icon: 'fa-cogs', category: 'Production', gradient: G.steel, departmentId: 'production' },
+    // Stores
+    { id: 'pack-size', title: 'Pack Size', description: '', route: '/master/mmaster/pack_size', icon: 'fa-box', category: 'Stores', gradient: G.amber, departmentId: 'stores' },
+    { id: 'section', title: 'Area / Section', description: '', route: '/master/section', icon: 'fa-columns', category: 'Stores', gradient: G.slate, departmentId: 'stores' },
+    // Other Master — reference, services, checklist, logistics registration
+    { id: 'mmaster-general', title: 'Other Material', description: '', route: '/master/mmaster/generalmat', icon: 'fa-flask', category: 'QA', gradient: G.copper, departmentId: 'qa' },
+    { id: 'service-master', title: 'Service Master', description: '', route: '/master/service-master', icon: 'fa-concierge-bell', category: 'QA', gradient: G.steel, departmentId: 'qa' },
+    { id: 'checklist-form', title: 'Master Checklist', description: '', route: '/master/checklist/form', icon: 'fa-clipboard-list', category: 'QA', gradient: G.indigo, departmentId: 'qa' },
+    { id: 'uom', title: 'UOM', description: '', route: '/master/mmaster/uom', icon: 'fa-ruler', category: 'QA', gradient: G.navy, departmentId: 'qa' },
+    { id: 'grade', title: 'Grade', description: '', route: '/master/mmaster/grade', icon: 'fa-layer-group', category: 'QA', gradient: G.slate, departmentId: 'qa' },
+    // Forms Customisation — visibility / fields for transactional forms (links to QA module)
+    {
+      id: 'material-master-form-customisation',
+      title: 'Material Master form',
+      description: 'Labels, order, text/checkbox, visibility → Material New',
+      route: '/master/material-master-form-customisation',
+      icon: 'fa-sliders-h',
+      category: 'Forms',
+      gradient: G.indigo,
+      departmentId: 'forms',
+    },
+    {
+      id: 'specification-form-customisation',
+      title: 'Specification Customisation',
+      description: 'Dynamic fields and labels for Raw/Packing/FG specifications',
+      route: '/master/specification-form-customisation',
+      icon: 'fa-file-medical',
+      category: 'Forms',
+      gradient: G.navy,
+      departmentId: 'forms',
+    },
+    {
+      id: 'receiving-form-customisation',
+      title: 'Receiving Form Customisation',
+      description: 'Dynamic labels, conditions and defaults for Receiving Proceed form',
+      route: '/master/receiving-form-customisation',
+      icon: 'fa-truck-loading',
+      category: 'Forms',
+      gradient: G.blue,
+      departmentId: 'forms',
+    },
+    {
+      id: 'software-type',
+      title: 'Software Type',
+      description: 'Lock Formulation/API with password-protected change',
+      route: '/master/software-type',
+      icon: 'fa-laptop-code',
+      category: 'Forms',
+      gradient: G.steel,
+      departmentId: 'forms',
+    },
+    // Human Resource — /master/* (designation, salary head, hra masters)
+    { id: 'hr-designation', title: 'Designation', description: '', route: '/master/designation', icon: 'fa-id-badge', category: 'HR', gradient: G.indigo, departmentId: 'hr' },
+    { id: 'hr-salary-head', title: 'Salary Head', description: '', route: '/master/salary-head', icon: 'fa-money-check-alt', category: 'HR', gradient: G.teal, departmentId: 'hr' },
+    // { id: 'hr-hra', title: 'Dashboard', description: '', route: '/hr/master/hra', icon: 'fa-user-tie', category: 'HR', gradient: G.slate, departmentId: 'hr' },
+    { id: 'hr-hra-log', title: 'Leave Policy Master', description: '', route: '/master/hra/log', icon: 'fa-list-alt', category: 'HR', gradient: G.blue, departmentId: 'hr' },
+    // { id: 'hr-hra-new', title: 'New', description: '', route: '/hr/master/hra/new', icon: 'fa-plus-circle', category: 'HR', gradient: G.navy, departmentId: 'hr' },
+    { id: 'hr-hra-shift', title: 'Shift', description: '', route: '/master/hra/shift', icon: 'fa-clock', category: 'HR', gradient: G.steel, departmentId: 'hr' },
+    // { id: 'hr-hra-leave', title: 'Leave', description: '', route: '/hr/master/hra/leave', icon: 'fa-calendar-alt', category: 'HR', gradient: G.indigo, departmentId: 'hr' },
+    { id: 'hr-hra-test-medical', title: 'Medical Test Master', description: '', route: '/master/hra/test-medical', icon: 'fa-heartbeat', category: 'HR', gradient: G.teal, departmentId: 'hr' },
+    { id: 'hr-hra-checklist', title: 'Checklist Master', description: '', route: '/master/hra/checklist-master', icon: 'fa-tasks', category: 'HR', gradient: G.amber, departmentId: 'hr' },
+    // { id: 'hr-hra-asset', title: 'Asset', description: '', route: '/hr/master/hra/asset', icon: 'fa-boxes', category: 'HR', gradient: G.slate, departmentId: 'hr' },
+    { id: 'hr-hra-asset-master', title: 'Asset Item Master', description: '', route: '/master/hra/asset/master', icon: 'fa-clipboard-list', category: 'HR', gradient: G.blue, departmentId: 'hr' },
+    // Engineering
+    { id: 'equipments', title: 'Equipment Master', description: '', route: '/master/equipments', icon: 'fa-tools', category: 'Engineering', gradient: G.steel, departmentId: 'engineering' },
+    // BMR
+    { id: 'master-bmr', title: 'BMR Master', description: '', route: '/master/bmr-master', icon: 'fa-book-medical', category: 'BMR', gradient: G.indigo, departmentId: 'bmr' },
+    { id: 'master-wobmr', title: 'WO BMR Master', description: '', route: '/master/wobmr', icon: 'fa-book-medical', category: 'BMR', gradient: G.indigo, departmentId: 'bmr' },
+  ];
+
+  searchQuery = '';
+  selectedDepartmentId = 'all';
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  constructor(
+    public service: DataAccessService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private masterHubReturn: MasterHubReturnService
+  ) {}
+
+  /** Call before navigating to a linked master so Close can return to this department tab */
+  registerMasterReturn(deptId: string): void {
+    this.masterHubReturn.setReturnDepartment(deptId);
+  }
+
+  private normalizeSoftwareType(value: any): 'API' | 'Formulation' | '' {
+    const s = String(value || '').trim().toLowerCase();
+    if (s === 'api') {
+      return 'API';
+    }
+    if (s === 'formulation') {
+      return 'Formulation';
+    }
+    return '';
+  }
+
+  private setProductCardRouteBySoftwareType(type: 'API' | 'Formulation' | ''): void {
+    const productCard = this.managementCards.find((c) => c.id === 'product');
+    if (!productCard) {
+      return;
+    }
+    productCard.route =
+      type === 'Formulation' ? this.productFormulationRoute : this.productDefaultRoute;
+  }
+
+  private loadProductRouteBySoftwareType(): void {
+    const plantId = String(localStorage.getItem('plant_id') || '').trim();
+    this.service
+      .get('qa/custimize.php?type=getSoftware_restrication_dep&dep_name=Master&module=Form Customisation')
+      .subscribe({
+        next: (response: any) => {
+          const rows = Array.isArray(response) ? response : [];
+          const filtered = rows
+            .filter((r) => String(r?.param_label || '').trim() === 'Software Type')
+            .filter((r) => !plantId || String(r?.plant_id || '').trim() === plantId)
+            .sort((a, b) => (Number(b?.id) || 0) - (Number(a?.id) || 0));
+          const selectedType = filtered.length
+            ? this.normalizeSoftwareType(filtered[0]?.param_value)
+            : '';
+          this.setProductCardRouteBySoftwareType(selectedType);
+        },
+        error: () => {
+          this.setProductCardRouteBySoftwareType('');
+        },
+      });
+  }
+
+  /** Leaving Master hub via header Close — do not force return to hub from other modules */
+  onLeaveMasterHub(): void {
+    this.masterHubReturn.clearReturnDepartment();
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  get currentDepartment(): MasterDepartment | undefined {
+    return this.departments.find((d) => d.id === this.selectedDepartmentId);
+  }
+
+  /** Sidebar departments that have at least one master card (excludes hidden forms tab). */
+  get visibleDepartments(): MasterDepartment[] {
+    return this.departments.filter(
+      (d) => d.id !== 'forms' && this.countForDepartment(d.id) > 0
+    );
+  }
+
+  countForDepartment(deptId: string): number {
+    return this.managementCards.filter((c) => c.departmentId === deptId).length;
+  }
+
+  selectDepartment(deptId: string): void {
+    this.selectedDepartmentId = deptId;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { dept: deptId },
+      queryParamsHandling: 'merge',
+    });
+    try {
+      localStorage.setItem('master_dashboard_department', deptId);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  showAllTabs(): void {
+    this.selectedDepartmentId = 'all';
+    this.searchQuery = '';
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { dept: 'all' },
+      queryParamsHandling: 'merge',
+    });
+    try {
+      localStorage.setItem('master_dashboard_department', 'all');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  getFilteredCards(): DashCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.managementCards.filter((c) => {
+      const matchDept = this.selectedDepartmentId === 'all' || c.departmentId === this.selectedDepartmentId;
+      const matchSearch =
+        !q ||
+        c.title.toLowerCase().includes(q) ||
+        (c.description && c.description.toLowerCase().includes(q)) ||
+        c.category.toLowerCase().includes(q);
+      return matchDept && matchSearch;
+    });
+  }
+
+  /** Group filtered cards by department for the All Tabs view. */
+  getGroupedSections(): GroupedCardsSection[] {
+    const cards = this.getFilteredCards();
+    if (this.selectedDepartmentId !== 'all') {
+      const dept = this.currentDepartment;
+      return dept ? [{ department: dept, cards }] : [];
+    }
+    const sections: GroupedCardsSection[] = [];
+    for (const dept of this.departments) {
+      const deptCards = cards.filter((c) => c.departmentId === dept.id);
+      if (deptCards.length > 0) {
+        sections.push({ department: dept, cards: deptCards });
+      }
+    }
+    return sections;
+  }
+
+  trackByCardId(_index: number, card: DashCard): string {
+    return card.id;
+  }
+
+  trackByDeptId(_index: number, dept: MasterDepartment): string {
+    return dept.id;
+  }
+
+  trackBySectionId(_index: number, section: GroupedCardsSection): string {
+    return section.department.id;
+  }
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+  showPalette = false;
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('master_dashboard_palette', palette.name);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  ngOnInit(): void {
+    this.loadProductRouteBySoftwareType();
+    const savedPalette = localStorage.getItem('master_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find((p) => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+    try {
+      const savedDept = localStorage.getItem('master_dashboard_department');
+      if (savedDept === 'all') {
+        this.selectedDepartmentId = 'all';
+      } else if (savedDept && this.departments.some((d) => d.id === savedDept)) {
+        this.selectedDepartmentId = savedDept;
+      }
+    } catch {
+      /* ignore */
+    }
+    this.route.queryParamMap.subscribe((params) => {
+      const fromQuery = params.get('dept');
+      if (fromQuery === 'all') {
+        this.selectedDepartmentId = 'all';
+        try {
+          localStorage.setItem('master_dashboard_department', 'all');
+        } catch {
+          /* ignore */
+        }
+      } else if (fromQuery && this.departments.some((d) => d.id === fromQuery)) {
+        this.selectedDepartmentId = fromQuery;
+        try {
+          localStorage.setItem('master_dashboard_department', fromQuery);
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+  }
+}

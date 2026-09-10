@@ -1,0 +1,126 @@
+<div class="card" *ngIf="!loading && sheet">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-8" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Sampling Room Usage and Cleaning Log (View)
+      </div>
+      <div class="clr-col-4" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+        <button class="btn btn-sm btn-danger" routerLink="/qc/sampling/sampling-room/log">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row meta-row">
+      <div class="clr-col-lg-3"><strong>Sheet No.:</strong> {{ sheet.sheet_no }}</div>
+      <div class="clr-col-lg-3"><strong>Log Date:</strong> {{ sheet.log_date | date:'dd-MM-yyyy' }}</div>
+      <div class="clr-col-lg-3">
+        <strong>Status:</strong>
+        <span [class.status-verified]="isVerified()">
+          {{ sheet.status | uppercase }}
+          <i *ngIf="isVerified()" class="fas fa-check-circle verified-tick" title="Verified"></i>
+        </span>
+      </div>
+      <div class="clr-col-lg-3"><strong>Entry By:</strong> {{ sheet.entry_by_name || sheet.entry_by }}</div>
+      <div class="clr-col-lg-3" *ngIf="isVerified()">
+        <strong>Verified By:</strong>
+        <span class="verified-label">{{ sheet.verified_by_name || sheet.verified_by }}</span>
+      </div>
+    </div>
+
+    <div class="log-table-wrap">
+      <table class="sampling-room-log-table">
+        <colgroup>
+          <col class="w-material" />
+          <col class="w-lot" />
+          <col class="w-check" />
+          <col class="w-check" />
+          <col class="w-agent-name" />
+          <col class="w-agent-lot" />
+          <col class="w-agent-expiry" />
+          <col class="w-check" />
+          <col class="w-check" />
+          <col class="w-gauge" />
+          <col class="w-gauge" />
+          <col class="w-gauge" />
+          <col class="w-sign" />
+          <col class="w-sign" />
+        </colgroup>
+        <thead>
+          <tr class="header-main">
+            <th rowspan="2">Material Description</th>
+            <th rowspan="2">Material Lot #</th>
+            <th colspan="2">Cleaning Performed</th>
+            <th colspan="3">Cleaning Agent</th>
+            <th colspan="2">Balance<sup>1</sup></th>
+            <th colspan="3">Magnehelic Gauge Reading<sup>2</sup><br><span class="limit-text">Limit: NLT 0.02" WC</span></th>
+            <th rowspan="2">Performed By</th>
+            <th rowspan="2">Verified By</th>
+          </tr>
+          <tr class="header-sub">
+            <th>Full</th>
+            <th>Partial</th>
+            <th>Name</th>
+            <th>Lot #</th>
+            <th>Expiry Date</th>
+            <th>Cleaned</th>
+            <th>Verified</th>
+            <th>#1</th>
+            <th>#2</th>
+            <th>#3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of entries">
+            <td>{{ row.material_description }}</td>
+            <td>{{ row.material_lot_no }}</td>
+            <td class="cell-check">{{ checkMark(row.cleaning_full) }}</td>
+            <td class="cell-check">{{ checkMark(row.cleaning_partial) }}</td>
+            <td>{{ row.cleaning_agent_name }}</td>
+            <td>{{ row.cleaning_agent_lot }}</td>
+            <td>{{ row.cleaning_agent_expiry | date:'dd-MM-yyyy' }}</td>
+            <td class="cell-check">{{ checkMark(row.balance_cleaned) }}</td>
+            <td class="cell-check">{{ checkMark(row.balance_verified) }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_1 }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_2 }}</td>
+            <td class="cell-gauge">{{ row.magnehelic_reading_3 }}</td>
+            <td>{{ row.performed_by }}</td>
+            <td class="verified-by-cell">
+              <span *ngIf="isRowVerified(row)" class="verified-wrap">
+                <i class="fas fa-check-circle verified-tick" title="Verified"></i>
+                {{ getVerifiedByDisplay(row) }}
+              </span>
+              <button
+                *ngIf="!isRowVerified(row) && !isVerified()"
+                type="button"
+                class="btn btn-sm btn-success btn-verify-row"
+                (click)="verifyRow(row)"
+                [disabled]="row.verifying">
+                {{ row.verifying ? '...' : 'Verify' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footnotes">
+      <p><sup>1</sup> Balance Verification is performed on the day of use with 100g, Class 1 certified weights.</p>
+      <p><sup>2</sup> Reading from Magnehelic gauge to be taken before sampling.</p>
+    </div>
+
+    <div class="sheet-no-footer">
+      <strong>Sheet No.:</strong> {{ sheet.sheet_no }}
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-info" (click)="downloadPdf()">Download PDF</button>
+    <button class="btn btn-danger" routerLink="/qc/sampling/sampling-room/log">Close</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading">
+  <div class="card-block">Loading...</div>
+</div>

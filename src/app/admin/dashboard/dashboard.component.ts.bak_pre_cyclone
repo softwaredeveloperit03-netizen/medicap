@@ -1,0 +1,176 @@
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+} from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  dept_head = 'No';
+  trainig_cordinator = 'No';
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  selectedSidebarModule: 'ALL' | 'ADMIN_MANAGEMENT' | 'FACILITIES_MANAGEMENT' | 'TRANSPORT_MANAGEMENT' = 'ALL';
+  showPalette = false;
+  private readonly adminManagementIds = new Set([
+    'aggremment',
+    'stationary'
+  ]);
+  private readonly facilitiesManagementIds = new Set([
+    'housekeeping',
+    'gardev',
+    'laundry',
+    'favility',
+    'first-aid',
+    'hygin'
+  ]);
+  private readonly transportManagementIds = new Set([
+    'transporter',
+    'vehicle-management'
+  ]);
+  private readonly adminOtherIds = new Set([
+    'scrap',
+    'courier',
+    'assetManagement'
+  ]);
+
+  private allCards: DeptCard[] = [
+        { id: 'gatepass', title: 'Gate Pass', description: 'Manage gate pass entries', route: '/security/gatepass', icon: 'fa-warehouse', category: 'Movement', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+
+    { id: 'aggremment', title: 'Agreement', description: 'Manage agreements and contracts', route: 'aggremment', icon: 'fa-file-signature', category: 'Admin', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'stationary', title: 'Stationary Inventory', description: 'Requisitions, consumption and stock', route: 'stationary', icon: 'fa-pen', category: 'Admin', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'housekeeping', title: 'Housekeeping Material', description: 'Material requisition and issuance', route: 'housekeeping', icon: 'fa-broom', category: 'Facilities', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'gardev', title: 'Garden Management', description: 'Garden and landscape maintenance', route: 'gardev', icon: 'fa-tree', category: 'Facilities', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'laundry', title: 'Laundry & Gowning', description: 'Laundry and gowning records', route: 'laundry', icon: 'fa-tshirt', category: 'Facilities', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'favility', title: 'Facility', description: 'Facility management and services', route: 'favility', icon: 'fa-building', category: 'Facilities', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'first-aid', title: 'First Aid', description: 'First aid requisition and procedures', route: 'first-aid', icon: 'fa-first-aid', category: 'Facilities', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'hygin', title: 'Hygiene', description: 'Hygiene reports and ETP logs', route: 'hygin', icon: 'fa-hand-sparkles', category: 'Facilities', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'transporter', title: 'Transport Mgt', description: 'Transporter registration and approval', route: 'transporter', icon: 'fa-truck', category: 'Transport', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'vehicle-management', title: 'Vehicle Management', description: 'Vehicle category and fleet details', route: 'vehicle-management', icon: 'fa-car', category: 'Transport', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    // { id: 'transport', title: 'Transport', description: 'Transport management module', route: 'transport', icon: 'fa-truck-moving', category: 'Transport', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'scrap', title: 'Scrap Management', description: 'Scrap vendor, entry and sales', route: 'scrap', icon: 'fa-trash-alt', category: 'Other', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'courier', title: 'Courier Register', description: 'Courier and dispatch register', route: 'courier', icon: 'fa-shipping-fast', category: 'Other', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    // { id: 'saftey', title: 'Safety', description: 'Safety alerts and fire training', route: 'saftey', icon: 'fa-shield-alt', category: 'Other', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'assetManagement', title: 'Asset Management', description: 'Track and manage assets', route: 'assetManagement', icon: 'fa-tasks', category: 'Other', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+  ];
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    const savedPalette = localStorage.getItem('admin_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+      this.cdr.markForCheck();
+    });
+  }
+
+  getFilteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.allCards.filter(c => {
+      const matchSidebar =
+        this.selectedSidebarModule === 'ALL' ||
+        (this.selectedSidebarModule === 'ADMIN_MANAGEMENT' && this.adminManagementIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'FACILITIES_MANAGEMENT' && this.facilitiesManagementIds.has(c.id)) ||
+        (this.selectedSidebarModule === 'TRANSPORT_MANAGEMENT' && this.transportManagementIds.has(c.id));
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchSidebar && matchCategory && matchSearch;
+    });
+  }
+
+  getOtherAdminSidebarCards(): DeptCard[] {
+    const cardsById = new Map(this.allCards.map(function(c) { return [c.id, c] as [string, DeptCard]; }));
+    return Array.from(this.adminOtherIds)
+      .map(function(id) { return cardsById.get(id); })
+      .filter(function(c): c is DeptCard { return !!c; });
+  }
+
+  selectSidebarModule(module: 'ALL' | 'ADMIN_MANAGEMENT' | 'FACILITIES_MANAGEMENT' | 'TRANSPORT_MANAGEMENT'): void {
+    this.selectedSidebarModule = module;
+    this.selectedCategory = 'All';
+    this.searchQuery = '';
+  }
+
+  showAllTabs(): void {
+    this.selectSidebarModule('ALL');
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('admin_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

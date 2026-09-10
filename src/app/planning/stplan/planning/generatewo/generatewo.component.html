@@ -1,0 +1,291 @@
+<div class="card" *ngIf="!showCancelled">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Generated Workorders</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-success" routerLink="/planning/Generatewolog">log</button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="tableSearchInput">Search PO/FO:</label>
+          <input type="text" id="tableSearchInput"
+            placeholder="Type to filter forecast, product, WO..."
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()">
+        </div>
+      </div>
+
+      <div class="gw-top-actions">
+        <span class="gw-selection-hint" *ngIf="selectedVisibleCount">
+          {{ selectedVisibleCount }} selected
+          <span *ngIf="selectionLock === 'cannot_plan'"> · To Be Not Plan only</span>
+          <span *ngIf="selectionLock === 'can_plan'"> · To Be Plan only</span>
+        </span>
+        <span class="gw-selection-hint" *ngIf="!selectedVisibleCount">
+          Select a To Be Plan or To Be Not Plan row first — only that type stays selectable.
+        </span>
+        <button type="button" class="btn btn-sm btn-outline" (click)="toggleSelectAll(true)"
+          [disabled]="!selectionLock || !Worders?.length">Select All</button>
+        <button type="button" class="btn btn-sm btn-outline" (click)="toggleSelectAll(false)" [disabled]="!selectedVisibleCount">Clear All</button>
+        <button type="button" class="btn btn-sm btn-danger" (click)="sendForRequirementAnalysis()"
+          [disabled]="selectionLock !== 'cannot_plan' || !selectedVisibleCount || autoSendInProgress">
+          Send for Requirement Analysis
+        </button>
+        <button type="button" class="btn btn-sm btn-success" (click)="approveCanPlanWorkOrders()"
+          [disabled]="selectionLock !== 'can_plan' || !selectedVisibleCount || autoSendInProgress">
+          Approve To Be Plan Work Orders
+        </button>
+      </div>
+
+      <div class="gw-table-scroll" *ngIf="loading">
+        <span class="spinner spinner-inline"></span> Loading...
+      </div>
+
+      <div class="gw-forecast-list" *ngIf="!loading">
+        <div class="gw-forecast-empty" *ngIf="!forecastGroups?.length">
+          No generated work orders found.
+        </div>
+
+        <div class="gw-forecast-block" *ngFor="let group of forecastGroups; let gi = index">
+          <div class="gw-forecast-header" [style.backgroundColor]="group.bg_color" (click)="toggleForecastCollapse(group)">
+            <span class="gw-forecast-arrow">{{ group.collapsed ? '▶' : '▼' }}</span>
+            <div class="gw-forecast-header-main">
+              <span class="gw-forecast-title">Forecast No: <strong>{{ group.order_no }}</strong>
+                <span class="gw-tag gw-tag--combi" *ngIf="group.hasCombiChild">Combi SFG</span>
+              </span>
+              <span class="gw-forecast-meta"><strong>Plan Month:</strong> {{ formatPlanMonth(group.planMonth) }}</span>
+              <span class="gw-forecast-meta"><strong>Billing:</strong> {{ group.billing_type }}</span>
+              <span class="gw-forecast-meta"><strong>Group:</strong> {{ group.mainGroupName || '-' }}</span>
+              <span class="gw-forecast-meta"><strong>Products:</strong> {{ group.productSummary || '-' }}</span>
+              <span class="gw-forecast-meta"><strong>WO Count:</strong> {{ group.totalCount }}</span>
+              <span class="gw-forecast-meta gw-meta-success"><strong>To Be Plan:</strong> {{ group.canPlanCount }}</span>
+              <span class="gw-forecast-meta gw-meta-danger"><strong>To Be Not Plan:</strong> {{ group.cannotPlanCount }}</span>
+            </div>
+            <div class="gw-forecast-header-actions" (click)="$event.stopPropagation()">
+              <button type="button" class="btn btn-sm btn-primary"
+                (click)="toggleForecastSelect(group, !group.allSelected)"
+                [disabled]="!canForecastSelectAll(group)">
+                {{ group.allSelected ? 'Deselect All' : 'Select All' }}
+              </button>
+              <span class="gw-forecast-selected" *ngIf="group.selectedCount">{{ group.selectedCount }} selected</span>
+            </div>
+          </div>
+
+          <div class="gw-forecast-table-wrap" *ngIf="!group.collapsed">
+            <div class="gw-month-block" *ngFor="let mg of group.monthGroups">
+              <div class="gw-month-tab">
+                <clr-icon shape="calendar"></clr-icon>
+                <span class="gw-month-tab-label">Month: {{ mg.label }}</span>
+                <span class="gw-month-count">{{ mg.workOrders.length }} WO</span>
+              </div>
+              <div class="datagrid-wrapper gw-month-datagrid">
+                <clr-datagrid [clrDgStickyHeader]="true" class="gw-po-grid">
+                  <clr-dg-column class="col-head-select">Select</clr-dg-column>
+                  <clr-dg-column>Sr.No.</clr-dg-column>
+                  <clr-dg-column>Work/batch order No</clr-dg-column>
+                  <clr-dg-column>Work/batch Date</clr-dg-column>
+                  <clr-dg-column>Order No</clr-dg-column>
+                  <clr-dg-column>Product Code</clr-dg-column>
+                  <clr-dg-column>Product Name</clr-dg-column>
+                  <clr-dg-column>Packing Type</clr-dg-column>
+                  <clr-dg-column>Batch Size</clr-dg-column>
+                  <clr-dg-column>Plan Month</clr-dg-column>
+                  <clr-dg-column>Unit</clr-dg-column>
+                  <clr-dg-column class="col-head-action">Action</clr-dg-column>
+
+                  <clr-dg-row *ngFor="let wo of mg.workOrders; let i = index; trackBy: trackWorkOrderRow"
+                    [clrDgItem]="wo"
+                    class="gw-wo-row"
+                    [class.gw-wo-row--sfg]="isCombiChild(wo)"
+                    [style.--gw-row-bg]="group.bg_color">
+                    <clr-dg-cell class="cell-center">
+                      <input type="checkbox"
+                        [(ngModel)]="wo.selected"
+                        [disabled]="!canSelectWorkOrder(wo)"
+                        [title]="selectionLockHint(wo)"
+                        (ngModelChange)="onRowSelectionChange(wo)" />
+                    </clr-dg-cell>
+                    <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.workorder_no || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.order_no || '-' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.product_code || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-product" [title]="wo.product_name || ''">
+                      <span class="gw-tag gw-tag--line" *ngIf="isCombiChild(wo)">SFG</span>
+                      {{ wo.product_name || '-' }}
+                    </clr-dg-cell>
+                    <clr-dg-cell>{{ packingTypeDisplay(wo) }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-num">{{ wo.batch_size || '0' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ planMonthLabel(wo.split_plan_month || wo.planMonth) }}</clr-dg-cell>
+                    <clr-dg-cell>{{ wo.planUnit || '-' }}</clr-dg-cell>
+                    <clr-dg-cell class="cell-action">
+                      <div class="gw-status-wrap">
+                        <span
+                          class="badge"
+                          [ngClass]="getActionStatusBadgeClass(wo.status)"
+                          [title]="getActionStatusTooltip(wo.status, wo)">
+                          {{ getActionStatusLabel(wo.status) }}
+                        </span>
+                        <button type="button" class="gw-info-btn"
+                          (click)="openInfoModal(wo, $event)"
+                          [attr.data-wo-id]="wo.id"
+                          title="View which materials are short / in stock">i</button>
+                      </div>
+                    </clr-dg-cell>
+                  </clr-dg-row>
+
+                  <clr-dg-placeholder>No work orders in this month.</clr-dg-placeholder>
+                </clr-datagrid>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Material stock status modal -->
+<clr-modal [(clrModalOpen)]="infoModalOpen" clrModalSize="xl" class="gw-stock-modal" (clrModalOpenChange)="onInfoModalOpenChange($event)">
+  <h3 class="modal-title">
+    Material Stock Status
+    <span *ngIf="infoWo"> &mdash; {{ infoWo.workorder_no }}</span>
+  </h3>
+  <div class="modal-body gw-stock-modal-body" *ngIf="infoModalOpen && infoWo && infoModalKey">
+    <div class="gw-stock-modal-meta">
+      <span *ngIf="infoWo.product_code"><strong>Product:</strong> {{ infoWo.product_code }}</span>
+      <span *ngIf="infoWo['product_name']">{{ infoWo['product_name'] }}</span>
+      <span *ngIf="infoWo.order_no"><strong>Order:</strong> {{ infoWo.order_no }}</span>
+      <span *ngIf="infoWo['bfr_no']"><strong>BFR:</strong> {{ infoWo['bfr_no'] }}</span>
+      <span *ngIf="infoWo.batch_size"><strong>Batch:</strong> {{ infoWo.batch_size }} {{ infoWo.planUnit || '' }}</span>
+    </div>
+
+    <div class="gw-table-scroll" *ngIf="infoModalLoading">
+      <span class="spinner spinner-inline"></span> Loading materials for this work order...
+    </div>
+
+    <!-- All materials — plain table (avoids clr-datagrid row cache across WOs) -->
+    <div class="gw-info-section" *ngIf="!infoModalLoading && infoMaterialRows.length">
+      <div class="gw-stock-table-wrap" [attr.data-wo-key]="infoModalKey">
+        <table class="table table-compact table-bordered gw-info-table">
+          <thead>
+            <tr>
+              <th class="col-sr">Sr. No.</th>
+              <th>Material Type</th>
+              <th>Material Name</th>
+              <th>Material Code</th>
+              <th class="cell-num">Req. Qty</th>
+              <th class="cell-num">Avail. Qty</th>
+              <th class="cell-num">Short Qty</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of infoMaterialRows; let i = index; trackBy: trackInfoMaterialRow"
+              [class.gw-row-short]="row.short_qty > 0">
+              <td class="col-sr">{{ i + 1 }}</td>
+              <td [ngClass]="materialTypeTextClass(row)">{{ row.material_type || '-' }}</td>
+              <td class="cell-material-name" [title]="row.material_name">{{ row.material_name }}</td>
+              <td>{{ row.material_code }}</td>
+              <td class="cell-num">{{ row.required_qty | number:'1.0-4' }}</td>
+              <td class="cell-num gw-avail-qty">{{ row.available_qty | number:'1.0-4' }}</td>
+              <td class="cell-num gw-short-qty">{{ row.short_qty | number:'1.0-4' }}</td>
+              <td>{{ row.unit || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="gw-info-empty" *ngIf="!infoModalLoading && !infoMaterialRows.length">
+      No BFR materials found for this work order.
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="closeInfo()">Close</button>
+  </div>
+</clr-modal>
+
+<!-- Cancelled WO Log -->
+<div class="card" *ngIf="showCancelled">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Cancelled Work Orders</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-info" (click)="closeCancelledWOs()">
+          <clr-icon shape="arrow" style="transform: rotate(-90deg);"></clr-icon> Back to Generate WO
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="cancelledSearchInput">Search cancelled WO:</label>
+          <input type="text" id="cancelledSearchInput"
+            placeholder="Type to filter items..."
+            [(ngModel)]="cancelledSearch"
+            (ngModelChange)="applyCancelledFilter()">
+        </div>
+      </div>
+
+      <div class="gw-table-scroll" *ngIf="cancelledLoading">
+        <span class="spinner spinner-inline"></span> Loading...
+      </div>
+
+      <div class="gw-table-scroll" *ngIf="!cancelledLoading">
+        <table class="table table-bordered table-sm gw-po-table">
+          <thead>
+            <tr>
+              <th>Sr.No.</th>
+              <th>Plan Month</th>
+              <th>Billing Type</th>
+              <th>Group</th>
+              <th>Forecast No</th>
+              <th>Work/batch order No</th>
+              <th>Work/batch Date</th>
+              <th>Product Code</th>
+              <th>Product Name</th>
+              <th>Packing Type</th>
+              <th>Plan Qty</th>
+              <th>Unit</th>
+              <th>Cancelled By</th>
+              <th>Cancelled On</th>
+              <th class="col-head-action">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let wo of cancelledWOs; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ formatPlanMonth(wo.planMonth) }}</td>
+              <td>{{ formatBillingType(wo) }}</td>
+              <td>{{ wo.mainGroupName || '-' }}</td>
+              <td>{{ wo.order_no || '-' }}</td>
+              <td>{{ wo.workorder_no || '-' }}</td>
+              <td>{{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd-MM-yyyy') : '-' }}</td>
+              <td>{{ wo.product_code || '-' }}</td>
+              <td class="cell-product" [title]="wo.product_name || ''">{{ wo.product_name || '-' }}</td>
+              <td>{{ packingTypeDisplay(wo) }}</td>
+              <td class="cell-num">{{ wo.batch_size || '0' }}</td>
+              <td>{{ wo.planUnit || '-' }}</td>
+              <td>{{ wo.cancelled_by_name || wo.cancel_hold_by || '-' }}</td>
+              <td>{{ wo.cancel_hold_on ? (wo.cancel_hold_on | date:'dd-MM-yyyy') : '-' }}</td>
+              <td class="cell-action">
+                <button class="btn btn-success btn-sm" (click)="proceedCancelledWO(wo)">Proceed</button>
+              </td>
+            </tr>
+            <tr *ngIf="!cancelledWOs?.length">
+              <td colspan="15" class="cell-empty">No cancelled work orders found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

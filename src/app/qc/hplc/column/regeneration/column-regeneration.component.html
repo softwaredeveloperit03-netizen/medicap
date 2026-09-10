@@ -1,0 +1,71 @@
+<app-hplc-page-shell title="Column Regeneration" subtitle="Full wash cycle, performance matrix before/after, verification" [backLink]="back">
+  <div class="hplc-actions">
+    <button type="button" class="hplc-btn hplc-btn--primary" (click)="showForm = !showForm; selected = null">{{ showForm ? 'Cancel' : 'New regeneration' }}</button>
+  </div>
+
+  <div *ngIf="showForm" class="hplc-section">
+    <h3>Regeneration process record</h3>
+    <p class="hplc-hint" *ngIf="!inventory.length">No inventory columns. Release a received column first.</p>
+    <div class="hplc-form">
+      <div>
+        <label>Column ID</label>
+        <select [(ngModel)]="form.column_id" (ngModelChange)="onColumnPick()" [disabled]="!inventory.length">
+          <option value="">— Select column —</option>
+          <option *ngFor="let i of inventory" [value]="i.column_id">{{ i.column_id }} — {{ i.type }} ({{ i.status }})</option>
+        </select>
+      </div>
+      <div><label>Column type</label><input [(ngModel)]="form.column_type" /></div>
+      <div><label>Reason for regeneration</label><input [(ngModel)]="form.reason" /></div>
+      <div><label>Solvent sequence</label><input [(ngModel)]="form.solvent_sequence" placeholder="IPA → MeOH → Water → ACN" /></div>
+      <div><label>Duration (hours)</label><input type="number" [(ngModel)]="form.duration_h" /></div>
+      <div><label>Reference method</label><input [(ngModel)]="form.method" /></div>
+      <div><label>Test injection volume (µL)</label><input type="number" [(ngModel)]="form.injection_ul" /></div>
+      <div class="full"><label>Procedure notes (USP / vendor)</label><textarea rows="3" [(ngModel)]="form.procedure"></textarea></div>
+    </div>
+
+    <h3>Regenerated column metrics matrix</h3>
+    <table class="hplc-table">
+      <tr><th>Parameter</th><th>Specification</th><th>Before</th><th>After</th><th>Pass/Fail</th></tr>
+      <tr *ngFor="let m of form.metrics">
+        <td>{{ m.label }}</td>
+        <td>{{ m.spec }}</td>
+        <td><input type="number" step="0.01" [(ngModel)]="m.before" (ngModelChange)="calcPass(m)" style="width:70px" /></td>
+        <td><input type="number" step="0.01" [(ngModel)]="m.after" (ngModelChange)="calcPass(m)" style="width:70px" /></td>
+        <td [class.hplc-pass]="m.pass === true" [class.hplc-fail]="m.pass === false">{{ m.pass === null ? '—' : (m.pass ? 'Pass' : 'Fail') }}</td>
+      </tr>
+    </table>
+
+    <div class="hplc-sign">
+      <div><label>Performed by</label><input [(ngModel)]="form.performed_by" /></div>
+      <div><label>Verified by</label><input [(ngModel)]="form.verified_by" /></div>
+      <div><label>Approved by</label><input [(ngModel)]="form.approved_by" /></div>
+    </div>
+    <div class="hplc-actions">
+      <button type="button" class="hplc-btn hplc-btn--primary" [disabled]="saving || !inventory.length" (click)="save()">{{ saving ? 'Saving…' : 'Save regeneration' }}</button>
+    </div>
+  </div>
+
+  <div class="hplc-section" *ngIf="selected">
+    <h3>Detail — {{ selected.regen_no }}</h3>
+    <table class="hplc-table">
+      <tr><th>Parameter</th><th>Spec</th><th>Before</th><th>After</th><th>Result</th></tr>
+      <tr *ngFor="let m of selected.metrics">
+        <td>{{ m.label }}</td><td>{{ m.spec }}</td><td>{{ m.before }}</td><td>{{ m.after }}</td>
+        <td [class.hplc-pass]="m.pass" [class.hplc-fail]="m.pass === false">{{ m.pass ? 'Pass' : 'Fail' }}</td>
+      </tr>
+    </table>
+    <button type="button" class="hplc-btn" (click)="selected = null">Close detail</button>
+  </div>
+
+  <div class="hplc-section">
+    <h3>Regeneration logbook</h3>
+    <p class="hplc-hint" *ngIf="!rows.length">No regeneration records yet.</p>
+    <table class="hplc-table" *ngIf="rows.length">
+      <tr><th>Regen No</th><th>Column ID</th><th>Type</th><th>Reason</th><th>Date</th><th>Status</th><th></th></tr>
+      <tr *ngFor="let r of rows">
+        <td>{{ r.regen_no }}</td><td>{{ r.column_id }}</td><td>{{ r.column_type }}</td><td>{{ r.reason }}</td><td>{{ r.regen_date }}</td><td>{{ r.status }}</td>
+        <td><button type="button" class="hplc-btn" (click)="openDetail(r)">Matrix</button></td>
+      </tr>
+    </table>
+  </div>
+</app-hplc-page-shell>

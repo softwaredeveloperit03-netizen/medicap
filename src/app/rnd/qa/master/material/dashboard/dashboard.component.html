@@ -1,0 +1,223 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Material Log</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="new" style="background-color: green;color: white;" *ngIf="isuser == 'Yes'">
+                    New Material Add
+                </button> 
+            <button class="btn btn-sm" routerLink="/rnd/qa" style="background-color: red;color: white;">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-6">
+                <label> Material Type</label>
+                <select name="material_type" [(ngModel)]="material_type" (change)="checkMaterialType($event.target.value)">
+                    <option value="">All</option>
+                    <option>Raw Material</option>
+                    <option>Packing Material</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isRawMaterial">
+                <label>Material subtype:</label>
+                <select name="material_subtype" [(ngModel)]="material_subtype" required>
+                <option value="">All</option>
+                <option>API</option>
+                <option>Excipient</option>
+                <option>Liquid</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isPackingMaterial">
+                <label>Material subtype:</label>
+                <select name="material_subtype" [(ngModel)]="material_subtype" required>
+                <option value="">All</option>
+                <option>Primary</option>
+                <option>Secondary</option>
+                <option>Tritiary</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>{{'common.status' | translate}}</label>
+                <select name="status" [(ngModel)]="status">
+                <option></option>
+                <option>Approve</option>
+                <option>{{'common.pending' | translate}}</option>
+                <option>Reject</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <button class="btn btn-danger" style="margin-top: 30px;" (click)="getMaterialsLog()">{{'common.search' | translate}}</button>
+            </div>
+        </div>
+        <div class="card-text" style="overflow-x:scroll; overflow-y:scroll;">
+            <table class="table">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Subtype</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Storage Condition</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Min. Inventory Level</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white; width:12%;">{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td style="text-align: left;">{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{ result.material_type }}</td>
+                    <td style="text-align: left;">{{ result.material_subtype }}</td>
+                    <td style="text-align: left;">{{ result.material_code }}</td>
+                    <td style="text-align: left;">{{ result.material_name }}</td>
+                    <td style="text-align: left;">{{ result.grade }}</td>
+                    <td style="text-align: left;">{{ result.storage_condition || '-' }}</td>
+                    <td style="text-align: left;">{{ result.inventory }} {{ result.unit }}</td>
+                    <td style="text-align: left;">{{ result.status }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success-outline btn-icon" (click)="view(i)"><clr-icon shape="eye" class="is-success"></clr-icon></button>
+                        <button class="btn btn-sm btn-info-outline btn-icon" (click)="download(result.id)"><clr-icon shape="download" class="is-info"></clr-icon></button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="10">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadReport()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Material Details</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+        </div>
+           <div class="card-block">
+                <div class="card-text">
+                    <table class="table">
+                        <tr>
+                            <td style="text-align: left;border:1px solid black;width:20%;"><b>Material Name:</b></td>
+                            <td style="text-align: left;border:1px solid black;" colspan="3">{{selectedResult['material_name']}}</td>
+                        </tr>
+                        <tr>
+                         <td style="text-align: left;border:1px solid black;width:20%;"><b>Material Type:</b></td>
+                         <td style="text-align: left;border:1px solid black;width:30%;">{{selectedResult['material_type']}}</td>
+                         <td style="text-align: left;border:1px solid black;width:20%"><b>Material Subtype:</b></td>
+                         <td style="text-align: left;border:1px solid black;width:30%">{{selectedResult['material_subtype']}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                          <td style="text-align: left;border:1px solid black;"><b>Printed:</b></td>
+                          <td style="text-align: left;border:1px solid black;">{{selectedResult['isprinted']}}</td>
+                          <td style="text-align: left;border:1px solid black;"><b>For Product:</b></td>
+                         <td style="text-align: left;border:1px solid black;">{{selectedResult['for_product']}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                            <td style="text-align: left;border:1px solid black;"><b>Product Name:</b></td>
+                            <td style="text-align: left;border:1px solid black;">{{selectedResult['product_name']}}</td>
+                            <td style="text-align: left;border:1px solid black;"><b>Material Code:</b></td>
+                            <td style="text-align: left;border:1px solid black;">{{selectedResult['material_code']}}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['material_type'] !== 'Packing Material'">
+                            <td style="text-align: left;border:1px solid black;"><b>Material Code:</b></td>
+                            <td style="text-align: left;border:1px solid black;" colspan="3">{{selectedResult['material_code']}}</td>
+                        </tr>
+                        <tr>
+                         <td style="text-align: left;border:1px solid black;"><b>Order Qty:</b></td>
+                         <td style="text-align: left;border:1px solid black;">{{selectedResult['order_qty']}}</td>
+                         <td style="text-align: left;border:1px solid black;"><b>Special Grade:</b></td>
+                         <td style="text-align: left;border:1px solid black;">{{selectedResult['special_grade']}}</td>
+                        </tr>
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Material nature:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['material_nature']}}</td>
+                       </tr>
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Storage Location:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['location']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Storage Condition:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{ selectedResult['storage_condition'] || '-' }}</td>
+                       </tr>
+                       <!-- HSN row hidden
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Hsn Code:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['hsn']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Unit:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['unit']}}</td>
+                        </tr>
+                        -->
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Unit:</b></td>
+                        <td style="text-align: left;border:1px solid black;" colspan="3">{{selectedResult['unit']}}</td>
+                        </tr>
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Shelf Life:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['shelf_life']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Minimum Shelf Life:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['min_shelf']}}</td>
+                        </tr>
+                       <tr *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                        <td style="text-align: left;border:1px solid black;"><b>Minimum Order Qty:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['order_qty']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Therapeutic Category:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['thera']}}</td>
+                       </tr>
+                       <tr *ngIf="selectedResult['material_type'] == 'Packing Material'">
+                        <td style="text-align: left;border:1px solid black;"><b>Minimum Order Qty:</b></td>
+                        <td style="text-align: left;border:1px solid black;" colspan="3">{{selectedResult['order_qty']}}</td>
+                       </tr>
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>QC Lead Time(days) :</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['lead_time']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Inventory:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['inventory']}}</td>
+                       </tr>
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>Category:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['category']}}</td>
+                        <td style="text-align: left;border:1px solid black;"><b>Retest:</b></td>
+                        <td style="text-align: left;border:1px solid black;">{{selectedResult['retest']}}</td>
+                       </tr> 
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>CAS Name:</b></td>
+                        <td style="text-align: left;border:1px solid black;"colspan="3">{{selectedResult['cas_name']}}</td>
+                       </tr> 
+                       <tr>
+                        <td style="text-align: left;border:1px solid black;"><b>IUPAC Name:</b></td>
+                        <td style="text-align: left;border:1px solid black;"colspan="3">{{selectedResult['upac_name']}}</td>
+                       </tr> 
+                    </table>
+                    <table class="table" *ngIf="selectedResult['material_type'] == 'Raw Material'">
+                        <tr>
+                        <th style="text-align: center;" > Equivalent To. </th>
+                         <th style="text-align: center;"> Factor </th>
+                        </tr>
+                        <tr *ngFor="let res of selectedResult['equivalent'];let i=index">
+                        <td style="text-align: center;"> {{ res.material_name }}</td>
+                        <td style="text-align: center;"> {{ res.factor }}</td>
+                        </tr>
+                        <tr *ngIf="selectedResult['equivalent']?.length==0">
+                        <td colspan="2">No Record found!</td>
+                         </tr>
+                    </table>
+                </div>
+            </div>
+        <div class="card-footer">
+            <button class=" btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>
+

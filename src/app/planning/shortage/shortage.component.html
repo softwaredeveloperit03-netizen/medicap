@@ -1,0 +1,204 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Check Shortages</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/planning" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <form #shortageForm="ngForm">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Product Type:</label>
+            <select name="dosage_form" [(ngModel)]="dosage_form" (change)="getProductsByDosage(dosage_form)" *ngIf="plant_type == 'Formulation'" >
+              <option> </option>
+              <option *ngFor="let type of fg_sub_materials">{{type.dosage_form}}</option>
+            </select>
+            <select name="dosage_form" [(ngModel)]="dosage_form" (change)="getProducts()" *ngIf="plant_type != 'Formulation'">
+              <option>API</option>
+              <option>Excipient</option>
+              <option>Intermediate</option>               
+          </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Product Name:</label>
+            <select name="product_name" [(ngModel)]="product_name" (change)="getMfrList($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let product of products">{{ product.product_name }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Grade:<sup style="color: red">*</sup></strong></label>
+            <input type="text" name="grade" [(ngModel)]="grade" readonly>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Select MFR No :</label>
+            <select name="mfr_no" [(ngModel)]="mfr_no" (change)="getBfrList($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let batch of mfr_list" [value]="batch.mfr_no">{{ batch.mfr_no }}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12"  *ngIf="plant_type == 'Formulation'">
+            <label><strong>MFR Description:<sup style="color: red">*</sup></strong></label>
+            <input type="text" name="mfr_desc" [(ngModel)]="mfr_desc">
+          </div>
+
+
+
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Select BFR No.:</label>
+            <select name="bfr_no" [(ngModel)]="bfr_no" (change)="getRawMaterialsByBfrNo($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let batch of bfr_list" [value]="batch.bfr_no">{{ batch.bfr_no }} ({{
+                batch.batch_formula_weight }})</option>
+            </select>
+          </div>
+
+          <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"  *ngIf="plant_type == 'Formulation'">
+            <label> Pack Size:</label>
+            <select name="pack_size" ngModel required (change)="getPackingMaterial($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let st of pack_sizes" [value]="st.pack_size">{{st.pack_size}}-{{st.pack_unit}}</option>
+            </select>
+          </div> -->
+
+          <!-- <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>MFR Batch Size:<sup style="color: red">*</sup></strong></label>
+              <input type="text" name="mfr_batch_size" [(ngModel)]="mfr_batch_size"  readonly>
+            </div> -->
+          <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>BFR Batch Size:<sup style="color: red">*</sup></strong></label>
+            <input type="text" name="bfr_batch_size" [(ngModel)]="bfr_batch_size" readonly>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>No.of Batches:<sup style="color: red">*</sup></strong></label>
+            <input type="text" name="number_of_batches" [(ngModel)]="number_of_batches" (input)="calculateBatchQty()"
+              required>
+          </div>
+        </div>
+      </form>
+        <h5 style="margin-top: 5px;">Raw Materials:</h5>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Material type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Unit Qty</th>
+            <th>Overages (%)</th>
+            <th>Total Qty</th>
+            <th>Batch Qty(kg)</th>
+            <th>Plan Qty</th>
+            <th>Available Stock</th>
+            <th>Short Qty</th>
+
+          </tr>
+          <tr *ngFor="let comp of raw_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.material_type }}</td>
+            <td>{{ comp.material_code }}</td>
+            <td>{{ comp.material_name }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.total_qty }}</td>
+            <td>{{ comp.batch_qty }}</td>
+            <td>{{ comp.plan_qty }}</td>
+            <td>{{ comp.avbl_stock }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{ comp.avbl_stock-comp.plan_qty }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.avbl_stock-comp.plan_qty }}</td>
+
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td colspan="8">No Records Found!</td>
+          </tr>
+        </table>
+
+
+
+        <!-- <h5 style="margin-top: 5px;">Packing Materials:</h5>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Material type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Unit Qty</th>
+            <th>Overages (%)</th>
+            <th>Total Qty</th>
+            <th>Batch Qty(kg)</th>
+            <th>Plan Qty</th>
+            <th>Available Stock</th>
+            <th>Short Qty</th>
+
+          </tr>
+          <tr *ngFor="let comp of packing_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ comp.material_type }}</td>
+            <td>{{ comp.material_code }}</td>
+            <td>{{ comp.material_name }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.total_qty }}</td>
+            <td>{{ comp.batch_qty }}</td>
+            <td>{{ comp.plan_qty }}</td>
+            <td>{{ comp.avbl_stock }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{ comp.avbl_stock-comp.plan_qty }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.avbl_stock-comp.plan_qty }}</td>
+
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td colspan="8">No Records Found!</td>
+          </tr>
+        </table> -->
+
+
+
+
+
+
+      </div>
+      
+    </div>
+    <div class="card-footer"><button class="btn btn-success" (click)="download()">Download</button></div>
+    <div class="card-footer"><button class="btn btn-primary" (click)="sendIndend(shortageForm)">Raise Indent</button></div>
+  </div>
+</div>
+<!--   
+<div class="container-fluid">
+    <div class="card">
+      <div class="card-header">LOD Calculation</div>
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-lg-5 clr-col-md-5 clr-col-sm-12 clr-col-xs-12" style="padding-right: 0px;">
+              <table class="table">
+                <tr>
+                  <td style="vertical-align: middle;width:40%;">Quantity to be used for batch (First AR)</td>
+                  <td style="vertical-align: middle;padding: 0px;">=</td>
+                  <td>Quantity per batch X 100<hr>Assay on Such Basis (B)</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-7 clr-col-md-7 clr-col-sm-12 clr-col-xs-12">
+              <table class="table">
+                <tr>
+                  <td style="vertical-align: middle;width:40%;">Quantity to be used for batch (Additional AR)</td>
+                  <td style="vertical-align: middle;">=</td>
+                  <td>(Std. Quantity per batch - First AR Qty) X 100<hr>Assay on Such Basis (B)</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+</div> -->

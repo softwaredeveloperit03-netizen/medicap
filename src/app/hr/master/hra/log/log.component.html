@@ -1,0 +1,264 @@
+﻿<!-- LOG SCREEN -->
+<div class="container-fluid" *ngIf="!isView && !isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Leave Log</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" (click)="openNewForm()">
+            {{ 'common.new' | translate }}
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" (click)="closeFromMasterHub()">
+            {{ 'common.close' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-text unique-table-wrapper">
+        <table class="table table-border unique-table">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">{{ 'common.table.srNo' | translate }}</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{ 'common.designation' | translate }}</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Effective From</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Effective To</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{ 'common.table.action' | translate }}</th>
+          </tr>
+
+          <tr *ngFor="let user of results; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ user.designation_heading }}</td>
+            <td style="text-align: left;">{{ user.Eefective_from | date: 'dd-MM-yyyy' }}</td>
+            <td style="text-align: left;">{{ user.Eefective_to | date: 'dd-MM-yyyy' }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="view(i)">{{ 'common.view' | translate }}</button>
+            </td>
+          </tr>
+
+          <tr *ngIf="results?.length == 0">
+            <td colspan="5">No Record Found!</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW SCREEN -->
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">Leave Card Details</div>
+    <div class="card-block">
+      <div class="card-text">
+        <h3>Employee Details:</h3>
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left; width: 20%;">{{ 'common.designation' | translate }}</td>
+            <td style="text-align: left;">{{ selectedResult['designation_heading'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">Effective From</td>
+            <td style="text-align: left;">{{ selectedResult['Eefective_from'] | date:'dd-MM-yyyy' }}</td>
+            <td style="text-align: left; width: 20%;">Effective To</td>
+            <td style="text-align: left;">{{ selectedResult['Eefective_to'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">Total Leave Per year</td>
+            <td style="text-align: left;">{{ selectedResult['total_leave'] }}</td>
+            <td style="text-align: left; width: 20%;">Per Month Allowed leave</td>
+            <td style="text-align: left;">{{ selectedResult['allow_leave'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">Without Permission Leaves Deduct:</td>
+            <td style="text-align: left;">{{ selectedResult['leave_deduct'] }}</td>
+            <td style="text-align: left; width: 20%;">No Of Days salary</td>
+            <td style="text-align: left;">{{ selectedResult['salary_day'] }}</td>
+          </tr>
+        </table>
+
+        <table class="table table-border">
+          <tr>
+            <th style="text-align: left;">Leave Type</th>
+            <th style="text-align: left;">No Of Days</th>
+            <th style="text-align: left;">Min. Days To Be Used At OneTime</th>
+            <th style="text-align: left;">Max. Days Permitted At Onetime</th>
+            <th style="text-align: left;">Carry</th>
+            <th style="text-align: left;">Total Accumulation</th>
+            <th style="text-align: left;">Encashment</th>
+          </tr>
+          <tr *ngFor="let res of selectedResult['leaveList']; let i = index">
+            <td style="text-align: left;">{{ res.leave_type }}</td>
+            <td style="text-align: left;">{{ res.days }}</td>
+            <td style="text-align: left;">{{ res.mintime }}</td>
+            <td style="text-align: left;">{{ res.maxtime }}</td>
+            <td style="text-align: left;">{{ res.forward }}</td>
+            <td style="text-align: left;">{{ res.accumulation }}</td>
+            <td style="text-align: left;">{{ res.encashment }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-danger" (click)="isView = false">{{ 'common.close' | translate }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW FORM SCREEN (same component) -->
+<div class="container-fluid" *ngIf="isNew">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-7" style="color: aliceblue; margin-top: -2px; text-align: left;">Leave Master</div>
+        <div class="clr-col-lg-5" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button class="btn btn-sm" style="background-color: red; color: white;" (click)="cancelNewForm()">
+            {{ 'common.close' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-text">
+        <form #leaveForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Leave Title<span style="color: red;">*</span></label>
+              <input type="text" name="leave_title" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Designation Heading<span style="color: red;">*</span></label>
+              <select name="designation_heading" ngModel required>
+                <option value=""></option>
+                <option *ngFor="let des of designations">{{ des.designation_heading }}</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Effective From</label>
+              <input type="date" name="Eefective_from" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Effective To</label>
+              <input type="date" name="Eefective_to" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Total Leave Per year</label>
+              <input type="text" name="total_leave" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Per Month Allowed leave</label>
+              <input type="text" name="allow_leave" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Without Permission Leaves Deduct:</label>
+              <select name="leave_deduct" [(ngModel)]="leave_deduct" required>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="leave_deduct == 'Yes'">
+              <label>No Of Days salary</label>
+              <input type="text" name="salary_day" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Over Time(OT)</label>
+              <select name="over_time" ngModel required>
+                <option>Applicable</option>
+                <option>Not/Applicable</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <form #addLeave="ngForm">
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Leave Type</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">No Of Days</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Min. Days To Be Used At OneTime</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Max. Days Permitted At Onetime</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Carry</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Total Accumulation</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">Encashment</th>
+                  <th style="text-align: center; background-color: rgb(14, 67, 112); color: white;">{{ 'common.table.action' | translate }}</th>
+                </tr>
+
+                <tr>
+                  <td style="padding: 0px;">
+                    <select name="leave_type" style="margin: 0px;" [(ngModel)]="leave_type" required (change)="addLeavetype()">
+                      <option></option>
+                      <option *ngFor="let leave of leavetypes">{{ leave.leave_type }}</option>
+                      <option>ADD NEW</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;"><input type="number" name="days" ngModel style="margin: 0px;"></td>
+                  <td style="padding: 0px;"><input type="number" name="mintime" ngModel style="margin: 0px;"></td>
+                  <td style="padding: 0px;"><input type="number" name="maxtime" ngModel style="margin: 0px;"></td>
+                  <td style="padding: 0px;">
+                    <select name="forward" [(ngModel)]="forward" required>
+                      <option>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px;"><input type="number" name="accumulation" ngModel style="margin: 0px;"></td>
+                  <td style="padding: 0px;">
+                    <select name="encashment" ngModel required>
+                      <option>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </td>
+                  <td style="padding: 0px; vertical-align: middle;">
+                    <button class="btn btn-sm btn-info" type="button" (click)="addData(addLeave)">{{ 'common.add' | translate }}</button>
+                  </td>
+                </tr>
+
+                <tr *ngFor="let res of leaveList; let i = index">
+                  <td style="text-align: left;">{{ res.leave_type }}</td>
+                  <td style="text-align: left;">{{ res.days }}</td>
+                  <td style="text-align: left;">{{ res.mintime }}</td>
+                  <td style="text-align: left;">{{ res.maxtime }}</td>
+                  <td style="text-align: left;">{{ res.forward }}</td>
+                  <td style="text-align: left;">{{ res.accumulation }}</td>
+                  <td style="text-align: left;">{{ res.encashment }}</td>
+                  <td><clr-icon shape="trash" class="is-error" (click)="delData(i)"></clr-icon></td>
+                </tr>
+              </table>
+            </form>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="save(leaveForm)">{{ 'common.save' | translate }}</button>
+      <button type="button" class="btn btn-danger" (click)="cancelNewForm()">{{ 'common.cancel' | translate }}</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isLeavetype">
+  <h3 class="modal-title">Add New :</h3>
+  <div class="modal-body">
+    <form #leave="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-12">
+          <label>Leave type:</label>
+          <input type="text" name="leave_type" ngModel required>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveLeaveType(leave)">{{ 'common.save' | translate }}</button>
+    <button type="button" class="btn btn-danger" (click)="isLeavetype = false">{{ 'common.close' | translate }}</button>
+  </div>
+</clr-modal>

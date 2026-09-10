@@ -1,0 +1,119 @@
+<div class="pls-page-wrap">
+  <div class="card pls-form-card">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">{{ formId }} — Sampling and QC Release Form (Intake)</div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-danger" routerLink="/qc/processing-laboratory-samples">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="clr-row form-meta">
+        <div class="clr-col-lg-3"><label>Form No.</label><input type="text" [(ngModel)]="form_no" readonly /></div>
+        <div class="clr-col-lg-3">
+          <label>Sample Flow</label>
+          <select [(ngModel)]="form.flow_type">
+            <option value="raw_material">Raw Material (Warehouse / FMM-003-01-C)</option>
+            <option value="other">Other Samples (Direct to Lab)</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Sample Category</label>
+          <select [(ngModel)]="form.sample_category" (ngModelChange)="onCategoryChange()">
+            <option value="">-- Select --</option>
+            <option *ngFor="let c of sampleCategories" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Type of Sample (Label)</label>
+          <select [(ngModel)]="form.sample_type_label">
+            <option *ngFor="let t of sampleTypeLabels" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-block auto-fetch-block">
+        <div class="clr-row">
+          <div class="clr-col-lg-3">
+            <label>Material Type (GRN)</label>
+            <select [(ngModel)]="material_type" (ngModelChange)="loadPendingIntakes()">
+              <option value="Raw Material">Raw Material</option>
+              <option value="Packing Material">Packing Material</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-7">
+            <label>Auto-fetch from GRN / Quarantine Batch</label>
+            <select [(ngModel)]="selectedBatchId" (ngModelChange)="onBatchSelect($event)" [disabled]="grnLoading">
+              <option value="">{{ grnLoading ? 'Loading GRN batches...' : '-- Select received batch --' }}</option>
+              <option *ngFor="let b of pendingIntakes" [value]="b.id">
+                [{{ intakeStageLabel(b) }}] {{ b.material_name }} | Lot: {{ b.batch_no }} | AR: {{ b.ar_no }} | GRN: {{ b.grn_no }}
+              </option>
+            </select>
+            <small *ngIf="!grnLoading && !pendingIntakes.length" class="hint-empty">No GRN batches found for {{ material_type }}. Check QC → Receive Material (For Sampling).</small>
+          </div>
+          <div class="clr-col-lg-2" style="padding-top:1.4rem">
+            <button type="button" class="btn btn-sm btn-secondary" (click)="loadPendingIntakes()" [disabled]="grnLoading">Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="clr-row">
+        <div class="clr-col-lg-4">
+          <label>Or Select Material (Master)</label>
+          <select (ngModelChange)="onMaterialSelect($event)" [ngModel]="form.medicap_code">
+            <option value="">-- Material --</option>
+            <option *ngFor="let m of materials" [value]="m.material_code">{{ m.material_name }} ({{ m.material_code }})</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Lab Number Scheme</label>
+          <select [(ngModel)]="form.lab_number_scheme">
+            <option *ngFor="let s of labSchemes" [value]="s.value">{{ s.label }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Controlled Substance</label>
+          <select [(ngModel)]="form.controlled_substance"><option>No</option><option>Yes</option></select>
+        </div>
+      </div>
+
+      <h4 class="section-heading">Sample Identification (Label Fields)</h4>
+
+      <div class="clr-row">
+        <div class="clr-col-lg-6"><label>Chemical Name *</label><input type="text" [(ngModel)]="form.chemical_name" /></div>
+        <div class="clr-col-lg-6"><label>Commercial Name (If applicable)</label><input type="text" [(ngModel)]="form.commercial_name" /></div>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-4"><label>Manufacturer</label><input type="text" [(ngModel)]="form.manufacturer" /></div>
+        <div class="clr-col-lg-4"><label>Manufacturer's Lot #</label><input type="text" [(ngModel)]="form.manufacturer_lot" /></div>
+        <div class="clr-col-lg-4"><label>Medicap Laboratories Code #</label><input type="text" [(ngModel)]="form.medicap_code" /></div>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-4"><label>Medicap Laboratories Lot #</label><input type="text" [(ngModel)]="form.medicap_lot" /></div>
+        <div class="clr-col-lg-4"><label># of Containers Received</label><input type="text" [(ngModel)]="form.containers_received" /></div>
+        <div class="clr-col-lg-4">
+          <label>FMM-003-01-C Attached</label>
+          <select [(ngModel)]="form.fmm_attached"><option>No</option><option>Yes</option></select>
+        </div>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label><input type="checkbox" [checked]="form.mfg_retest_applicable === 'Yes'" (change)="form.mfg_retest_applicable = $any($event.target).checked ? 'Yes' : 'No'" /> Manufacturer Retest Date</label>
+          <input type="date" [(ngModel)]="form.mfg_retest_date" [disabled]="form.mfg_retest_applicable !== 'Yes'" />
+        </div>
+        <div class="clr-col-lg-3">
+          <label><input type="checkbox" [checked]="form.exp_applicable === 'Yes'" (change)="form.exp_applicable = $any($event.target).checked ? 'Yes' : 'No'" /> Exp Date</label>
+          <input type="date" [(ngModel)]="form.exp_date" [disabled]="form.exp_applicable !== 'Yes'" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn btn-secondary" (click)="saveDraft()" [disabled]="saving || submitting">Save Draft</button>
+      <button class="btn btn-primary" (click)="submit()" [disabled]="saving || submitting">Submit to Workflow</button>
+      <button class="btn btn-danger" routerLink="/qc/processing-laboratory-samples">CLOSE</button>
+    </div>
+  </div>
+</div>

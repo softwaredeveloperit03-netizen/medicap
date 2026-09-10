@@ -1,0 +1,186 @@
+<div class="card" *ngIf="!isNew">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Sampling Records for Line Clearance</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/rnd/qc/sampling/raw">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Containers</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving no</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Date</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling Person</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td style="text-align: left;">{{ result.material_name }}</td>
+                    <td style="text-align: left;">{{ result.material_code }}</td>
+                    <td style="text-align: left;">{{ result.batch_no }}</td>
+                    <td style="text-align: left;">{{ result.containers }}</td>
+                    <td style="text-align: left;">{{ result.grn_no }}</td>
+                    <td style="text-align: left;">{{ result.grn_date | date: 'dd-MM-yyyy'}}</td>
+                    <td style="text-align: left;">{{ result.sampling_person }}</td>
+                    <td style="color: red;font-weight: 800;">{{ result.clearance_status }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)" *ngIf="result.specification_no !== ''">PROCEED</button>
+                        <button class="btn btn-sm btn-info" routerLink="/specifications" *ngIf="result.specification_no == ''">ADD SPECIFICATION</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="8">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isNew">
+    <div class="card">
+        <div class="card-header">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Sampling Records for Line Clearance</div>
+                <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isNew = false" style="background-color: red;color: white;">
+                    CLOSE
+                  </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Material Details:</h3>
+                <table class="table table1">
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Sampling No.:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['id'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Allocation Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['request_date'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['grn_no'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['grn_date'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Material Name:</b></td>
+                        <td style="text-align: left;" colspan="3">{{ selectedSampling['material_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['material_code'] }}</td>
+                        <td style="text-align: left;width: 15%;">Grade:</td>
+                        <td style="text-align: left;">{{ selectedSampling['grade'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Mfg. Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['mfg_date'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Exp. Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['exp_date'] }}</td>
+                    </tr>
+                </table>
+                
+                <h3>Line Clearance:</h3>
+                <div *ngIf="selectedSampling['clearance_status'] == 'pending'">
+                    <!-- <div style="text-align: center;">
+                        <button class="btn btn-primary" (click)="callforclearance()">CALL FOR LINE CLEARANCE</button>
+                    </div> -->
+                    <h5>Line Clearance Checkpoints:</h5>
+                    <form #clearanceForm="ngForm">
+                        <table class="table">
+                            <tr>
+                                <th>Sr.</th>
+                                <th>Checkpoints</th>
+                                <th>{{'common.status' | translate}}</th>
+                                <th>{{'common.table.remark' | translate}}</th>
+                            </tr>
+                            <tr *ngFor="let checkpoint of checkpoints; let i = index">
+                                <td>{{ i + 1 }}.</td>
+                                <td>{{ checkpoint.checkpoint }}</td>
+                                <td style="padding: 0px;">
+                                    <select name="status{{ i }}" [(ngModel)]="checkpoint.status" required style="margin: 0px;height: 33px;">
+                                        <option>Ok</option>
+                                        <option>Not Ok</option>
+                                    </select>
+                                </td>
+                                <td style="padding: 0px;">
+                                    <input type="text" name="remark" [(ngModel)]="checkpoint.remark" style="margin: 0px;height: 33px;">
+                                </td>
+                            </tr>
+                            <tr *ngIf="checkpoints?.length == 0">
+                                <td colspan="4">{{'common.noRecords' | translate}}</td>
+                            </tr>
+                        </table>
+                    </form>
+                    <br>
+                    <div style="text-align: left;">
+                        <button class="btn btn-primary" (click)="callforclearance(clearanceForm)">CALL FOR LINE CLEARANCE</button>
+                    </div>
+                </div>
+                <div *ngIf="selectedSampling['clearance_status'] == 'inprocess' || selectedSampling['clearance_status'] == 'complete'">
+                    <h3 style="text-align: center;color: red;">Line Clearance Pending in QA Department</h3>
+                    <h5>User Line Clearance:</h5>
+                    <table class="table">
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Checkpoints</th>
+                            <th>{{'common.status' | translate}}</th>
+                            <th>{{'common.table.remark' | translate}}</th>
+                        </tr>
+                        <tr *ngFor="let checkpoint of selectedSampling['clearance_details'].checkpoints; let i = index">
+                            <td>{{ i + 1 }}.</td>
+                            <td>{{ checkpoint.checkpoint }}</td>
+                            <td>{{ checkpoint.status }}</td>
+                            <td>{{ checkpoint.remark }}</td>
+                        </tr>
+                        <tr *ngIf="selectedSampling['clearance_details'].checkpoints?.length == 0">
+                            <td colspan="4">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                    </table>
+                    <h5>Previous Product Details:</h5>
+                    <table class="table">
+                        <tr>
+                            <td style="text-align: left;width: 20%;"><b>Previous Product:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].material_code }}</td>
+                            <td style="text-align: left;width: 20%;"><b>Medicap Lot No/Lot No.:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].batch_no }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;"><b>Area Cleaned By:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].entry_by }}</td>
+                            <td style="text-align: left;width: 20%;"><b>Clearance By:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].entry_date }}</td>
+                        </tr>
+                    </table>
+                    <h5>Clearance Details:</h5>
+                    <table class="table">
+                        <tr>
+                            <td style="text-align: left;width: 20%;"><b>Temp.:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].temperature }}</td>
+                            <td style="text-align: left;width: 20%;"><b>Humidity:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].humidity }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 20%;"><b>Is Area Cleaned:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].area_cleaned }}</td>
+                            <td style="text-align: left;width: 20%;"><b>Previous Product Trace:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['clearance_details'].product_traces }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

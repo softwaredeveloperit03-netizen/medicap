@@ -1,0 +1,132 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Minutes of Meeting ({{ formNo }})</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+          <button class="btn btn-sm" routerLink="/qa/management-review-quality-systems" style="background-color: red; color: white">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_no">Meeting No.</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_in">Meeting In</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_date">Meeting Date</clr-dg-column>
+        <clr-dg-column clrDgField="review_period">Review Period</clr-dg-column>
+        <clr-dg-column>Action</clr-dg-column>
+        <clr-dg-row *clrDgItems="let user of results; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_in }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.review_period }}</clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">CAPTURE MOM</button></clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">Minutes of Meeting — {{ selectedResult?.meeting_no }} ({{ formNo }})</div>
+    <div class="card-block">
+      <table class="mrq-form__sheet-table">
+        <tr>
+          <td class="mrq-form__label-cell">REF:</td>
+          <td class="mrq-form__value-cell">{{ sopRef }}</td>
+          <td class="mrq-form__label-cell">Meeting Date:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_date | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td class="mrq-form__label-cell">Meeting In:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_in }}</td>
+          <td class="mrq-form__label-cell">Review Period:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.review_period }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Participants &amp; Attendance:</h3>
+      <table class="table table-border">
+        <tr>
+          <th>Sr.</th><th>Name</th><th>Department</th><th>Designation</th><th>Attendance</th>
+        </tr>
+        <tr *ngFor="let user of selectedResult?.participants; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ user.firstname || user.emp_name }}</td>
+          <td>{{ user.department }}</td>
+          <td>{{ user.designation }}</td>
+          <td>
+            <button type="button" class="btn btn-sm btn-primary-outline mrq-form__attendance-btn" [class.is-active]="user.attendance === 'present'" (click)="addAttendance(i, 'present')">Present</button>
+            <button type="button" class="btn btn-sm btn-danger-outline mrq-form__attendance-btn" [class.is-active]="user.attendance === 'absent'" (click)="addAttendance(i, 'absent')">Absent</button>
+          </td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Agenda Discussion &amp; Minutes:</h3>
+      <table class="table table-border">
+        <tr>
+          <th>Sr.</th><th>Agenda</th><th>Details</th><th>Discussion / Minutes</th><th>Decision / Conclusion</th>
+        </tr>
+        <tr *ngFor="let item of momDiscussions; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ item.agenda }}</td>
+          <td>{{ item.detail }}</td>
+          <td><textarea class="mrq-form__textarea" [(ngModel)]="item.discussion" [name]="'discussion_' + i"></textarea></td>
+          <td><textarea class="mrq-form__textarea" [(ngModel)]="item.decision" [name]="'decision_' + i"></textarea></td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Action Items:</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Action</th><th>Responsible Person</th><th>Target Date</th><th></th></tr>
+        <tr>
+          <td>0</td>
+          <td><input class="mrq-form__input" type="text" [(ngModel)]="actionText" name="action_text" /></td>
+          <td>
+            <select class="mrq-form__select" [(ngModel)]="actionResponsible" name="action_responsible">
+              <option value="">-- Select Employee --</option>
+              <option *ngFor="let emp of employees" [value]="employeeLabel(emp)">{{ employeeLabel(emp) }}</option>
+            </select>
+          </td>
+          <td><input class="mrq-form__input" type="date" [(ngModel)]="actionTargetDate" name="action_target_date" /></td>
+          <td><button type="button" class="btn btn-sm btn-info" (click)="addActionItem()">ADD</button></td>
+        </tr>
+        <tr *ngFor="let act of actionItems; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ act.action }}</td>
+          <td>{{ act.responsible }}</td>
+          <td>{{ act.target_date | date: 'dd-MM-yyyy' }}</td>
+          <td>#</td>
+        </tr>
+        <tr *ngIf="!actionItems.length"><td colspan="5">No action items added.</td></tr>
+      </table>
+
+      <div class="clr-row">
+        <div class="clr-col-12">
+          <label>Meeting Conclusions:</label>
+          <textarea class="mrq-form__textarea" name="conclusions" [(ngModel)]="conclusions"></textarea>
+        </div>
+        <div class="clr-col-12">
+          <label>Remarks:</label>
+          <textarea class="mrq-form__textarea" name="remark" [(ngModel)]="remark"></textarea>
+        </div>
+        <div class="clr-col-4">
+          <label>Next Management Review Date:</label>
+          <input class="mrq-form__input" type="date" name="next_review_date" [(ngModel)]="nextReviewDate" />
+        </div>
+        <div class="clr-col-8">
+          <label>MOM Prepared By:</label>
+          <input class="mrq-form__input" type="text" name="mom_prepared_by" [(ngModel)]="momPreparedBy" readonly />
+          <button type="button" class="btn btn-sm btn-secondary mrq-form__stamp-btn" (click)="stampMomPreparedBy()">Stamp</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="completeMeeting()">COMPLETE MEETING &amp; SAVE MOM</button>
+      <button class="btn btn-danger" (click)="isView = false">BACK</button>
+    </div>
+  </div>
+</div>

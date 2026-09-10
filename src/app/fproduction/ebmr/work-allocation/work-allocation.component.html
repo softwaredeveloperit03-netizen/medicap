@@ -1,0 +1,278 @@
+<div class="eb-page wa-page" *ngIf="!detailOpen && !historyDetail">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-tasks"></i>
+      Batch Work Allocation
+      <span class="eb-sub">Assign Production personnel to eBMR stages — operators only see their allocated stages in execution</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="wa-tabs">
+    <button type="button" class="wa-tab" [class.active]="activeTab==='allocation'" (click)="setTab('allocation')">
+      <i class="fas fa-user-plus"></i> Allocation
+    </button>
+    <button type="button" class="wa-tab" [class.active]="activeTab==='change'" (click)="setTab('change')">
+      <i class="fas fa-user-edit"></i> Change Allocation
+    </button>
+    <button type="button" class="wa-tab" [class.active]="activeTab==='log'" (click)="setTab('log')">
+      <i class="fas fa-clipboard-list"></i> Allocation Log
+    </button>
+  </div>
+
+  <!-- ALLOCATION / CHANGE LIST -->
+  <ng-container *ngIf="activeTab==='allocation' || activeTab==='change'">
+    <div class="eb-toolbar">
+      <div class="eb-field" *ngIf="activeTab==='allocation'">
+        <span class="eb-field-label">Status</span>
+        <select class="eb-select" [(ngModel)]="statusFilter">
+          <option value="">All pending</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="eb-field">
+        <span class="eb-field-label">Search</span>
+        <input class="eb-input" [(ngModel)]="search" placeholder="Batch, WO, product…" />
+      </div>
+      <div class="eb-spacer"></div>
+      <button class="eb-btn eb-btn-outline" (click)="load()" [disabled]="loading">
+        <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-sync'"></i> Refresh
+      </button>
+    </div>
+
+    <div class="eb-table-wrap wa-panel">
+      <table class="eb-table">
+        <thead>
+          <tr>
+            <th>Medicap Lot No</th>
+            <th>Work Order</th>
+            <th>Plan</th>
+            <th>Product</th>
+            <th>Dosage</th>
+            <th>Profile</th>
+            <th>Allocation</th>
+            <th>eBMR</th>
+            <th style="width:220px">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!filtered.length">
+            <td colspan="9" class="eb-empty">
+              <span *ngIf="activeTab==='allocation'">No batches pending allocation. Complete QA batch number, RM receipt, and Production approval first.</span>
+              <span *ngIf="activeTab==='change'">No allocated batches found to change.</span>
+            </td>
+          </tr>
+          <tr *ngFor="let r of filtered">
+            <td class="eb-strong">{{ r.batch_number || '—' }}</td>
+            <td>{{ r.work_order_no || r.work_order_id }}</td>
+            <td>{{ r.plan_no || '—' }}</td>
+            <td>
+              <div class="eb-strong">{{ r.product_name }}</div>
+              <div class="eb-hint">{{ r.product_code }}</div>
+            </td>
+            <td><span class="eb-badge eb-badge-type">{{ r.dosage_form || '—' }}</span></td>
+            <td><span class="eb-badge eb-badge-muted">{{ r.profile_code || '—' }}</span></td>
+            <td>
+              <span class="eb-badge" [ngClass]="statusClass(r.alloc_status)">{{ r.alloc_status || 'Pending' }}</span>
+            </td>
+            <td>
+              <span class="eb-badge" [ngClass]="r.ebmr_batch_id ? 'eb-badge-ok' : 'eb-badge-muted'">
+                {{ r.ebmr_exec_status || (r.ebmr_batch_id ? 'Started' : 'Not started') }}
+              </span>
+            </td>
+            <td>
+              <div class="eb-row-actions">
+                <button class="eb-btn eb-btn-sm eb-btn-solid" *ngIf="activeTab==='allocation'" (click)="openAllocate(r, false)">
+                  <i class="fas fa-user-plus"></i> Allocate
+                </button>
+                <button class="eb-btn eb-btn-sm eb-btn-solid" *ngIf="activeTab==='change'" (click)="openAllocate(r, true)">
+                  <i class="fas fa-user-edit"></i> Change
+                </button>
+                <button
+                  class="eb-btn eb-btn-sm eb-btn-outline"
+                  *ngIf="(r.alloc_status || '') === 'Allocated'"
+                  (click)="goExecute(r)"
+                >
+                  <i class="fas fa-industry"></i> Execute
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- ALLOCATION LOG -->
+  <ng-container *ngIf="activeTab==='log'">
+    <div class="eb-toolbar">
+      <div class="eb-field">
+        <span class="eb-field-label">Search log</span>
+        <input class="eb-input" [(ngModel)]="historySearch" placeholder="Batch, action, user, reason…" />
+      </div>
+      <div class="eb-spacer"></div>
+      <button class="eb-btn eb-btn-outline" (click)="loadHistory()" [disabled]="historyLoading">
+        <i class="fas" [ngClass]="historyLoading ? 'fa-spinner fa-spin' : 'fa-sync'"></i> Refresh
+      </button>
+    </div>
+
+    <div class="eb-table-wrap wa-panel">
+      <table class="eb-table">
+        <thead>
+          <tr>
+            <th style="width:140px">Date / Time</th>
+            <th>Medicap Lot No</th>
+            <th>WO</th>
+            <th>Action</th>
+            <th>Changed By</th>
+            <th>Reason</th>
+            <th style="width:100px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!filteredHistory.length">
+            <td colspan="7" class="eb-empty">No allocation log entries yet. Allocate or change assignment to create history.</td>
+          </tr>
+          <tr *ngFor="let h of filteredHistory">
+            <td>{{ h.changed_at }}</td>
+            <td class="eb-strong">{{ h.batch_number || '—' }}</td>
+            <td>{{ h.work_order_id }}</td>
+            <td><span class="eb-badge" [ngClass]="actionClass(h.action)">{{ h.action || 'Allocate' }}</span></td>
+            <td>{{ h.changed_by_name || h.changed_by || '—' }}</td>
+            <td class="eb-hint">{{ h.change_reason || '—' }}</td>
+            <td>
+              <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="openHistoryDetail(h)">
+                <i class="fas fa-eye"></i> View
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- LOG DETAIL -->
+<div class="eb-page wa-page" *ngIf="historyDetail">
+  <div class="eb-header">
+    <h1>
+      <i class="fas fa-clipboard-list"></i>
+      Allocation Log — {{ historyDetail.batch_number || historyDetail.work_order_id }}
+      <span class="eb-sub">{{ historyDetail.action }} · {{ historyDetail.changed_at }}</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="closeHistoryDetail()"><i class="fas fa-arrow-left"></i> Back to log</button>
+    </div>
+  </div>
+
+  <div class="wa-meta">
+    <div><b>Action</b> {{ historyDetail.action }}</div>
+    <div><b>By</b> {{ historyDetail.changed_by_name || historyDetail.changed_by }}</div>
+    <div><b>Reason</b> {{ historyDetail.change_reason || '—' }}</div>
+  </div>
+
+  <div class="wa-log-cols">
+    <div class="wa-log-card">
+      <h4>Before</h4>
+      <p class="eb-hint">{{ stageSummary(historyDetail.before) }}</p>
+    </div>
+    <div class="wa-log-card">
+      <h4>After</h4>
+      <p class="eb-hint">{{ stageSummary(historyDetail.after) }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- ALLOCATE / CHANGE DETAIL -->
+<div class="eb-page wa-page" *ngIf="detailOpen">
+  <div class="eb-header">
+    <h1>
+      <i class="fas" [ngClass]="changeMode ? 'fa-user-edit' : 'fa-user-check'"></i>
+      {{ changeMode ? 'Change Allocation' : 'Allocate' }} — {{ selected?.batch_number }}
+      <span class="eb-sub">{{ selected?.product_name }} ({{ selected?.product_code }})</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="closeDetail()"><i class="fas fa-arrow-left"></i> Back to list</button>
+      <button class="eb-btn eb-btn-solid" (click)="saveAllocate()" [disabled]="saving">
+        <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-signature'"></i>
+        {{ changeMode ? 'Sign & Change' : 'Sign & Allocate' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="wa-meta">
+    <div><b>Work Order</b> {{ selected?.work_order_no || selected?.work_order_id }}</div>
+    <div><b>Plan</b> {{ selected?.plan_no || '—' }}</div>
+    <div><b>Batch size</b> {{ selected?.batch_size || '—' }}</div>
+    <div><b>Profile</b> {{ selected?.header?.profile_code || selected?.profile_code || '—' }}</div>
+  </div>
+
+  <div class="wa-change-reason" *ngIf="changeMode">
+    <label class="eb-field-label">Reason for change of allocation *</label>
+    <textarea class="eb-textarea" rows="2" [(ngModel)]="changeReason" placeholder="e.g. Operator leave / stage reassignment…"></textarea>
+  </div>
+
+  <div class="eb-table-wrap wa-panel">
+    <table class="eb-table wa-alloc-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Stage</th>
+          <th>Operator *</th>
+          <th>Officer *</th>
+          <th>Alt Operator</th>
+          <th>Alt Officer</th>
+          <th>Reviewer</th>
+          <th>Approver</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!stages.length">
+          <td colspan="8" class="eb-empty">No stages available for this batch.</td>
+        </tr>
+        <tr *ngFor="let s of stages">
+          <td>{{ s.stage_seq }}</td>
+          <td class="eb-strong">{{ s.stage_name }}</td>
+          <td>
+            <select class="eb-select" [ngModel]="s.operator_emp" (ngModelChange)="onEmpPick(s, 'operator', $event)">
+              <option value="">— Select —</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+          <td>
+            <select class="eb-select" [ngModel]="s.office_emp" (ngModelChange)="onEmpPick(s, 'office', $event)">
+              <option value="">— Select —</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+          <td>
+            <select class="eb-select" [ngModel]="s.alt_operator_emp" (ngModelChange)="onEmpPick(s, 'alt_operator', $event)">
+              <option value="">—</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+          <td>
+            <select class="eb-select" [ngModel]="s.alt_officer_emp" (ngModelChange)="onEmpPick(s, 'alt_officer', $event)">
+              <option value="">—</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+          <td>
+            <select class="eb-select" [ngModel]="s.reviewer_emp" (ngModelChange)="onEmpPick(s, 'reviewer', $event)">
+              <option value="">—</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+          <td>
+            <select class="eb-select" [ngModel]="s.approver_emp" (ngModelChange)="onEmpPick(s, 'approver', $event)">
+              <option value="">—</option>
+              <option *ngFor="let p of personnel" [value]="p.emp_id">{{ p.display_name }}</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

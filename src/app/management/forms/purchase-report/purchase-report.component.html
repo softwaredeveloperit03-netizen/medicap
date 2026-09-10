@@ -1,0 +1,134 @@
+﻿<div class="container-fluid" *ngIf="!isViewPO">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Report</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm" routerLink="/" style="background-color: red;color: white;">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+            <form #reportForm="ngForm">
+              <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Vendor Name</label>
+                    <select name="vendor_no" [(ngModel)]="vendor_no">
+                      <option></option>
+                      <option *ngFor="let ven of vendors" [value]="ven.vendor_no">{{ ven.vendor_name }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>From Date</label>
+                  <input type="date" name="fromDate" [(ngModel)]="fromDate" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>To Date</label>
+                  <input type="date" name="toDate" [max]="currentDate" [(ngModel)]="toDate" required>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="margin-top: 6px;">
+                  <label>&nbsp;</label><br>
+                  <button class="btn btn-danger" (click)="getAllPurchaseOrders()"> SEARCH</button>
+                  <button *ngIf="showclearbtn" class="btn btn-warning" (click)="clearRecord()">{{'common.clear' | translate}}</button>
+                </div>
+              </div>
+            </form>
+            <div class="card-text">
+                <clr-datagrid>
+                    <clr-dg-column>PO No.</clr-dg-column>
+                    <clr-dg-column>Vendor Name</clr-dg-column>
+                    <clr-dg-column>GST Type</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Prepared By</clr-dg-column>
+                    <clr-dg-column>Prepared Date</clr-dg-column>
+                    <clr-dg-column>view</clr-dg-column>
+                
+                    <clr-dg-row *ngFor="let user of orders; let i = index">
+                        <clr-dg-cell>{{user.po_no}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.vendor_name}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.gst_type}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.status}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.entry_by}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.entry_date}}</clr-dg-cell>
+                        <clr-dg-cell>
+                          <button class="btn btn-sm btn-info" (click)="viewPO(i)">{{'common.view' | translate}}</button>
+                          <button class="btn btn-sm btn-icon" (click)="downloadReport(user.po_no)"><clr-icon shape="download"></clr-icon></button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                    <clr-dg-row *ngIf="norecord">
+                      <clr-dg-cell colspan="7" style="text-align: center;">No Record Found</clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-success" (click)="downloadReportLog()">{{'common.download' | translate}}</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isViewPO">
+    <div class="card">
+      <div class="card-header">Purchase order Report</div>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table">
+            <tr>
+              <td style="text-align: left; width: 20%;">Vendor Name:</td>
+              <td style="text-align: left;">{{ data["vendor_name"] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 20%;">Discount (A.P. Quotation):</td>
+              <td style="text-align: left;">{{ data["discount"] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 20%;">GST Type:</td>
+              <td style="text-align: left;">{{ data["gst_type"] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 20%;">Requirement Days:</td>
+              <td style="text-align: left;">{{ data["requirement_days"] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 20%;">Delivery Schedule Date:</td>
+              <td style="text-align: left;">{{ data["delivery_schedule_date"] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 20%;">Delivery Address:</td>
+              <td style="text-align: left;">{{ data["delivery_address"] }}</td>
+            </tr>
+          </table>
+          <h4>Materials:</h4>
+          <table class="table">
+            <tr>
+              <th>Material Type</th>
+              <th>Material Name</th>
+              <th>Grade</th>
+              <th>Required Qty.</th>
+              <th>{{'common.unit' | translate}}</th>
+              <th>Requirement</th>
+              <th>Quotation No.</th>
+            </tr>
+            <tr *ngFor="let material of data['materials']">
+              <td>{{ material.material_type }}</td>
+              <td style="text-align: left;">{{ material.material_name }}</td>
+              <td>{{ material.grade }}</td>
+              <td>{{ material.required_qty }}</td>
+              <td>{{ material.unit }}</td>
+              <td>{{ material.requirement }}</td>
+              <td *ngIf="material.quotation !== ''">{{ material.quotation }}</td>
+              <td *ngIf="material.quotation == ''">NA</td>
+            </tr>
+          </table>
+          <h4>Terms & Conditions:</h4>
+          <p>{{ data["terms_conditions"] }}</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadReport(data['po_no'])">DOWNLOAD PDF</button>
+        <button class="btn btn-danger" (click)="isViewPO = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>

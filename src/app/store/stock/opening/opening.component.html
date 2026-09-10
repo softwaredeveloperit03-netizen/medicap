@@ -1,0 +1,140 @@
+<div class="card recv-page">
+  <header class="card-header mef-panel-header">
+    <h1 class="mef-panel-header__title">Opening Stock</h1>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+      <form #requestForm="ngForm">
+        <div class="clr-row opening-filters">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type:<span class="required-mark">*</span></label>
+            <select name="material_type" [(ngModel)]="material_type" required (ngModelChange)="getSubMaterials($event)">
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Search</label>
+            <input type="text" name="searchQuery" [(ngModel)]="searchQuery" placeholder="Search material / code">
+          </div>
+        </div>
+      </form>
+
+      <form #batchForm="ngForm">
+        <h3>Materials</h3>
+        <div class="card-text opening-stock-scroll" *ngIf="!loading">
+          <table class="table table-border unique-table recv-data-table">
+            <thead>
+              <tr>
+                <th>Check</th>
+                <th>Material Name</th>
+                <th>Material Code</th>
+                <th>Medicap Lot No</th>
+                <th>Pack Size</th>
+                <th>Qty</th>
+                <th>Unit</th>
+                <th>Receiving no</th>
+                <th>Date</th>
+                <th>Mfg. Dt.</th>
+                <th>Exp. Dt</th>
+                <th>Release Dt.</th>
+                <th>Containers</th>
+                <th>Vendor</th>
+                <!-- <th>Client Grp.</th>
+                <th>Client Sub Grp.</th> -->
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let term of filteredMaterials; let i = index">
+                <td>
+                  <input type="checkbox" name="selected{{ i }}" [(ngModel)]="term.selected">
+                </td>
+                <td>{{ term.material_name }}</td>
+                <td>{{ term.material_code }}</td>
+                <td><input type="text" name="batch_no{{ i }}" [(ngModel)]="term.batch_no"></td>
+                <td><input type="text" name="pack_size{{ i }}" [(ngModel)]="term.pack_size"></td>
+                <td><input type="number" name="qty{{ i }}" [(ngModel)]="term.qty"></td>
+                <td>{{ term.unit }}</td>
+                <td><input type="text" name="grn_no{{ i }}" [(ngModel)]="term.grn_no"></td>
+                <td><input type="date" name="grn_date{{ i }}" [(ngModel)]="term.grn_date"></td>
+                <td><input type="date" name="mfg_date{{ i }}" [(ngModel)]="term.mfg_date"></td>
+                <td><input type="date" name="exp_date{{ i }}" [(ngModel)]="term.exp_date"></td>
+                <td><input type="date" name="release_date{{ i }}" [(ngModel)]="term.release_date"></td>
+                <td><input type="number" name="total_containers{{ i }}" [(ngModel)]="term.total_containers"></td>
+                <td>
+                  <select name="vendor_no{{ i }}" [(ngModel)]="term.vendor_no">
+                    <option value=""></option>
+                    <option *ngFor="let ven of vendors" [value]="ven.vendor_no">{{ ven.vendor_name }} ({{ ven.vendor_no }})</option>
+                  </select>
+                </td>
+                <!-- <td>
+                  <select name="clientGrpCode{{ i }}" [(ngModel)]="term.clientGrpCode">
+                    <option value=""></option>
+                    <option *ngFor="let cliGrp of clients" [value]="cliGrp.client_code">{{ cliGrp.LglNm }} - ({{ cliGrp.client_code }})</option>
+                  </select>
+                </td>
+                <td>
+                  <select name="clientSubGrpCode{{ i }}" [(ngModel)]="term.clientSubGrpCode">
+                    <option value=""></option>
+                    <option *ngFor="let clisubGrp of clients" [value]="clisubGrp.client_code">{{ clisubGrp.LglNm }} - ({{ clisubGrp.client_code }})</option>
+                  </select>
+                </td> -->
+              </tr>
+              <tr *ngIf="!filteredMaterials?.length">
+                <td colspan="14">No materials found for selected type.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="opening-loading" *ngIf="loading">Loading materials...</div>
+        <button class="btn btn-outline" type="button" (click)="addProduct()" *ngIf="materials?.length">{{'common.add' | translate}}</button>
+      </form>
+
+      <ng-container *ngIf="productList.length">
+        <h3>Selected Materials</h3>
+        <div class="opening-stock-scroll">
+          <table class="table table-border unique-table recv-data-table">
+            <thead>
+              <tr>
+                <th>Material Name</th>
+                <th>Material Code</th>
+                <th>Medicap Lot No</th>
+                <th>Pack Size</th>
+                <th>Qty</th>
+                <th>{{'common.unit' | translate}}</th>
+                <th>Receiving no</th>
+                <th>Date</th>
+                <th>Mfg. Date</th>
+                <th>Exp. Date</th>
+                <th>Release Date</th>
+                <th>{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let batch of productList; let i = index;">
+                <td>{{ batch.material_name }}</td>
+                <td>{{ batch.material_code }}</td>
+                <td>{{ batch.batch_no }}</td>
+                <td>{{ batch.pack_size }}</td>
+                <td>{{ batch.qty }}</td>
+                <td>{{ batch.unit }}</td>
+                <td>{{ batch.grn_no }}</td>
+                <td>{{ batch.grn_date | date:'dd-MM-yyyy' }}</td>
+                <td>{{ batch.mfg_date | date:'dd-MM-yyyy' }}</td>
+                <td>{{ batch.exp_date | date:'dd-MM-yyyy' }}</td>
+                <td>{{ batch.release_date | date:'dd-MM-yyyy' }}</td>
+                <td>
+                  <clr-icon shape="trash" class="is-error" (click)="productList.splice(i,1)"></clr-icon>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" type="button" (click)="saveOpeningStock(requestForm)" [disabled]="clicked">{{'common.save' | translate}}</button>
+  </div>
+</div>

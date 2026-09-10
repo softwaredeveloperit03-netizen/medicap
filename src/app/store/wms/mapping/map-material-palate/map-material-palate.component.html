@@ -1,0 +1,113 @@
+<div class="component store-legacy-dash">
+  <div class="subsection">
+    <div class="purchase-block">
+      <div style="text-align:end" class="exit-section">
+        <div class="header-block" style="margin:10px 0px">
+          <h3>Map Material to Palate</h3>
+        <div routerLink="/store/wms/mapping" class="name-board2"><i class="fas fa-times"></i>
+        </div>
+      </div>
+
+      <div class="main-section" style="margin: 0px 10px 10px 10px !important;">
+        <div class="card">
+          <div class="card-block">
+            <div class="clr-row" style="margin-bottom: 20px;">
+              <div class="clr-col-lg-12">
+                <label>
+                  <input type="checkbox" [(ngModel)]="isBatchMode" (ngModelChange)="toggleBatchMode()">
+                  <strong>Batch Mode (Map multiple materials to same palate)</strong>
+                </label>
+              </div>
+            </div>
+
+            <div class="clr-row" style="margin-bottom: 20px;">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Scan Material Barcode (Tracking ID):</strong></label>
+                <input 
+                  type="text" 
+                  #materialInput
+                  [(ngModel)]="materialBarcode"
+                  (keyup.enter)="onMaterialScan($event)"
+                  class="form-control"
+                  style="font-size: 18px; padding: 10px;"
+                  placeholder="Scan material barcode and press Enter"
+                  autofocus>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-xs-12">
+                <label><strong>Scan Palate Barcode:</strong></label>
+                <input 
+                  type="text" 
+                  #palateInput
+                  [(ngModel)]="palateBarcode"
+                  (keyup.enter)="onPalateScan($event)"
+                  class="form-control"
+                  style="font-size: 18px; padding: 10px;"
+                  placeholder="Scan palate barcode and press Enter">
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="materialData">
+              <div class="clr-col-12">
+                <div class="alert alert-success">
+                  <strong>Material Found:</strong> {{ materialData.material_code }} - {{ materialData.material_name }} ({{ materialData.batch_no }})
+                  <button class="btn btn-sm btn-success" style="float: right; margin-left: 10px;" *ngIf="isBatchMode && palateData" (click)="addToBatch()">
+                    <i class="fas fa-plus"></i> Add to Batch
+                  </button>
+                  <button class="btn btn-sm btn-primary" style="float: right;" *ngIf="!isBatchMode && palateData && materialData" (click)="saveMapping()">
+                    Map to Palate
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="palateData">
+              <div class="clr-col-12">
+                <div class="alert alert-info">
+                  <strong>Palate Found:</strong> {{ palateData.paletteNo }} - {{ palateData.section_name }}
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" *ngIf="isBatchMode && mappedMaterials.length > 0">
+              <div class="clr-col-12">
+                <h4>Materials to Map ({{ mappedMaterials.length }})</h4>
+                <div class="datagrid-wrapper">
+                  <clr-datagrid>
+                    <clr-dg-column>Sr. No.</clr-dg-column>
+                    <clr-dg-column>Tracking ID</clr-dg-column>
+                    <clr-dg-column>Material Code</clr-dg-column>
+                    <clr-dg-column>Material Name</clr-dg-column>
+                    <clr-dg-column>Medicap Lot No</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                    <clr-dg-row *clrDgItems="let material of mappedMaterials; let i = index" [clrDgItem]="material">
+                      <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.tracking_id }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.material_code }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.material_name }}</clr-dg-cell>
+                      <clr-dg-cell>{{ material.batch_no }}</clr-dg-cell>
+                      <clr-dg-cell>
+                        <button class="btn btn-sm btn-danger" (click)="removeFromBatch(i)">Remove</button>
+                      </clr-dg-cell>
+                    </clr-dg-row>
+                  </clr-datagrid>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row" style="margin-top: 20px;">
+              <div class="clr-col-12">
+                <button class="btn btn-primary" (click)="saveMapping()" 
+                        [disabled]="loading || (!isBatchMode && !materialData) || (isBatchMode && mappedMaterials.length === 0) || !palateData">
+                  <span *ngIf="loading" class="spinner spinner-inline"></span>
+                  {{ isBatchMode ? 'Save Batch Mapping' : 'Save Mapping' }}
+                </button>
+                <button class="btn btn-secondary" (click)="resetForm()" style="margin-left: 10px;">{{'common.reset' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

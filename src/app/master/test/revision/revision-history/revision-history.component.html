@@ -1,0 +1,78 @@
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Revision History</span>
+    <button type="button" class="btn btn-sm btn-outline" routerLink="/master/test/revision">{{'common.back' | translate}}</button>
+  </div>
+  <div class="card-block">
+    <p class="card-text text-muted">Detailed revision history. Use Revision History to view details and View Change Control to open linked change control.</p>
+    <div class="clr-row">
+      <div class="clr-col-lg-5">
+        <label for="rh-search">Search</label>
+        <input id="rh-search" type="text" placeholder="Search..." [(ngModel)]="searchQuery" aria-label="Search">
+      </div>
+    </div>
+    <div class="datagrid-wrapper">
+      <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+        <clr-dg-column style="width: 50px;">{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Test Code</clr-dg-column>
+        <clr-dg-column>Test Type</clr-dg-column>
+        <clr-dg-column>Test Name</clr-dg-column>
+        <clr-dg-column>Prepared By/On</clr-dg-column>
+        <clr-dg-column>Approve By/On</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>Test Status</clr-dg-column>
+        <clr-dg-column>Approval Date</clr-dg-column>
+        <clr-dg-column>Approval By</clr-dg-column>
+        <clr-dg-column>Revision No</clr-dg-column>
+        <clr-dg-column>Revision Date</clr-dg-column>
+        <clr-dg-column>Change Control No</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        <clr-dg-row *clrDgItems="let result of filteredList; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test_method_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.test || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.entry_by || 'NA' }} / {{ (result.entry_date | date:'dd-MM-yyyy') || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span *ngIf="getTestStatus(result) === 'Active'">{{ result.approve_by || '-' }} / {{ (result.approve_date | date:'dd-MM-yyyy') || '-' }}</span>
+            <span *ngIf="getTestStatus(result) !== 'Active'">- / -</span>
+          </clr-dg-cell>
+          <clr-dg-cell>{{ result.status || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ getTestStatus(result) }}</clr-dg-cell>
+          <clr-dg-cell>{{ (result.approval_date | date:'dd-MM-yyyy') || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.approval_by || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.revision_number || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ (result.revision_date | date:'dd-MM-yyyy') || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.change_control_no || result.change_control_id || '-' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button type="button" class="btn btn-sm btn-info" (click)="openRevisionDetail(result)" aria-label="Revision history detail">Revision History</button>
+            <button type="button" class="btn btn-sm btn-outline" (click)="viewChangeControl(result)" [disabled]="!(result.change_control_id || result.cc_id)" aria-label="View change control">View Change Control</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="detailModalOpen" [clrModalClosable]="true" clrModalSize="lg">
+  <h3 class="modal-title">Revision History Detail</h3>
+  <div class="modal-body" *ngIf="selectedRow">
+    <div class="detail-grid">
+      <div class="detail-row"><strong>Test Code:</strong> {{ selectedRow.test_method_no || 'NA' }}</div>
+      <div class="detail-row"><strong>Test Type:</strong> {{ selectedRow.test_type || 'NA' }}</div>
+      <div class="detail-row"><strong>Test Name:</strong> {{ selectedRow.test || 'NA' }}</div>
+      <div class="detail-row"><strong>Prepared By/On:</strong> {{ selectedRow.entry_by || 'NA' }} / {{ (selectedRow.entry_date | date:'dd-MM-yyyy') || 'NA' }}</div>
+      <div class="detail-row"><strong>Approve By/On:</strong> {{ selectedRow.approve_by || '-' }} / {{ (selectedRow.approve_date | date:'dd-MM-yyyy') || '-' }}</div>
+      <div class="detail-row"><strong>Approval By (QA):</strong> {{ selectedRow.approval_by || '-' }}</div>
+      <div class="detail-row"><strong>Approval Date:</strong> {{ (selectedRow.approval_date | date:'dd-MM-yyyy') || '-' }}</div>
+      <div class="detail-row"><strong>Approval Remark:</strong> {{ selectedRow.approval_remark || '-' }}</div>
+      <div class="detail-row"><strong>Revision Number:</strong> {{ selectedRow.revision_number || '-' }}</div>
+      <div class="detail-row"><strong>Revision Date:</strong> {{ (selectedRow.revision_date | date:'dd-MM-yyyy') || '-' }}</div>
+      <div class="detail-row"><strong>Change Control No:</strong> {{ selectedRow.change_control_no || selectedRow.change_control_id || '-' }}</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeDetailModal()">{{'common.close' | translate}}</button>
+    <button type="button" class="btn btn-primary" (click)="viewChangeControl(selectedRow); closeDetailModal()" *ngIf="selectedRow?.change_control_id || selectedRow?.cc_id">View Change Control</button>
+  </div>
+</clr-modal>

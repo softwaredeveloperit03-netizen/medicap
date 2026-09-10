@@ -1,0 +1,125 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Order Log</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" routerLink="/security/inword" style="background-color: red;color: white;">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type:<span style="color: red">*</span></label>
+            <select name="material_type" [(ngModel)]="po_type" required (change)="getApprovedPOForBarcodePrinting()">
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Engg Store Mech</option>
+              <option>Engg Store Elect</option>
+              <option>Stationary</option>
+              <option>Housekeeping</option>
+              <option>Canteen</option>
+              <option>Building Material</option>
+              <option>Machine Spares (Dedicated)</option>
+              <option>Machine Spares (Common)</option>
+              <option>QC Materials</option>
+              <option>IT Materials</option>
+              <option>Others</option>
+              <option>Service</option>
+              <option>Equipment</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-5">
+            <label>Search </label>
+            <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+          </div>
+        </div>
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+            <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Material Type.</clr-dg-column>
+            <clr-dg-column>PO No.</clr-dg-column>
+            <clr-dg-column>Po Dt.</clr-dg-column>
+            <clr-dg-column>Materials</clr-dg-column>
+            <clr-dg-column>Entered By</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+    
+            <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+              <clr-dg-cell>{{ result.po_type}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.po_no}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+              <clr-dg-cell> {{result.materials?.length}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_by }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.status  | uppercase}}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+          </clr-datagrid>
+
+        </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div id="contentToConvert">
+    <div class="card-header">Purchase Order Details For Label Printing</div>
+    <div class="card-block">
+      <div class="card-text">
+
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;width: 13%;">PO No.:</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ selectedPO['po_no'] }}</td>
+            <td style="text-align: center; font-size:15px; color:green;width: 48%;"><strong>{{ selectedPO['vendor_name'] }} - {{ selectedPO['vendor_no'] }}</strong></td>
+            <td style="text-align: left;width: 13%;">PO Date.:</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ selectedPO['entry_date'] | date:'dd-MM-yyyy'}}</td>
+          </tr>
+        </table>
+
+          <h3>Materials:</h3>
+          <div class="unique-table-wrapper">
+            <table class="table table-border unique-table">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Code</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Name</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">No.Of.Barcode Print</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Print Barcode</th>
+              </tr>
+              <tr *ngFor="let user of selectedPO['materials']; let i = index">
+                <td style="color: blue;">{{i+1}}</td>
+                <td style="color: blue;text-align: left;">{{user.material_code}}</td>
+                <td style="color: blue;text-align: left;">{{user.material_name}}</td>
+                <td style="color: blue;">{{user.qty}} {{user.unit}}</td>
+                <td style="color: blue; margin:0;padding:0;">
+                  <input type="number" name="NoOfBarcode{{i}}" [(ngModel)]="user.NoOfBarcode" required style="margin:0;">
+                </td>
+                <td style="color: blue;">
+                    <button type="button" class="btn btn-sm btn-info" (click)="printBarcode(user)"><i class="fas fa-barcode"></i> Print Barcode</button>
+                </td>
+              </tr>
+         
+            </table>
+          </div>
+          
+      </div>
+    </div>
+  </div>
+  <div class="card-footer" >
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+ 
+

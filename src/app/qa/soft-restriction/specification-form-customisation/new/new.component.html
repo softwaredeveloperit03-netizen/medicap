@@ -1,0 +1,101 @@
+<div class="card">
+  <div class="card-header">
+    <div class="row-flex">
+      <div>Specification Customisation - New Request</div>
+      <div class="actions">
+        <button class="btn btn-sm btn-success" (click)="submit()">Save</button>
+        <button class="btn btn-sm btn-danger" (click)="cancel()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="scope-row">
+      <label>Specification Scope</label>
+      <select [(ngModel)]="scope">
+        <option *ngFor="let s of scopes" [ngValue]="s">{{ s }}</option>
+      </select>
+    </div>
+
+    <div class="card custom-add">
+      <div class="card-header">Add Additional Input Field</div>
+      <div class="card-block">
+        <div class="form-inline">
+          <input type="text" placeholder="Input Field Display Name" [(ngModel)]="customFieldLabel" />
+          <input type="text" placeholder="Auto Input Field Name" [value]="autoCustomFieldKey" readonly />
+          <select [(ngModel)]="customFieldType" (ngModelChange)="onCustomFieldTypeChange()">
+            <option *ngFor="let t of types" [ngValue]="t">{{ t }}</option>
+          </select>
+          <select
+            *ngIf="customFieldType === 'DROPDOWN' || customFieldType === 'YESNO'"
+            [(ngModel)]="customFieldPattern"
+            (ngModelChange)="onCustomPatternChange()"
+          >
+            <option *ngFor="let p of dropdownPatterns" [ngValue]="p">{{ p }}</option>
+          </select>
+          <input
+            *ngIf="customFieldType === 'DROPDOWN' || customFieldType === 'YESNO'"
+            type="text"
+            placeholder="Dropdown Pattern (comma-separated: Yes,No,Applicable,Not Applicable)"
+            [(ngModel)]="customFieldOptions"
+          />
+          <select [(ngModel)]="customFieldGroup">
+            <option *ngFor="let g of groups" [ngValue]="g">{{ g }}</option>
+          </select>
+          <button class="btn btn-sm btn-primary" (click)="addCustomField()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group-block" *ngFor="let group of groups">
+      <h5>{{ group | titlecase }}</h5>
+      <div class="datagrid-wrapper">
+        <clr-datagrid >
+          <clr-dg-column>Input Field Name</clr-dg-column>
+          <clr-dg-column>Input Field Display Name</clr-dg-column>
+          <clr-dg-column>Input Criteria</clr-dg-column>
+          <clr-dg-column>Sort</clr-dg-column>
+          <clr-dg-column>Applicable</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let row of rowsForGroup(group); let i = index" [clrDgItem]="row">
+            <clr-dg-cell>{{ row.field_key }}</clr-dg-cell>
+            <clr-dg-cell><input type="text" [(ngModel)]="row.field_label" /></clr-dg-cell>
+            <clr-dg-cell>
+              <select [(ngModel)]="row.field_type" [disabled]="!row.allowTypeOverride">
+                <option *ngFor="let t of types" [ngValue]="t">{{ t }}</option>
+              </select>
+              <select
+                *ngIf="row.field_type === 'DROPDOWN' || row.field_type === 'YESNO'"
+                [ngModel]="getRowPattern(row)"
+                (ngModelChange)="setRowPattern(row, $event)"
+                style="margin-top: 4px;"
+              >
+                <option *ngFor="let p of dropdownPatterns" [ngValue]="p">{{ p }}</option>
+              </select>
+              <input
+                *ngIf="row.field_type === 'DROPDOWN' || row.field_type === 'YESNO'"
+                type="text"
+                [(ngModel)]="row.field_options"
+                placeholder="Options: Yes,No,Applicable,Not Applicable"
+                style="margin-top: 4px;"
+              />
+            </clr-dg-cell>
+            <clr-dg-cell><input type="number" [(ngModel)]="row.sort_order" /></clr-dg-cell>
+            <clr-dg-cell>
+              <select [(ngModel)]="row.applicable">
+                <option [ngValue]="'Applicable'">Applicable</option>
+                <option [ngValue]="'Not Applicable'">Not Applicable</option>
+              </select>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-danger" [disabled]="isDefaultRow(row)" (click)="removeCustomField(row)">
+                Remove
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>

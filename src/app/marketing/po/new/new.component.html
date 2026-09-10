@@ -1,0 +1,474 @@
+<div class="po-form">
+  <div class="card">
+    <div class="card-header po-page-header">
+      <div class="clr-row po-header-row">
+        <div class="clr-col-9 po-header-title">New Forecast</div>
+        <div class="clr-col-lg-3 po-header-actions">
+          <button class="btn btn-sm po-btn-close" routerLink="/marketing/po">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-text">
+        <form #poEntry="ngForm">
+          <h3 class="po-section-title">Order Details</h3>
+          <div class="clr-row po-field-row">
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Order For <span class="po-required">*</span></label>
+              <select name="billing_type" [(ngModel)]="billing_type" class="po-control" required>
+                <option></option>
+                <option>Forcast</option>
+                <option>PO for Billing</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Sales Order Type <span class="po-required">*</span></label>
+              <select name="po_type" [(ngModel)]="po_type" class="po-control" required>
+                <option></option>
+                <option>Domestic</option>
+                <option>Export</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Main Group <span class="po-required">*</span></label>
+              <select name="mainGroup" [(ngModel)]="mainGroup" class="po-control" required
+                (change)="getSubGroup($event.target.selectedIndex)">
+                <option></option>
+                <option *ngFor="let cli of clients1;" [value]="cli.client_code">
+                  {{ cli.LglNm || cli.TrdNm }} - ( {{ cli.client_code }} )
+                </option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Client Division</label>
+              <select name="subClient" [(ngModel)]="subClient" class="po-control">
+                <option></option>
+                <option>NA</option>
+                <option *ngFor="let cli of subGroupSeris;">{{ cli.LglNm }}-{{ cli.client_code }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Group Code</label>
+              <input type="text" name="groupcode" [(ngModel)]="mainGroup" class="po-control" readonly>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">
+                Client Group (Bill To)
+                <span class="po-required" *ngIf="billing_type=='PO for Billing'">*</span>
+              </label>
+              <select name="client_code" [(ngModel)]="client_code" class="po-control">
+                <option></option>
+                <option *ngFor="let cli of clients" [value]="cli.client_code">{{ cli.TrdNm }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">
+                Consignee Name (Ship To)
+                <span class="po-required" *ngIf="billing_type=='PO for Billing'">*</span>
+              </label>
+              <select name="conisgnee" [(ngModel)]="conisgnee" class="po-control">
+                <option></option>
+                <option *ngFor="let cli of clients" [value]="cli.client_code">{{ cli.TrdNm }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Customer Order No <span class="po-required">*</span></label>
+              <input type="text" name="po_no" ngModel class="po-control" required>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Order Date <span class="po-required">*</span></label>
+              <input type="date" name="po_date" ngModel required
+                class="po-date-native po-date-native--field po-control"
+                (change)="calculateDeliveryDate()" />
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Upload If Any</label>
+              <input type="file" (change)="onFileChange($event)" name="file" ngModel class="po-control">
+            </div>
+          </div>
+
+          <h3 class="po-section-title">Service Category</h3>
+          <div class="clr-row po-field-row">
+            <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12">
+              <label class="po-label">Service Category <span class="po-required">*</span></label>
+              <p-multiSelect
+                name="serviceCategorySelect"
+                class="form-dropdown-field"
+                [options]="serviceCategories"
+                [(ngModel)]="selectedServiceCategories"
+                placeholder="Select Service Category"
+                selectedItemsLabel="{0} categories selected"
+                [maxSelectedLabels]="2"
+                (onChange)="onServiceCategoriesChange()"
+                [style]="{ width: '100%' }"
+                [panelStyle]="{ 'min-width': '280px' }"
+                appendTo="body"
+              ></p-multiSelect>
+            </div>
+
+            <div
+              class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12"
+              *ngFor="let category of selectedServiceCategories"
+            >
+              <div class="service-description-panel">
+                <h4 class="service-category-title">{{ category }}</h4>
+
+                <div class="clr-row" *ngIf="isCommercialManufacturingCategory(category)">
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                    <label class="po-label">Select Finished Product(s) <span class="po-required">*</span></label>
+                    <p-multiSelect
+                      [name]="'finishedProducts_' + category"
+                      class="form-dropdown-field"
+                      [options]="finishedProducts"
+                      [ngModel]="getCategoryDraftProducts(category)"
+                      (ngModelChange)="setCategoryDraftProducts(category, $event)"
+                      optionLabel="displayLabel"
+                      dataKey="product_code"
+                      placeholder="Select finished products from master"
+                      selectedItemsLabel="{0} products selected"
+                      [maxSelectedLabels]="2"
+                      [style]="{ width: '100%' }"
+                      [panelStyle]="{ 'min-width': '320px' }"
+                      appendTo="body"
+                      [filter]="true"
+                      filterPlaceHolder="Search product"
+                    ></p-multiSelect>
+                  </div>
+                </div>
+
+                <label class="po-label"><strong>Select Description :</strong></label>
+                <div class="service-description-boxes">
+                  <button
+                    type="button"
+                    class="service-description-box"
+                    *ngFor="let item of getDescriptionItems(category)"
+                    [class.selected]="isDescriptionItemSelected(category, item)"
+                    (click)="toggleDescriptionItem(category, item)"
+                  >
+                    {{ item }}
+                  </button>
+                </div>
+
+                <div
+                  class="description-detail-row"
+                  *ngFor="let entry of getSelectedDescriptionEntries(category)"
+                >
+                  <div class="description-detail-label">{{ entry.label }}</div>
+                  <input
+                    type="text"
+                    class="po-control"
+                    [name]="'serviceDetail_' + category + '_' + entry.label"
+                    [(ngModel)]="entry.details"
+                    (ngModelChange)="onDescriptionDetailsChange(category, entry.label, $event)"
+                    placeholder="Add details for this description"
+                  />
+                </div>
+
+                <label class="manual-description-label"><strong>Or add manually :</strong></label>
+                <input
+                  type="text"
+                  class="po-control"
+                  [name]="'manualServiceDescription_' + category"
+                  [(ngModel)]="categoryManualText[category]"
+                  (ngModelChange)="onCategoryManualChange(category)"
+                  placeholder="Type description manually if not selected above"
+                />
+
+                <div class="service-category-actions">
+                  <button type="button" class="btn btn-sm btn-success" (click)="addServiceCategoryEntry(category)">
+                    ADD
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-col-lg-12" *ngIf="savedServiceEntries.length">
+              <div class="saved-service-panel">
+                <h4 class="service-category-title">Added Service Details</h4>
+                <div class="table-responsive saved-service-wrap">
+                  <table class="table table-bordered saved-service-table has-action-column">
+                    <thead>
+                      <tr>
+                        <th class="cell-sno">S.No</th>
+                        <th class="cell-category">Service Category</th>
+                        <th class="cell-descriptions">Descriptions</th>
+                        <th class="cell-action">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let entry of savedServiceEntries; let i = index">
+                        <td class="cell-sno">{{ i + 1 }}</td>
+                        <td class="cell-category">{{ entry.category }}</td>
+                        <td class="cell-descriptions">
+                          <div class="service-desc-content">
+                            <div
+                              class="service-desc-block"
+                              *ngIf="isCommercialManufacturingCategory(entry.category) && entry.products?.length"
+                            >
+                              <div class="service-desc-heading">Product</div>
+                              <ul class="service-cell-list">
+                                <li *ngFor="let product of entry.products">
+                                  {{ product.displayLabel || getProductLabel(product) }}
+                                </li>
+                              </ul>
+                            </div>
+                            <div class="service-desc-block" *ngIf="getDescriptionLinesForEntry(entry)?.length">
+                              <div class="service-desc-heading">Descriptions</div>
+                              <ul class="service-cell-list">
+                                <li *ngFor="let line of getDescriptionLinesForEntry(entry)">{{ line }}</li>
+                              </ul>
+                            </div>
+                            <span
+                              class="cell-empty-value"
+                              *ngIf="!(isCommercialManufacturingCategory(entry.category) && entry.products?.length) && !getDescriptionLinesForEntry(entry)?.length"
+                            >N/A</span>
+                          </div>
+                        </td>
+                        <td class="cell-action">
+                          <button type="button" class="btn btn-sm btn-danger" (click)="removeSavedServiceEntry(i)">
+                            DELETE
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-col-lg-12 service-save-row" *ngIf="selectedServiceCategories.length">
+              <button type="button" class="btn btn-primary" (click)="saveAllServiceDetails()">
+                SAVE SERVICE DETAILS
+              </button>
+              <span class="service-save-status" *ngIf="serviceDetailsSaved">Service details saved</span>
+            </div>
+
+            <input type="hidden" name="serviceCategory" [(ngModel)]="serviceCategory" />
+            <input type="hidden" name="serviceDescription" [(ngModel)]="serviceDescription" />
+            <input type="hidden" name="serviceDescriptionData" [(ngModel)]="serviceDescriptionData" />
+            <input type="hidden" name="selectedProductCodes" [(ngModel)]="selectedProductCodes" />
+          </div>
+        </form>
+
+        <form #productForm="ngForm">
+          <h3 class="po-section-title">Product Lines</h3>
+          <div class="clr-row">
+            <div class="clr-col-lg-12">
+              <div class="product-table-toolbar">
+                <div class="product-excel-upload">
+                  <label class="po-label po-label--inline"><strong>Upload products (Excel):</strong></label>
+                  <input #productExcelInput type="file" accept=".xlsx,.xls" class="po-control"
+                    [disabled]="excelImportPending"
+                    (change)="onProductExcelSelected($event)">
+                  <span class="product-excel-hint">
+                    Select Main Group first. Delivery dates are auto-calculated on upload
+                    (uses Order Date as base; falls back to Plan Month if needed).
+                    <span *ngIf="excelImportPending"> Calculating…</span>
+                  </span>
+                </div>
+                <!-- <button type="button" class="btn btn-sm btn-primary"
+                  (click)="downloadProductTemplate()">Download Template</button> -->
+              </div>
+
+              <div class="po-table-wrap">
+                <table class="table table-border po-product-table">
+                  <colgroup>
+                    <col class="po-col-sr" />
+                    <col class="po-col-date" />
+                    <col class="po-col-product" />
+                    <col class="po-col-code" />
+                    <col class="po-col-pack" />
+                    <col class="po-col-qty" />
+                    <col class="po-col-unit" />
+                    <col class="po-col-date" />
+                    <col class="po-col-remark" />
+                    <col class="po-col-action" />
+                  </colgroup>
+                  <thead>
+                    <tr class="po-table-head">
+                      <th class="po-th-sr">#</th>
+                      <th class="po-th-month">Plan<br>Month</th>
+                      <th class="po-th-product">Product Name</th>
+                      <th class="po-th-code">Code</th>
+                      <th class="po-th-pack">Pack<br>Size</th>
+                      <th class="po-th-qty">Plan<br>Qty</th>
+                      <th class="po-th-unit">Unit</th>
+                      <th class="po-th-delivery">
+                        <span class="po-th-delivery-text">Delivery<br>Date</span>
+                        <button type="button" class="delivery-info-btn" title="How is delivery date calculated?"
+                          (click)="openDeliveryCalcModal()">!</button>
+                      </th>
+                      <th class="po-th-remark">Remark</th>
+                      <th class="po-th-action">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="po-entry-row">
+                      <td class="po-td-sr">0</td>
+                      <td class="po-td-date">
+                        <input type="date" name="planMonth" ngModel
+                          class="po-date-native po-date-native--table" />
+                      </td>
+                      <td>
+                        <select name="product_code" [(ngModel)]="product_code" class="po-control po-control--table"
+                          (change)="getProductName($event.target.selectedIndex)">
+                          <option></option>
+                          <option *ngFor="let product of products;" value="{{ product.product_code }}">
+                            {{ product.product_name }} - ( {{ product.product_code }} )
+                          </option>
+                        </select>
+                      </td>
+                      <td class="po-td-code">{{ product_code || '-' }}</td>
+                      <td>
+                        <select name="packingStyle1" [(ngModel)]="selectedPackLabel" class="po-control po-control--table"
+                          (change)="getPackingStyleUnit($event.target.selectedIndex)"
+                          [disabled]="!pack_size?.length">
+                          <option value=""></option>
+                          <option *ngFor="let pksize of pack_size" [value]="getPackSizeLabel(pksize)">
+                            {{ getPackSizeLabel(pksize) }}
+                          </option>
+                        </select>
+                        <span class="po-pack-hint" *ngIf="product_code && !pack_size?.length">
+                          No pack size in unit formula
+                        </span>
+                      </td>
+                      <td>
+                        <input type="number" name="planQty" ngModel class="po-control po-control--table"
+                          (change)="calculateDeliveryDate()">
+                      </td>
+                      <td>
+                        <input type="text" name="planUnit" [(ngModel)]="productUnit" class="po-control po-control--table" readonly>
+                      </td>
+                      <td class="po-td-date">
+                        <input type="date" name="deliveryDate" ngModel
+                          class="po-date-native po-date-native--table"
+                          title="Auto-calculated; you may edit if needed" />
+                      </td>
+                      <td>
+                        <input type="text" name="remark" ngModel class="po-control po-control--table">
+                      </td>
+                      <td class="po-td-action">
+                        <button type="button" class="btn btn-sm btn-success po-btn-add" (click)="addProduct(productForm)">ADD</button>
+                      </td>
+                    </tr>
+                    <tr *ngFor="let item of productList; let i = index;" class="po-data-row">
+                      <td class="po-td-sr">{{ i + 1 }}</td>
+                      <td>{{ item.planMonth | date:'dd/MM/yyyy' }}</td>
+                      <td>{{ item.product_name }}</td>
+                      <td class="po-td-code">{{ item.product_code }}</td>
+                      <td>{{ item.packSizeLabel || (item.packingStyle + ' ' + item.packingUnit) }}</td>
+                      <td>{{ item.planQty }}</td>
+                      <td>{{ item.planUnit }}</td>
+                      <td>{{ item.deliveryDate | date:'dd/MM/yyyy' }}</td>
+                      <td>{{ item.remark || '-' }}</td>
+                      <td class="po-td-action">
+                        <button type="button" class="btn btn-sm btn-danger po-btn-del" (click)="deleteProduct(i)">DEL</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-footer po-footer">
+      <button type="button" class="btn btn-primary" (click)="saveForm(poEntry)">SUBMIT</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="deliveryCalcModalOpen" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Date Of Delivery — Calculation</h3>
+  <div class="modal-body delivery-calc-modal">
+    <p><strong>Formula</strong></p>
+    <p class="delivery-calc-formula">
+      Delivery Date = Order Date + Max Material Lead Time (short RMs only) + Production Lead Time
+    </p>
+
+    <p><strong>Steps</strong></p>
+    <ol class="delivery-calc-steps">
+      <li>Standard batch size is taken from unit formula / batch formula for the selected product and plan unit.</li>
+      <li>Number of batches = Plan Qty ÷ Batch Size.</li>
+      <li>Required raw material qty is calculated per batch material; stock is checked for RM and mother code.</li>
+      <li>Net available stock = Total stock − Used (issued) − Booked (WO/MRP allocations) − Hold stock.</li>
+      <li>Only materials in <em>shortage</em> after net stock check are considered for material lead time; the <strong>maximum</strong> lead time among those short materials is used.</li>
+      <li>Production total lead time is taken from Timeline Master → Production for the product.</li>
+      <li>If all materials are in stock, material lead time = 0 days.</li>
+    </ol>
+
+    <div *ngIf="deliveryDateBreakdown?.status === 'success'" class="delivery-calc-breakdown">
+      <p><strong>Current row (last calculated)</strong></p>
+      <table class="table table-compact table-bordered">
+        <tr>
+          <td>Order / base date</td>
+          <td>{{ deliveryDateBreakdown.base_date | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td>Batch size</td>
+          <td>{{ deliveryDateBreakdown.batch_size }} {{ deliveryDateBreakdown.batch_unit }}</td>
+        </tr>
+        <tr>
+          <td>Number of batches</td>
+          <td>{{ deliveryDateBreakdown.number_of_batches }}</td>
+        </tr>
+        <tr>
+          <td>Max material lead time (short RMs)</td>
+          <td>{{ deliveryDateBreakdown.max_material_lead_time_days }} day(s)</td>
+        </tr>
+        <tr>
+          <td>Production lead time</td>
+          <td>{{ deliveryDateBreakdown.production_lead_time_days }} day(s)</td>
+        </tr>
+        <tr>
+          <td>Total lead time</td>
+          <td><strong>{{ deliveryDateBreakdown.total_lead_time_days }} day(s)</strong></td>
+        </tr>
+        <tr>
+          <td>Suggested delivery date</td>
+          <td><strong>{{ deliveryDateBreakdown.delivery_date | date:'dd-MM-yyyy' }}</strong></td>
+        </tr>
+      </table>
+
+      <p *ngIf="deliveryDateBreakdown.short_materials?.length"><strong>Short materials</strong></p>
+      <table *ngIf="deliveryDateBreakdown.short_materials?.length"
+        class="table table-compact table-bordered">
+        <tr>
+          <th>Material code</th>
+          <th>Required</th>
+          <th>Used</th>
+          <th>Booked</th>
+          <th>Hold</th>
+          <th>Net avail.</th>
+          <th>Lead time (days)</th>
+        </tr>
+        <tr *ngFor="let m of deliveryDateBreakdown.short_materials">
+          <td>{{ m.material_code }}</td>
+          <td>{{ m.required_qty | number:'1.2-3' }}</td>
+          <td>{{ m.used_qty | number:'1.2-3' }}</td>
+          <td>{{ m.booked_qty | number:'1.2-3' }}</td>
+          <td>{{ m.hold_qty | number:'1.2-3' }}</td>
+          <td>{{ m.available_qty | number:'1.2-3' }}</td>
+          <td>{{ m.lead_time_days }}</td>
+        </tr>
+      </table>
+      <p *ngIf="!deliveryDateBreakdown.short_materials?.length" class="delivery-calc-note">
+        No material shortage — only production lead time was applied.
+      </p>
+    </div>
+
+    <p *ngIf="deliveryDateBreakdown?.status !== 'success'" class="delivery-calc-note">
+      Select product and plan qty to see calculated values for the current row.
+    </p>
+
+    <p class="delivery-calc-note">
+      The delivery date field is auto-filled but remains <strong>editable</strong> if you need to override it.
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="deliveryCalcModalOpen = false">Close</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,328 @@
+<!-- NEW FORM -->
+<div class="card rcd-form" *ngIf="!isLog && !isView && !isQaReview">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Final Release Checklist for Finished Product ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/stepwise-qa-release/final/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/stepwise-qa-release" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <form #finalForm="ngForm">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">TITLE:</td>
+          <td colspan="3" class="rcd-form__title-cell">FINAL RELEASE CHECKLIST FOR FINISHED PRODUCT</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+        </tr>
+      </table>
+
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Approved Stepwise Review <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select class="rcd-form__select" name="stepwise_select" [(ngModel)]="selectedStepwise" (ngModelChange)="onStepwiseSelect()" required>
+              <option [ngValue]="null">-- Select Approved Finished Product Review --</option>
+              <option *ngFor="let s of approvedStepwise" [ngValue]="s">
+                {{ s.product_name }} — Lot {{ s.lot_number }} ({{ s.lot_disposition }})
+              </option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product Name</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="product_name" [(ngModel)]="productName" readonly /></td>
+          <td class="rcd-form__label-cell">Product Code</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="product_code" [(ngModel)]="productCode" readonly /></td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Lot #</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="lot_number" [(ngModel)]="lotNumber" readonly /></td>
+          <td class="rcd-form__label-cell">Count</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="text" name="lot_count" [(ngModel)]="lotCount" /></td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">IN-PROCESS BATCH RECORDS</div>
+      <table class="rcd-form__sheet-table">
+        <thead>
+          <tr><th>Stage</th><th>Checked By</th><th>Date</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of inprocessRecords">
+            <td>{{ row.stage }}</td>
+            <td>{{ row.checked_by || '—' }}</td>
+            <td>{{ row.checked_date || '—' }}</td>
+            <td><button type="button" class="btn btn-sm btn-outline" (click)="stampInprocess(row.stage)">Stamp</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="rcd-form__section-title">BULK PRODUCT BATCH RECORD</div>
+      <p class="rcd-form__note">Bulk product batch record review completed per approved FQA-035-B stepwise review.</p>
+
+      <div class="rcd-form__section-title">PACKAGING BATCH RECORD</div>
+      <p class="rcd-form__note">Packaging batch record included in stepwise finished product review.</p>
+
+      <div class="rcd-form__section-title">SUMMARY OF OUT OF SPECIFICATIONS / NON-CONFORMANCE INVESTIGATIONS</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">List all OOS (LIRs) and NCRs</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <textarea class="rcd-form__textarea" name="oos_ncr_summary" [(ngModel)]="oosNcrSummary" rows="3"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">All LIRs/NCRs completed</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="all_lirs_ncrs" [value]="opt" [(ngModel)]="allLirsNcrsCompleted" /> {{ opt }}
+            </label>
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">FINAL PRODUCT RELEASE DOCUMENTS</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Final product/bulk analysis release signed by QC</td>
+          <td class="rcd-form__value-cell">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="final_analysis" [value]="opt" [(ngModel)]="finalProductAnalysisSigned" /> {{ opt }}
+            </label>
+          </td>
+          <td class="rcd-form__label-cell">Audit Trail Reviewed and signed off</td>
+          <td class="rcd-form__value-cell">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="audit_trail" [value]="opt" [(ngModel)]="auditTrailReviewed" /> {{ opt }}
+            </label>
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">MATERIAL LABELLED WITH RELEASED LABELS</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Released for Submission Only labels</td>
+          <td class="rcd-form__value-cell">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="label_submission" [value]="opt" [(ngModel)]="labelledSubmissionOnly" /> {{ opt }}
+            </label>
+          </td>
+          <td class="rcd-form__label-cell">Released for Commercial Use labels</td>
+          <td class="rcd-form__value-cell">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="label_commercial" [value]="opt" [(ngModel)]="labelledCommercialUse" /> {{ opt }}
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Retain Samples Logged in</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label *ngFor="let opt of yesNoNa" style="margin-right:1rem">
+              <input type="radio" name="retain_samples" [value]="opt" [(ngModel)]="retainSamplesLogged" /> {{ opt }}
+            </label>
+          </td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__note">
+        All documents pertaining to the manufacturing and testing of this lot have been reviewed and found to be in compliance with cGMP.
+        This lot meets all manufacturing, filling, labeling and testing specifications.
+      </p>
+
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Release Date</td>
+          <td class="rcd-form__value-cell"><input class="rcd-form__input" type="date" name="release_date" [(ngModel)]="releaseDate" /></td>
+          <td class="rcd-form__label-cell">QA Director or Designate</td>
+          <td class="rcd-form__value-cell">
+            <div class="rcd-form__readonly">{{ qaDirector || '—' }}</div>
+            <button type="button" class="btn btn-sm btn-outline" (click)="stampQaDirector()">Stamp</button>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align: center; margin-top: 0.75rem">
+        <button type="button" class="btn btn-outline" (click)="saveDraft()">Save Draft</button>
+        <button type="button" class="btn btn-primary" (click)="submitForApproval(finalForm)" style="margin-left: 0.35rem">
+          Submit for Final Release Approval
+        </button>
+      </div>
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose Without Authorization</p>
+    </form>
+  </div>
+</div>
+
+<!-- QA DIRECTOR REVIEW -->
+<div class="card rcd-form" *ngIf="isQaReview">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        QA Director — Final Release Approval ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/stepwise-qa-release/approval" style="margin-right: 0.35rem">Back</button>
+        <button class="btn btn-sm" routerLink="/qa/stepwise-qa-release" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Product / Lot</td>
+        <td class="rcd-form__value-cell">{{ productName }} / {{ lotNumber }}</td>
+        <td class="rcd-form__label-cell">Count / Release Date</td>
+        <td class="rcd-form__value-cell">{{ lotCount || '—' }} / {{ releaseDate | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Submission Only Labels</td>
+        <td class="rcd-form__value-cell">{{ labelledSubmissionOnly }}</td>
+        <td class="rcd-form__label-cell">Commercial Use Labels</td>
+        <td class="rcd-form__value-cell">{{ labelledCommercialUse }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">OOS/NCR Summary</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ oosNcrSummary || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">All LIRs/NCRs Completed</td>
+        <td class="rcd-form__value-cell">{{ allLirsNcrsCompleted }}</td>
+        <td class="rcd-form__label-cell">Retain Samples Logged</td>
+        <td class="rcd-form__value-cell">{{ retainSamplesLogged }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">QA Director</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ qaDirector }}</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button class="btn btn-success" (click)="approve()">Release Lot — QA Director/Designate</button>
+      <button class="btn btn-danger" (click)="reject()" style="margin-left: 0.35rem">Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="card rcd-form" *ngIf="isLog">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Final Release Checklist Log ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/stepwise-qa-release/final/new" style="margin-right: 0.35rem">New Final Release</button>
+        <button class="btn btn-sm" routerLink="/qa/stepwise-qa-release" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="alert alert-info" *ngIf="pendingFinal?.length && dept_head === 'Yes'">
+      {{ pendingFinal.length }} final release(s) pending QA Director approval.
+    </div>
+
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3"><label>From</label><input class="rcd-form__input" type="date" [(ngModel)]="fromDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3"><label>To</label><input class="rcd-form__input" type="date" [(ngModel)]="toDate" [max]="maxDate" /></div>
+      <div class="clr-col-lg-3" style="padding-top: 1.2rem"><button class="btn btn-sm btn-primary" (click)="getLog(); loadPendingFinal()">Search</button></div>
+    </div>
+
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>Product</th>
+          <th>Code</th>
+          <th>Lot #</th>
+          <th>Count</th>
+          <th>Release Date</th>
+          <th>Status</th>
+          <th>QA Director</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of results; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.product_name }}</td>
+          <td>{{ r.product_code }}</td>
+          <td>{{ r.lot_number }}</td>
+          <td>{{ r.lot_count || '—' }}</td>
+          <td>{{ r.release_date | date: 'dd-MM-yyyy' }}</td>
+          <td><span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status }}</span></td>
+          <td>{{ r.qa_director || '—' }}</td>
+          <td>
+            <button class="btn btn-sm btn-info" (click)="view(r)">View</button>
+            <button class="btn btn-sm btn-warning" *ngIf="r.status === 'Pending Final Release' && dept_head === 'Yes'" (click)="goQaReview(r)">Approve</button>
+            <button class="btn btn-sm btn-outline" (click)="downloadForm(r.id)">PDF</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length"><td colspan="9" style="text-align: center">No records found</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Final Release — {{ productName }} / Lot {{ lotNumber }}
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+        <button class="btn btn-sm btn-outline" (click)="downloadForm(recordId)">PDF</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Status</td>
+        <td class="rcd-form__value-cell"><span class="label" [ngClass]="getStatusClass(recordStatus)">{{ recordStatus }}</span></td>
+        <td class="rcd-form__label-cell">Release Date</td>
+        <td class="rcd-form__value-cell">{{ releaseDate | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Submission Only</td>
+        <td class="rcd-form__value-cell">{{ labelledSubmissionOnly }}</td>
+        <td class="rcd-form__label-cell">Commercial Use</td>
+        <td class="rcd-form__value-cell">{{ labelledCommercialUse }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">OOS/NCR Summary</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ oosNcrSummary || '—' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">QA Director</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ qaDirector || '—' }}</td>
+      </tr>
+    </table>
+  </div>
+</div>

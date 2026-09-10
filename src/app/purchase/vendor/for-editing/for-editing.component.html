@@ -1,0 +1,333 @@
+<div class="vapp vapp--card" *ngIf="isListMode">
+  <header class="vapp__header">
+    <h1 class="vapp__title">Vendors returned by QA</h1>
+    <a class="vapp__btn vapp__btn--close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Vendor Registration' }">Close</a>
+  </header>
+  <div class="vapp__body">
+    <div class="vapp__toolbar">
+      <label class="vapp__search-label">Search</label>
+      <input type="text" class="vapp__search" placeholder="Search..." [(ngModel)]="searchQuery" />
+    </div>
+    <div class="vapp__table-wrap">
+      <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading" >
+        <clr-dg-column class="vapp__col-sr">#</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>QA remark</clr-dg-column>
+        <clr-dg-column class="vapp__col-action">Action</clr-dg-column>
+        <clr-dg-row *clrDgItems="let row of filteredRows; let i = index" [clrDgItem]="row">
+          <clr-dg-cell class="vapp__cell-sr">{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.vendor_no || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.vendor_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.status_remark || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="vapp__cell-action">
+            <button type="button" class="vapp__btn vapp__btn--view" (click)="startEdit(row)">Edit</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="vreg vreg--compact" *ngIf="!isListMode">
+  <div class="vreg__card">
+    <header class="vreg__header">
+      <h1 class="vreg__title">Correct vendor &amp; resubmit</h1>
+      <button type="button" class="vreg__btn vreg__btn--close" (click)="backToList()">
+        <clr-icon shape="window-close" class="is-solid"></clr-icon> BACK
+      </button>
+    </header>
+
+    <div class="vreg__qa-banner" *ngIf="qaStatusRemark">
+      <strong>QA requested changes:</strong> {{ qaStatusRemark }}
+    </div>
+
+    <div class="vreg__body">
+      <form [formGroup]="vendorForm" class="vreg__form">
+        <section class="vreg__section">
+          <div class="vreg__grid">
+
+            <div class="vreg__field">
+              <label class="vreg__label">New/Division <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="vendor_Is">
+                <option value="">Select</option>
+                <option value="Vendor">Vendor</option>
+                <option value="Division">Division</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('vendor_Is').invalid && vendorForm.get('vendor_Is').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field vreg__field--span2" *ngIf="vendorForm.get('vendor_Is').value === 'Division'">
+              <label class="vreg__label">Division Of <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="parentVendor" (change)="copyDetails()">
+                <option value="">Select</option>
+                <option *ngFor="let ven of existingVendors" [value]="ven.vendor_no">{{ven.vendor_name}} ({{ven.vendor_no}})</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('parentVendor').invalid && vendorForm.get('parentVendor').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Vendor Type <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="vendor_type">
+                <option value="">Select</option>
+                <option value="Manufacturer">Manufacturer</option>
+                <option value="Supplier">Supplier</option>
+                <option value="General">General</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('vendor_type').invalid && vendorForm.get('vendor_type').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Material Type <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="material_type">
+                <option value="">Select</option>
+                <option value="Raw Material">Raw Material</option>
+                <option value="Packing Material">Packing Material</option>
+                <option value="Equipment/Machinery">Equipment/Machinery</option>
+                <option value="General Material">General Material</option>
+                <option value="Service">Service</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('material_type').invalid && vendorForm.get('material_type').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field vreg__field--span2">
+              <label class="vreg__label">Vendor Name <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="vendor_name" placeholder="Vendor name">
+              <span class="vreg__error" *ngIf="vendorForm.get('vendor_name').invalid && vendorForm.get('vendor_name').touched">
+                <span *ngIf="vendorForm.get('vendor_name').errors?.required">Required.</span>
+                <span *ngIf="vendorForm.get('vendor_name').errors?.minlength">Min 2 characters.</span>
+              </span>
+            </div>
+
+            <div class="vreg__field vreg__field--span2">
+              <label class="vreg__label">Contact Person <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="contact_person" placeholder="Name">
+              <span class="vreg__error" *ngIf="vendorForm.get('contact_person').invalid && vendorForm.get('contact_person').touched">Required, min 2 chars.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Phone <span class="vreg__asterisk">*</span></label>
+              <input type="tel" class="vreg__input" formControlName="contact_number">
+              <span class="vreg__error" *ngIf="vendorForm.get('contact_number').invalid && vendorForm.get('contact_number').touched">
+                <span *ngIf="vendorForm.get('contact_number').errors?.canadianPhone">Enter a valid Canadian phone number (e.g. 416-555-1234).</span>
+                <span *ngIf="!vendorForm.get('contact_number').errors?.canadianPhone">Required.</span>
+              </span>
+            </div>
+
+            <div class="vreg__field vreg__field--span2">
+              <label class="vreg__label">Email <span class="vreg__asterisk">*</span></label>
+              <input type="email" class="vreg__input" formControlName="contact_email" placeholder="email@example.com">
+              <span class="vreg__error" *ngIf="vendorForm.get('contact_email').invalid && vendorForm.get('contact_email').touched">Valid email required.</span>
+            </div>
+
+            <div class="vreg__field vreg__field--full">
+              <label class="vreg__label">Address <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input vreg__input--large" formControlName="address" placeholder="Full address">
+              <span class="vreg__error" *ngIf="vendorForm.get('address').invalid && vendorForm.get('address').touched">Required, min 5 chars.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Country <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="country" (change)="toggleTax(vendorForm.get('country').value)">
+                <option value="">Select</option>
+                <option *ngFor="let c of countries" [value]="c">{{ c }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('country').invalid && vendorForm.get('country').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field" *ngIf="vendorForm.get('country').value === 'Canada'">
+              <label class="vreg__label">Province / territory <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="permanent_state">
+                <option value="">Select</option>
+                <option *ngFor="let s of provincesCanada" [value]="s">{{ s }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('permanent_state').invalid && vendorForm.get('permanent_state').touched">Required.</span>
+            </div>
+            <div class="vreg__field" *ngIf="vendorForm.get('country').value === 'India'">
+              <label class="vreg__label">State <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="permanent_state">
+                <option value="">Select</option>
+                <option *ngFor="let s of statesIndia" [value]="s">{{ s }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('permanent_state').invalid && vendorForm.get('permanent_state').touched">Required.</span>
+            </div>
+            <div class="vreg__field" *ngIf="vendorForm.get('country').value !== 'Canada' && vendorForm.get('country').value !== 'India'">
+              <label class="vreg__label">State / province <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="permanent_state" placeholder="State or province">
+              <span class="vreg__error" *ngIf="vendorForm.get('permanent_state').invalid && vendorForm.get('permanent_state').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">City <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="city" placeholder="City">
+              <span class="vreg__error" *ngIf="vendorForm.get('city').invalid && vendorForm.get('city').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Postal Code <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="pincode"
+                [attr.maxlength]="vendorForm.get('country').value === 'Canada' ? 8 : (vendorForm.get('country').value === 'India' ? 6 : 12)"
+                [placeholder]="vendorForm.get('country').value === 'Canada' ? 'e.g. K1A 0A6' : (vendorForm.get('country').value === 'India' ? '6 digits' : 'Postal code')">
+              <span class="vreg__error" *ngIf="vendorForm.get('pincode').invalid && vendorForm.get('pincode').touched">Valid postal code for the selected country.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Qualified By <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="qualifiedBy">
+                <option value="">Select</option>
+                <option value="Client">Client</option>
+                <option value="Own">Own</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('qualifiedBy').invalid && vendorForm.get('qualifiedBy').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field vreg__field--span2" *ngIf="vendorForm.get('qualifiedBy').value === 'Client'">
+              <label class="vreg__label">Select Client <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="client_code">
+                <option value="">Select</option>
+                <option *ngFor="let cli of clients" [value]="cli.client_code">{{cli.LglNm}}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('client_code').invalid && vendorForm.get('client_code').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field">
+              <label class="vreg__label">Vendor for <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="vendorFor">
+                <option value="">Select</option>
+                <option value="Domestic">Domestic</option>
+                <option value="Import">Import</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('vendorFor').invalid && vendorForm.get('vendorFor').touched">Required.</span>
+            </div>
+
+            <div class="vreg__field vreg__field--full" *ngIf="vendorForm.get('country').value !== 'India'">
+              <label class="vreg__label">Trading Currency</label>
+              <div class="vreg__curr">
+                <select class="vreg__input vreg__input--sm" [(ngModel)]="currency" [ngModelOptions]="{standalone: true}">
+                  <option value="">Select</option>
+                  <option *ngFor="let curr of tradingCurrency" [value]="curr.code">{{curr.code}} – {{curr.name}}</option>
+                </select>
+                <button type="button" class="vreg__btn vreg__btn--add" (click)="addCurr()">{{'common.add' | translate}}</button>
+              </div>
+              <div class="vreg__curr-list" *ngIf="selectedCurrencies.length">
+                <span class="vreg__curr-tag" *ngFor="let curr of selectedCurrencies; let i = index">
+                  {{curr.code}} <button type="button" class="vreg__btn vreg__btn--del" (click)="removeCurr(i)">×</button>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="vreg__table-wrap">
+            <table class="vreg__table">
+              <thead>
+                <tr>
+                  <th>Contact Type</th>
+                  <th>{{'common.name' | translate}}</th>
+                  <th>Telephone</th>
+                  <th>{{'common.email' | translate}}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <select class="vreg__input vreg__input--sm" [(ngModel)]="contactType" [ngModelOptions]="{standalone: true}">
+                      <option value="">Select</option>
+                      <option value="Technical Matter">Technical Matter</option>
+                      <option value="Commercial Matter">Commercial Matter</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </td>
+                  <td><input type="text" class="vreg__input vreg__input--sm" [(ngModel)]="cPersonName" [ngModelOptions]="{standalone: true}" placeholder="Name"></td>
+                  <td><input type="tel" class="vreg__input vreg__input--sm" name="cPersonMob" [(ngModel)]="cPersonMob" [ngModelOptions]="{standalone: true}"></td>
+                  <td><input type="email" class="vreg__input vreg__input--sm" [(ngModel)]="cPersonEmail" [ngModelOptions]="{standalone: true}" placeholder="Email"></td>
+                  <td><button type="button" class="vreg__btn vreg__btn--add" (click)="addCperson()">{{'common.add' | translate}}</button></td>
+                </tr>
+                <tr *ngFor="let item of other_contact; let i = index">
+                  <td>{{item.contactType}}</td>
+                  <td>{{item.cPersonName}}</td>
+                  <td>{{(item.cPersonMob | canadianPhone)}}</td>
+                  <td>{{item.cPersonEmail}}</td>
+                  <td><button type="button" class="vreg__btn vreg__btn--del" (click)="other_contact.splice(i,1)">×</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="vreg__section vreg__section--card">
+          <header class="vreg__subheader">
+            <h2 class="vreg__subtitle">Corporate Address</h2>
+            <label class="vreg__check">
+              <input type="checkbox" formControlName="sameaddress" (change)="onCheckboxChange()">
+              Same as vendor address
+            </label>
+          </header>
+          <div class="vreg__grid">
+            <div class="vreg__field vreg__field--span2">
+              <label class="vreg__label">Office Name <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="c_unit_name" placeholder="Office name">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_unit_name').invalid && vendorForm.get('c_unit_name').touched">Required.</span>
+            </div>
+            <div class="vreg__field vreg__field--full">
+              <label class="vreg__label">Address <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input vreg__input--large" formControlName="c_address" placeholder="Address">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_address').invalid && vendorForm.get('c_address').touched">Required.</span>
+            </div>
+            <div class="vreg__field">
+              <label class="vreg__label">Country <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="c_country">
+                <option value="">Select</option>
+                <option *ngFor="let c of countries" [value]="c">{{ c }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('c_country').invalid && vendorForm.get('c_country').touched">Required.</span>
+            </div>
+            <div class="vreg__field" *ngIf="vendorForm.get('c_country').value === 'Canada'">
+              <label class="vreg__label">Province / territory <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="c_state">
+                <option value="">Select</option>
+                <option *ngFor="let s of provincesCanada" [value]="s">{{ s }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('c_state').invalid && vendorForm.get('c_state').touched">Required.</span>
+            </div>
+            <div class="vreg__field" *ngIf="vendorForm.get('c_country').value === 'India'">
+              <label class="vreg__label">State <span class="vreg__asterisk">*</span></label>
+              <select class="vreg__input" formControlName="c_state">
+                <option value="">Select</option>
+                <option *ngFor="let s of statesIndia" [value]="s">{{ s }}</option>
+              </select>
+              <span class="vreg__error" *ngIf="vendorForm.get('c_state').invalid && vendorForm.get('c_state').touched">Required.</span>
+            </div>
+            <div class="vreg__field" *ngIf="vendorForm.get('c_country').value !== 'Canada' && vendorForm.get('c_country').value !== 'India'">
+              <label class="vreg__label">State / province <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="c_state" placeholder="State or province">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_state').invalid && vendorForm.get('c_state').touched">Required.</span>
+            </div>
+            <div class="vreg__field">
+              <label class="vreg__label">City <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="c_city" placeholder="City">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_city').invalid && vendorForm.get('c_city').touched">Required.</span>
+            </div>
+            <div class="vreg__field">
+              <label class="vreg__label">Postal Code <span class="vreg__asterisk">*</span></label>
+              <input type="text" class="vreg__input" formControlName="c_pincode"
+                [attr.maxlength]="vendorForm.get('c_country').value === 'Canada' ? 8 : (vendorForm.get('c_country').value === 'India' ? 6 : 12)"
+                [placeholder]="vendorForm.get('c_country').value === 'Canada' ? 'e.g. K1A 0A6' : (vendorForm.get('c_country').value === 'India' ? '6 digits' : 'Postal code')">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_pincode').invalid && vendorForm.get('c_pincode').touched">Valid postal code for the selected country.</span>
+            </div>
+            <div class="vreg__field">
+              <label class="vreg__label">Phone <span class="vreg__asterisk">*</span></label>
+              <input type="tel" class="vreg__input" formControlName="c_mobile_no">
+              <span class="vreg__error" *ngIf="vendorForm.get('c_mobile_no').invalid && vendorForm.get('c_mobile_no').touched">Enter a valid Canadian phone number (e.g. 416-555-1234).</span>
+            </div>
+          </div>
+        </section>
+      </form>
+    </div>
+
+    <footer class="vreg__footer">
+      <button type="button" class="vreg__btn vreg__btn--primary" (click)="saveAndResubmit()">Save &amp; send for purchase approval</button>
+      <button type="button" class="vreg__btn vreg__btn--secondary" (click)="backToList()">{{'common.close' | translate}}</button>
+    </footer>
+  </div>
+</div>

@@ -1,0 +1,436 @@
+import { DatePipe } from '@angular/common';
+import { AfterViewInit, Component, OnInit } from '@angular/core';
+import {
+  Chart,
+  ChartConfiguration,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  Title,
+  registerables,
+} from 'chart.js';
+import { DataAccessService } from 'src/app/data-access.service';
+declare let alertify;
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  providers: [DatePipe],
+})
+export class DashboardComponent implements OnInit, AfterViewInit {
+  isLogin = false;
+  software_type: any;
+  dispatchData: any;
+  public yearlyPurchase: any;
+  public fourthNightlyPurchase: any;
+  public monthlyPurchase: any;
+  public materialTypePurchase: any;
+  public threeMonthlyPurchase: any;
+  public vendorVicePurchase: any;
+  public rawMaterialmonthly: any;
+  public rawMaterialQuarterly: any;
+  public dispatchReportChart: any;
+  public materialPurchase: any = [];
+  purchaseData: any;
+  material_subtype = '';
+  today = '';
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights;
+  loggedInDept;
+  challanChart: any;
+  challanData: any;
+  receivingMaterialData: any;
+  receivingMaterialReport: { id: string; received_qty: string; unit: string }[];
+  finishGRNData: any;
+  vendor_no = '';
+  from_date = '';
+  to_date = '';
+  results: any;
+  material_type: any;
+  status: any;
+  // finishGRNChartModule: Chart<"scatter", any, unknown>;
+  finishGRNChartModule: Chart<'line', any, unknown>;
+  receivingMaterial: Chart<'pie', any, unknown>;
+  pendingRetestData: Object;
+  damageChart: Chart<'bar', any, unknown>;
+  chartRef: any;
+  damageData: any;
+
+  constructor(private service: DataAccessService, private datePipe: DatePipe) {
+    Chart.register(...registerables);
+    this.loggedInDept = localStorage.getItem('department');
+  }
+  ngAfterViewInit(): void {}
+
+  ngOnInit() {
+    this.getChallansLog();
+    this.getPendingExpiry();
+    this.validateUser();
+    this.get_rights();
+    this.getReceivingLog();
+    this.getPendingRetests();
+    this.getGRNLog();
+    this.from_date = this.datePipe.transform(Date.now(), 'yyyy-MM-01');
+    this.to_date = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+    this.today = this.datePipe.transform(Date.now(), 'yyyy-MM-dd');
+    let software_type = this.service.getPlantConfigFields('software_type');
+    if (software_type == 'Pharma ERP') {
+      document.getElementById('Godown').hidden = true;
+      document.getElementById('Receiving').hidden = true;
+      document.getElementById('Job').hidden = true;
+      document.getElementById('Qms').hidden = true;
+      document.getElementById('Checklist').hidden = true;
+    }
+  }
+
+  getReceivingLog() {
+    this.service
+      .get(
+        'store/raw.php?type=getReceivingLog&material_subtype=' +
+          this.material_subtype +
+          '&from_date=' +
+          this.from_date +
+          '&to_date=' +
+          this.to_date
+      )
+      .subscribe((response) => {
+        this.receivingMaterialData = response;
+        this.receivingMaterialReportFun();
+      });
+  }
+  getPendingRetests() {
+    this.service
+      .get('store/raw.php?type=getPendingRetests')
+      .subscribe((response) => {
+        this.pendingRetestData = response;
+        // this.pendingRetestDataFun();
+      });
+  }
+  unreadExpiry = 0;
+  getPendingExpiry() {
+    this.service
+      .get('notification.php?type=ExpiryNotification')
+      .subscribe((response) => {
+        this.unreadExpiry = response['Pending_expiry'];
+        if (this.unreadExpiry > 0) {
+          alertify.warning(response['text']);
+        }
+      });
+  }
+  goToDeptHomePage() {
+    let loggedInDept = localStorage.getItem('department');
+    this.service.navigateToSpecificDeptHome(loggedInDept);
+  }
+  get_rights() {
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          localStorage.getItem('emp_id') +
+          '&dep_name=' +
+          this.loggedInDept
+      )
+      .subscribe((response) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+        this.ischecker = this.rights[0].ischecker;
+        this.isapprover = this.rights[0].isapprover;
+        this.qms_approver = this.rights[0].qms_approver;
+        this.dept_head = this.rights[0].dept_head;
+        this.isauditor = this.rights[0].isauditor;
+        this.plant_head = this.rights[0].plant_head;
+        this.shift_allocator = this.rights[0].shift_allocator;
+      });
+  }
+
+  checkLogin(formData) {
+    const data = formData.value;
+    this.service
+      .post(
+        'checkLogin.php?type=newLogin&username=' +
+          data['username'] +
+          '&password=' +
+          data['password'],
+        JSON.stringify(data)
+      )
+      .subscribe((response) => {
+        if (response['status'] === 'success') {
+          localStorage.setItem('token', response['token']);
+          localStorage.setItem('department', response['department']);
+          localStorage.setItem('designation', response['designation']);
+          localStorage.setItem('user', response['user']);
+          localStorage.setItem('checker', response['checker']);
+          localStorage.setItem('approver', response['approver']);
+          localStorage.setItem('username', response['username']);
+          this.service.username = response['username'];
+          this.service.userChange();
+          if (response['department'] == 'Store') {
+            this.isLogin = true;
+          }
+        } else {
+          this.isLogin = false;
+        }
+      });
+  }
+
+  validateUser() {
+    if (
+      localStorage.getItem('token') !== null &&
+      localStorage.getItem('department') == 'Store'
+    ) {
+      this.isLogin = true;
+    } else {
+      this.isLogin = false;
+    }
+  }
+
+  destroyChart(chart: any): void {
+    if (chart) {
+      chart.destroy();
+      chart = undefined;
+    }
+  }
+
+  getChallansLog() {
+    this.service
+      .get(
+        'store/challan.php?type=getChallansLog&vendor_no=' +
+          this.vendor_no +
+          '&to_date=' +
+          this.to_date +
+          '&from_date=' +
+          this.from_date
+      )
+      .subscribe((response) => {
+        this.challanData = response;
+        this.challanChartFun();
+      });
+  }
+  challanChartFun() {
+    const materialTotals: { [materialName: string]: number } = {};
+
+    // Iterate through each item in finishGRNData
+    this.challanData.forEach((item) => {
+      // Iterate through each material in the materials array
+      item.materials.forEach((material) => {
+        // Check if the material name is already in the materialTotals object
+        if (materialTotals[material.material_name]) {
+          // Add the quantity to the existing total
+          materialTotals[material.material_name] += parseFloat(material.qty);
+        } else {
+          // Initialize the total for this material name
+          materialTotals[material.material_name] = parseFloat(material.qty);
+        }
+      });
+    });
+
+    // Extract the labels and quantities for the chart
+    const labels = Object.keys(materialTotals);
+    const quantities = Object.values(materialTotals);
+    const ctx = document.getElementById('challanReport') as HTMLCanvasElement;
+    this.challanChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Challan Quantity',
+            data: quantities,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  }
+
+  getGRNLog() {
+    this.service
+      .get(
+        'store/raw.php?type=getGRNLog&from_date=' +
+          this.from_date +
+          '&to_date=' +
+          this.to_date +
+          '&material_subtype=' +
+          this.material_subtype
+      )
+      .subscribe((response) => {
+        this.finishGRNData = response;
+        this.finishGRNChart();
+      });
+  }
+
+  finishGRNChart(): void {
+    const labels = this.finishGRNData.map((data) => data.material_name);
+    const data = this.finishGRNData.map((data) => data.qty);
+
+    const ctx = document.getElementById('finisGRNLog') as HTMLCanvasElement;
+
+    this.destroyChart(this.finishGRNChartModule);
+
+    this.finishGRNChartModule = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'GRN Data',
+            data: data,
+            backgroundColor: [
+              '#FF6384',
+              '#36A2EB',
+              '#FFCE56',
+              '#4BC0C0',
+              '#9966FF',
+              '#FF9F40',
+            ],
+            hoverBackgroundColor: [
+              '#FF6384',
+              '#36A2EB',
+              '#FFCE56',
+              '#4BC0C0',
+              '#9966FF',
+              '#FF9F40',
+            ],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function (tooltipItem) {
+                return `${tooltipItem.label}: ${tooltipItem.raw} Kg`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  public month: any = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  public quartly: any = ['jan-Mar', 'Apr-Jun', 'july-Sep', 'Oct-Dec'];
+
+  materialTypePurchase1() {
+    Chart.register(
+      LineController,
+      LineElement,
+      PointElement,
+      LinearScale,
+      Title
+    );
+    this.destroyChart(this.materialTypePurchase);
+    this.materialTypePurchase = new Chart('materialTypePurchaseChart', {
+      type: 'pie',
+
+      data: {
+        labels: ['Raw', 'Packing', 'finish'],
+        datasets: [
+          {
+            label: 'Material Type Purchase',
+            data: this.materialPurchase,
+            backgroundColor: ['#FF6633', '#FFB399', '#FF33FF'],
+            borderColor: 'black',
+            borderWidth: 2,
+          },
+        ],
+      },
+    });
+  }
+
+  receivingMaterialReportFun() {
+    const labels = this.receivingMaterialData.map(
+      (item) => `${item.material_name}`
+    );
+    const quantities = this.receivingMaterialData.map((item) =>
+      parseFloat(item.received_qty)
+    );
+
+    const ctx = document.getElementById(
+      'receivingMaterialeReport'
+    ) as HTMLCanvasElement;
+
+    this.destroyChart(this.receivingMaterial); // Destroy existing chart if any
+
+    this.receivingMaterial = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Received Quantity',
+            data: quantities,
+            backgroundColor: [
+              '#FF6384',
+              '#36A2EB',
+              '#FFCE56',
+              '#4BC0C0',
+              '#9966FF',
+              '#FF9F40',
+            ],
+            hoverBackgroundColor: [
+              '#FF6384',
+              '#36A2EB',
+              '#FFCE56',
+              '#4BC0C0',
+              '#9966FF',
+              '#FF9F40',
+            ],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function (tooltipItem) {
+                return `${tooltipItem.label}: ${tooltipItem.raw} Kg`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+
+  
+}

@@ -1,0 +1,203 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Reagents Receiving Log</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/qc"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="clr-row">
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading">
+          <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Receivig No./Dt.</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Inward Dt.</clr-dg-column>
+          <clr-dg-column>PO No./Dt.</clr-dg-column>
+          <clr-dg-column>Packaging Slip/Dt.</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Received By/Dt.</clr-dg-column>
+          <clr-dg-column>Billign Qty.</clr-dg-column>
+          <clr-dg-column>Short. Qty.</clr-dg-column>
+          <clr-dg-column>Damage Qty.</clr-dg-column>
+          <clr-dg-column>Received Qty.</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ result.receiving_no }} / {{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.inward_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_no }} / {{ result.po_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.ch_no }} / {{ result.challan_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.received_by }} / {{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.qty }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.short_qty || 0 }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.hold_qty || 0 }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.received_qty }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadLog()">DOWNLOAD PDF</button>
+    <button class="btn btn-danger" routerLink="/qc">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Reagents Receiving Details</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView = false"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;"><b>Receiving No.:</b></td>
+          <td style="text-align: left;">{{ selectedReport['receiving_no'] }}</td>
+          <td style="text-align: left;"><b>Receiving Dt. :</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['receiving_date'] | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Name:</b></td>
+          <td style="text-align: left;">{{ selectedReport['material_name'] }}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_code'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Vendor No. :</b></td>
+          <td style="text-align: left;">{{ selectedReport['vendor_no'] }}</td>
+          <td style="text-align: left;"><b>Vendor Name :</b></td>
+          <td style="text-align: left;">{{ selectedReport['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Packaging Slip:</b></td>
+          <td style="text-align: left;">{{ selectedReport['ch_no'] }}</td>
+          <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+          <td style="text-align: left;">{{ selectedReport['challan_date'] | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO No.:</b></td>
+          <td style="text-align: left;">{{ selectedReport['po_no'] }}</td>
+          <td style="text-align: left;"><b>Material Type:</b></td>
+          <td style="text-align: left;">{{ selectedReport['material_type'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Subtype:</b></td>
+          <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+          <td style="text-align: left;"><b>Qty:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+        </tr>
+      </table>
+
+      <h3>Labeling Details:</h3>
+      <table class="table table-border">
+        <tr>
+          <td style="font-weight:bolder; background-color:aqua;">Medicap Lot No</td>
+          <td style="font-weight:bolder; background-color:aqua;">Batch Qty</td>
+          <td style="font-weight:bolder; background-color:aqua;">Pack Size</td>
+          <td style="font-weight:bolder; background-color:aqua;">{{'common.unit' | translate}}</td>
+          <td style="font-weight:bolder; background-color:aqua;">No Of Containers</td>
+          <td style="font-weight:bolder; background-color:aqua;">Mfg Date</td>
+          <td style="font-weight:bolder; background-color:aqua;">Exp Date</td>
+          <td style="font-weight:bolder; background-color:aqua;">COA Received:</td>
+          <td style="font-weight:bolder; background-color:aqua;">Upload COA:</td>
+        </tr>
+        <tr *ngFor="let list of selectedReport['batches']; let i = index">
+          <td style="font-weight: bolder;color: blue;">{{ list.batch_no }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.qty_received }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.pack_size }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.unit }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.total_containers }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.mfg_date | date: 'dd-MM-yyyy' }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.exp_date | date: 'dd-MM-yyyy' }}</td>
+          <td style="font-weight: bolder;color: blue;">{{ list.coa_received }}</td>
+          <td style="font-weight: bolder;color: blue;">
+            <button class="btn btn-info btn-sm" [disabled]="list.coa_files === ''" (click)="viewCoafile(list.coa_files)">{{'common.view' | translate}}</button>
+          </td>
+        </tr>
+      </table>
+
+      <h3>Packing Details:</h3>
+      <table class="table" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;border: 1px solid;"><b>Container Type:</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport['container_type'] }}</td>
+          <td style="text-align: left;border: 1px solid;"><b>Container Subtype:</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport['container_subtype'] }}</td>
+        </tr>
+      </table>
+
+      <h3>Received Quantity Details:</h3>
+      <table class="table" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;border: 1px solid;"><b>Challan Qty: {{ selectedReport?.unit }}</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport?.challan_qty }}</td>
+          <td style="text-align: left;border: 1px solid;"><b>Received Qty: {{ selectedReport?.unit }}</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport?.received_qty }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;border: 1px solid;"><b>No. Of Containers:</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport.containers }}</td>
+          <td style="text-align: left;border: 1px solid;"><b>Damage Container Observed:</b></td>
+          <td style="text-align: left;border: 1px solid;">{{ selectedReport?.receiving_details?.isdamagecontainer }}</td>
+        </tr>
+      </table>
+
+      <h3 *ngIf="checklist?.length > 0">Receiving Checklist:</h3>
+      <table class="table table-border" *ngIf="checklist?.length > 0">
+        <tr>
+          <th style="text-align:left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Parameters</th>
+          <th style="text-align:left;background-color: rgb(14, 67, 112); color: white;">{{'common.remarks' | translate}}</th>
+        </tr>
+        <tr *ngFor="let hr of checklist; let i = index">
+          <td style="text-align:left;">{{ i + 1 }}</td>
+          <td style="text-align:left;">{{ hr?.params }}</td>
+          <td style="text-align:left;">{{ hr.chk_value }}</td>
+        </tr>
+      </table>
+
+      <h3 *ngIf="uploadedFileNames?.length > 0">Uploaded Documents:</h3>
+      <table class="table table-border" *ngIf="uploadedFileNames?.length > 0">
+        <tr>
+          <td style="font-weight: bold; background-color:aquamarine;">Document Name</td>
+          <td style="font-weight: bold; background-color:aquamarine;">Receiving no</td>
+          <td style="font-weight: bold; background-color:aquamarine;">View</td>
+        </tr>
+        <tr *ngFor="let inv of uploadedFileNames; let i = index">
+          <td>{{ inv.docName }}</td>
+          <td>{{ inv.docNo }}</td>
+          <td style="margin: 0; padding: 0;">
+            <button class="btn btn-primary btn-sm" (click)="viewFile(inv.file)">{{'common.view' | translate}}</button>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

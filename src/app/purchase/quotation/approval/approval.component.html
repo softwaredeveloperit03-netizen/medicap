@@ -1,0 +1,205 @@
+<div class="qquot" *ngIf="!isView">
+  <div class="card qquot__card">
+    <div class="card-header qquot__header">
+      <div class="qquot__header-row">
+        <div class="qquot__title">Quotation For Approval</div>
+        <div class="qquot__actions">
+          <button type="button" class="btn btn-sm qquot__btn qquot__btn--close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <p class="qquot__hint">Materials with pending vendor quotations. Open a material to compare all quotations and approve or reject.</p>
+      <div class="card-text">
+        <clr-datagrid class="qquot__datagrid" [clrDgLoading]="loading">
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Pending Quotations</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.pendingCount || 0 }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="qquot qquot--detail" *ngIf="isView">
+  <div class="card qquot__card">
+    <div class="card-header qquot__header">
+      <div class="qquot__title">Quotation For Approval</div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <table class="qquot-info-table table table-border">
+          <tr>
+            <td class="qquot-table-label qquot-table-label--narrow">Material Type:</td>
+            <td class="qquot-table-value">{{ selectedResult['material_type'] }}</td>
+            <td class="qquot-table-label">Material Code:</td>
+            <td class="qquot-table-value">{{ selectedResult['material_code'] }}</td>
+          </tr>
+          <tr>
+            <td class="qquot-table-label">Material Name:</td>
+            <td class="qquot-table-value" colspan="3">{{ selectedResult['material_name'] }}</td>
+          </tr>
+        </table>
+
+        <h3 class="qquot-subtitle">Available Quotations:</h3>
+        <div class="qquot-table-wrap">
+          <table class="qquot-table table table-border">
+            <thead>
+              <tr>
+                <th>{{'common.table.srNo' | translate}}</th>
+                <th>Vendor Name</th>
+                <th>Quotation No.</th>
+                <th>Quotation Rate</th>
+                <th>Currency</th>
+                <th>Tax Type</th>
+                <th>GST %</th>
+                <th>Quotation Date</th>
+                <th>Status</th>
+                <th>View Quotation</th>
+                <th>Uploaded Doc.</th>
+                <th>{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let quotation of selectedResult['quotationDetails']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td>{{ quotation.vendor_name }}</td>
+                <td *ngIf="plant_id != '67'">{{ quotation.quotation_no || quotation.vendor_quotation_no }}</td>
+                <td *ngIf="plant_id == '67'">{{ quotation.vendor_quotation_no }}</td>
+                <td>{{ quotation.quotation_amt }}</td>
+                <td>{{ quotation.currency }}</td>
+                <td>{{ quotation.tax_type || 'Local' }}</td>
+                <td>{{ quotation.gst_per }}</td>
+                <td>{{ quotation.entry_date | date: 'dd-MM-yyyy' }}</td>
+                <td>
+                  <span [class.qquot__status--approved]="isApprovedQuotation(quotation)" [class.qquot__status--pending]="isPendingQuotation(quotation)">
+                    {{ getQuotationStatus(quotation) }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info" (click)="viewQuotation(quotation)">{{'common.view' | translate}}</button>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-info"
+                    (click)="viewUploadedQuotation(quotation)"
+                    *ngIf="hasUploadedDoc(quotation)"
+                  >
+                    View
+                  </button>
+                  <span *ngIf="!hasUploadedDoc(quotation)">N/A</span>
+                </td>
+                <td>
+                  <ng-container *ngIf="isPendingQuotation(quotation)">
+                    <button type="button" class="btn btn-sm btn-success" (click)="approveQuotation(quotation)">{{'common.approve' | translate}}</button>
+                    <button type="button" class="btn btn-sm btn-danger" (click)="openRejectModal(quotation)">{{'common.reject' | translate}}</button>
+                  </ng-container>
+                  <span *ngIf="isApprovedQuotation(quotation)" class="qquot__action-label qquot__action-label--approved">Approved</span>
+                  <span *ngIf="!isPendingQuotation(quotation) && !isApprovedQuotation(quotation)">{{ getQuotationStatus(quotation) }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isQuotationViewOpen" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Quotation Details</h3>
+  <div class="modal-body" *ngIf="viewQuotationHdr">
+    <h4 class="qquot-subtitle">Vendor Details</h4>
+    <table class="qquot-info-table table table-border">
+      <tr>
+        <td class="qquot-table-label">Vendor Name:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.vendor_name }}</td>
+        <td class="qquot-table-label">Vendor No:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.materials?.[0]?.vendor_no }}</td>
+      </tr>
+      <tr>
+        <td class="qquot-table-label">Quotation No:</td>
+        <td class="qquot-table-value" *ngIf="plant_id != '67'">{{ viewQuotationHdr.quotation_no || viewQuotationHdr.vendor_quotation_no }}</td>
+        <td class="qquot-table-value" *ngIf="plant_id == '67'">{{ viewQuotationHdr.vendor_quotation_no }}</td>
+        <td class="qquot-table-label">Quotation Date:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.entry_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+    <h3 class="qquot-subtitle">Materials</h3>
+    <div class="qquot-table-wrap">
+      <table class="qquot-table table table-border">
+        <thead>
+          <tr>
+            <th>Material Type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Tax Type</th>
+            <th>Tax</th>
+            <th>Quotation Amount</th>
+            <th>Currency</th>
+            <!-- <th>Quotation Per</th> -->
+            <th *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">Pack Size</th>
+            <th *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">Valid Till</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mat of viewQuotationHdr.materials">
+            <td>{{ mat.material_type }} - {{ mat.material_subtype }}</td>
+            <td>{{ mat.material_code }}</td>
+            <td>{{ mat.material_name }}</td>
+            <td>{{ mat.tax_type || 'Local' }}</td>
+            <td>{{ mat.gst_per }} %</td>
+            <td>{{ mat.quotation_amt }}</td>
+            <td>{{ mat.currency }}</td>
+            <!-- <td>{{ mat.quotation_per }}</td> -->
+            <td *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">{{ mat.pack_size }} {{ mat.pack_unit }}</td>
+            <td *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">{{ mat.validTill | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-body" *ngIf="viewQuotationLoading">
+    Loading quotation details...
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeQuotationView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isOpen" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Add Remark</h3>
+  <div class="modal-body">
+    <textarea rows="4" name="Reject_remark" [(ngModel)]="Reject_remark" required class="qquot__textarea" style="width: 100%;"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="updateQuotation('reject')">{{'common.reject' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="isOpen = false">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>

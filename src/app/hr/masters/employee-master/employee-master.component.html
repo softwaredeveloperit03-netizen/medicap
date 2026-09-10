@@ -1,0 +1,219 @@
+<div class="container-fluid" *ngIf="isNewCandidate">
+  <div class="row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card">
+          <div class="card-header" style="text-align: center">Candidate Registration Form</div>
+          <div class="card-block">
+            <div class="card-text">
+              <form #candidateform="ngForm">
+                <div class="clr-row">
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Candidate Name:</strong></label>
+                    <input type="text" id="candidate_name" name="candidate_name" ngModel required>
+                  </div>
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Qualification:</strong></label>
+                    <select id="qualification" name="qualification" ngModel>
+                      <option></option>
+                      <option *ngFor="let qualification of qualifications">{{qualification.qualification}}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="clr-row">
+                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Mobile Number:</strong></label>
+                    <input type="tel" id="mobile_no" name="mobile_no" ngModel required>
+                  </div>
+                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Email Id:</strong></label>
+                    <input type="email" id="email_id" name="email_id" ngModel required>
+                  </div>
+                  <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Gender:</strong></label>
+                    <select name="gender" ngModel='Male' required>
+                      <option>Male</option>
+                      <option>Female</option>
+                    </select>
+                  </div>
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Address:</strong></label>
+                    <textarea id="address" name="address" ngModel required></textarea>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary" (click)="saveForm(candidateform)">{{'common.submit' | translate}}</button>
+            <button class="btn btn-danger" (click)="isNewCandidate = false">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="!isNewCandidate">
+  <div class="card">
+    <div class="card-header">Registered Candidate List</div>
+    <div class="card-block">
+      <div class="card-text datagrid-wrapper">
+        <button class="btn btn-sm btn-info" (click)="isNewCandidate = true" *ngIf="isUser">NEW CANDIDATE REGISTRATION</button>
+        <clr-datagrid >
+          <clr-dg-column>Candidate Name</clr-dg-column>
+          <clr-dg-column>Qualification</clr-dg-column>
+          <clr-dg-column>Contact No</clr-dg-column>
+          <clr-dg-column>Email Id</clr-dg-column>
+          <clr-dg-column>Interview Schedule</clr-dg-column>
+          <clr-dg-column>Interviewer Allocated</clr-dg-column>
+          <clr-dg-column>Interviewer Complete</clr-dg-column>
+          <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      
+          <clr-dg-row *ngFor="let user of candidates; let i = index">
+              <clr-dg-cell>{{user.candidate_name}}</clr-dg-cell>
+              <clr-dg-cell>{{user.qualification}}</clr-dg-cell>
+              <clr-dg-cell>{{(user.mobile_no | canadianPhone)}}</clr-dg-cell>
+              <clr-dg-cell>{{user.email_id}}</clr-dg-cell>
+              <clr-dg-cell *ngIf="user.isScheduleInteview == 'No'">
+                <button class="btn btn-sm btn-info" (click)="scheduleInterview(i)">Schedule Interview</button>
+              </clr-dg-cell>
+              <clr-dg-cell *ngIf="user.isScheduleInteview == 'Yes'">Yes</clr-dg-cell>
+              <clr-dg-cell *ngIf="user.interview_allocated == 'No'">
+                <button class="btn btn-sm btn-info" (click)="allocateInterviewers(i)">Allocate Interviwer</button>
+              </clr-dg-cell>
+              <clr-dg-cell *ngIf="user.interview_allocated == 'Yes'">Yes</clr-dg-cell>
+              <clr-dg-cell>{{ user.isInterviewCompleted }}</clr-dg-cell>
+              <clr-dg-cell>{{user.dept_remark}}</clr-dg-cell>
+          </clr-dg-row>
+          <!-- <clr-dg-footer class="clarity-footer">
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+              {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+              of {{pagination.totalItems}} users
+            </clr-dg-pagination>
+          </clr-dg-footer> -->
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isScheduleInterview" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Schedule Interview</h3>
+  <div class="modal-body">
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          Candidate Name: {{ selectedCandidate['candidate_name'] }}
+        </div>
+      </div>
+      <form #scheduleForm="ngForm">
+        <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Interview Date:</strong></label>
+            <input type="date" name="interview_date" [min]="today" ngModel required>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Interview Time:</strong></label>
+            <input type="text" name="interview_time" placeholder="10:00 AM onwords" ngModel required>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Place / Venue:</strong></label>
+            <select name="venue" ngModel="Factory">
+              <option>Factory</option>
+              <option>Corporate</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Requirement Department:</strong></label>
+            <select name="department" ngModel required>
+              <option></option>
+              <option *ngFor="let dept of departments">{{ dept.department_name }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Designation:</strong></label>
+            <select name="designation" ngModel required>
+              <option></option>
+              <option *ngFor="let designation of reqdesignation">{{ designation.designation }}</option>
+            </select>
+          </div>
+        </div>
+      </form>
+  </div>
+  <div class="modal-footer">
+      <button type="button" class="btn btn-success" (click)="saveScheduleInterview(scheduleForm)">{{'common.submit' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="isScheduleInterview = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isInterviewerAllocated" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Schedule Interview</h3>
+  <div class="modal-body">
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          Candidate Name: {{ selectedCandidate['candidate_name'] }}
+        </div>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+          <div class="card">
+            <div class="card-header">Assign Interviewers</div>
+            <div class="card-block">
+              <form #interviewers="ngForm">
+                <div class="clr-row">
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label>Department:</label>
+                    <select name="department" #dept="ngModel" ngModel (change)="getDesignation()" required>
+                      <option></option>
+                      <option *ngFor="let dept of departments">{{ dept.department_name }}</option>
+                    </select>
+                  </div>
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label>Designation:</label>
+                    <select name="designation" ngModel (change)="getEmployees(dept.value, $event.target.value)" required>
+                      <option></option>
+                      <option *ngFor="let designation of designations">{{ designation.designation }}</option>
+                    </select>
+                  </div>
+                  <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                    <label>Employee:</label>
+                    <select name="employee" ngModel required>
+                      <option></option>
+                      <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.emp_name }} ( {{employee.emp_id}} )</option>
+                    </select>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-primary" (click)="interviewers.form.valid && addInterviewer(interviewers)">{{'common.add' | translate}}</button>
+            </div>
+          </div>
+        </div>
+        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+          <div class="card">
+            <div class="card-header">Selected Interviewers</div>
+            <div class="card-block">
+              <div class="card-text datagrid-wrapper">
+                <clr-datagrid >
+                    <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+                    <clr-dg-column>{{'common.designation' | translate}}</clr-dg-column>
+                    <clr-dg-column>Employee</clr-dg-column>
+      
+                    <clr-dg-row *ngFor="let user of interviewer">
+                        <clr-dg-cell>{{user.department}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.designation}}</clr-dg-cell>
+                        <clr-dg-cell>{{user.employee}}</clr-dg-cell>
+                    </clr-dg-row>
+                  </clr-datagrid>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+      <button type="button" class="btn btn-success" (click)="submitInterviewers()">{{'common.submit' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="isInterviewerAllocated = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

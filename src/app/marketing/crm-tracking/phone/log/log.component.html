@@ -1,0 +1,189 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Phone Call Tracking Log
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button type="button" class="btn btn-sm btn-success" (click)="downloadPdf()" style="margin-right: 5px;">
+            <i class="fas fa-download"></i> {{ 'common.download' | translate }}
+          </button>
+          <button class="btn btn-sm btn-primary" routerLink="/marketing/crmTracking" style="margin-right: 5px;">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          <button class="btn btn-sm" routerLink="/marketing/crmTracking" style="background-color: red; color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <!-- Filters -->
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-3">
+            <label>Classification:</label>
+            <select [(ngModel)]="filterClassification" (change)="filter()">
+              <option value="">All</option>
+              <option value="Domestic">Domestic</option>
+              <option value="Export">Export</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Status:</label>
+            <select [(ngModel)]="filterStatus" (change)="filter()">
+              <option value="">All</option>
+              <option value="Completed">{{'common.completed' | translate}}</option>
+              <option value="Missed">Missed</option>
+              <option value="No Answer">No Answer</option>
+              <option value="Busy">Busy</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-6" style="text-align: right;">
+            <button class="btn btn-sm btn-info" (click)="refresh()" style="margin-right: 5px;">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-sm btn-secondary" (click)="clearFilter()">
+              Clear Filter
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>Classification</clr-dg-column>
+            <clr-dg-column>Client Name</clr-dg-column>
+            <clr-dg-column>Contact Person</clr-dg-column>
+            <clr-dg-column>Phone Number</clr-dg-column>
+            <clr-dg-column>Call Type</clr-dg-column>
+            <clr-dg-column>Date & Time</clr-dg-column>
+            <clr-dg-column>Duration</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let call of calls; let i = index" [clrDgItem]="call">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="getClassificationClass(call.classification)">
+                  {{ call.classification || 'N/A' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ call.client_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ call.contact_person || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ call.phone_number || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ call.call_type || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ call.call_date | date: 'dd-MM-yyyy' }} {{ call.call_time }}</clr-dg-cell>
+              <clr-dg-cell>{{ call.call_duration || 'N/A' }} min</clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="getStatusClass(call.status)">
+                  {{ call.status || 'N/A' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(i)" title="View Details">
+                  <i class="fas fa-eye"></i> View
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="calls.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Phone Call Details</h3>
+  <div class="modal-body" *ngIf="selectedCall">
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Classification:</strong> 
+        <span [ngClass]="getClassificationClass(selectedCall.classification)">
+          {{ selectedCall.classification || 'N/A' }}
+        </span>
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Status:</strong> 
+        <span [ngClass]="getStatusClass(selectedCall.status)">
+          {{ selectedCall.status || 'N/A' }}
+        </span>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Client Name:</strong> {{ selectedCall.client_name || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Contact Person:</strong> {{ selectedCall.contact_person || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Phone Number:</strong> {{ selectedCall.phone_number || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Called By:</strong> {{ selectedCall.called_by || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-4">
+        <strong>Call Type:</strong> {{ selectedCall.call_type || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Call Date:</strong> {{ selectedCall.call_date | date: 'dd-MM-yyyy' }}
+      </div>
+      <div class="clr-col-lg-4">
+        <strong>Call Time:</strong> {{ selectedCall.call_time || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Call Duration:</strong> {{ selectedCall.call_duration || 'N/A' }} minutes
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Response Received:</strong> {{ selectedCall.response_received || 'No' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedCall.response_received === 'Yes'">
+      <div class="clr-col-lg-12">
+        <strong>Response Details:</strong>
+        <div style="padding: 10px; background-color: #f5f5f5; border-radius: 4px; margin-top: 5px;">
+          {{ selectedCall.response_details || 'N/A' }}
+        </div>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Followup Required:</strong> {{ selectedCall.followup_required || 'No' }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedCall.followup_required === 'Yes'">
+        <strong>Followup Date & Time:</strong> {{ selectedCall.followup_date | date: 'dd-MM-yyyy' }} {{ selectedCall.followup_time }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-12">
+        <strong>Remarks:</strong> {{ selectedCall.remarks || 'N/A' }}
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+

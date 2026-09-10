@@ -1,0 +1,139 @@
+﻿<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Bill Of Material</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/production/ebmr/bom">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <form #basicForm="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Dosage Form:</label>
+                        <select name="dosage_form" [(ngModel)]="dosage_form" required (change)="getProductsByDosage($event.target.value)">
+                            <option></option>
+                            <option *ngFor="let dosage of dosages">{{ dosage.dosage_form }}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Grade:</label>
+                        <select name="grade" ngModel required>
+                            <option></option>
+                            <option *ngFor="let grade of grades">{{ grade.grade }}</option>
+                        </select>
+                    </div>
+
+                    <!-- <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="dosage_form == 'TABLET'">
+                        <label>Process Type:</label>
+                        <select name="process_type" ngModel required>
+                            <option>WET GRANULATION</option>
+                            <option>DRY GRANULATION</option>
+                        </select>
+                    </div> -->
+                    <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Product Name:</label>
+                        <select name="product_code" [(ngModel)]="product_code" required (change)="getDetails($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let product of products; let i = index" [value]="product.product_code">{{ product.product_name }}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3">
+                        <label>MFR NO.</label>
+                        <select name="mfr_no" (change)="getMaterials($event.target.selectedIndex)" [(ngModel)]="mfr_no">
+                            <option></option>
+                            <option *ngFor="let mf of mfrs" [value]="mf.mfr_no">{{ mf.mfr_no }}</option>
+                        </select>
+                    </div> 
+                    <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label> Batch Size:</label>
+                        <input type="text" name="batch_size" [(ngModel)]="batch_size" (keyup)="calculate()" >
+                   </div>
+                   <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <label>NO. Of Lot:</label>
+                    <input type="text" name="lot" [(ngModel)]="lot" (keyup)="calculate()" >
+                  </div>
+                  <h4>Stages</h4>
+                    <table class="table">
+                        <tr>
+                            <th style="text-align: left;">For LOT</th>
+                            <th style="text-align: left;">Stages</th>
+                        </tr>
+                        <tr *ngFor="let res of stage;let i = index">
+                            <td style="text-align: left;"><input type="checkbox" name="for_lot"   (change)="onChange($event.target.checked, i)" [(ngModel)] ="res.for_lot" required></td>
+                            <td style="text-align: left;">{{ res.stage }}</td>
+                        </tr>
+                    </table>              
+                </div>           
+            </form>
+            <div *ngIf="isProduct">
+                <h4>Raw Material:</h4>
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left;">Material Type</th>
+                        <th style="text-align: left;">Material Subtype</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <th style="text-align: left;">Grade</th>
+                        <th style="text-align: left;">Qty</th>
+                        <th>Overages</th>
+                        <th style="text-align: left;">Role</th>
+                        <th style="text-align: left;">Process</th>
+                        <th>Batch Qty</th>
+                    </tr>
+                    <tr *ngFor="let result of raw; let i = index">
+                        <td style="text-align: left;">{{ result.material_type }}</td>
+                        <td style="text-align: left;">{{ result.material_subtype }}</td>
+                        <td style="text-align: left;">{{ result.material_code }}</td>
+                        <td style="text-align: left;">{{ result.material_name }}</td>
+                        <td style="text-align: left;">{{ result.grade }}</td>
+                        <td style="text-align: left;">{{ result.qty }} {{ result.unit }}</td>
+                        <td>{{ result.overages }} %</td>
+                        <td style="text-align: left;">{{ result.role }}</td>
+                        <td style="text-align: left;">{{ result.process }}</td>
+                        <td>{{ result.batch_qty }} {{ result.unit }}</td>
+                    </tr>
+                    <tr *ngIf="raw?.length == 0">
+                        <td colspan="7">No. Records Found</td>
+                    </tr>
+                </table>
+
+                <h4>Packing Material:</h4>
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left;">Material Type</th>
+                        <th style="text-align: left;">Material Subtype</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <th style="text-align: left;">Grade</th>
+                        <th style="text-align: left;">Qty</th>
+                        <th>Overages</th>
+                        <th style="text-align: left;">Role</th>
+                        <th>Batch Qty</th>
+                    </tr>
+                    <tr *ngFor="let result of packing; let i = index">
+                        <td style="text-align: left;">{{ result.material_type }}</td>
+                        <td style="text-align: left;">{{ result.material_subtype }}</td>
+                        <td style="text-align: left;">{{ result.material_code }}</td>
+                        <td style="text-align: left;">{{ result.material_name }}</td>
+                        <td style="text-align: left;">{{ result.grade }}</td>
+                        <td style="text-align: left;">{{ result.qty }} {{ result.batch_unit }}</td>
+                        <td>{{ result.overages }} %</td>
+                        <td style="text-align: left;">{{ result.role }}</td>
+                        <td>{{ result.batch_qty }}{{ result.batch_unit }} </td>
+                    </tr>
+                    <tr *ngIf="packing?.length == 0">
+                        <td colspan="7">No. Records Found</td>
+                    </tr>
+                </table>
+            </div> 
+          
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="save(basicForm)">{{'common.save' | translate}}</button>
+    </div>
+</div>
+

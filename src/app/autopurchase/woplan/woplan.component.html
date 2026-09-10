@@ -1,0 +1,642 @@
+<div class="card" *ngIf="!isView && !isPlan">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div
+        class="clr-col-9"
+        style="color: aliceblue; margin-top: -2px; text-align: left"
+      >
+        Received Factory Order
+      </div>
+      <div
+        class="clr-col-lg-3"
+        style="text-align: right; padding-right: 0px; margin-top: -7px"
+      >
+        <button
+          class="btn btn-sm"
+          routerLink="/autopurchase"
+          style="background-color: red; color: white"
+        >
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div *ngFor="let group of groupedOrders" >
+        <!-- Group Header -->
+        <h3>{{ group.mainGroupName }} ({{ group.groupcode }})</h3>
+
+        <!-- Loop over products in this group -->
+        <div *ngFor="let product of group.ordersByProduct">
+          <h5>
+            <input
+              type="checkbox"
+              [checked]="isProductSelected(product)"
+              (change)="toggleProductSelection(product, $event)"
+            />
+            {{ product.product_name }} ({{ product.product_code }}) - Unit:
+            {{ product.ord_unit }}
+          </h5>
+
+          <!-- Loop over weekly orders for this product/unit -->
+          <div *ngFor="let week of product.ordersByWeek">
+            <h6>
+              Week: {{ week.startDate | date : "dd-MM-yyyy" }} -
+              {{ week.endDate | date : "dd-MM-yyyy" }}
+            </h6>
+            <button
+              class="btn btn-danger"
+              (click)="plan(week, product.product_code, product.ord_unit)"
+            >
+              Plan & shortages
+            </button>
+            <br>
+            <div class="digi-grid">
+              <!-- Header -->
+              <div class="digi-row digi-header">
+             
+                <div class="digi-col">Order No.</div>
+                <div class="digi-col">Order Received Date</div>
+                <div class="digi-col">Order Qty</div>
+                <div class="digi-col">Order Unit</div>
+               </div>
+
+              <!-- Rows -->
+              <div
+                class="digi-row"
+                *ngFor="let order of week.orders; let i = index"
+                
+              >
+               
+                <div class="digi-col"  [style.backgroundColor]="order.bg_color"><b>{{ order.po_order_no }}</b></div>
+                <div class="digi-col"  [style.backgroundColor]="order.bg_color">
+                  {{ order.order_recivedDate | date : "dd-MM-yyyy" }}
+                </div>
+                <div class="digi-col"  [style.backgroundColor]="order.bg_color">{{ order.order_qty }}</div>
+                <div class="digi-col"  [style.backgroundColor]="order.bg_color">{{ order.ord_unit }} 
+                                                 <button  
+                                                  class="btn btn-danger"
+                                                  (click)="plan( order.order_qty, product.product_code, product.ord_unit,order)"
+                                                >
+                                                  Plan & shortages
+                                                </button>
+
+                </div>
+               </div>
+
+              <!-- Total Row -->
+              <div class="digi-row digi-total">
+                <div class="digi-col" style="grid-column: span 2">{{'common.total' | translate}}</div>
+                <div class="digi-col">{{ week.total_qty }}</div>
+                <div class="digi-col">{{ product.ord_unit }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-success" (click)="sendForReq()">
+      Send For Requirement Analysis
+    </button>
+  </div>
+</div>
+ 
+
+<clr-modal
+  [(clrModalOpen)]="isMerge"
+  clrModalSize="xl"
+  [clrModalClosable]="true"
+>
+  <h3 class="modal-title">Prepare Purchase Requisition</h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table table-border">
+            <tr>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                  text-align: left;
+                "
+              >
+                <b>Material Type</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                  text-align: left;
+                "
+              >
+                <b>Material Code</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                  text-align: left;
+                "
+              >
+                <b>Material Name</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>Avaliable Qty.</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>Required Qty</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>Min. Order Qty</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b
+                  >Short Qty <span style="font-weight: 6px">(Min Ord.)</span></b
+                >
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b
+                  >Short Qty
+                  <span style="font-weight: 6px">(Avl. Qty.)</span></b
+                >
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>Actual Order Qty</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>{{'common.unit' | translate}}</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>Requirment</b>
+              </td>
+              <td
+                style="
+                  text-align: center;
+                  background-color: rgb(117, 162, 247);
+                  color: white;
+                "
+              >
+                <b>DEL</b>
+              </td>
+            </tr>
+            <tr *ngFor="let item of mergedArray; let i = index">
+              <td style="text-align: left">{{ item.material_type }}</td>
+              <td style="text-align: left">{{ item.material_code }}</td>
+              <td style="text-align: left">{{ item.material_name }}</td>
+              <td
+                [ngClass]="{
+                  'light-red': item.balance_qty <= 0,
+                  'light-green': item.balance_qty > 0
+                }"
+              >
+                {{ item.balance_qty }}
+              </td>
+
+              <td>{{ item.required_qty }} {{ item.required_qty_unit }}</td>
+              <td>{{ item.min_order_qty || "0" }} {{ item.uom }}</td>
+              <td style="color: red">{{ calculateDifference(item) }}</td>
+              <td style="color: red">{{ calculateDifference(item) }}</td>
+              <td
+                style="
+                  margin: 0;
+                  padding: 0;
+                  background-color: rgb(243, 243, 158);
+                "
+              >
+                <input
+                  style="margin: 0; padding: 0"
+                  type="text"
+                  name="required_qty1"
+                  [(ngModel)]="item.required_qty1"
+                  required
+                />
+              </td>
+              <td
+                style="
+                  margin: 0;
+                  padding: 0;
+                  background-color: rgb(243, 243, 158);
+                "
+              >
+                <select
+                  name="required_qty_unit"
+                  [(ngModel)]="item.required_qty_unit"
+                  required
+                  style="margin: 0; padding: 0"
+                >
+                  <option></option>
+                  <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                </select>
+              </td>
+
+              <td
+                style="
+                  margin: 0;
+                  padding: 0;
+                  background-color: rgb(243, 243, 158);
+                "
+              >
+                <input
+                  style="margin: 0; padding: 0"
+                  type="date"
+                  name="requirement"
+                  [(ngModel)]="item.requirement"
+                  required
+                />
+              </td>
+              <td>
+                <clr-icon
+                  shape="trash"
+                  class="is-error"
+                  (click)="delIndent(i)"
+                ></clr-icon>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button [disabled]="!btn" class="btn btn-primary" (click)="save()">
+          Save Purchase Requisition
+        </button>
+        <button class="btn btn-danger" (click)="isMerge = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</clr-modal>
+
+<div class="card" *ngIf="isPlan">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div
+        class="clr-col-9"
+        style="color: aliceblue; margin-top: -2px; text-align: left"
+      >
+        New Batch Planning Form
+      </div>
+      <div
+        class="clr-col-lg-3"
+        style="text-align: right; padding-right: 0px; margin-top: -7px"
+      >
+        <button class="btn btn-sm btn-danger" routerLink="/planning/production">
+          CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <form #batchForm="ngForm">
+      <div class="card-text">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Select MFR No :</label>
+            <select
+              name="mfr_no"
+              [(ngModel)]="mfr_no"
+              (change)="getBfrList($event.target.selectedIndex)"
+            >
+              <option></option>
+              <option *ngFor="let batch of mfr_list" [value]="batch.mfr_no">
+                {{ batch.mfr_no }}
+              </option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Select BFR No.:</label>
+            <select
+              name="bfr_no"
+              [(ngModel)]="bfr_no"
+              (change)="getRawMaterialsByBfrNo($event.target.selectedIndex)"
+            >
+              <option></option>
+              <option
+                *ngFor="let batch of bfr_list; let i = index"
+                [value]="batch.bfr_no"
+              >
+                {{ batch.bfr_no }} ({{ batch.batch_formula_weight }})
+              </option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Packsize:</label>
+            <select
+              name="pack_size1"
+              [(ngModel)]="pack_size1"
+              required
+              (change)="get_pack_size_by_mfrno($event.target.selectedIndex)"
+            >
+              <option></option>
+              <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">
+                P-{{ cnt.pack_sizes }}
+              </option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+            <label>No Of Batches (Proposed) (Nos):</label>
+            <input
+              type="text"
+              name="number_of_batches"
+              [(ngModel)]="number_of_batches"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+              style="background-color: #1e8cc5; color: white"
+              (input)="calculateBatchQty()"
+              required
+            />
+          </div>
+          <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+            <label>Total Quantity to Plan (Kg): </label>
+            <input
+              type="text"
+              name="planned_qty"
+              style="background-color: #1e8cc5; color: white"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+              [(ngModel)]="planned_qty"
+              (input)="setNoOfBatches()"
+              [readonly]="plan_type == 'Batch Wise'"
+              required
+            />
+          </div>
+          <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+            <label>No of Batches can be planned</label>
+            <input
+              style="background-color: green; color: white"
+              type="text"
+              name="lowest_batch"
+              [(ngModel)]="lowest_batch"
+              readonly
+            />
+          </div>
+          <div
+            class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12"
+            readonly
+          >
+            <label> Quantity Can be planned :</label>
+            <input
+              style="background-color: green; color: white"
+              type="text"
+              name="can_plan_qty"
+              [(ngModel)]="can_plan_qty"
+              readonly
+            />
+          </div>
+        </div>
+
+        <!-- <h3 style="margin-top: 5px;">Raw Materials:</h3>
+<table class="table table-bordered">
+    <tr>
+        <th>Sr.</th>
+        <th>Material type</th>
+        <th>Material Code</th>
+        <th>Material Name</th>
+        <th>Unit Qty</th>
+        <th>Batch Qty(kg)</th>
+        <th>Plan Qty</th>
+        <th>Available Stock</th>
+        <th>No Of Batches Can Be Planned</th>
+        <th>Short Qty</th>
+    </tr>
+    <tr *ngFor="let comp of raw_materials; let i = index">
+        <td>{{ i + 1 }}.</td>
+        <td>{{ comp.material_type }}</td>
+        <td>{{ comp.material_code }}</td>
+        <td>{{ comp.material_name }}</td>
+        <td>{{ comp.qty | number:'1.2-2' }} {{ comp.unit }}</td>
+        <td>{{ comp.batch_qty | number:'1.2-2' }}</td>
+        <td>{{ comp.plan_qty | number:'1.2-2' }}</td>
+        <td>{{ comp.avbl_stock | number:'1.2-2' || '0.00' }}</td>
+        <td>{{ comp.can_plan_batches | number:'1.2-2' }}</td>
+        <td [ngStyle]="{'color': comp.shortage_qty < 0 ? 'red' : 'green'}">
+            {{ comp.shortage_qty | number:'1.2-2' }}
+        </td>
+    </tr>
+</table>
+
+<h3 style="margin-top: 5px;">Packing Materials:</h3>
+<table class="table table-bordered">
+    <tr>
+        <th>Sr.</th>
+        <th>Material type</th>
+        <th>Material Code</th>
+        <th>Material Name</th>
+        <th>Unit Qty</th>
+        <th>Overages (%)</th>
+        <th>Total Qty</th>
+        <th>Batch Qty(kg)</th>
+        <th>Plan Qty</th>
+        <th>Available Stock</th>
+        <th>No Of Batches Can Be Planned</th>
+        <th>Short Qty</th>
+    </tr>
+    <tr *ngFor="let comp of packing_materials; let i = index">
+        <td>{{ i + 1 }}.</td>
+        <td>{{ comp.material_subtype }}</td>
+        <td>{{ comp.material_code }}</td>
+        <td>{{ comp.material_name }}</td>
+        <td>{{ comp.qty | number:'1.2-2' }} {{ comp.unit }}</td>
+        <td>{{ comp.pm_overages | number:'1.2-2' }}</td>
+        <td>{{ comp.total_qty | number:'1.4-6' }}</td>
+        <td>{{ comp.batch_qty | number:'1.4-6' }}</td>
+        <td>{{ comp.plan | number:'1.4-6' }}</td>
+        <td>{{ comp.avbl_stock | number:'1.4-6' || '0.00' }}</td>
+        <td>{{ comp.can_plan_batches | number:'1.4-6' }}</td>
+        <td [ngStyle]="{'color': comp.short_qt < 0 ? 'red' : 'green'}">
+            {{ comp.short_qt | number:'1.4-6' }}
+        </td>
+    </tr>
+</table> -->
+        <div *ngIf="remainingQtyToPlan && remainingQtyToPlan > 0" class="mt-3">
+          <p>
+            Remaining quantity: {{ remainingQtyToPlan | number : "1.2-2" }}
+            {{ ord_unit }}
+          </p>
+          <button
+            class="btn btn-primary mr-2"
+            (click)="adjustWithLowestBatch()"
+          >
+            Adjust with Lowest Batch Size
+          </button>
+          <button class="btn btn-warning" (click)="planNextMonth()">
+            Plan Next Month
+          </button>
+        </div>
+
+        <div
+          *ngFor="let batch of batches; let batchIndex = index"
+          class="batch-block"
+        >
+          <h4>
+            Batch {{ batch.batchIndex }} - Planned Qty:
+            {{ batch.batchQty | number : "1.2-2" }} {{ ord_unit }}
+          </h4>
+
+          <!-- RAW MATERIALS -->
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Sr.</th>
+                <th>Material Type</th>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>Unit Qty</th>
+                <th>Batch Qty</th>
+                <th>Plan Qty</th>
+                <th>Available Stock</th>
+                <th>No of Batches Can Be Planned</th>
+                <th>Short Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let comp of batch.raw_materials; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ comp.material_type }}</td>
+                <td>{{ comp.material_code }}</td>
+                <td>{{ comp.material_name }}</td>
+                <td>{{ comp.qty | number : "1.2-2" }} {{ comp.unit }}</td>
+                <td>{{ comp.batch_qty | number : "1.2-2" }}</td>
+                <td>{{ comp.plan_qty | number : "1.2-2" }}</td>
+                <td>{{ comp.avbl_stock | number : "1.2-2" }}</td>
+                <td>{{ comp.can_plan_batches || "-" }}</td>
+                <td [ngStyle]="{ color: comp.short_qty > 0 ? 'red' : 'green' }">
+                  {{ comp.short_qty | number : "1.2-2" }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- PACKING MATERIALS -->
+          <table class="table table-bordered mt-3">
+            <thead>
+              <tr>
+                <th>Sr.</th>
+                <th>Material Type</th>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>Unit Qty</th>
+                <th>Batch Qty</th>
+                <th>Plan Qty</th>
+                <th>Available Stock</th>
+                <th>No of Batches Can Be Planned</th>
+                <th>Short Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let comp of batch.packing_materials; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ comp.material_type }}</td>
+                <td>{{ comp.material_code }}</td>
+                <td>{{ comp.material_name }}</td>
+                <td>{{ comp.qty | number : "1.2-2" }} {{ comp.unit }}</td>
+                <td>{{ comp.batch_qty | number : "1.2-2" }}</td>
+                <td>{{ comp.plan_qty | number : "1.2-2" }}</td>
+                <td>{{ comp.avbl_stock | number : "1.2-2" }}</td>
+                <td>{{ comp.can_plan || "-" }}</td>
+                <td [ngStyle]="{ color: comp.short_qty > 0 ? 'red' : 'green' }">
+                  {{ comp.short_qty | number : "1.2-2" }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="card-footer">
+    <button
+      class="btn btn-primary"
+      style="background-color: #1e8cc5; color: white"
+      (click)="saveBatchPlan(batchForm, 'Proposed Qty')"
+    >
+      Proceed For Planning
+    </button>
+  </div>
+</div>
+
+<!-- Shortage Modal -->
+<clr-modal [(clrModalOpen)]="showShortageModal" [clrModalClosable]="true">
+  <h3 class="modal-title">Insufficient Stock</h3>
+  <div class="modal-body">
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Material Name</th>
+          <th>Required Qty</th>
+          <th>Available Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of shortageMaterials">
+          <td>{{ m.material_name }}</td>
+          <td>{{ m.required_qty }}</td>
+          <td>{{ m.avbl_stock }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="showShortageModal = false"
+    >
+      Close
+    </button>
+  </div>
+</clr-modal>

@@ -1,0 +1,191 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Duty Payment
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+        
+          <button class="btn btn-sm" routerLink="/Exports/landed" style="background-color: red; color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-12" style="text-align: right;">
+            <button class="btn btn-sm btn-info" (click)="refresh()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>PO No</clr-dg-column>
+            <clr-dg-column>Packaging Slip</clr-dg-column>
+            <clr-dg-column>Receiving no</clr-dg-column>
+            <clr-dg-column>Item Code</clr-dg-column>
+            <clr-dg-column>Item Description</clr-dg-column>
+            <clr-dg-column>ICEGATE Ref. No</clr-dg-column>
+            <clr-dg-column>Payment Status</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let record of importData; let i = index" [clrDgItem]="record">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.po_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.challan_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.grn_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.item_code || record.material_code || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.item_description || record.material_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ record.icegate_ref_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="{'badge': true, 'badge-success': record.payment_status === 'Paid', 'badge-warning': record.payment_status === 'Pending', 'badge-danger': record.payment_status === 'Failed'}">
+                  {{ record.payment_status || 'N/A' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(i)" title="View/Edit Payment">
+                  <i class="fas fa-edit"></i> Payment
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="importData.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View/Edit Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Duty Payment</h3>
+  <div class="modal-body" *ngIf="selectedRecord">
+    <form #paymentForm="ngForm">
+      
+      <!-- Basic Information -->
+      <div class="section-header">
+        <h4>Basic Information</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>PO No:</label>
+          <input type="text" name="poNo" [(ngModel)]="poNo" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Packaging Slip:</label>
+          <input type="text" name="challanNo" [(ngModel)]="challanNo" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Receiving no:</label>
+          <input type="text" name="grnNo" [(ngModel)]="grnNo" readonly>
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Paid Custom Duty:</label>
+          <input type="number" name="totalPaidCustomDuty" [(ngModel)]="paymentAmount" step="0.01" readonly>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Item Code:</label>
+          <input type="text" name="itemCode" [(ngModel)]="itemCode" readonly>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Item Description:</label>
+          <input type="text" name="itemDescription" [(ngModel)]="itemDescription" readonly>
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-4">
+          <label>Quantity:</label>
+          <input type="number" name="quantity" [(ngModel)]="quantity" readonly step="0.01">
+        </div>
+        <div class="clr-col-lg-4">
+          <label>UOM:</label>
+          <input type="text" name="uom" [(ngModel)]="uom" readonly>
+        </div>
+      </div>
+
+      <!-- Payment Details -->
+      <div class="section-header" style="margin-top: 20px;">
+        <h4>Payment Details</h4>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>ICEGATE Ref. No:</label>
+          <input type="text" name="icegateRefNo" [(ngModel)]="icegateRefNo" placeholder="Enter ICEGATE reference number">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Payment Date & Time:</label>
+          <input type="datetime-local" name="paymentDateTime" [(ngModel)]="paymentDateTime">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Bank Transaction No.:</label>
+          <input type="text" name="bankTransactionNo" [(ngModel)]="bankTransactionNo" placeholder="Enter bank transaction number">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Receiving no:</label>
+          <input type="text" name="documentNo" [(ngModel)]="documentNo" placeholder="Enter document number">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-6">
+          <label>Packaging Slip:</label>
+          <input type="text" name="challanNoPayment" [(ngModel)]="challanNoPayment" placeholder="Enter challan number">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Payment Amount:</label>
+          <input type="number" name="paymentAmount" [(ngModel)]="paymentAmount" step="0.01" placeholder="Enter payment amount">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-4">
+          <label>Payment Status:</label>
+          <select name="paymentStatus" [(ngModel)]="paymentStatus">
+            <option *ngFor="let status of paymentStatuses" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Payment Mode:</label>
+          <select name="paymentMode" [(ngModel)]="paymentMode">
+            <option value="">Select Payment Mode</option>
+            <option *ngFor="let mode of paymentModes" [value]="mode">{{ mode }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Bank Name:</label>
+          <input type="text" name="bankName" [(ngModel)]="bankName" placeholder="Enter bank name">
+        </div>
+      </div>
+      <div class="clr-row" style="margin-top: 10px;">
+        <div class="clr-col-lg-12">
+          <label>Remarks:</label>
+          <textarea name="remarks" [(ngModel)]="remarks" rows="3" placeholder="Enter any remarks"></textarea>
+        </div>
+      </div>
+
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+    <button type="button" class="btn btn-success" (click)="save(paymentForm)">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>

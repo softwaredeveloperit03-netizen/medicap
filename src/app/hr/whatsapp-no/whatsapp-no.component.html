@@ -1,0 +1,134 @@
+<div class="container-fluid" >
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Alert & Notifications</div>
+          <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-success"  (click)="isNew = true" >{{'common.new' | translate}}</button>
+             <button class="btn btn-sm" routerLink="/hr" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button> 
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Employee Name</clr-dg-column>
+            <clr-dg-column>Employee ID</clr-dg-column>
+            <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+            <clr-dg-column>Contact No.</clr-dg-column>
+            <clr-dg-column>Entry By.</clr-dg-column>
+            <clr-dg-column>Entry On.</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+  
+            <clr-dg-row *ngFor="let user of alerts; let i = index" [clrDgItem]="user">
+                <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                <clr-dg-cell>{{user.empName}}</clr-dg-cell>
+                <clr-dg-cell>{{user.emp_id}}</clr-dg-cell>
+                <clr-dg-cell>{{user.department_name}}</clr-dg-cell>
+                <clr-dg-cell>{{(user.whatsappNO | canadianPhone)}}</clr-dg-cell>
+                <clr-dg-cell>{{user.entryBy}}</clr-dg-cell>
+                <clr-dg-cell>{{user.entryOn | date : 'dd-MM-YYYY'}}</clr-dg-cell>
+              
+                <clr-dg-cell>
+                  <button class="btn btn-sm btn-success" (click)="editNumber(user)" >{{'common.edit' | translate}}</button>
+                </clr-dg-cell>
+              
+            </clr-dg-row>
+         
+  
+        </clr-datagrid>
+        </div>
+      </div>
+    </div>
+  </div> 
+  
+   <clr-modal [(clrModalOpen)]="isEdit" clrModalSize="xl" [clrModalClosable]="true">
+    <h3 class="modal-title">Edit Contact Details</h3>
+    <div class="modal-body">
+        <div class="card">            
+            <div class="card-block">
+                <div class="card-text">
+                    <form #editForm="ngForm" >
+                        <div class="clr-row">
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                <label>Employee Name : <span style="color:red">*</span></label>
+                                <input type="text" name="empName" [(ngModel)]="selectedResult['empName']" readonly>
+                            </div>
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                <label>Whatsapp No.: <span style="color:red">*</span></label>
+                                <input type="tel" name="whatsappNO" [(ngModel)]="selectedResult['whatsappNO']" required #whatsappNO="ngModel">
+                                <div *ngIf="whatsappNO.invalid && whatsappNO.touched" style="color: red; font-size: 12px;">
+                                  <span *ngIf="whatsappNO.errors?.required">Whatsapp number is required.</span>
+                                  <span *ngIf="whatsappNO.errors?.pattern">Invalid number. Must start with 6-9 and have 10 digits.</span>
+                                  <span *ngIf="whatsappNO.errors?.minlength || whatsappNO.errors?.maxlength">number must be 10 digits.</span>
+                              </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-success" (click)="editSave(editForm)">{{'common.edit' | translate}}</button>
+              <button class="btn btn-danger" (click)="isEdit = false;">{{'common.close' | translate}}</button>
+  
+            </div>
+        </div>
+    </div>
+  </clr-modal> 
+
+
+
+   <clr-modal [(clrModalOpen)]="isNew" clrModalSize="xl" [clrModalClosable]="true">
+    <h3 class="modal-title">Save New Contact Details</h3>
+    <div class="modal-body">
+        <div class="card">            
+            <div class="card-block">
+                <div class="card-text">
+                    <form #saveNoForm="ngForm" >
+                        <div class="clr-row">
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                <label>Department : <span style="color:red">*</span></label>
+                                <select name="department_name" [(ngModel)]="department_name"   (change)="getDepartmentsEmployee($event.target.value)"  required  >
+                                  <option></option>
+                                  <option *ngFor="let department of departments" value="{{ department.department_name }}" >{{ department.department_name }}</option>
+                                </select>
+                            </div>
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                <label>Employee Name : <span style="color:red">*</span></label>
+                                <select name="emp_id" [(ngModel)]="emp_id" required  >
+                                    <option></option>
+                                    <option *ngFor="let employee of employees1" [value]="employee.emp_id">{{ employee.firstname}} - {{employee.emp_id}}</option>
+                                </select>
+                            </div>
+                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                              <label>Whatsapp No.: <span style="color:red">*</span></label>
+                              <input type="tel" name="whatsappNO" #whatsappNO="ngModel" ngModel required>
+                              <div *ngIf="whatsappNO.invalid && whatsappNO.touched" style="color: red; font-size: 12px;">
+                                  <span *ngIf="whatsappNO.errors?.required">Whatsapp number is required.</span>
+                                  <span *ngIf="whatsappNO.errors?.pattern">Invalid number. Must start with 6-9 and have 10 digits.</span>
+                                  <span *ngIf="whatsappNO.errors?.minlength || whatsappNO.errors?.maxlength">number must be 10 digits.</span>
+                              </div>
+                          </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-success" (click)="save(saveNoForm)">{{'common.save' | translate}}</button>
+              <button class="btn btn-danger" (click)="isNew = false;">{{'common.close' | translate}}</button>
+  
+            </div>
+        </div>
+    </div>
+  </clr-modal> 
+  
+  
+  
+  
+  
+  
+   

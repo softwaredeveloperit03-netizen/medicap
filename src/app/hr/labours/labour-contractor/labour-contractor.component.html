@@ -1,0 +1,402 @@
+
+  
+  <div class="container-fluid" *ngIf="!isView && !isNew">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-6" style="color: aliceblue; margin-top: -2px; text-align: left;">Labour Contractor Log</div>
+              <div class="clr-col-lg-6" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+                  <button class="btn btn-sm btn-success" (click)="isNew = true">Add Labour Contractor</button>
+                  <button class="btn btn-sm btn-danger" routerLink="/hr">
+                      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                  </button>
+              </div>
+          </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+ 
+
+            <div class="clr-row">
+              <div class="clr-col-lg-5">
+                <label>Search </label>
+                <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+                    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="emp_id">Contractor ID</clr-dg-column>
+                    <clr-dg-column clrDgField="contract_firm">Contractor Firm</clr-dg-column>
+                    <clr-dg-column clrDgField="person">Authorised Person</clr-dg-column>
+                    <clr-dg-column clrDgField="address">{{'common.address' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="phone_no">Phone No</clr-dg-column>
+                    <clr-dg-column clrDgField="email">{{'common.email' | translate}}</clr-dg-column>
+                    <clr-dg-column clrDgField="status">{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry By/On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+ 
+                    <clr-dg-row *clrDgItems="let contractor of filteredMaterials;let i=index" [clrDgItem]="contractor">
+                      <clr-dg-cell>{{i+1}}</clr-dg-cell>
+                      <clr-dg-cell>{{contractor.contractor_id || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{contractor.contract_firm || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{contractor.person || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{contractor.address || '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{(contractor.phone_no  | canadianPhone)|| '-'}}</clr-dg-cell>
+                      <clr-dg-cell>{{contractor.email || '-'}}</clr-dg-cell>
+                      <clr-dg-cell><strong >{{contractor.status | uppercase}}</strong></clr-dg-cell>
+                      <clr-dg-cell>{{contractor.entry_by}} / {{contractor.entry_date | date : 'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell >
+                          <button class="btn btn-sm btn-icon" (click)="view(contractor)">
+                            <clr-icon shape="eye"></clr-icon>
+                          </button>
+                      </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+ 
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadReport()">{{'common.download' | translate}}</button>
+        <button class="btn btn-danger"  routerLink="/hr">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+ 
+
+ <div class="container-fluid" *ngIf="isView">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <div class="card">
+      <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Labour Contractor</div>
+              <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isView = false" style="background-color: red; color: white;">
+                      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                  </button>
+              </div>
+          </div>
+      </div>
+        <div class="card-block">
+          <div class="card-text">
+            <form #updateLabourForm="ngForm">
+              <div class="clr-row">
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Name of Contractor Firm : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="contract_firm" [(ngModel)]="selectedEntry['contract_firm']" required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Name of Authorised Person: : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="person" [(ngModel)]="selectedEntry['person']" required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Address : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="address" [(ngModel)]="selectedEntry['address']" required />
+                </div>
+                
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">City : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="place" [(ngModel)]="selectedEntry['place']" required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Province : <span style="color: red;">*</span></label>
+                  <select *ngIf="isEdit" name="landmark" [(ngModel)]="selectedEntry['landmark']" required>
+                    <option value=""></option>
+                    <option *ngFor="let p of canadianProvinces" [value]="p">{{ p }}</option>
+                  </select>
+                  <input *ngIf="!isEdit" type="text" name="landmark" [(ngModel)]="selectedEntry['landmark']" required readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Postal Code : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="pincode" [(ngModel)]="selectedEntry['pincode']" required
+                    [pattern]="postalCaHtmlPattern" placeholder="e.g. K1A 0A6" (input)="isEdit && formatPostalInput($event)">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Phone No : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="tel" name="phone_no" [(ngModel)]="selectedEntry['phone_no']" required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Email Id : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="email" name="email" [(ngModel)]="selectedEntry['email']" required />
+                </div>
+  
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <h4 style="margin-top: 0.5rem;">Bank Account Details</h4>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Bank Name : <span style="color: red;">*</span></label>
+                  <select *ngIf="isEdit" name="bank" [(ngModel)]="selectedEntry['bank']" required (ngModelChange)="onBankChange($event)">
+                    <option value=""></option>
+                    <option *ngFor="let bank of canadianBanks" [value]="bank">{{ bank }}</option>
+                    <option [value]="addNewBankOption">ADD NEW</option>
+                  </select>
+                  <input *ngIf="!isEdit" type="text" name="bank" [(ngModel)]="selectedEntry['bank']" required readonly />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Transit # : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="branch" [(ngModel)]="selectedEntry['branch']" required maxlength="5" inputmode="numeric" />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Institution # : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="ifsc" [(ngModel)]="selectedEntry['ifsc']" required maxlength="3" inputmode="numeric" />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Account Type : <span style="color: red;">*</span></label>
+                  <select *ngIf="isEdit" name="acc_type" [(ngModel)]="selectedEntry['acc_type']" required>
+                    <option value="Saving Account">Saving Account</option>
+                    <option value="Checking Account">Checking Account</option>
+                  </select>
+                  <input *ngIf="!isEdit" type="text" name="acc_type" [(ngModel)]="selectedEntry['acc_type']" required readonly />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Account # : <span style="color: red;">*</span></label>
+                  <input [readonly]="!isEdit" type="text" name="ac_no" [(ngModel)]="selectedEntry['ac_no']" required maxlength="20" inputmode="numeric" />
+                </div>
+
+  
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                   <table class="table table-border">
+                      <tr>
+                        <td style="text-align: left;"><strong>PF Registration : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_pf" (change)="onFileChange($event, 'file_pf')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit"  class="btn btn-sm btn-info" [disabled]="selectedEntry['file_pf'] == 'NA'" (click)="open(selectedEntry['file_pf'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_pf')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: left;"><strong>ESIC Reg. : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_pf" (change)="onFileChange($event, 'file_pf')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit" class="btn btn-sm btn-info" [disabled]="selectedEntry['file_esic_no'] == 'NA'" (click)="open(selectedEntry['file_esic_no'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_esic_no')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: left;"><strong>GST/HST Certificate : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_gst_no" (change)="onFileChange($event, 'file_gst_no')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit" class="btn btn-sm btn-info" [disabled]="selectedEntry['file_gst_no'] == 'NA'" (click)="open(selectedEntry['file_gst_no'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_gst_no')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: left;"><strong>Certi. Of Labour Principle : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_labour_pri" (change)="onFileChange($event, 'file_labour_pri')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit" class="btn btn-sm btn-info" [disabled]="selectedEntry['file_labour_pri'] == 'NA'" (click)="open(selectedEntry['file_labour_pri'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_labour_pri')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: left;"><strong>Labour Lic : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_labour_lic" (change)="onFileChange($event, 'file_labour_lic')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit" class="btn btn-sm btn-info" [disabled]="selectedEntry['file_labour_lic'] == 'NA'" (click)="open(selectedEntry['file_labour_lic'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_labour_lic')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: left;"><strong>Other File : </strong></td>
+                        <td *ngIf="isEdit" style="margin: 0;padding: 0;"><input style="margin: 0;" type="file" name="file_other" (change)="onFileChange($event, 'file_other')" ngModel /></td>
+                        <td>
+                          <button *ngIf="!isEdit" class="btn btn-sm btn-info" [disabled]="selectedEntry['file_other'] == 'NA'" (click)="open(selectedEntry['file_other'])">{{'common.view' | translate}}</button>
+                          <button *ngIf="isEdit"  class="btn btn-sm btn-success" (click)="uploadFile('file_other')">{{'common.upload' | translate}}</button>
+                        </td>
+                      </tr>
+                   </table>
+                </div>
+    
+ 
+
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-footer" *ngIf="selectedEntry['status'] == 'Pending'">
+          <button  class="btn btn-success" (click)="approveLabourCOntractor('Approved')">{{'common.approve' | translate}}</button>
+          <button  class="btn btn-danger" (click)="approveLabourCOntractor('Rejected')">{{'common.reject' | translate}}</button>
+          <button class="btn btn-danger" (click)="isView =false">{{'common.close' | translate}}</button>
+        </div>
+        <div class="card-footer" *ngIf="selectedEntry['status'] != 'Pending'">
+          <button  class="btn btn-primary" (click)="isEdit = !isEdit"><span *ngIf="!isEdit">EDIT</span><span *ngIf="isEdit">Close Edit</span> </button>
+          <button *ngIf="isEdit" class="btn btn-success" (click)="updateLabourCOntractor(updateLabourForm)">{{'common.update' | translate}}</button>
+          <button class="btn btn-danger" (click)="isView =false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+
+
+
+
+
+ <div class="container-fluid" *ngIf="isNew">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <div class="card">
+      <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Labour Contractor</div>
+              <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isNew = false" style="background-color: red; color: white;">
+                      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                  </button>
+              </div>
+          </div>
+      </div>
+        <div class="card-block">
+          <div class="card-text">
+            <form #labourForm="ngForm">
+              <div class="clr-row">
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Name of Contractor Firm : <span style="color: red;">*</span></label>
+                  <input type="text" name="contract_firm" ngModel required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Name of Authorised Person: : <span style="color: red;">*</span></label>
+                  <input type="text" name="person" ngModel required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Address : <span style="color: red;">*</span></label>
+                  <input type="text" name="address" ngModel required />
+                </div>
+                
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">City : <span style="color: red;">*</span></label>
+                  <input type="text" name="place" ngModel required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Province : <span style="color: red;">*</span></label>
+                  <select name="landmark" ngModel required>
+                    <option value=""></option>
+                    <option *ngFor="let p of canadianProvinces" [value]="p">{{ p }}</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Postal Code : <span style="color: red;">*</span></label>
+                  <input type="text" name="pincode" [(ngModel)]="postal_code" required
+                    [pattern]="postalCaHtmlPattern" placeholder="e.g. K1A 0A6" (input)="formatPostalInput($event)">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Phone No : <span style="color: red;">*</span></label>
+                  <input type="tel" name="phone_no" ngModel required />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Email Id : <span style="color: red;">*</span></label>
+                  <input type="email" name="email" ngModel required />
+                </div>
+  
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <h4 style="margin-top: 0.5rem;">Bank Account Details</h4>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Bank Name : <span style="color: red;">*</span></label>
+                  <select name="bank" [(ngModel)]="bank_name" required (ngModelChange)="onBankChange($event)">
+                    <option value=""></option>
+                    <option *ngFor="let bank of canadianBanks" [value]="bank">{{ bank }}</option>
+                    <option [value]="addNewBankOption">ADD NEW</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Transit # : <span style="color: red;">*</span></label>
+                  <input type="text" name="branch" [(ngModel)]="transit_no" required maxlength="5" inputmode="numeric" />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Institution # : <span style="color: red;">*</span></label>
+                  <input type="text" name="ifsc" [(ngModel)]="institution_no" required maxlength="3" inputmode="numeric" />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Account Type : <span style="color: red;">*</span></label>
+                  <select name="acc_type" [(ngModel)]="acc_type" required>
+                    <option value="Saving Account">Saving Account</option>
+                    <option value="Checking Account">Checking Account</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label style="font-weight: 400;">Account # : <span style="color: red;">*</span></label>
+                  <input type="text" name="ac_no" [(ngModel)]="acc_no" required maxlength="20" inputmode="numeric" />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_pf">PF Registration : </label>
+                  <input type="file" name="file_pf" (change)="onFileChange($event, 'file_pf')" ngModel />
+                </div>
+  
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_esic_no">ESIC Reg. : </label>
+                  <input type="file" name="file_esic_no" (change)="onFileChange($event, 'file_esic_no')" ngModel />
+                </div>
+  
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_gst_no">GST/HST Certificate : </label>
+                  <input type="file" name="file_gst_no" (change)="onFileChange($event, 'file_gst_no')" ngModel />
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_gst_no">Certi. Of Labour Principle : </label>
+                  <input type="file" name="file_labour_pri" (change)="onFileChange($event, 'file_labour_pri')" ngModel />
+                </div>
+  
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_labour_lic">Labour Lic : </label>
+                  <input type="file" name="file_labour_lic" (change)="onFileChange($event, 'file_labour_lic')" ngModel />
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label for="file_other">Other File : </label>
+                  <input type="file" name="file_other" (change)="onFileChange($event, 'file_other')" ngModel />
+                </div>
+
+
+              </div>
+            </form>
+          </div>
+        </div>
+  
+        <div class="card-footer">
+          <button class="btn btn-primary" (click)="labourForm.form.valid && saveForm(labourForm)" [disabled]="labourForm.form.invalid">
+            SAVE
+          </button>
+          <button class="btn btn-danger" (click)="isNew =false">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="showAddBankModal" [clrModalClosable]="true" (clrModalOpenChange)="!$event && closeAddBankModal()">
+    <h3 class="modal-title">ADD NEW BANK</h3>
+    <div class="modal-body">
+        <label><strong>Bank Name : <span style="color: red;">*</span></strong></label>
+        <input type="text" name="newBankName" [(ngModel)]="newBankName" class="form-control" placeholder="Enter bank name" (keyup.enter)="saveNewBank()">
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="closeAddBankModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="saveNewBank()">Save</button>
+    </div>
+</clr-modal>
+ 

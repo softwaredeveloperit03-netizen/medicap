@@ -1,0 +1,171 @@
+<div class="card" *ngIf="!isEdit">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Total Days Calculation for Forecast</div>
+        <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+
+          <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+
+  <div class="card-block">
+    <div class="clr-row">
+      <div class="clr-col-lg-5">
+        <label>Search </label>
+        <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+      </div>
+    </div>
+
+    <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+          <clr-dg-column style="width: 10px;">Sr.No</clr-dg-column>
+           <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Indent days Before Receiving</clr-dg-column>
+          <clr-dg-column>Purchase Order Days After Indent</clr-dg-column>
+          <clr-dg-column>Payment Days After PO</clr-dg-column>
+          <clr-dg-column>Material Must Receive in Days After PO</clr-dg-column>
+          <clr-dg-column>No of days Required for Sampling After Receiving</clr-dg-column>
+          <clr-dg-column>Testing Required days After Sampling</clr-dg-column>
+          <clr-dg-column>Total No of Days From Indent To Sampling </clr-dg-column>
+
+          <!-- <clr-dg-column>Hurdo %(Moisture %)(Days)</clr-dg-column>
+          <clr-dg-column>No of days Required to Indent After Fatory Order</clr-dg-column>
+          <clr-dg-column>No of days  to Raise PO After Indent</clr-dg-column>
+          <clr-dg-column>No of days  to Receive After PO</clr-dg-column>
+          <clr-dg-column>No of days Required for Sampling After Receiving</clr-dg-column>
+          <clr-dg-column>No of days Required for Analysis Indent After Release</clr-dg-column> -->
+          <clr-dg-column>Action</clr-dg-column>
+
+
+          <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="result">
+            <clr-dg-cell> {{i+1}}</clr-dg-cell>
+            <clr-dg-cell> {{res.material_code}}</clr-dg-cell>
+            <clr-dg-cell> {{res.material_name}}</clr-dg-cell>
+ 
+            <clr-dg-cell> {{res.indend_prepare_date || 'NA'}}</clr-dg-cell>
+            <clr-dg-cell> {{res.Purchase_prepare_date || 'NA'}}</clr-dg-cell>
+            <clr-dg-cell> {{res.ForPayment || 'NA'}}</clr-dg-cell>
+            <clr-dg-cell> {{res.PurchaseDeliveryTime || 'NA'}}</clr-dg-cell>
+            <clr-dg-cell> {{res.Sampling_prepare_date || 'NA'}}</clr-dg-cell>
+            <clr-dg-cell> {{res.release_prepare_date || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ calculateTotal(res, PurchaseDeliveryTime) }}</clr-dg-cell>
+            <clr-dg-cell><button class="btn btn-danger" (click)="edit(i)" >Edit</button></clr-dg-cell>
+
+
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+  </div>
+
+
+
+    <div class="card-footer">
+      <button class="btn  btn-success" (click)="exportToExcelMaterialMaster()">
+        <clr-icon shape="download"></clr-icon> Download Excel
+      </button>
+
+      <button class="btn btn-primary" (click)="downloadReport()">Download</button>
+    </div>
+  </div>
+
+
+  <div class="card" *ngIf="isEdit">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Raw Material update</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" (click)="isEdit=!isEdit">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-text">
+        <form #materialForm="ngForm">
+          <div class="clr-row">
+
+
+
+         
+             <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Hurdo %(Moisture %)(Days):<span style="color: red">*</span></label>
+              <input type="text" name="moisture" [(ngModel)]="moisture" #material="ngModel">
+
+            </div>
+             <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days Required to Indent After Fatory Order:<span style="color: red">*</span></label>
+              <input type="text" name="indend_prepare_date" [(ngModel)]="indend_prepare_date" #material="ngModel">
+
+            </div>
+             <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days  to Raise PO After Indent:<span style="color: red">*</span></label>
+              <input type="text" name="Purchase_prepare_date" [(ngModel)]="Purchase_prepare_date" #material="ngModel">
+
+            </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days  to Receive After PO:<span style="color: red">*</span></label>
+              <input type="text" name="PurchaseDeliveryTime" [(ngModel)]="PurchaseDeliveryTime" #material="ngModel">
+
+            </div>
+             <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days Required for Sampling After Receiving:<span style="color: red">*</span></label>
+              <input type="text" name="Sampling_prepare_date" [(ngModel)]="Sampling_prepare_date" #material="ngModel">
+
+            </div>
+             <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days Required for Analysis Indent After Release:<span style="color: red">*</span></label>
+              <input type="text" name="release_prepare_date" [(ngModel)]="release_prepare_date" #material="ngModel">
+
+            </div> -->
+
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Indent days Before Receiving:<span style="color: red">*</span></label>
+              <input type="text" name="indend_prepare_date" [(ngModel)]="indend_prepare_date" #material="ngModel">
+
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Purchase Order Days After Indent:<span style="color: red">*</span></label>
+              <input type="text" name="Purchase_prepare_date" [(ngModel)]="Purchase_prepare_date" #material="ngModel">
+
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Payment Days After PO :<span style="color: red">*</span></label>
+              <input type="text" name="ForPayment" [(ngModel)]="ForPayment" #material="ngModel">
+
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Must Receive in Days After PO :<span style="color: red">*</span></label>
+              <input type="text" name="PurchaseDeliveryTime" [(ngModel)]="PurchaseDeliveryTime" #material="ngModel">
+
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>No of days Required for Sampling After Receiving:<span style="color: red">*</span></label>
+              <input type="text" name="Sampling_prepare_date" [(ngModel)]="Sampling_prepare_date" #material="ngModel">
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Testing Required days After Sampling:<span style="color: red">*</span></label>
+              <input type="text" name="release_prepare_date" [(ngModel)]="release_prepare_date" #material="ngModel">
+            </div>
+
+
+
+
+
+
+          </div>
+
+
+
+
+
+        </form>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" (click)="editRawMaterial(materialForm)">Update</button>
+      <button type="button" class="btn btn-danger" (click)="isEdit = false">Cancel</button>
+    </div>
+  </div>

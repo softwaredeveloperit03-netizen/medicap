@@ -1,0 +1,740 @@
+﻿<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div
+        class="clr-col-9"
+        style="color: aliceblue; margin-top: -2px; text-align: left"
+      >
+        <h3 style="margin: 0; color: white">
+          <b>Total Status Dashboard</b>
+        </h3>
+        <p style="margin: 0; font-size: 14px; opacity: 0.9; color: beige">
+          Comprehensive Overview of All Project Components
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-spinner">
+    <clr-spinner>Loading dashboard data...</clr-spinner>
+  </div>
+
+  <div class="card-block" *ngIf="!isLoading">
+    <div class="card-text">
+      <div class="clr-row filters-section">
+        <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+          <div class="search-box">
+            <clr-icon shape="search"></clr-icon>
+            <input
+              type="text"
+              placeholder="Search all entries..."
+              class="search-input"
+              [(ngModel)]="searchTerm"
+              (input)="filterPlans()"
+              [disabled]="isLoading"
+            />
+          </div>
+        </div>
+        <div class="clr-col-lg-6 clr-col-md-5 clr-col-sm-12 filter-actions">
+          
+          <select
+            class="form-control"
+            [(ngModel)]="selectedModule"
+            (change)="filterPlans()"
+            style="width: 150px; display: inline-block; margin-right: 10px"
+            [disabled]="isLoading"
+          >
+            <option value="">All Modules</option>
+            <option *ngFor="let module of modules" [value]="module">
+              {{ module }}
+            </option>
+          </select>
+
+          <select
+            class="form-control"
+            [(ngModel)]="selectedStatus"
+            (change)="filterPlans()"
+            style="width: 180px; display: inline-block"
+            [disabled]="isLoading"
+          >
+            <option value="">All Status</option>
+            <option value="completed">{{'common.completed' | translate}}</option>
+            <option value="in-progress">In Progress</option>
+            <option value="not-started">Not Started</option>
+            <option value="on-hold">On Hold</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 text-right">
+          <button
+            class="btn btn-sm btn-outline"
+            (click)="refreshData()"
+            [disabled]="isLoading"
+          >
+            <clr-icon shape="refresh"></clr-icon> Refresh
+          </button>
+          <button
+            class="btn btn-sm btn-success"
+            (click)="exportToExcel()"
+            [disabled]="isLoading"
+          >
+            <clr-icon shape="export"></clr-icon> Export
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="dashboardData" class="stats-section">
+        <h4>Project Statistics</h4>
+        <div class="clr-row stats-grid">
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card total">
+              <div class="stat-icon">
+                <clr-icon shape="blocks-group" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ dashboardData.totalProjects }}</div>
+                <div class="stat-label">Total Projects</div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card development">
+              <div class="stat-icon">
+                <clr-icon shape="code" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">
+                  {{ dashboardData.developmentStats.completed }}
+                </div>
+                <div class="stat-label">Development Completed</div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card testing">
+              <div class="stat-icon">
+                <clr-icon shape="bug" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">
+                  {{ dashboardData.testingStats.completed }}
+                </div>
+                <div class="stat-label">Testing Completed</div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card training">
+              <div class="stat-icon">
+                <clr-icon shape="users" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">
+                  {{ dashboardData.trainingStats.completed }}
+                </div>
+                <div class="stat-label">Training Completed</div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card trial">
+              <div class="stat-icon">
+                <clr-icon shape="flask" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">
+                  {{ dashboardData.trialStats.completed }}
+                </div>
+                <div class="stat-label">Trial Completed</div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-6">
+            <div class="stat-card implementation">
+              <div class="stat-icon">
+                <clr-icon shape="deploy" size="24"></clr-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">
+                  {{ dashboardData.implementationStats.completed }}
+                </div>
+                <div class="stat-label">Implementation Completed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="dashboardData">
+        <clr-datagrid [clrDgLoading]="isLoading">
+          <!-- Basic Information Columns -->
+          <clr-dg-column [style.width.px]="70">Sr. No.</clr-dg-column>
+          <!-- <clr-dg-column [style.width.px]="150">Client</clr-dg-column> -->
+          <clr-dg-column [style.width.px]="100">Phase</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">{{'common.department' | translate}}</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Module</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Sub Module</clr-dg-column>
+          <clr-dg-column [style.width.px]="130">Form Name</clr-dg-column>
+
+          <!-- Development Columns -->
+          <!-- <clr-dg-column [style.width.px]="130"
+            >Dev Projected Date</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="120">Developer</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Dev Status</clr-dg-column>
+          <clr-dg-column [style.width.px]="130">Dev Completed On</clr-dg-column>
+          <clr-dg-column [style.width.px]="130">Dev Deviation</clr-dg-column>
+          <clr-dg-column [style.width.px]="150">Dev Remark</clr-dg-column> -->
+
+          <!-- Testing Columns -->
+          <clr-dg-column [style.width.px]="130"
+            >Test Projected Date</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="120">Tester</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Testing Status</clr-dg-column>
+          <clr-dg-column [style.width.px]="130"
+            >Test Completed On</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="130">Test Deviation</clr-dg-column>
+          <clr-dg-column [style.width.px]="150">Testing Remark</clr-dg-column>
+
+          <!-- Training Columns -->
+          <clr-dg-column [style.width.px]="130"
+            >Training Projected Date</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="120">Trainer</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Training Status</clr-dg-column>
+          <clr-dg-column [style.width.px]="130"
+            >Training Completed On</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="130"
+            >Training Deviation</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="150">Training Remark</clr-dg-column>
+
+          <!-- Trial Columns -->
+          <clr-dg-column [style.width.px]="130"
+            >Trial Projected Date</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="120">Trialer</clr-dg-column>
+          <clr-dg-column [style.width.px]="120">Trial Status</clr-dg-column>
+          <clr-dg-column [style.width.px]="130"
+            >Trial Completed On</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="130">Trial Deviation</clr-dg-column>
+          <clr-dg-column [style.width.px]="150">Trial Remark</clr-dg-column>
+
+          <!-- Implementation Columns -->
+          <clr-dg-column [style.width.px]="180"
+            >Implementation Projected Dates</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="120">Implementer</clr-dg-column>
+          <clr-dg-column [style.width.px]="120"
+            >Implementation Status</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="130"
+            >Implementation Completed On</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="130"
+            >Implementation Deviation</clr-dg-column
+          >
+          <clr-dg-column [style.width.px]="150"
+            >Implementation Remark</clr-dg-column
+          >
+
+          <!-- Rows -->
+          <clr-dg-row *clrDgItems="let plan of filteredPlans; let i = index">
+            <!-- Basic Information -->
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <!-- <clr-dg-cell>
+              <span class="cell-content">{{ plan.client_name }}</span>
+            </clr-dg-cell> -->
+            <clr-dg-cell>
+              <span class="cell-content">{{ plan.phase }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="cell-content">{{ plan.department }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="cell-content">{{ plan.module }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="cell-content">{{ plan.sub_module }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <span class="cell-content">{{ plan.form_name }}</span>
+            </clr-dg-cell>
+
+            <!-- Development Columns -->
+            <!-- <clr-dg-cell>
+              <span
+                *ngIf="plan.current_projected_date"
+                class="label label-blue date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.current_projected_date) }}
+              </span>
+              <span
+                *ngIf="!plan.current_projected_date"
+                class="label label-light-blue"
+                >Not set</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">{{
+                plan.developer_name || "Not assigned"
+              }}</span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                class="label"
+                [ngClass]="getDevelopmentStatusClass(plan.development_status)"
+              >
+                {{ getDevelopmentStatusDisplayText(plan.development_status) }}
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.development_completed_on"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.development_completed_on) }}
+              </span>
+              <span
+                *ngIf="!plan.development_completed_on"
+                class="label label-light-blue"
+                >Not completed</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="
+                  plan.deviation_days !== null &&
+                  plan.deviation_days !== undefined &&
+                  plan.deviation_days > 0
+                "
+                class="label label-warning"
+              >
+                +{{ plan.deviation_days }} days
+              </span>
+              <span
+                *ngIf="
+                  plan.deviation_days === 0 ||
+                  plan.deviation_days === null ||
+                  plan.deviation_days === undefined
+                "
+                class="label label-success"
+              >
+                On time
+              </span>
+              <span *ngIf="plan.deviation_days < 0" class="label label-info">
+                {{ plan.deviation_days }} days early
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">
+                {{ plan.development_remark || "No remarks" | slice : 0 : 20 }}
+                {{
+                  plan.development_remark && plan.development_remark.length > 20
+                    ? "..."
+                    : ""
+                }}
+              </span>
+            </clr-dg-cell> -->
+
+            <!-- Testing Columns -->
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.current_testing_projected_date"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.current_testing_projected_date) }}
+              </span>
+              <span
+                *ngIf="!plan.current_testing_projected_date"
+                class="label label-light-blue"
+                >Not set</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">{{
+                plan.tester_name || "Not assigned"
+              }}</span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                class="label"
+                [ngClass]="getTestingStatusClass(plan.testing_status)"
+              >
+                {{ getTestingStatusDisplayText(plan.testing_status) }}
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.testing_completed_on"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.testing_completed_on) }}
+              </span>
+              <span
+                *ngIf="!plan.testing_completed_on"
+                class="label label-light-blue"
+                >Not completed</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="
+                  plan.testing_deviation_days !== null &&
+                  plan.testing_deviation_days !== undefined &&
+                  plan.testing_deviation_days > 0
+                "
+                class="label label-warning"
+              >
+                +{{ plan.testing_deviation_days }} days
+              </span>
+              <span
+                *ngIf="
+                  plan.testing_deviation_days === 0 ||
+                  plan.testing_deviation_days === null ||
+                  plan.testing_deviation_days === undefined
+                "
+                class="label label-success"
+              >
+                On time
+              </span>
+              <span
+                *ngIf="plan.testing_deviation_days < 0"
+                class="label label-info"
+              >
+                {{ plan.testing_deviation_days }} days early
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">
+                {{ plan.testing_remark || "No remarks" | slice : 0 : 20 }}
+                {{
+                  plan.testing_remark && plan.testing_remark.length > 20
+                    ? "..."
+                    : ""
+                }}
+              </span>
+            </clr-dg-cell>
+
+            <!-- Training Columns -->
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.current_training_projected_date"
+                class="label label-purple date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.current_training_projected_date) }}
+              </span>
+              <span
+                *ngIf="!plan.current_training_projected_date"
+                class="label label-light-blue"
+                >Not set</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">{{
+                plan.trainer_name || "Not assigned"
+              }}</span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                class="label"
+                [ngClass]="getTrainingStatusClass(plan.training_status)"
+              >
+                {{ getTrainingStatusDisplayText(plan.training_status) }}
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.training_completed_on"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.training_completed_on) }}
+              </span>
+              <span
+                *ngIf="!plan.training_completed_on"
+                class="label label-light-blue"
+                >Not completed</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="
+                  plan.training_deviation_days !== null &&
+                  plan.training_deviation_days !== undefined &&
+                  plan.training_deviation_days > 0
+                "
+                class="label label-warning"
+              >
+                +{{ plan.training_deviation_days }} days
+              </span>
+              <span
+                *ngIf="
+                  trainingDeviationDays === 0 ||
+                  trainingDeviationDays === null ||
+                  trainingDeviationDays === undefined
+                "
+                class="label label-success"
+              >
+                On time
+              </span>
+              <span *ngIf="trainingDeviationDays < 0" class="label label-info">
+                {{ trainingDeviationDays }} days early
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span title="{{ plan.training_remark }}" class="cell-content">
+                {{ plan.training_remark || "No remarks" | slice : 0 : 20 }}
+                {{
+                  plan.training_remark && plan.training_remark.length > 20
+                    ? "..."
+                    : ""
+                }}
+              </span>
+            </clr-dg-cell>
+
+            <!-- Trial Columns -->
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.current_trial_projected_date"
+                class="label label-orange date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.current_trial_projected_date) }}
+              </span>
+              <span
+                *ngIf="!plan.current_trial_projected_date"
+                class="label label-light-blue"
+                >Not set</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">{{
+                plan.trialer_name || "Not assigned"
+              }}</span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                class="label"
+                [ngClass]="getTrialStatusClass(plan.trial_status)"
+              >
+                {{ getTrialStatusDisplayText(plan.trial_status) }}
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.trial_completed_on"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.trial_completed_on) }}
+              </span>
+              <span
+                *ngIf="!plan.trial_completed_on"
+                class="label label-light-blue"
+                >Not completed</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="
+                  plan.trial_deviation_days !== null &&
+                  plan.trial_deviation_days !== undefined &&
+                  plan.trial_deviation_days > 0
+                "
+                class="label label-warning"
+              >
+                +{{ plan.trial_deviation_days }} days
+              </span>
+              <span
+                *ngIf="
+                  plan.trial_deviation_days === 0 ||
+                  plan.trial_deviation_days === null ||
+                  plan.trial_deviation_days === undefined
+                "
+                class="label label-success"
+              >
+                On time
+              </span>
+              <span
+                *ngIf="plan.trial_deviation_days < 0"
+                class="label label-info"
+              >
+                {{ plan.trial_deviation_days }} days early
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">
+                {{ plan.trial_remark || "No remarks" | slice : 0 : 20 }}
+                {{
+                  plan.trial_remark && plan.trial_remark.length > 20
+                    ? "..."
+                    : ""
+                }}
+              </span>
+            </clr-dg-cell>
+
+            <!-- Implementation Columns -->
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.current_implementation_projected_date"
+                class="label label-orange date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.current_implementation_projected_date) }}
+              </span>
+              <span
+                *ngIf="!plan.current_implementation_projected_date"
+                class="label label-light-blue"
+                >Not set</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">{{
+                plan.implementer_name || "Not assigned"
+              }}</span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                class="label"
+                [ngClass]="
+                  getImplementationStatusClass(plan.implementation_status)
+                "
+              >
+                {{
+                  getImplementationStatusDisplayText(plan.implementation_status)
+                }}
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="plan.implementation_completed_on"
+                class="label label-green date-badge"
+              >
+                <clr-icon shape="calendar" style="margin-right: 4px"></clr-icon>
+                {{ formatDate(plan.implementation_completed_on) }}
+              </span>
+              <span
+                *ngIf="!plan.implementation_completed_on"
+                class="label label-light-blue"
+                >Not completed</span
+              >
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span
+                *ngIf="
+                  plan.implementation_deviation_days !== null &&
+                  plan.implementation_deviation_days !== undefined &&
+                  plan.implementation_deviation_days > 0
+                "
+                class="label label-warning"
+              >
+                +{{ plan.implementation_deviation_days }} days
+              </span>
+              <span
+                *ngIf="
+                  plan.implementation_deviation_days === 0 ||
+                  plan.implementation_deviation_days === null ||
+                  plan.implementation_deviation_days === undefined
+                "
+                class="label label-success"
+              >
+                On time
+              </span>
+              <span
+                *ngIf="plan.implementation_deviation_days < 0"
+                class="label label-info"
+              >
+                {{ plan.implementation_deviation_days }} days early
+              </span>
+            </clr-dg-cell>
+
+            <clr-dg-cell>
+              <span class="cell-content">
+                {{
+                  plan.implementation_remark || "No remarks" | slice : 0 : 20
+                }}
+                {{
+                  plan.implementation_remark &&
+                  plan.implementation_remark.length > 20
+                    ? "..."
+                    : ""
+                }}
+              </span>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <!-- Empty State -->
+          <clr-dg-row *ngIf="filteredPlans.length === 0 && !isLoading">
+            <clr-dg-cell colspan="40" style="text-align: center; padding: 20px">
+              <div class="no-data-message">
+                <clr-icon shape="dashboard" size="48"></clr-icon>
+                <h3>No Project Data Found</h3>
+                <p *ngIf="dashboardData?.plans?.length === 0">
+                  No project data found.
+                </p>
+                <p *ngIf="dashboardData?.plans?.length > 0">
+                  No projects match your search criteria.
+                </p>
+              </div>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <!-- Footer -->
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]"
+                >Entries per page</clr-dg-page-size
+              >
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+              {{ pagination.totalItems }} entries
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-alert
+  [clrAlertType]="toastType"
+  [clrAlertClosable]="true"
+  [(clrAlertClosed)]="toastClosed"
+  *ngIf="showToast"
+>
+  <clr-alert-item>
+    <span class="alert-text">{{ toastMessage }}</span>
+  </clr-alert-item>
+</clr-alert>

@@ -1,0 +1,193 @@
+<div class="card bmr-check-card">
+  <div class="card-header clr-row" style="background-color: rgb(117, 162, 247); color: white; margin: 0">
+    <div class="clr-col-9" style="padding-top: 6px; text-align: left">e BMR — checking saved entries</div>
+    <div class="clr-col-lg-3" style="text-align: right; padding: 4px 0">
+      <button type="button" class="btn btn-sm btn-secondary" style="margin-right: 8px" (click)="reloadSnapshot()" [disabled]="loadingSnapshot">Refresh from server</button>
+      <button type="button" class="btn btn-sm btn-danger" (click)="close()">CLOSE</button>
+    </div>
+  </div>
+
+  <div class="card-block" *ngIf="selectedResult">
+    <p *ngIf="loadingSnapshot" class="alert alert-secondary" style="margin-bottom: 12px">Loading saved data and BMR stage/step layout…</p>
+    <p *ngIf="snapshotHint" class="alert alert-warning" style="margin-bottom: 12px">{{ snapshotHint }}</p>
+    <p *ngIf="bmrStructureHint" class="alert alert-info" style="margin-bottom: 12px">{{ bmrStructureHint }}</p>
+
+    <table class="table table-border" style="margin-bottom: 16px">
+      <tr>
+        <td style="background: #f0f0f0; font-weight: bold; width: 180px">Product</td>
+        <td>{{ selectedResult?.product_name }} {{ selectedResult?.grade }}</td>
+      </tr>
+      <tr>
+        <td style="background: #f0f0f0; font-weight: bold">Product code</td>
+        <td>{{ selectedResult?.product_code }}</td>
+      </tr>
+      <tr>
+        <td style="background: #f0f0f0; font-weight: bold">Work order</td>
+        <td>{{ selectedResult?.work_order_no }}</td>
+      </tr>
+      <tr>
+        <td style="background: #f0f0f0; font-weight: bold">Batch no.</td>
+        <td>{{ selectedResult?.batch_number }}</td>
+      </tr>
+      <tr *ngIf="snapshot">
+        <td style="background: #f0f0f0; font-weight: bold">Local save status</td>
+        <td>
+          <span *ngIf="snapshot.approvalStatus === 'pending'" class="label label-warning">Pending approval</span>
+          <span *ngIf="snapshot.approvalStatus === 'approved'" class="label label-success">Approved</span>
+          <span *ngIf="snapshot.approvedAt" style="margin-left: 8px; color: #666; font-size: 12px">{{ snapshot.approvedAt }}</span>
+          <span *ngIf="snapshot.approvalStatus === 'approved' && snapshot.approvedByEmpId" style="margin-left: 8px; color: #666; font-size: 12px">· Checker emp ID: {{ snapshot.approvedByEmpId }}</span>
+        </td>
+      </tr>
+      <tr *ngIf="snapshot?.lastStepEmpId">
+        <td style="background: #f0f0f0; font-weight: bold">Last Proceed save (server)</td>
+        <td>
+          Emp ID <strong>{{ snapshot.lastStepEmpId }}</strong>
+          <span *ngIf="snapshot.lastStepSavedAt" style="margin-left: 8px; color: #666; font-size: 12px">{{ snapshot.lastStepSavedAt }}</span>
+        </td>
+      </tr>
+    </table>
+
+    <p *ngIf="!loadingSnapshot && !snapshot" class="alert alert-info">
+      No saved data for this batch (server and browser). Open <strong>Proceed</strong>, fill steps, and save — data is stored in <code>ebmr_filled_step</code> and shown here after <strong>Refresh from server</strong>.
+    </p>
+
+    <ng-container *ngIf="snapshot">
+      
+      <ng-container *ngFor="let sec of bmrOrderedSections">
+        <div class="ebmr-check-stage-block">
+          <h5 class="ebmr-check-stage-title">
+            Stage {{ sec.stageOrdinal }} — {{ sec.stageTitle }}
+          </h5>
+          <ng-container *ngFor="let blk of sec.steps">
+            <div class="ebmr-check-step-block">
+              <div class="ebmr-check-step-heading">
+                <span class="ebmr-check-idx">Step {{ sec.stageOrdinal }}.{{ blk.stepOrdinal }}</span>
+                <span class="ebmr-check-id">ID {{ blk.stepId }}</span>
+                <span class="ebmr-check-name">{{ blk.stepName || '—' }}</span>
+              </div>
+              <div *ngIf="blk.stepSaved" class="ebmr-check-step-body">
+                <p class="ebmr-check-meta-line" *ngIf="blk.stepSaved.savedAt">Saved: {{ blk.stepSaved.savedAt }}</p>
+                <div class="ebmr-check-payload-cell">
+                  <ng-container *ngIf="payloadViewForStep(blk.stepSaved) as v">
+                    <ng-container *ngTemplateOutlet="ebmrCheckPayloadView; context: { $implicit: v }"></ng-container>
+                  </ng-container>
+                </div>
+              </div>
+              <ng-container *ngFor="let sub of blk.substeps">
+                <div class="ebmr-check-substep-block">
+                  <div class="ebmr-check-substep-heading">
+                    <span class="ebmr-check-idx">Substep {{ sec.stageOrdinal }}.{{ blk.stepOrdinal }}.{{ sub.subOrdinal }}</span>
+                    <span class="ebmr-check-id">ID {{ sub.subId }}</span>
+                    <span class="ebmr-check-name">{{ sub.subName }}</span>
+                  </div>
+                  <p class="ebmr-check-meta-line" *ngIf="sub.saved.savedAt">Saved: {{ sub.saved.savedAt }}</p>
+                  <div class="ebmr-check-payload-cell">
+                    <ng-container *ngIf="payloadViewForOrderedSub(sub) as sv">
+                      <ng-container *ngTemplateOutlet="ebmrCheckPayloadView; context: { $implicit: sv }"></ng-container>
+                    </ng-container>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+
+      <div *ngIf="bmrOrphanSteps.length > 0 || bmrOrphanSubsteps.length > 0" class="ebmr-check-orphan-section">
+        <h5 class="ebmr-check-stage-title ebmr-check-orphan-title">Outside current BMR tree</h5>
+        <p class="text-muted" style="font-size: 13px">Saved ids not found under the loaded Stages/Steps/Substeps (older template, different product build, or API mismatch).</p>
+
+        <div *ngFor="let row of bmrOrphanSteps" class="ebmr-check-step-block ebmr-check-orphan-item">
+          <div class="ebmr-check-step-heading">
+            <span class="ebmr-check-idx">Step (orphan)</span>
+            <span class="ebmr-check-id">ID {{ row.stepId }}</span>
+            <span class="ebmr-check-name">{{ row.stepName || '—' }}</span>
+          </div>
+          <p class="ebmr-check-meta-line" *ngIf="row.savedAt">Saved: {{ row.savedAt }}</p>
+          <div class="ebmr-check-payload-cell">
+            <ng-container *ngIf="payloadViewForStep(row) as v">
+              <ng-container *ngTemplateOutlet="ebmrCheckPayloadView; context: { $implicit: v }"></ng-container>
+            </ng-container>
+          </div>
+        </div>
+
+        <div *ngFor="let row of bmrOrphanSubsteps" class="ebmr-check-substep-block ebmr-check-orphan-item">
+          <div class="ebmr-check-substep-heading">
+            <span class="ebmr-check-idx">Substep (orphan)</span>
+            <span class="ebmr-check-id">Step {{ row.stepId }} / Sub {{ row.subId }}</span>
+          </div>
+          <p class="ebmr-check-meta-line" *ngIf="row.savedAt">Saved: {{ row.savedAt }}</p>
+          <div class="ebmr-check-payload-cell">
+            <ng-container *ngIf="payloadViewForSubstep(row) as sv">
+              <ng-container *ngTemplateOutlet="ebmrCheckPayloadView; context: { $implicit: sv }"></ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="stepRows.length === 0 && substepRows.length === 0" class="alert alert-warning">Snapshot exists but no step rows yet.</div>
+
+      <div class="btn-group" style="margin-top: 16px">
+        <button type="button" class="btn btn-primary" (click)="preview()" [disabled]="!snapshot">Preview / print (full detail)</button>
+        <button type="button" class="btn btn-success" (click)="approve()" [disabled]="!snapshot || (stepRows.length === 0 && substepRows.length === 0)">Approve for PDF</button>
+      </div>
+
+      <ng-template #ebmrCheckPayloadView let-v>
+        <span *ngIf="v.kind === 'empty'" class="text-muted">—</span>
+        <ng-container *ngIf="v.kind === 'row-table'">
+          <ng-container *ngTemplateOutlet="ebmrCheckRowTable; context: { $implicit: v }"></ng-container>
+        </ng-container>
+        <ng-container *ngIf="v.kind === 'wrapper'">
+          <table class="table table-bordered table-sm ebmr-meta-table">
+            <tbody>
+              <tr *ngFor="let m of v.meta">
+                <td class="ebmr-meta-label">{{ m.label }}</td>
+                <td>{{ m.value }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p *ngIf="v.clearance.kind !== 'empty'" class="ebmr-subheading">Line clearance / checklist</p>
+          <ng-container *ngIf="v.clearance.kind === 'row-table'">
+            <ng-container *ngTemplateOutlet="ebmrCheckRowTable; context: { $implicit: v.clearance }"></ng-container>
+          </ng-container>
+          <table *ngIf="v.clearance.kind === 'kv'" class="table table-bordered table-sm ebmr-meta-table">
+            <tbody>
+              <tr *ngFor="let p of v.clearance.pairs">
+                <td class="ebmr-meta-label">{{ p.label }}</td>
+                <td>{{ p.value }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="v.clearance.kind === 'text'" class="ebmr-check-text">{{ v.clearance.text }}</div>
+          <span *ngIf="v.clearance.kind === 'empty'" class="text-muted">—</span>
+        </ng-container>
+        <table *ngIf="v.kind === 'kv'" class="table table-bordered table-sm ebmr-meta-table">
+          <tbody>
+            <tr *ngFor="let p of v.pairs">
+              <td class="ebmr-meta-label">{{ p.label }}</td>
+              <td>{{ p.value }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="v.kind === 'text'" class="ebmr-check-text">{{ v.text }}</div>
+      </ng-template>
+
+      <ng-template #ebmrCheckRowTable let-rt>
+        <table class="table table-bordered table-sm ebmr-nested-table" *ngIf="rt.columns?.length">
+          <thead>
+            <tr>
+              <th>Sr. No.</th>
+              <th *ngFor="let c of rt.columns">{{ c.label }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of rt.rows; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td *ngFor="let c of rt.columns">{{ formatCell(r[c.key]) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </ng-template>
+    </ng-container>
+  </div>
+</div>

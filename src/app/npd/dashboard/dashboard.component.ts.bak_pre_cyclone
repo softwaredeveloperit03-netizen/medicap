@@ -1,0 +1,157 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+  rights: any;
+  dept_head = 'No';
+  trainig_cordinator = 'No';
+
+  cards: DeptCard[] = [
+    { id: 'npdApproval', title: 'RND RM/PM Approval', route: '/rnd/master/material/npdApproval', icon: 'fa-bullhorn', category: 'NPD', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'eqnFromBd', title: 'Enq. From BD', route: 'eqnFromBd', icon: 'fa-bullhorn', category: 'NPD', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'fesibilityForm', title: 'Project Feasibility', route: 'fesibilityForm', icon: 'fa-bullhorn', category: 'NPD', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'fesibilityFormLog', title: 'Feasibility Form Log', route: 'fesibilityFormLog', icon: 'fa-bullhorn', category: 'NPD', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'rndMatREqIssueStatusLog', title: 'Material Issue Request From RND', route: 'rndMatREqIssueStatusLog', icon: 'fa-boxes', category: 'NPD', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'packingMAtDevRequest', title: 'PM Dev. Request From RND', route: 'packingMAtDevRequest', icon: 'fa-boxes', category: 'NPD', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+  ];
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(private service: DataAccessService) {}
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.cards.filter((c) => {
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    const savedPalette = localStorage.getItem('npd_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) return;
+    this.service.get('hr/employee.php?type=getrights&emp_id=' + encodeURIComponent(empId) + '&dep_name=' + encodeURIComponent(localStorage.getItem('department') || '')).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+    });
+  }
+
+  getCategories(): string[] {
+    return ['All', ...Array.from(new Set(this.cards.map(c => c.category)))];
+  }
+
+  getFilteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('npd_dashboard_palette', palette.name);
+    } catch {}
+  }
+}

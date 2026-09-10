@@ -1,0 +1,308 @@
+<div class="card recv-page" *ngIf="!isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Accepted Dispensing Request</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/dispensing/raw/activity">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                  <th>Sr.</th>
+                  <th>{{'common.date' | translate}}</th>
+                  <th style="text-align: left;">Plant</th>
+                  <th style="text-align: left;">BOM For</th>
+                  <th>Receiving no</th>
+                  <th style="text-align: left;">Product Code</th>
+                  <th style="text-align: left;">Product Name</th>
+                  <th>Batch/Lot No.</th>
+                  <th>Batch Size</th>
+                  <th>Request By</th>
+                  <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ result.request_date | date: 'dd-MM-yyyy' }}</td>
+                  <td style="text-align: left;">{{ result.company_unit}}</td>
+                  <td style="text-align: left;">{{ result.bom_for}}</td>
+                  <td>{{ result.document_no }}</td>
+                  <td style="text-align: left;">{{ result.product_code}}</td>
+                  <td style="text-align: left;">{{ result.product_name }}</td>
+                  <td>{{ result.batch_no }}</td>
+                  <td style="text-align: left;">{{ result.min_output_qty }} {{ result.unit }} - {{ result.max_output_qty }} {{ result.unit }}</td>
+                  <td>{{ result.firstname }}-{{ result.request_by }}{{ result.unit }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                  </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="12">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+    <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dispensing Details</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView=false"><clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE</button>
+    </div>
+  </header>
+    <div class="card-text">
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"> <b>Batch/LOT No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch Size/LOT Size:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                    </tr>
+        
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>BMR No.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['document_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr']}}</td>
+                    
+                    </tr>
+                </table>
+                <h3>Bill of Material:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th style="text-align: left;">Material Subtype</th>
+                        <th style="text-align: left;">Material Code</th>
+                        <th style="text-align: left;">Material Name</th>
+                        <th style="text-align: left;">Medicap Lot No</th>
+                        <th style="text-align: left;">AR Avl Qty</th>
+                        <th style="text-align: left;">Grade</th>
+                        <th>LOD %</th>
+                        <th>LOD Qty</th>
+                        <th style="text-align: left;"> Std.Batch Qty</th>
+                        <th style="text-align: left;"> Batch Qty</th>
+                        <th>{{'common.table.action' | translate}}</th>
+                        <th>Label Print</th>
+                    </tr>
+                    <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                        <td style="text-align: left;"></td>
+                        <td style="text-align: left;">avl qty</td>
+                        <td style="text-align: left;">{{ comp.grade }}</td>
+                        <td>{{comp.lod_per }}</td>
+                        <td>{{ comp.lod_qty}}</td>
+                        <td style="text-align: left;">{{ comp.batch_qty }}</td>
+                        <td style="text-align: left;"></td>
+                        <td><button class="btn btn-sm" (click)="show(i)" *ngIf="comp.status == 'pending'">START DISPENSING</button>   
+                            <button class="btn btn-sm" (click)="viewshow(i)" *ngIf="comp.status == 'done'">{{'common.view' | translate}}</button>                 
+                       </td> 
+                       <td><button class="btn btn-sm" (click)="print(comp.material_code)">{{'common.print' | translate}}</button>                    
+                   </td>                     
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+           <button class="btn btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isViewshow" clrModalSize="xl">
+    <h3 class="modal-title">Start Dispensing:</h3>
+    <div class="modal-body">
+         <table class="table">
+            <tr>
+               <td style="text-align: left;"><b>Dispensing No:</b></td>
+               <td style="text-align: left;">{{selectedMaterial['dispensing_no']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><b>Material Name:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['material_name']}}</td>
+             </tr>
+             <tr>
+                <td style="text-align: left;"><b>Grade:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['grade']}}</td>
+             </tr>
+        </table>
+          <h3>Containers:</h3>
+         <table class="table">
+            <tr>
+                <th style="text-align: left;">Medicap Lot No</th>
+                <th style="text-align: left;">Container No</th>
+                <th style="text-align: left;">Gross Wt</th>
+                <th style="text-align: left;">Tare Wt</th>
+                <th style="text-align: left;">Net Wt</th> 
+            </tr>
+            <tr *ngFor="let list of selectedContainer;let i=index;">
+                <td style="text-align: left;">{{list.ar_no}}</td>
+                <td style="text-align: left;">{{list.container_no}}</td>
+                <td style="text-align: left;">{{list.gross_wt}}</td>
+                <td style="text-align: left;">{{list.tare_wt}}</td>
+                <td style="text-align: left;">{{list.net_wt }}</td>       
+            </tr>
+        </table> 
+        <table class="table">
+            <tr>
+                <th  style="text-align: left;">Sr.</th>
+                <th  style="text-align: left;">Medicap Lot No</th>
+                <th  style="text-align: left;">Qty</th>
+            </tr>
+            <tr *ngFor="let ar of selectedMaterial['ars'];let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{ar.ar_no}}</td>
+                <td style="text-align: left;">{{ar.qty}}</td>
+            </tr>
+        </table> 
+        <div class="clr-row">
+            <div class="clr-col-lg-4">
+                <label>Done By</label>
+                <input type="text" name="done_by" ngModel="{{selectedMaterial['firstname']}}-{{selectedMaterial['done_by']}}" required readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-4">
+                <label>RLAF Start Time</label>
+                <input type="text" name="rlaf_start" [(ngModel)]="selectedMaterial['rlaf_start']" required readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-4">
+                <label>Pressure Reading</label>
+                <input type="text" name="pressure_reading" [(ngModel)]="selectedMaterial['pressure_reading']" required readonly tabindex="-1">
+            </div>
+       </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-danger" (click)="isViewshow = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal> 
+
+
+<!-- //start Dispendsing -->
+
+
+<clr-modal [(clrModalOpen)]="isStart" clrModalSize="xl">
+    <h3 class="modal-title">Start Dispensing:</h3>
+    <div class="modal-body">
+        
+        <table class="table">
+            <tr>
+               <td style="text-align: left;width: 20%;"><b>Dispensing No:</b></td>
+               <td style="text-align: left;">{{selectedMaterial['dispensing_no']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><b>Material Name:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['material_name']}}</td>
+             </tr>
+             <tr>
+                <td style="text-align: left;"><b>Grade:</b></td>
+                <td style="text-align: left;">{{selectedMaterial['grade']}}</td>
+             </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6">
+                <label>Required Qty:</label>
+                <input type="text" name="qty" [ngModel]="selectedMaterial['qty']" readonly tabindex="-1">
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6">
+                <label>Balance Qty:</label>
+                <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly tabindex="-1">
+            </div>
+        </div>
+        <h3>Containers:</h3>
+        <form #contanerForm="ngForm">
+            <table class="table">
+                <tr>
+                    <th>Medicap Lot No</th>
+                    <th>Container No</th>
+                    <th>Gross Wt</th>
+                    <th>Tare Wt</th>
+                    <th>Net Wt</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr>
+                    <td style="padding: 0px;">
+                        <select name="ar_no" ngModel required style="margin: 0px;">
+                            <option></option>
+                            <option *ngFor="let ar of selectedMaterial['available_ars']" [value]="ar.ar_no">{{ ar.ar_no }} ({{ ar.balance_qty }})</option>
+                        </select>
+                    </td>
+                    <td style="padding: 0px;"><input type="text" name="container_no" ngModel required  style="margin: 0px;"></td>
+                    <td  style="padding: 0px;"><input type="text" name="gross_wt" [(ngModel)]="gross_wt" required  style="margin: 0px;"></td>
+                    <td  style="padding: 0px;"><input type="text" name="tare_wt" [(ngModel)]="tare_wt" style="margin: 0px;" required></td>
+                    <td style="text-align: left;">{{gross_wt - tare_wt}}</td>
+                    <td  style="padding: 0px;"><button class="btn btn-sm" (click)="adddata(contanerForm)" style="margin: 0px;" >{{'common.add' | translate}}</button></td>
+                </tr>
+                <tr *ngFor="let list of containers;let i=index;">
+                    <td style="text-align: left;">{{list.ar_no}}</td>
+                    <td style="text-align: left;">{{list.container_no}}</td>
+                    <td style="text-align: left;">{{list.gross_wt}}</td>
+                    <td style="text-align: left;">{{list.tare_wt}}</td>
+                    <td style="text-align: left;">{{list.net_wt}}</td>
+                    <td><clr-icon shape="trash" class="is-error" (click)="delData(i)"></clr-icon></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: right;">Total:</td>
+                    <td style="text-align: left;">{{gross_total}}</td>
+                    <td style="text-align: left;">{{tare_total}}</td>
+                    <td style="text-align: left;">{{net_total}}</td>
+                </tr>
+            </table>
+        </form>
+        <table class="table">
+            <tr>
+                <th  style="text-align: left;">Sr.</th>
+                <th  style="text-align: left;">Medicap Lot No</th>
+                <th  style="text-align: left;">Qty</th>
+            </tr>
+            <tr *ngFor="let ar of ars;let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{ar.ar_no}}</td>
+                <td style="text-align: left;">{{ar.qty}}</td>
+            </tr>
+            <tr *ngIf="ars?.length==0">
+                <td>No Record Found!</td>
+            </tr>
+        </table>
+        <div class="clr-row">
+            <div class="clr-col-lg-6">
+                <label>Dispensing Room:</label>
+                <select name="dispensing_room" [(ngModel)]="dispensing_room"  required>
+                    <option>RLAF</option>
+                    <option>Liquid Room</option>
+                    <option>NA</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-6">
+                <label>Done By:</label>
+                <select name="done_by" [(ngModel)]="emp_id"  required>
+                    <option></option>
+                    <option *ngFor="let emp of employees" [value]="emp.emp_id">{{emp.firstname}} {{emp.lastname}}</option>
+                </select>
+            </div>
+            <!-- <div class="clr-col-lg-6" *ngIf="dispensing_room=='RLAF'">
+                <label>Start Time:</label>
+                <input type="time" name="rlaf_start" [(ngModel)]="rlaf_start">
+            </div>
+            <div class="clr-col-lg-6" *ngIf="dispensing_room=='RLAF'">
+                <label>Pressure Differential Reading:</label>
+                <input type="text" name="pressure_reading" [(ngModel)]="pressure_reading ">
+            </div> -->
+        </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" (click)="saveDispensingForm()">{{'common.save' | translate}}</button>
+      <button type="button" class="btn btn-danger" (click)="isStart = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+

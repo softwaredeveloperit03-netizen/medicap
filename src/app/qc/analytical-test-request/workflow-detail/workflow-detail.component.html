@@ -1,0 +1,126 @@
+<div class="atr-page-wrap">
+  <div class="card" *ngIf="loading"><div class="card-block">Loading...</div></div>
+
+  <div class="card atr-form-card" *ngIf="!loading && req">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">
+          FQC-005-06-A — Analytical Test Request
+          <span class="status-badge">{{ statusLabel(req.status) }}</span>
+        </div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+          <button class="btn btn-sm btn-danger" [routerLink]="backRoute()">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <app-atr-form-display [req]="req"></app-atr-form-display>
+
+      <!-- Workflow action panels -->
+      <div class="action-panel" *ngIf="step === 'qa-verify' && req.status === 'pending_qa_verify'">
+        <h4 class="section-heading">QA &amp; Compliance Verification (Section A)</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>MFG Date</label><input type="date" [(ngModel)]="mfgDate" /></div>
+          <div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div>
+        </div>
+        <button class="btn btn-success" (click)="qaVerify()" [disabled]="processing">Verify Section A</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'production-verify' && req.status === 'pending_production_verify'">
+        <h4 class="section-heading">Production Second-Person Verification</h4>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="productionVerify()" [disabled]="processing">Verify Samples</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'lab-receive' && req.status === 'pending_lab_receive'">
+        <h4 class="section-heading">QC Samples Receiving Logbook</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>Lab Sample Number *</label><input type="text" [(ngModel)]="labSampleNumber" /></div>
+        </div>
+        <button class="btn btn-success" (click)="labReceive()" [disabled]="processing">Receive &amp; Log Sample</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'analyst' && req.status === 'pending_analyst'">
+        <h4 class="section-heading">Section B — Laboratory Analyst (Entry)</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-12"><label>Analyst Remark</label><textarea [(ngModel)]="analystRemark" rows="2"></textarea></div>
+        </div>
+        <div class="clr-row">
+          <div class="clr-col-lg-4">
+            <label>Alternative Test Procedure?</label>
+            <select [(ngModel)]="alternativeMethod"><option>No</option><option>Yes</option></select>
+          </div>
+          <div class="clr-col-lg-8" *ngIf="alternativeMethod === 'Yes'">
+            <label>Scientific Justification</label><textarea [(ngModel)]="alternativeJustification" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="field-block">
+          <label>Results Forwarded to Binder</label>
+          <div class="checkbox-grid">
+            <label *ngFor="let b of binderOptions" class="chk-label"><input type="checkbox" [checked]="inArr(binderForward, b)" (change)="toggleArr(binderForward, b)" /> {{ b }}</label>
+          </div>
+          <input *ngIf="inArr(binderForward, 'Others')" type="text" [(ngModel)]="binderForwardOther" placeholder="Other binder" />
+        </div>
+        <div class="field-block">
+          <label>Copy of Results Forwarded To Department</label>
+          <div class="checkbox-grid">
+            <label *ngFor="let d of deptOptions" class="chk-label"><input type="checkbox" [checked]="inArr(deptForward, d)" (change)="toggleArr(deptForward, d)" /> {{ d }}</label>
+          </div>
+          <input *ngIf="inArr(deptForward, 'Others')" type="text" [(ngModel)]="deptForwardOther" placeholder="Other department" />
+        </div>
+        <button class="btn btn-primary" (click)="submitAnalyst()" [disabled]="processing">Submit to Lab Manager</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'alt-method-qa' && req.status === 'pending_alt_method_qa'">
+        <h4 class="section-heading">QA &amp; Compliance — Alternative Method Approval</h4>
+        <p><strong>Justification:</strong> {{ req.alternative_justification }}</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>Decision</label><select [(ngModel)]="altApproved"><option [ngValue]="true">Approve</option><option [ngValue]="false">Reject (Return to Analyst)</option></select></div>
+          <div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div>
+        </div>
+        <button class="btn btn-success" (click)="approveAltMethod()" [disabled]="processing">Submit Decision</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'lab-manager' && req.status === 'pending_lab_manager'">
+        <h4 class="section-heading">Lab Manager Review (Section B)</h4>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="labManagerApprove()" [disabled]="processing">Approve Section B</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'qa-disposition' && req.status === 'pending_qa_disposition'">
+        <h4 class="section-heading">QA Manager — Final Disposition</h4>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Disposition Remark</label><textarea [(ngModel)]="remark" rows="2"></textarea></div></div>
+        <button class="btn btn-success" (click)="qaDisposition()" [disabled]="processing">Complete Disposition</button>
+      </div>
+
+      <div class="workflow-log" *ngIf="workflowLog.length">
+        <h4 class="section-heading">Workflow History</h4>
+        <table class="workflow-table">
+          <thead>
+            <tr>
+              <th>Date / Time</th>
+              <th>Action</th>
+              <th>Status Change</th>
+              <th>By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let w of workflowLog">
+              <td>{{ w.action_date | date:'dd-MM-yyyy HH:mm' }}</td>
+              <td>{{ w.action }}</td>
+              <td>{{ w.from_status }} → {{ w.to_status }}</td>
+              <td>{{ w.action_by_name || w.action_by }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn btn-info" (click)="downloadPdf()">Download PDF</button>
+      <button class="btn btn-danger" [routerLink]="backRoute()">CLOSE</button>
+    </div>
+  </div>
+</div>

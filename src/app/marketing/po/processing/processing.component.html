@@ -1,0 +1,316 @@
+<div class="card po-processing-card" *ngIf="!isView && !showCancelled">
+  <div class="card-header po-processing-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Processing PO/FO Entry
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-warning" (click)="openCancelledOrders()">
+          <clr-icon shape="undo"></clr-icon> Cancelled Orders
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/marketing/po">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+<!-- Pending POs Datagrid -->
+ <div class="processing-entry-toolbar">
+    <label for="newFoEntryType">FO Type:</label>
+    <select id="newFoEntryType" [(ngModel)]="newFoEntryType" class="po-control processing-entry-select"
+      (ngModelChange)="onFoTypeFilterChange()">
+      <option value="FO Service">FO Service</option>
+      <option value="FO Product">FO Product</option>
+    </select>
+    <a class="btn btn-primary btn-sm"
+      [routerLink]="['/marketing/po/new']"
+      [queryParams]="{ foType: newFoEntryType === 'FO Service' ? 'service' : 'product', returnUrl: '/marketing/po/processing' }">
+      New FO Entry
+    </a>
+    <span class="processing-entry-hint">
+      Showing {{ newFoEntryType === 'FO Service' ? 'service-only' : 'product' }} entries.
+    </span>
+  </div>
+ <div class="search-container">
+    <div class="filter-item filter-item--search">
+      <label for="tableSearchInput">Search PO/FO:</label>
+      <input type="text" id="tableSearchInput"
+        placeholder="Type to filter items..."
+        [(ngModel)]="searchText"
+        (ngModelChange)="applyFilter()">
+    </div>
+    <div class="filter-item">
+      <label for="filterDateFrom">Forecast date from:</label>
+      <input type="date" id="filterDateFrom" [(ngModel)]="filterDateFrom" (ngModelChange)="applyFilter()">
+    </div>
+    <div class="filter-item">
+      <label for="filterDateTo">To:</label>
+      <input type="date" id="filterDateTo" [(ngModel)]="filterDateTo" (ngModelChange)="applyFilter()">
+    </div>
+    <button type="button" class="btn btn-sm btn-outline filter-clear-btn"
+      *ngIf="filterDateFrom || filterDateTo"
+      (click)="clearDateFilter()">Clear dates</button>
+  </div>
+<div class="datagrid-wrapper po-processing-grid-wrap">
+  <!-- FO Service log: fixed columns (no product-only fields) -->
+  <clr-datagrid
+    *ngIf="!showProductLogColumns"
+    class="po-processing-grid po-processing-grid--service"
+    [clrDgLoading]="loading"
+    [clrDgStickyHeader]="true">
+    <clr-dg-column>Sr.No.</clr-dg-column>
+    <clr-dg-column>Service Category</clr-dg-column>
+    <clr-dg-column>Group</clr-dg-column>
+    <clr-dg-column>Entry No</clr-dg-column>
+    <clr-dg-column>Forecast No</clr-dg-column>
+    <clr-dg-column>Forecast Date</clr-dg-column>
+    <clr-dg-column>Product Name</clr-dg-column>
+    <clr-dg-column>Entry User Name</clr-dg-column>
+    <clr-dg-column>Approve</clr-dg-column>
+    <clr-dg-column>Cancel</clr-dg-column>
+    <clr-dg-column>Hold</clr-dg-column>
+
+    <clr-dg-row *ngFor="let po of pendingpo; let i = index">
+      <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="getServiceCategoryLabel(po)">{{ getServiceCategoryLabel(po) }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.mainGroupName || '-'">{{ po.mainGroupName || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.doc_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.order_no || po.po_no || '-'">{{ po.order_no || po.po_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" title="Service entry">Service entry</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.emp_name || '-'">{{ po.emp_name || '-' }}</clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-success btn-sm po-action-btn" (click)="updatePendingPOs('Work Order Processed', po)">Approve</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-danger btn-sm po-action-btn" (click)="updatePendingPOs('Rejected', po)">Cancel</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-info btn-sm po-action-btn" (click)="updatePendingPOs('Hold', po)">On Hold</button>
+      </clr-dg-cell>
+    </clr-dg-row>
+    <clr-dg-placeholder>No service entries found.</clr-dg-placeholder>
+  </clr-datagrid>
+
+  <!-- FO Product log: full product columns -->
+  <clr-datagrid
+    *ngIf="showProductLogColumns"
+    class="po-processing-grid po-processing-grid--product"
+    [clrDgLoading]="loading"
+    [clrDgStickyHeader]="true">
+    <clr-dg-column>Sr.No.</clr-dg-column>
+    <clr-dg-column>Service Category</clr-dg-column>
+    <clr-dg-column>Group</clr-dg-column>
+    <clr-dg-column>Entry No</clr-dg-column>
+    <clr-dg-column>Forecast No</clr-dg-column>
+    <clr-dg-column>Forecast Date</clr-dg-column>
+    <clr-dg-column>Plan Month</clr-dg-column>
+    <clr-dg-column>Product Code</clr-dg-column>
+    <clr-dg-column>Product Name</clr-dg-column>
+    <clr-dg-column>Plan Qty</clr-dg-column>
+    <clr-dg-column>Available Batch Sizes</clr-dg-column>
+    <clr-dg-column>Workorder Qty</clr-dg-column>
+    <clr-dg-column>Workorder Count</clr-dg-column>
+    <clr-dg-column>Balance</clr-dg-column>
+    <clr-dg-column>Plan Unit</clr-dg-column>
+    <clr-dg-column>Expected Delivery Date</clr-dg-column>
+    <clr-dg-column>View Uploaded PDF</clr-dg-column>
+    <clr-dg-column>Entry User Name</clr-dg-column>
+    <clr-dg-column>Approve</clr-dg-column>
+    <clr-dg-column>Cancel</clr-dg-column>
+    <clr-dg-column>Hold</clr-dg-column>
+
+    <clr-dg-row *ngFor="let po of pendingpo; let i = index">
+      <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="getServiceCategoryLabel(po)">{{ getServiceCategoryLabel(po) }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.mainGroupName || '-'">{{ po.mainGroupName || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.doc_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.order_no || po.po_no || '-'">{{ po.order_no || po.po_no || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.po_date ? (po.po_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ formatPlanMonth(po.planMonth) }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.product_code || '-'">{{ po.product_code || '-' }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.product_name || '-'">{{ po.product_name || '-' }}</clr-dg-cell>
+      <clr-dg-cell>{{ po.plan_qty || po.planQty || '0' }}</clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-success btn-sm po-batch-btn" (click)="generateBatches(po, null)">
+          {{ getBatchButtonLabel(po) }}
+        </button>
+      </clr-dg-cell>
+      <clr-dg-cell>{{ getRowWorkorderQty(po) }}</clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="formatBatchPlanSummary(po.batches, po.planUnit || po.packingUnit)">
+        {{ formatBatchPlanSummary(po.batches, po.planUnit || po.packingUnit) }}
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <span class="po-balance" [class.po-balance--short]="getRowBalance(po) > 0" [class.po-balance--excess]="getRowBalance(po) < 0">
+          {{ getRowBalance(po) }}
+        </span>
+      </clr-dg-cell>
+      <clr-dg-cell>{{ po.planUnit || po.packingUnit || '-' }}</clr-dg-cell>
+      <clr-dg-cell>
+        <span *ngIf="po.deliveryDate; else noDeliveryPo" class="po-expected-delivery">{{ po.deliveryDate | date:'dd/MM/yyyy' }}</span>
+        <ng-template #noDeliveryPo>-</ng-template>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" [disabled]="po['file']=='NA'" class="btn btn-sm btn-outline po-view-btn" (click)="downloadpo(po['file'])">View</button>
+      </clr-dg-cell>
+      <clr-dg-cell class="po-cell-clip" [title]="po.emp_name || '-'">{{ po.emp_name || '-' }}</clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-success btn-sm po-action-btn" (click)="updatePendingPOs('Work Order Processed', po)">Approve</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-danger btn-sm po-action-btn" (click)="updatePendingPOs('Rejected', po)">Cancel</button>
+      </clr-dg-cell>
+      <clr-dg-cell>
+        <button type="button" class="btn btn-info btn-sm po-action-btn" (click)="updatePendingPOs('Hold', po)">On Hold</button>
+      </clr-dg-cell>
+    </clr-dg-row>
+    <clr-dg-placeholder>No product entries found.</clr-dg-placeholder>
+  </clr-datagrid>
+</div>
+
+<!-- Extra Batch Modal -->
+ 
+
+ 
+    </div>
+  </div>
+</div>
+
+<!-- Cancelled Orders Log -->
+<div class="card po-processing-card" *ngIf="!isView && showCancelled">
+  <div class="card-header po-processing-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Cancelled Orders Log
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-info" (click)="closeCancelledOrders()">
+          <clr-icon shape="arrow" style="transform: rotate(-90deg);"></clr-icon> Back to Processing
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <div class="search-container">
+        <div class="filter-item filter-item--search">
+          <label for="cancelledSearchInput">Search cancelled orders:</label>
+          <input type="text" id="cancelledSearchInput"
+            placeholder="Type to filter items..."
+            [(ngModel)]="cancelledSearch"
+            (ngModelChange)="applyCancelledFilter()">
+        </div>
+      </div>
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="cancelledLoading" [clrDgStickyHeader]="true">
+          <clr-dg-column>Sr.No.</clr-dg-column>
+          <clr-dg-column>Group</clr-dg-column>
+          <clr-dg-column>Entry No</clr-dg-column>
+          <clr-dg-column>Forecast No</clr-dg-column>
+          <clr-dg-column>Forecast Date</clr-dg-column>
+          <clr-dg-column>Plan Month</clr-dg-column>
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Plan Qty</clr-dg-column>
+          <clr-dg-column>Unit</clr-dg-column>
+          <clr-dg-column>Expected Delivery Date</clr-dg-column>
+          <clr-dg-column>Status</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *ngFor="let row of cancelledOrders; let i = index">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.mainGroupName || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.doc_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.order_no || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.po_date ? (row.po_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.planMonth ? formatPlanMonth(row.planMonth) : '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.product_code || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.product_name || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.planQty || row.plan_qty || '0' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.planUnit || row.packingUnit || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ row.deliveryDate ? (row.deliveryDate | date:'dd/MM/yyyy') : '-' }}</clr-dg-cell>
+            <clr-dg-cell>
+              <span class="po-balance po-balance--short">{{ row.status || 'Cancelled' }}</span>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-success btn-sm" (click)="proceedCancelledOrder(row)">Proceed</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>No cancelled orders found.</clr-dg-placeholder>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Batch Planning Modal -->
+<clr-modal [(clrModalOpen)]="batchModalOpen"  [clrModalSize]="'m'">
+  <h3 class="modal-title">
+    {{ batchModalIsEdit ? 'Change' : 'Generate' }} Batches for
+    {{ selectedProduct?.product_name || selectedPO?.product_name || selectedPO?.doc_no }}
+  </h3>
+
+  <div class="modal-body">
+    <div *ngIf="draftBatches?.length" class="po-draft-batches" style="margin-bottom:1rem;">
+      <p style="font-weight:bold; margin-bottom:0.5rem;">Current batch plan (saved on submit):</p>
+      <ul style="margin:0; padding-left:1.25rem;">
+        <li *ngFor="let b of draftBatches; let i = index" style="margin-bottom:0.25rem;">
+          {{ b.count }} × {{ b.size }} {{ b.unit || planDisplayUnit }}
+          <button type="button" class="btn btn-link btn-sm" (click)="removeDraftBatch(i)">Remove</button>
+        </li>
+      </ul>
+    </div>
+    <p style="font-weight:bold; font-size:16px;">
+      Remaining plan qty ({{ planDisplayUnit || 'plan unit' }}): {{ formatQtyWithUnit(remainingQty) }} {{ currentRowExcessLeftover }}
+    </p>
+    <p *ngIf="planDisplayUnit" style="font-size:13px; color:#565656; margin-top:0.25rem;">
+      FO order qty is in {{ planDisplayUnit }}. Batch sizes below use each formula&apos;s own unit (e.g. Nos or Kg).
+    </p>
+    <p *ngIf="batch_formula?.length === 0" style="color:#c92100;">
+      No approved batch formula sizes found for this product.
+    </p>
+
+    <table class="table table-border">
+      <tr>
+        <th>Batch Size</th>
+        <th>No. of Batches</th>
+        <th>Planned Qty</th>
+        <th>Leftover / Excess</th>
+        <th>Action</th>
+      </tr>
+      <tr *ngFor="let row of batchRows; let idx = index">
+        <td style="margin:0;padding:0;">
+          <select [(ngModel)]="row.selectedBatch" (change)="calculateBatch(idx)" style="margin:0; min-width:140px;">
+            <option [ngValue]="null">-- Select Batch Size --</option>
+            <option *ngFor="let b of batch_formula" [ngValue]="b">
+              {{ formatBatchLabel(b) }}
+            </option>
+          </select>
+        </td>
+        <td style="margin:0;padding:0;">
+          <input type="number"  [(ngModel)]="row.numBatches" (change)="updatePlanQty(idx)" [min]="0"   style="margin:0;" />
+        </td>
+        <td>{{ formatQtyWithUnit(row.planQty || 0, row.selectedBatch?.batch_formula_weight_unit) }}</td>
+        <td>{{ formatQtyWithUnit(row.leftover || 0, row.selectedBatch?.batch_formula_weight_unit) }}</td>
+        <td style="margin:0;padding:0;">
+          <button class="btn btn-success btn-sm" (click)="addBatch(idx)"  [disabled]="!row.selectedBatch || row.numBatches <= 0"> Add</button>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-outline" (click)="batchModalOpen=false">Close</button>
+    <button
+      class="btn btn-primary"
+      (click)="commitBatchPlan()"
+      [disabled]="!draftBatches?.length">
+      {{ batchModalIsEdit ? 'Change Batches' : 'Save Batches' }}
+    </button>
+  </div>
+</clr-modal>
+
+
+

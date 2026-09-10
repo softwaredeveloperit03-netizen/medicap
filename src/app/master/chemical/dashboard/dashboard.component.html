@@ -1,0 +1,351 @@
+﻿<div class="card"  *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Chemical Master</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <app-master-excel-provision
+            configId="CHEMICAL"
+            buttonClass="btn btn-sm btn-primary"
+            (uploaded)="getChemiclLog()"
+          ></app-master-excel-provision>
+          <button class="btn btn-sm btn-success" routerLink="new" style="color: white;"> New
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="seedStandardChemicals()" [disabled]="seedingStandards" style="color: white;">
+            {{ seedingStandards ? 'Seeding…' : 'Seed QC Chemicals' }}
+          </button>
+          <button class="btn btn-sm" routerLink="/master" style="background-color: red;color: white;"> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+          <div  class="clr-col-lg-3">
+              <label>Search </label>
+              <input type="text" name="search" placeholder="Search chemical..." [(ngModel)]="searchQuery">
+            </div>        
+            <table class="table">
+              <tr>
+                  <th>{{'common.table.srNo' | translate}}</th>
+                  <th >Chemical No</th>
+                  <!-- <th style="text-align: left;">Date </th> -->
+                  <th >{{'common.name' | translate}}</th>
+                  <th >Grade</th>
+                  <th >Molecular Wt(gm/mole)</th>
+                  <!--  <th style="text-align: left;">Entry By</th>
+                    <th style="text-align: left;">Approve By</th> -->
+                    <th >CAS NO</th>
+                    <th>View</th>
+                    <th>Add Stock</th>
+              </tr>
+              <tr *ngFor="let record of filteredItems; let i = index">
+                  <td>{{ i+1 }}.</td>
+                  <td>{{ record.chemical_no}}</td>
+              <!--     <td style="text-align: left;">{{record.entry_date}}</td> -->
+                  <td>{{record.chemical_name }}</td>
+                  <td>{{ record.grade }}</td>
+                  <td>{{ record.molecular_wt }}</td>
+              <!--     <td style="text-align: left;">{{ record.entry_by }}</td>
+              <td style="text-align: left;">{{ record.approve_by }}</td> -->
+                  <td>{{ record.cas_name }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info" (click)="viewReviews(record)">{{'common.view' | translate}}</button>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary" (click)="addstock(record)" >Add Stock</button>
+              </td>
+              </tr>
+              <tr *ngIf="!filteredItems?.length">
+                <td colspan="8" style="text-align:center;">{{'common.noRecords' | translate}}</td>
+              </tr>
+          </table>
+        
+  </div>
+      </div>
+         <div class="card-footer">
+                  <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+   </div>
+   </div>
+  <!-- 
+  
+  <div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Log Glassware Master</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width:20%;">Name:</td>
+                        <td style="text-align: left;">{{ selectedReview['name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:20%;">Capacity:</td>
+                        <td style="text-align: left;">{{ selectedReview['capacity'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:20%;">Unit:</td>
+                        <td style="text-align: left;">{{ selectedReview['unit'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:20%;">Class:</td>
+                        <td style="text-align: left;">{{ selectedReview['glassware_class'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width:20%;">Description :</td>
+                        <td style="text-align: left;">{{ selectedReview['description'] }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div> 
+  </div>     
+  
+   -->
+  
+   <clr-modal [(clrModalOpen)]="addStock" clrModalSize="xl" >
+      <div class="modal-body">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Chemical</div>
+            <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+             </div>
+          </div>
+        </div>
+        <form #stockForm="ngForm">
+        <div class="card-block">
+          <div class="clr-row">
+                           
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Chemical No :<span style="color:red">*</span></label> 
+                  <input type="text" name="" value="{{ selectedReview1['chemical_no'] }}"readOnly>
+              </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Chemical Name:<span style="color:red">*</span></label>
+                  <input type="text" name="" value="{{ selectedReview1['chemical_name'] }}"readOnly>
+              </div>
+                
+    
+          </div>
+        </div>
+         <form #formlevle="ngForm">
+        <table class="table">
+          <tr>
+            <th style="background-color:#144196;color:white;font-size:15px">{{'common.date' | translate}}</th>
+            <th style="background-color:#144196;color:white;font-size:15px">Pack Size</th>
+            <th style="background-color:#144196;color:white;font-size:15px">{{'common.unit' | translate}}</th>
+            <th style="background-color:#144196;color:white;font-size:15px">Total Available  Packs </th>
+            <th style="background-color:#144196;color:white;font-size:15px">Loose Qty</th>
+            <th style="background-color:#144196;color:white;font-size:15px"> Unit</th>
+            <th style="background-color:#144196;color:white;font-size:15px">Medicap Lot No</th>
+            <th style="background-color:#144196;color:white;font-size:15px">Total qty</th>
+     
+          </tr>
+          <tr>
+            <td style="padding:0px;"> <input type="date" name="date" ngModel required style="margin:0px;"></td>
+            <td style="padding:0px;"> <input type="text" name="pack_size" ngModel required style="margin:0px;"></td>
+            <!-- <td style="padding:0px;"> <input type="text" name="unit" [(ngModel)]="unitValue" (input)="updateUnit2()" required style="margin:0px;"></td> -->
+             
+              <td style="padding:0px;"> 
+                <select name="unit" [(ngModel)]="unitValue" (input)="updateUnit2()" required style="margin:0px;">
+                  <option > </option>
+                  <option *ngFor="let RD of unit" [value]="RD.unit">{{ RD.unit }}</option>
+                </select>
+              </td>
+           
+            <td style="padding:0px;"> <input type="text" name="total_pack" ngModel required style="margin:0px;"></td>
+            <td style="padding:0px;"> <input type="text" name="loose_qty" ngModel required style="margin:0px;"></td>
+            <td style="padding:0px;">  <input type="text" name="unit" [(ngModel)]="unitValue" readonly style="margin:0px;">  </td>
+            <!-- <td style="padding:0px;"> <input type="text" name="unit2" [ngModel]="unit2Value" readonly style="margin:0px;"></td> -->
+            <td style="padding:0px;"> <input type="text" name="batch_no" ngModel required style="margin:0px;"></td>
+            <td style="padding:0px;"> <input type="text" name="total_qty" ngModel required style="margin:0px;"></td>
+        </tr>
+        
+        </table>
+      </form>
+      </form>
+      <div class="modal-footer">
+          <button class="btn btn-primary" (click)="saveStock(formlevle)">{{'common.save' | translate}}</button>
+      </div>
+      </div>
+    </clr-modal>
+  
+   <div class="card" *ngIf="isView">
+   <div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Chemical Master</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm"  (click)="closeView()"style="background-color: red;color: white;"> CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <form #changeform="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Chemical Name<span style="color: red;">*</span></label>
+                        <input type="text" name="chemical_name" [(ngModel)]="chemical_name" required>
+                    </div>
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Grade:</label>
+                        <input type="text" name="grade" [(ngModel)]="grade" readonly>
+                    </div>  
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Molecular Weight(gm/mole)</label>
+                        <input type="number" name="molecular_wt" [(ngModel)]="molecular_wt" >
+                        
+                    </div>
+                    <!-- <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Pack Size<span style="color: red;">*</span></label>
+                        <input type="number" name="pack_size" ngModel required #pack_size="ngModel">
+                        <span style="color: red;" *ngIf="pack_size.invalid && pack_size.touched">Please Enter Pack Size</span>
+                    </div> -->
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>CAS No:</label>
+                        <input type="text" name="cas_name" [(ngModel)]="cas_name">
+                        
+                    </div>
+                    
+                    <!-- <div class="clr-col-lg-4 clr-col-sm-4 clr-col-xs-6">
+                        <label>GST:<span style="color: red;">*</span></label>
+                        <select name="gst" ngModel>
+                            <option *ngFor="let gs of gst" value="{{gs.gst}}">{{gs.gst}}
+                            </option>
+                        </select>
+                    </div> -->
+                    <!-- <div class="clr-col-lg-4 clr-col-sm-4 clr-col-xs-6">
+                       <label>HSN:</label>
+                    <input type="number" name="hsn" ngModel #hsn="ngModel" maxlength="8" >
+                    
+                    <span style="color: red;" *ngIf="hsn.invalid && hsn.touched">Only Numbers 4 to 8 digits</span>
+                    </div> -->
+                    <div class="clr-col-lg-12">
+                        <!-- <form #makeform ="ngForm"> -->
+                            <table class="table table-border">
+                                <tr>
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Make</th>
+                                    <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th> -->
+                                </tr>
+                               
+                                <tr *ngFor="let me of make;let i=index">
+                                    <td>{{i+1}}</td>
+                                    <td style="text-align: left;">{{me.make}}</td>
+                                </tr>
+                                <tr *ngIf="!make?.length">
+                                    <td colspan="2" style="text-align:center;">No make records.</td>
+                                </tr>
+                            </table>
+                        <!-- </form>  -->
+                    </div>
+                    <div class="clr-col-lg-12">
+                        <!-- <form #dataForm="ngForm"> -->
+                            <table class="table table-border" >
+                                         <tr>
+                                           <th style="width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                                           <th style="background-color: rgb(14, 67, 112); color: white;">Manufacturer Name</th>
+                                           <th style="background-color: rgb(14, 67, 112); color: white;">Code</th>
+                                           <!-- <th style="width: 13%;background-color: rgb(14, 67, 112); color: white;">ADD</th> -->
+                                         </tr>
+                                                                 
+                                         <tr *ngFor="let user of manufaturer; let j = index">
+                                             <td>{{ j + 1 }}.</td>
+                                             <td>{{ user.vendor_name }}</td>
+                                             <td>{{ user.vendor_no }}</td>
+                                           </tr>
+                                         <tr *ngIf="!manufaturer?.length">
+                                             <td colspan="3" style="text-align:center;">No manufacturer records.</td>
+                                           </tr>
+                                       </table>
+                                       <!-- </form> -->
+                    </div>
+                </div>
+            </form>
+          
+        </div>
+    </div>
+    </div>
+    <!-- <div class="card-footer">
+        <button class="btn btn-primary" type="button" (click)="save(changeform)" [disabled]="changeform.invalid">{{'common.save' | translate}}</button>
+    </div> -->
+    <div class="datagrid-wrapper">
+     <clr-datagrid [clrDgLoading]="stockLoading" [clrDgStickyHeader]="true">
+      <clr-dg-column class="clr-col-header clr-text-white">{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">{{'common.date' | translate}}</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">Pack Size</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">{{'common.unit' | translate}}</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">Total Available Pack</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">Losse Qty</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">{{'common.unit' | translate}}</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">Medicap Lot No</clr-dg-column>
+      <clr-dg-column class="clr-col-header clr-text-white">Total Qty</clr-dg-column>
+      <!-- <clr-dg-column class="clr-col-header clr-text-white">{{'common.table.action' | translate}}</clr-dg-column> -->
+      
+      
+  
+      <clr-dg-row *clrDgItems="let result of stock; let i = index" [clrDgItem]="result">
+        <clr-dg-cell >{{i+1}}</clr-dg-cell>
+        <clr-dg-cell >{{result.date}}</clr-dg-cell>
+        <clr-dg-cell >{{result.pack_size}}</clr-dg-cell>
+        <clr-dg-cell >{{result.unit}}</clr-dg-cell>
+        <clr-dg-cell >{{result.total_pack}}</clr-dg-cell>
+        <clr-dg-cell >{{result.loose_qty}}</clr-dg-cell>
+        <clr-dg-cell >{{result.unit}}</clr-dg-cell>
+        <clr-dg-cell >{{result.batch_no}}</clr-dg-cell>
+        <clr-dg-cell >{{result.total_qty}}</clr-dg-cell>
+        <!-- <clr-dg-cell>
+        
+          <button class="btn btn-sm btn-icon btn-outline-danger" (click)="deleteStock(calculateStartSrNo() + i)">
+            <clr-icon class="is-warning" shape="trash"></clr-icon>
+          </button>
+    
+  
+        </clr-dg-cell> -->
+      </clr-dg-row>
+      <clr-dg-placeholder *ngIf="!stockLoading && !stock?.length">
+        No stock records. Use Add Stock from the list to enter pack / lot details.
+      </clr-dg-placeholder>
+      <clr-dg-footer>  
+        <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+          {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+          of {{pagination.totalItems}} 
+        </clr-dg-pagination>
+      </clr-dg-footer>
+    </clr-datagrid>
+  </div>
+    <!-- <table class="table table-border">
+      <tr>
+        <th style="background-color:#144196;color:white;font-size:15px">{{'common.date' | translate}}</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Pack Size</th>
+        <th style="background-color:#144196;color:white;font-size:15px">{{'common.unit' | translate}}</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Total Available  Packs </th>
+        <th style="background-color:#144196;color:white;font-size:15px">Loose Qty</th>
+        <th style="background-color:#144196;color:white;font-size:15px"> Unit</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Medicap Lot No</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Toal qty</th>
+        
+  
+       </tr>
+      <tr *ngFor="let user of stock; let i = index">
+        <td style="text-align: left;">{{ i + 1 }}.</td>
+        <td style="text-align: left;">{{user.date}}</td>
+        <td style="text-align: left;">{{user.pack_size}}</td>
+        <td style="text-align: left;">{{user.Unit}}</td>
+        <td style="text-align: left;">{{user.total_pack}}</td>
+        <td style="text-align: left;">{{user.loose_qty}}</td>
+        <td style="text-align: left;">{{user.batch_no}}</td>
+        <td style="text-align: left;">{{user.total_qty}}</td>
+  
+       
+      </tr>
+      <tr *ngIf="stock?.length == 0">
+        <td colspan="8">{{'common.noRecords' | translate}}</td>
+      </tr>
+    </table> -->
+  </div>
+  

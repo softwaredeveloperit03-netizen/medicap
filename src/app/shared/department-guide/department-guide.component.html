@@ -1,0 +1,179 @@
+<div class="guide-shell">
+  <header class="guide-topbar">
+    <div class="guide-topbar__brand">
+      <i class="fas fa-book-open" aria-hidden="true"></i>
+      <div>
+        <p class="guide-eyebrow">Department Guide Book</p>
+        <h1>{{ pageHeading }}</h1>
+      </div>
+    </div>
+    <div class="guide-topbar__meta">
+      <span class="guide-chip" *ngIf="loggedInDept">Logged in: {{ loggedInDept }}</span>
+      <span class="guide-chip guide-chip--focus" *ngIf="focusMode && (context.section || context.moduleId)">
+        Section: {{ context.section || context.moduleId }}
+      </span>
+      <button type="button" class="guide-btn guide-btn--ghost" (click)="printGuide()" title="Print">
+        <i class="fas fa-print"></i> Print
+      </button>
+      <button type="button" class="guide-btn guide-btn--close" (click)="onClose()">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
+  </header>
+
+  <div class="guide-empty" *ngIf="!guide && !focusedModule">
+    <i class="fas fa-info-circle"></i>
+    <h2>No guide book mapped for this login department</h2>
+    <p>
+      Department on login: <strong>{{ loggedInDept || 'Not set' }}</strong>.
+      Contact IT / Admin to map this department label to a guide book.
+    </p>
+    <button type="button" class="guide-btn" (click)="onClose()">Back to department</button>
+  </div>
+
+  <div class="guide-layout" *ngIf="guide || focusedModule">
+    <aside class="guide-toc">
+      <div class="guide-toc__search">
+        <i class="fas fa-search"></i>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search modules" aria-label="Search guide modules" />
+      </div>
+      <div class="toc-focus-banner" *ngIf="focusMode && focusedModule">
+        <i class="fas fa-location-arrow"></i>
+        <div>
+          <strong>Current module</strong>
+          <span>{{ focusedModule.title }}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="toc-item toc-item--overview"
+        *ngIf="guide"
+        [class.active]="selectedModuleId === '__overview'"
+        (click)="selectModule('__overview')"
+      >
+        <i class="fas fa-sitemap"></i>
+        <span>Department Overview</span>
+      </button>
+      <p class="toc-label">{{ focusMode ? 'This & related modules' : 'Modules' }}</p>
+      <button
+        type="button"
+        class="toc-item"
+        *ngFor="let mod of filteredModules; trackBy: trackByModuleId"
+        [class.active]="selectedModuleId === mod.id"
+        (click)="selectModule(mod.id)"
+      >
+        <i class="fas fa-file-alt"></i>
+        <span>{{ mod.title }}</span>
+      </button>
+      <p class="toc-empty" *ngIf="filteredModules.length === 0">No modules match your search.</p>
+    </aside>
+
+    <main class="guide-document" *ngIf="selectedModuleId === '__overview' && guide as book; else moduleDoc">
+      <section class="doc-section">
+        <h2>1. Purpose &amp; Scope</h2>
+        <p>{{ book.overview }}</p>
+      </section>
+
+      <section class="doc-section">
+        <h2>2. Department Workflow Pattern</h2>
+        <div class="flow-diagram" aria-label="Department flow diagram">
+          <div class="flow-step" *ngFor="let step of book.departmentFlow; let i = index; let last = last">
+            <div class="flow-step__node">
+              <span class="flow-step__num">{{ i + 1 }}</span>
+              <span class="flow-step__text">{{ step }}</span>
+            </div>
+            <div class="flow-step__arrow" *ngIf="!last" aria-hidden="true">
+              <i class="fas fa-arrow-down"></i>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>3. General Precautions</h2>
+        <ul class="doc-list doc-list--warn">
+          <li *ngFor="let p of book.generalPrecautions">{{ p }}</li>
+        </ul>
+      </section>
+
+      <section class="doc-section">
+        <h2>4. Module Index</h2>
+        <ol class="doc-list">
+          <li *ngFor="let mod of book.modules">
+            <button type="button" class="linkish" (click)="selectModule(mod.id)">{{ mod.title }}</button>
+            — {{ mod.purpose }}
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <ng-template #moduleDoc>
+      <main class="guide-document" *ngIf="selectedModule as mod">
+        <header class="doc-header">
+          <p class="doc-kicker">Module Guide</p>
+          <h2>{{ mod.title }}</h2>
+          <p class="doc-purpose">{{ mod.purpose }}</p>
+        </header>
+
+        <section class="doc-section">
+          <h3>A. Module Flow Diagram</h3>
+          <div class="flow-diagram flow-diagram--horizontal" aria-label="Module flow diagram">
+            <ng-container *ngFor="let step of mod.flowSteps; let i = index; let last = last">
+              <div class="flow-pill">
+                <em>{{ i + 1 }}</em>
+                <span>{{ step }}</span>
+              </div>
+              <i class="fas fa-chevron-right flow-h-arrow" *ngIf="!last" aria-hidden="true"></i>
+            </ng-container>
+          </div>
+        </section>
+
+        <section class="doc-section">
+          <h3>B. Detailed Procedure (step-by-step)</h3>
+          <ol class="procedure-list">
+            <li *ngFor="let step of mod.workflow">{{ step }}</li>
+          </ol>
+        </section>
+
+        <section class="doc-section">
+          <h3>C. Detailed Instructions</h3>
+          <ul class="doc-list">
+            <li *ngFor="let tip of mod.instructions">{{ tip }}</li>
+          </ul>
+        </section>
+
+        <section class="doc-section">
+          <h3>D. Compulsory &amp; Optional Fields</h3>
+          <div class="fields-grid">
+            <div class="fields-card fields-card--required">
+              <h4><i class="fas fa-asterisk"></i> Compulsory fields</h4>
+              <ul>
+                <li *ngFor="let f of mod.compulsoryFields">
+                  <strong>{{ f.name }}</strong>
+                  <span *ngIf="f.note"> — {{ f.note }}</span>
+                </li>
+              </ul>
+            </div>
+            <div class="fields-card fields-card--optional">
+              <h4><i class="fas fa-circle"></i> Optional fields</h4>
+              <ul>
+                <li *ngFor="let f of mod.optionalFields">
+                  <strong>{{ f.name }}</strong>
+                  <span *ngIf="f.note"> — {{ f.note }}</span>
+                </li>
+                <li *ngIf="!mod.optionalFields?.length">None specified for this module.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section">
+          <h3>E. Precautions</h3>
+          <ul class="doc-list doc-list--warn">
+            <li *ngFor="let p of mod.precautions">{{ p }}</li>
+          </ul>
+        </section>
+      </main>
+    </ng-template>
+  </div>
+</div>

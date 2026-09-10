@@ -1,0 +1,86 @@
+/** Standard HPLC / GC columns for Medicap plant seed (matches Cyclone seed list). */
+export interface StandardHplcColumnTemplate {
+  technique: 'HPLC' | 'GC';
+  column_name: string;
+  usp_l_code: string;
+  pharmacopoeia_reference: string;
+  stationary_phase: string;
+  dimensions_mm: string;
+  particle_size_um: string;
+  pore_size_a: string;
+  end_capped: 'Yes' | 'No';
+  manufacturer: string;
+  catalog_no: string;
+}
+
+export const STANDARD_HPLC_COLUMN_TEMPLATES: StandardHplcColumnTemplate[] = [
+  // HPLC — C18 (L1)
+  { technique: 'HPLC', column_name: 'Inertsil ODS-3 C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP/BP/IP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'GL Sciences', catalog_no: '5020-01731' },
+  { technique: 'HPLC', column_name: 'Inertsil ODS-3 C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP/BP/IP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '150 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'GL Sciences', catalog_no: '5020-01730' },
+  { technique: 'HPLC', column_name: 'Hypersil BDS C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '120', end_capped: 'Yes', manufacturer: 'Thermo Scientific', catalog_no: '28105-254630' },
+  { technique: 'HPLC', column_name: 'Symmetry C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: 'WAT054275' },
+  { technique: 'HPLC', column_name: 'XBridge C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '130', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186003117' },
+  { technique: 'HPLC', column_name: 'Zorbax Eclipse XDB-C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '150 x 4.6', particle_size_um: '5', pore_size_a: '80', end_capped: 'Yes', manufacturer: 'Agilent', catalog_no: '993967-902' },
+  { technique: 'HPLC', column_name: 'Kromasil 100-5-C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'AkzoNobel', catalog_no: 'M05CLA25' },
+  { technique: 'HPLC', column_name: 'Luna C18(2)', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Phenomenex', catalog_no: '00G-4252-E0' },
+  { technique: 'HPLC', column_name: 'ACE 5 C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Advanced Chromatography Technologies', catalog_no: 'ACE-121-2546' },
+  { technique: 'HPLC', column_name: 'Inertsil ODS-3V C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'GL Sciences', catalog_no: '5020-06819' },
+  { technique: 'HPLC', column_name: 'Nucleosil C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Macherey-Nagel', catalog_no: '720014.46' },
+  { technique: 'HPLC', column_name: 'LiChrospher RP-18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP/EP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.0', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Merck', catalog_no: '1.50983.0001' },
+  { technique: 'HPLC', column_name: 'Purospher STAR RP-18e', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '120', end_capped: 'Yes', manufacturer: 'Merck', catalog_no: '1.51460.0001' },
+  { technique: 'HPLC', column_name: 'SunFire C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186002560' },
+  { technique: 'HPLC', column_name: 'Atlantis T3', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186003748' },
+
+  // HPLC — C8 (L7)
+  { technique: 'HPLC', column_name: 'Zorbax SB-C8', usp_l_code: 'L7', pharmacopoeia_reference: 'USP', stationary_phase: 'Octylsilane (C8)', dimensions_mm: '150 x 4.6', particle_size_um: '5', pore_size_a: '80', end_capped: 'No', manufacturer: 'Agilent', catalog_no: '883975-906' },
+  { technique: 'HPLC', column_name: 'Symmetry C8', usp_l_code: 'L7', pharmacopoeia_reference: 'USP', stationary_phase: 'Octylsilane (C8)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: 'WAT054260' },
+  { technique: 'HPLC', column_name: 'Inertsil C8-3', usp_l_code: 'L7', pharmacopoeia_reference: 'USP', stationary_phase: 'Octylsilane (C8)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'GL Sciences', catalog_no: '5020-07424' },
+  { technique: 'HPLC', column_name: 'Luna C8(2)', usp_l_code: 'L7', pharmacopoeia_reference: 'USP', stationary_phase: 'Octylsilane (C8)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Phenomenex', catalog_no: '00G-4249-E0' },
+
+  // HPLC — Phenyl (L11)
+  { technique: 'HPLC', column_name: 'Zorbax SB-Phenyl', usp_l_code: 'L11', pharmacopoeia_reference: 'USP', stationary_phase: 'Phenyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '80', end_capped: 'No', manufacturer: 'Agilent', catalog_no: '880975-912' },
+  { technique: 'HPLC', column_name: 'Luna Phenyl-Hexyl', usp_l_code: 'L11', pharmacopoeia_reference: 'USP', stationary_phase: 'Phenyl-Hexyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Phenomenex', catalog_no: '00G-4257-E0' },
+  { technique: 'HPLC', column_name: 'XBridge Phenyl', usp_l_code: 'L11', pharmacopoeia_reference: 'USP', stationary_phase: 'Phenyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '130', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186003335' },
+
+  // HPLC — Cyano (L10)
+  { technique: 'HPLC', column_name: 'Zorbax SB-CN', usp_l_code: 'L10', pharmacopoeia_reference: 'USP', stationary_phase: 'Cyanopropyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '80', end_capped: 'No', manufacturer: 'Agilent', catalog_no: '880975-905' },
+  { technique: 'HPLC', column_name: 'Luna CN', usp_l_code: 'L10', pharmacopoeia_reference: 'USP', stationary_phase: 'Cyanopropyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'No', manufacturer: 'Phenomenex', catalog_no: '00G-4255-E0' },
+
+  // HPLC — Amino (L8)
+  { technique: 'HPLC', column_name: 'Luna NH2 Amino', usp_l_code: 'L8', pharmacopoeia_reference: 'USP', stationary_phase: 'Aminopropyl', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'No', manufacturer: 'Phenomenex', catalog_no: '00G-4377-E0' },
+
+  // HPLC — Silica / normal phase (L3)
+  { technique: 'HPLC', column_name: 'Zorbax RX-SIL', usp_l_code: 'L3', pharmacopoeia_reference: 'USP', stationary_phase: 'Bare Silica', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '80', end_capped: 'No', manufacturer: 'Agilent', catalog_no: '880975-901' },
+  { technique: 'HPLC', column_name: 'Luna Silica', usp_l_code: 'L3', pharmacopoeia_reference: 'USP', stationary_phase: 'Bare Silica', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '100', end_capped: 'No', manufacturer: 'Phenomenex', catalog_no: '00G-4274-E0' },
+
+  // HPLC — C4 (L26)
+  { technique: 'HPLC', column_name: 'Jupiter C4', usp_l_code: 'L26', pharmacopoeia_reference: 'USP', stationary_phase: 'Butylsilane (C4)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '300', end_capped: 'Yes', manufacturer: 'Phenomenex', catalog_no: '00G-4167-E0' },
+
+  // HPLC — Chiral
+  { technique: 'HPLC', column_name: 'Chiralpak IA', usp_l_code: 'L51', pharmacopoeia_reference: 'USP', stationary_phase: 'Amylose tris(3,5-dimethylphenylcarbamate)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '1000', end_capped: 'No', manufacturer: 'Daicel', catalog_no: '80524' },
+  { technique: 'HPLC', column_name: 'Chiralcel OD-H', usp_l_code: 'L40', pharmacopoeia_reference: 'USP', stationary_phase: 'Cellulose tris(3,5-dimethylphenylcarbamate)', dimensions_mm: '250 x 4.6', particle_size_um: '5', pore_size_a: '1000', end_capped: 'No', manufacturer: 'Daicel', catalog_no: '14025' },
+
+  // HPLC — HILIC / sugars
+  { technique: 'HPLC', column_name: 'ZIC-HILIC', usp_l_code: 'L3', pharmacopoeia_reference: 'USP', stationary_phase: 'Zwitterionic Sulfobetaine', dimensions_mm: '150 x 4.6', particle_size_um: '5', pore_size_a: '200', end_capped: 'No', manufacturer: 'Merck', catalog_no: '1.50442.0001' },
+  { technique: 'HPLC', column_name: 'Aminex HPX-87H', usp_l_code: 'L17', pharmacopoeia_reference: 'USP', stationary_phase: 'Sulphonated styrene-divinylbenzene (H+)', dimensions_mm: '300 x 7.8', particle_size_um: '9', pore_size_a: '', end_capped: 'No', manufacturer: 'Bio-Rad', catalog_no: '1250140' },
+  { technique: 'HPLC', column_name: 'Aminex HPX-87C', usp_l_code: 'L19', pharmacopoeia_reference: 'USP', stationary_phase: 'Sulphonated styrene-divinylbenzene (Ca2+)', dimensions_mm: '300 x 7.8', particle_size_um: '9', pore_size_a: '', end_capped: 'No', manufacturer: 'Bio-Rad', catalog_no: '1250095' },
+
+  // HPLC — Guard
+  { technique: 'HPLC', column_name: 'Inertsil ODS-3 Guard C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '10 x 4.0', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'GL Sciences', catalog_no: '5020-08726' },
+  { technique: 'HPLC', column_name: 'Symmetry C18 Guard', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '20 x 3.9', particle_size_um: '5', pore_size_a: '100', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: 'WAT054225' },
+
+  // HPLC — UPLC / sub-2um
+  { technique: 'HPLC', column_name: 'Acquity BEH C18', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Ethylene Bridged Hybrid C18', dimensions_mm: '100 x 2.1', particle_size_um: '1.7', pore_size_a: '130', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186002352' },
+  { technique: 'HPLC', column_name: 'Zorbax Eclipse Plus C18 RRHD', usp_l_code: 'L1', pharmacopoeia_reference: 'USP', stationary_phase: 'Octadecylsilane (C18)', dimensions_mm: '100 x 2.1', particle_size_um: '1.8', pore_size_a: '95', end_capped: 'Yes', manufacturer: 'Agilent', catalog_no: '959758-902' },
+  { technique: 'HPLC', column_name: 'Acquity BEH C8', usp_l_code: 'L7', pharmacopoeia_reference: 'USP', stationary_phase: 'Ethylene Bridged Hybrid C8', dimensions_mm: '100 x 2.1', particle_size_um: '1.7', pore_size_a: '130', end_capped: 'Yes', manufacturer: 'Waters', catalog_no: '186002878' },
+
+  // GC columns
+  { technique: 'GC', column_name: 'DB-1 (100% Dimethylpolysiloxane)', usp_l_code: 'G1', pharmacopoeia_reference: 'USP', stationary_phase: '100% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '0.25 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '123-1032' },
+  { technique: 'GC', column_name: 'DB-5 (5% Phenyl 95% Methylpolysiloxane)', usp_l_code: 'G27', pharmacopoeia_reference: 'USP', stationary_phase: '5% Diphenyl 95% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '0.25 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '123-5032' },
+  { technique: 'GC', column_name: 'DB-624', usp_l_code: 'G43', pharmacopoeia_reference: 'USP', stationary_phase: '6% Cyanopropylphenyl 94% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '1.80 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '123-1334' },
+  { technique: 'GC', column_name: 'DB-WAX (Polyethylene Glycol)', usp_l_code: 'G16', pharmacopoeia_reference: 'USP', stationary_phase: 'Polyethylene Glycol', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '0.25 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '123-7032' },
+  { technique: 'GC', column_name: 'HP-INNOWax', usp_l_code: 'G16', pharmacopoeia_reference: 'USP', stationary_phase: 'Polyethylene Glycol', dimensions_mm: '30 m x 0.53 mm', particle_size_um: '1.00 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '19091N-215' },
+  { technique: 'GC', column_name: 'Rtx-5', usp_l_code: 'G27', pharmacopoeia_reference: 'USP', stationary_phase: '5% Diphenyl 95% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.53 mm', particle_size_um: '1.50 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Restek', catalog_no: '10253' },
+  { technique: 'GC', column_name: 'DB-1701', usp_l_code: 'G46', pharmacopoeia_reference: 'USP', stationary_phase: '14% Cyanopropylphenyl 86% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '0.25 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '123-0732' },
+  { technique: 'GC', column_name: 'HP-5', usp_l_code: 'G27', pharmacopoeia_reference: 'USP', stationary_phase: '5% Diphenyl 95% Dimethylpolysiloxane', dimensions_mm: '30 m x 0.32 mm', particle_size_um: '0.25 (film um)', pore_size_a: '', end_capped: 'No', manufacturer: 'Agilent J&W', catalog_no: '19091J-413' },
+];

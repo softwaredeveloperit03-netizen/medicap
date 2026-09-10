@@ -1,0 +1,105 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+declare let alertify: any;
+
+interface DashCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  badgeCount?: () => number;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+
+  pageTitle = 'Recruitment';
+  sectionLabel = 'Recruitment modules';
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  unreadrinterview = 0;
+  unreadrmanreq = 0;
+
+  cards: DashCard[] = [
+    { id: 'requisition', title: 'Manpower Requisition', description: 'Create and manage manpower requisitions', route: 'requisition', icon: 'fa-user-plus', category: 'Recruitment', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', badgeCount: () => this.unreadrmanreq },
+    { id: 'interview', title: 'Interview Process', description: 'Manage interview process', route: 'candidate/new', icon: 'fa-user-check', category: 'Recruitment', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'final-hr', title: 'Final HR Round', description: 'Final HR round', route: 'candidate/finalHrRound', icon: 'fa-file-signature', category: 'Recruitment', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    { id: 'selected', title: 'Selected Candidates', description: 'Selected candidates for further process', route: 'candidate/log', icon: 'fa-clipboard-list', category: 'Recruitment', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', badgeCount: () => this.unreadrinterview },
+  ];
+
+  constructor(private service: DataAccessService) {}
+
+  ngOnInit() {
+    this.getNotification();
+    const savedPalette = localStorage.getItem('hr_sub_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  getNotification() {
+    this.getPendingreqman();
+    this.getPendingInterview();
+  }
+
+  getPendingreqman() {
+    this.service.get('notification.php?type=getRequisitionrevisionNotification').subscribe((response: any) => {
+      this.unreadrmanreq = Number(response['Pending_req']);
+    });
+  }
+
+  getPendingInterview() {
+    this.service.get('notification.php?type=getPendingInterviews').subscribe((response: any) => {
+      this.unreadrinterview = Number(response['Pending_interview']);
+    });
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.cards.map(c => c.category))));
+  }
+
+  getFilteredCards(): DashCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_i: number, card: DashCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('hr_sub_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+}

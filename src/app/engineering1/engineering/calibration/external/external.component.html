@@ -1,0 +1,176 @@
+﻿<div class="card" >
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">External Calibration Calendar</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/engineering/calibration" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+  </div>
+  <div class="card-block">
+      <div class="card-text">
+          <div class="clr-row">
+              <div class="btn btn-success clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12"  (click)="previousMonth()" >
+                  Previous Month
+              </div>
+              <div class="btn btn-outline-secondary clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12" (click)="currentMonth()"> 
+                  <b>{{ displayMonth }}</b>
+              </div>
+              <div class="btn btn-success clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12"  (click)="nextMonth()">
+                  Next Month
+              </div>
+              <div class="  clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12"  >
+
+              </div>
+           </div>
+           <div class="clr-row">
+            <div class="clr-col-lg-5">
+              <label>Search </label>
+              <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+            </div>
+            <div class="clr-col-lg-4">
+              <label>Frequency </label>
+              <select name="frequency"  [(ngModel)]="searchQuery">
+                  <option ></option>
+                  <option >Daily</option>
+                  <option >Weekly</option>
+                  <option >FortNightly</option>
+                  <option >Monthly</option>
+                  <option >Quarterly</option>
+                  <option >Half-Yearly</option>
+                  <option >Annually</option>
+   
+              </select>
+             </div>
+          </div>
+
+          
+        <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+          <clr-dg-column>Tag No</clr-dg-column>
+          <clr-dg-column>Equipment Name</clr-dg-column>
+           <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+          <clr-dg-column>Location</clr-dg-column>
+            <clr-dg-column>Due Date</clr-dg-column>
+           <clr-dg-column>Frequency</clr-dg-column>
+           <clr-dg-column>Remaining Days</clr-dg-column>
+           <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+    
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+             <clr-dg-cell>{{ result.tag_no }}</clr-dg-cell>
+             <clr-dg-cell>{{ result.equipment_name }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.department }}</clr-dg-cell>
+             <clr-dg-cell>{{ result.location || 'N/A'}}</clr-dg-cell>
+              <clr-dg-cell><b>{{ result.due_date}}</b></clr-dg-cell>
+            <clr-dg-cell><b>{{ result.frequency}}</b></clr-dg-cell>
+            <clr-dg-cell>
+              <span class="btn btn-sm btn-danger" *ngIf="result.remaining_days < 0 "  ><b>Due Date Passed ( {{ result.remaining_days}} )</b></span>
+              <span class="btn btn-sm btn-success" *ngIf="result.remaining_days == 0 "><b>{{ result.remaining_days}}</b></span>
+              <span class="btn btn-sm" style="background-color: rgb(207, 240, 141);" *ngIf="result.remaining_days > 0 "><b>{{ result.remaining_days}}</b></span>
+            </clr-dg-cell>
+      
+            <clr-dg-cell>
+              <button *ngIf="result.remaining_days < 0 && result.cali_status == 'Pending'" class="btn btn-sm btn-primary" (click)="view(i)">
+                 Perform Calibration
+              </button>
+              <button *ngIf="result.remaining_days == 0 && result.cali_status == 'Pending' " class="btn btn-sm btn-success" (click)="view(i)">
+                 Perform Calibration
+              </button>
+              <button *ngIf="result.remaining_days > 0 && result.cali_status == 'Pending'" class="btn btn-sm"  (click)="view(i)"  style="background-color: rgb(207, 240, 141);">
+                 Perform Calibration
+              </button>
+              <button *ngIf="result.cali_status == 'Done'" class="btn btn-sm"  (click)="view1(i)"  style="background-color: rgb(207, 240, 141);">
+                View Details
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+  </div>
+</div>
+
+
+
+
+
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="small" clrModalClosable="false">
+  <h3 class="modal-title">Perform Calibration</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <form #caliform="ngForm">
+
+        
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Calibration Date :<span style="color: red">*</span></b></label>
+            <input type="date" name="calibration_date" [(ngModel)]="calibration_date" required>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Agency Name :<span style="color: red">*</span></b></label>
+            <input type="text" name="agency_name" [(ngModel)]="agency_name" required>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Upload File<span style="color: red">*</span></b></label>
+            <input type="file" name="report_file" (change)="onFileChanged($event)" ngModel required>
+          </div>
+
+    
+      </form>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="editEquipment(caliform)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isView1" clrModalSize="small" clrModalClosable="false">
+  <h3 class="modal-title">View Calibration Details</h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <form #caliform="ngForm">
+
+        
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Calibration Date :</b></label>
+            <input type="text" name="calibration_date" [(ngModel)]="selectedResult['calibration_date']" readonly>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Agency Name :</b></label>
+            <input type="text" name="agency_name" [(ngModel)]="selectedResult['agency_name']" readonly>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Entry By :</b></label>
+            <input type="text" name="entry_by" [(ngModel)]="selectedResult['entry_by']" readonly>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>Entry On :</b></label>
+            <input type="text" name="entry_date" [(ngModel)]="selectedResult['entry_date']" readonly>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+            <label><b>View File</b></label><br>
+            <button class="btn btn-success" (click)="viewPhoto()">{{'common.view' | translate}}</button>
+           </div>
+
+    
+      </form>
+    </div>
+  </div>
+  <div class="modal-footer">
+     <button type="button" class="btn btn-danger" (click)="isView1 = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+
+

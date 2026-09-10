@@ -1,0 +1,169 @@
+<div class="logs-shell">
+  <div class="logs-header">
+    <div class="title-block">
+      <h2>MOA/STP Revision</h2>
+      <p>Unified logs table for revision workflow</p>
+    </div>
+
+    <div class="actions">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search in logs"
+          aria-label="Search MOA/STP revision logs"
+        />
+      </div>
+      <button class="btn btn-sm btn-primary" routerLink="/master/moa-stp-copy/revision">
+        Back To Revision
+      </button>
+      <button class="btn btn-sm btn-danger" routerLink="/master/moa-stp-copy/revision">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <clr-datagrid [clrDgLoading]="loading" >
+      <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column>MOA/STP No.</clr-dg-column>
+      <clr-dg-column>Test Type</clr-dg-column>
+      <clr-dg-column>Test Name</clr-dg-column>
+      <clr-dg-column>Version No.</clr-dg-column>
+      <clr-dg-column>Effective Date</clr-dg-column>
+      <clr-dg-column>Next Review Date</clr-dg-column>
+      <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      <clr-dg-column>Revision Status</clr-dg-column>
+      <clr-dg-column>Draft MOA/STP</clr-dg-column>
+      <clr-dg-column>Workflow Status</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let result of filteredLogs; let i = index" [clrDgItem]="result">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.test_method_no || ('TEST-' + result.id) }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.test_type || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.test || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ getDisplayVersionNo(result) }}</clr-dg-cell>
+        <clr-dg-cell>{{ getEffectiveDate(result) | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ getNextReviewDate(result) | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <strong [class.status-revision-due]="getDisplayStatus(result) === 'Revision Due'" [class.revision-blink]="isStatusBlinking(result)">
+            {{ getDisplayStatus(result) | uppercase }}
+          </strong>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button
+            class="btn btn-sm"
+            [ngClass]="getRevisionButtonClass(result)"
+            [disabled]="isRevisionButtonDisabled(result)"
+            (click)="onRevisionAction(result)"
+          >
+            {{ getRevisionButtonLabel(result) }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <button
+            class="btn btn-sm"
+            [ngClass]="getDraftButtonClass(result)"
+            [class.bw-inactive]="isDraftButtonDisabled(result)"
+            [disabled]="isDraftButtonDisabled(result)"
+            (click)="openDraft(result)"
+          >
+            {{ getDraftButtonLabel(result) }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <span [class.blocked-status]="getRevisionWorkflowStatus(result) === 'Blocked'" [class.released-status]="getRevisionWorkflowStatus(result) === 'Released Under Change Control'">
+            {{ getRevisionWorkflowStatus(result) }}
+          </span>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+
+    <div class="empty-state" *ngIf="!loading && filteredLogs.length === 0">
+      No MOA/STP logs found.
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="revisionModalOpen" [clrModalClosable]="true" clrModalSize="md">
+  <h3 class="modal-title">Revision Request Form</h3>
+  <div class="modal-body" *ngIf="selectedDoc">
+    <form>
+      <div class="clr-form-group">
+        <label for="rev-reason">Reason for Revision <span class="required">*</span></label>
+        <input id="rev-reason" type="text" class="clr-input" [(ngModel)]="revisionForm.reason" [ngModelOptions]="{standalone: true}" required placeholder="Enter reason" aria-label="Reason for revision">
+      </div>
+      <div class="clr-form-group">
+        <label for="rev-remarks">{{'common.remarks' | translate}}</label>
+        <textarea id="rev-remarks" class="clr-textarea" [(ngModel)]="revisionForm.remarks" [ngModelOptions]="{standalone: true}" rows="3" placeholder="Remarks (optional)" aria-label="Remarks"></textarea>
+      </div>
+      <div class="clr-form-group" *ngIf="selectedDoc">
+        <label>Document</label>
+        <p class="static-value">{{ selectedDoc.test_method_no || ('TEST-' + selectedDoc.id) }} - {{ selectedDoc.test || 'NA' }}</p>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()" [disabled]="!revisionForm.reason">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeRevisionModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="draftModalOpen" [clrModalClosable]="true" clrModalSize="lg">
+  <h3 class="modal-title">Draft MOA/STP</h3>
+  <div class="modal-body" *ngIf="!draftLoading">
+    <div class="clr-row">
+      <div class="clr-col-md-4">
+        <label>MOA/STP No.</label>
+        <input class="clr-input" [(ngModel)]="draftForm.doc_no" [ngModelOptions]="{standalone: true}" [readonly]="true">
+      </div>
+      <div class="clr-col-md-4">
+        <label>Current Version</label>
+        <input class="clr-input" [(ngModel)]="draftForm.source_version_no" [ngModelOptions]="{standalone: true}" [readonly]="true">
+      </div>
+      <div class="clr-col-md-4">
+        <label>Draft Version</label>
+        <input class="clr-input" [(ngModel)]="draftForm.draft_version_no" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly">
+      </div>
+      <div class="clr-col-md-6">
+        <label>Test Type</label>
+        <input class="clr-input" [(ngModel)]="draftForm.test_type" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly">
+      </div>
+      <div class="clr-col-md-6">
+        <label>Test Name</label>
+        <input class="clr-input" [(ngModel)]="draftForm.test" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly">
+      </div>
+      <div class="clr-col-md-6">
+        <label>Effective Date</label>
+        <input type="date" class="clr-input" [(ngModel)]="draftForm.effective_date" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly">
+      </div>
+      <div class="clr-col-md-6">
+        <label>Next Review Date</label>
+        <input type="date" class="clr-input" [(ngModel)]="draftForm.review_date" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly">
+      </div>
+    </div>
+
+    <h5 style="margin-top: 12px;">Subtests</h5>
+    <button class="btn btn-sm btn-primary" *ngIf="!draftReadOnly" (click)="addDraftSubtest()">Add Subtest</button>
+    <table class="table table-bordered table-sm">
+      <tr>
+        <th>Subtest</th><th *ngIf="!draftReadOnly">Action</th>
+      </tr>
+      <tr *ngFor="let s of draftSubtests; let i = index">
+        <td><input class="clr-input" [(ngModel)]="s.subtest" [ngModelOptions]="{standalone: true}" [readonly]="draftReadOnly"></td>
+        <td *ngIf="!draftReadOnly"><button class="btn btn-sm btn-danger" (click)="removeDraftSubtest(i)">Del</button></td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-body" *ngIf="draftLoading">
+    Loading draft...
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" *ngIf="!draftReadOnly" (click)="saveDraft()" [disabled]="draftSaving">
+      {{ draftSaving ? 'Saving...' : 'Save Draft' }}
+    </button>
+    <button type="button" class="btn btn-outline" (click)="closeDraftModal()">Close</button>
+  </div>
+</clr-modal>
+

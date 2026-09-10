@@ -1,0 +1,725 @@
+<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Batch Planning Form
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <!-- <button class="btn btn-sm btn-success" routerLink="/planning/production/bulk">Bulk Planning</button> -->
+                <button class="btn btn-sm btn-danger" routerLink="/planning/production">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <form #batchForm="ngForm">
+            <div class="card-text">
+                <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Plan Type:</label>
+                        <select name="plan_type" [(ngModel)]="plan_type" required>
+                            <option>Batch Wise</option>
+                            <option>Total Qty Wise</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Product Type:</label>
+                        <select name="dosage_form" [(ngModel)]="dosage_form" required
+                            (change)="getProducts(dosage_form)">
+                            <option></option>
+                            <option *ngFor="let type of fg_sub_materials">{{type.dosage_form_type}}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Product Name:</label>
+                        <select name="product_name" [(ngModel)]="product_name"
+                            (change)="getMfrList($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let product of products" [value]="product.product_code">{{
+                                product.product_name }}</option>
+                        </select>
+                    </div>
+                    <!-- <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Grade:<sup style="color: red">*</sup></strong></label>
+                        <input type="text" name="grade" [(ngModel)]="selectedProduct['grade']" readonly>
+                    </div> -->
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Select MFR No :</label>
+                        <select name="mfr_no" [(ngModel)]="mfr_no" (change)="getBfrList($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let batch of mfr_list" [value]="batch.mfr_no">{{ batch.mfr_no }}</option>
+                        </select>
+                    </div>
+
+
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Select BFR No.:</label>
+                        <select name="bfr_no" [(ngModel)]="bfr_no"
+                            (change)="getRawMaterialsByBfrNo($event.target.selectedIndex)">
+                         <option></option>
+                            <option *ngFor="let batch of bfr_list;let i = index;" [value]="batch.bfr_no">{{ batch.bfr_no }} ({{
+                                batch.batch_formula_weight }})</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Plan For Market:<span style="color: red">*</span></label>
+                        <select name="plan_for_market" [(ngModel)]="plan_for_market"
+                            (change)="getPackingMaterialsByBfrNo($event.target.selectedIndex)" required>
+                            <option>Export</option>
+                            <option>Domestic</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="plan_for_market=='Domestic'">
+                        <label>Multipacking:</label>
+                        <select name="multi_packing" [(ngModel)]="multi_packing" required  (change)="getPackList($event.target.selectedIndex)">
+                            <option> </option>
+                            <option>Yes </option>
+                            <option>No</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="plan_for_market=='Export'">
+                        <label>Country Specific Packing:</label>
+                        <select name="country_specific" [(ngModel)]="country_specific" required>
+                            <option> </option>
+                            <option>Yes </option>
+                            <option>No</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="country_specific=='Yes'">
+                        <label>Pack For Multiple Countries:</label>
+                        <select name="pack_multiple_countries" [(ngModel)]="pack_multiple_countries"
+                            (change)="getPackinSizesByCountry($event.target.selectedIndex)" required>
+                            <option> </option>
+                            <option>Yes </option>
+                            <option>No</option>
+                        </select>
+                    </div>
+                    <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="pack_multiple_countries=='No'">
+                        <label>Packsize:</label>
+                        <select name="pack_size" ngModel required
+                            (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let cnt of countries3" [value]="cnt.pack_size">{{
+                                cnt.pack_size
+                                }}
+                            </option>
+                        </select>
+
+                    </div> -->
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="multi_packing=='No'">
+                        <label>Pack Size:</label>
+                        <select name="pack_size1" [(ngModel)]="pack_size1" required
+                            (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">{{ cnt.pack_size }} {{cnt.batch_size}}
+                            </option>
+                        </select>
+
+                    </div>
+                    <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Packing Type:</label>
+                        <select name="packing_type" [(ngModel)]="packing_type"
+                        (change)="setBatchQty($event.target.selectedIndex)"  required>
+                            <option> </option>
+                            <option>Sale </option>
+                            <option>Sample(PS)</option>
+                            <option>Both</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="multi_packing=='No'">
+                        <label>Paking Type:</label>
+                        <select name="pack_type" ngModel required
+                            (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let cnt of countries3" [value]="cnt.pack_size">{{
+                                cnt.pack_size
+                                }}
+                            </option>
+                        </select>
+
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="multi_packing=='No'">
+                        <label>Batch size:</label>
+                        <select name="pack_size" ngModel required
+                            (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let cnt of countries3" [value]="cnt.id">{{
+                                cnt.pack_size
+                                }}
+                            </option>
+                        </select>
+
+                    </div> -->
+
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="multi_packing=='Yes'">
+
+                        <div class="card">
+                            <div class="card-header" style="text-align: center">
+                                <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                        Domestic Multi Packing
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="card-block">
+                                <div class="clr-row">
+                                    <form #cntForm="ngForm">
+                                        <div class="clr-row">
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label>Pack Size:</label>
+                                                <select name="pack_size1" [(ngModel)]="pack_size1" required
+                                                (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                                                <option></option>
+                                                <option *ngFor="let cnt of Pack_Sizess" [value]="cnt.id">{{ cnt.pack_size }} {{cnt.batch_size}}
+                                                </option>
+                                            </select>
+                                                <!-- <select name="pack_size" ngModel required
+                                                    (change)="get_pack_size_by_mfrno($event.target.selectedIndex)">
+                                                    <option></option>
+                                                    <option *ngFor="let cnt of countries1" [value]="cnt.pack_size">{{
+                                                        cnt.pack_size
+                                                        }}
+                                                    </option>
+                                                </select> -->
+                                                <!-- <select name="pack_size" ngModel required
+                                                    (change)="getPackSizes($event.target.selectedIndex)">
+                                                    <option></option>
+                                                    <option *ngFor="let cnt of countries" [value]="cnt.country_name">{{
+                                                        cnt.country_name
+                                                        }}
+                                                    </option>
+                                                </select> -->
+                                            </div>
+                                            
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label>Packing Type:</label>
+                                                <select name="packing_type" [(ngModel)]="packing_type"
+                                                (change)="setBatchQty($event.target.selectedIndex)"  required>
+                                                    <option> </option>
+                                                    <option>Sale </option>
+                                                    <option>Sample(PS)</option>
+                                                    <option>Both</option>
+                                                </select>
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                                *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                                                <label>Sale Qty:</label>
+                                                <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()"
+                                                    [(ngModel)]="sale_qty" [readonly]="packing_type == 'Sale'"
+                                                    [max]="bfr_batch_size"
+                                                    required>
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                                *ngIf="packing_type=='Sample(PS)' || packing_type=='Both'">
+                                                <label>PS Qty:</label>
+                                                <input type="text" name="ps_qty" [(ngModel)]="ps_qty"
+                                                [max]="bfr_batch_size"
+                                                    [readonly]="packing_type=='Both' || is_both_types == 'Sample(PS)'">
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <button class="btn btn-success btn-sm" style="margin-top:20px" (click)="addCountry(cntForm)">Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                SL No
+                                            </th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Pack
+                                                Size</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Packing Type</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Sale
+                                                Qty</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                PS
+                                                Qty</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Action</th>
+                                        </tr>
+                                        <tr *ngFor="let result of country_configuration; let i = index">
+                                            <td style="text-align: left;">{{ i+1 }}</td>
+                            
+                                            <td style="text-align: left;">{{ result.packs1234 }}</td>
+                                            <td style="text-align: left;">{{ result.packing_type }}</td>
+                                            <td style="text-align: left;">{{ result.sale_qty }}</td>
+                                            <td style="text-align: left;" *ngIf="result.ps_qty!=''">{{ result.ps_qty }}</td>
+                                            <td style="text-align: left;" *ngIf="result.ps_qty==''">NA</td>
+                                            <td style="text-align: center;">
+                                                <clr-icon shape="trash" class="is-error" (click)="deleteCountry(i)">
+                                                </clr-icon>
+                                            </td>
+                                        </tr>
+                                        <tr *ngIf="country_configuration?.length == 0">
+                                            <td colspan="7">No. Records Found</td>
+                                        </tr>
+                                    </table>
+
+                                  
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="pack_multiple_countries=='Yes'">
+
+                        <div class="card">
+                            <div class="card-header" style="text-align: center">
+                                <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                                        Country Wise Packing Material Planing
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="card-block">
+                                <div class="clr-row">
+                                    <form #cntForm="ngForm">
+                                        <div class="clr-row">
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label>Country Name:</label>
+                                                <select name="country_name" ngModel required
+                                                    (change)="getPackSizes($event.target.selectedIndex)">
+                                                    <option></option>
+                                                    <option *ngFor="let cnt of countries" [value]="cnt.country_name">{{
+                                                        cnt.country_name
+                                                        }}
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label>Packsize:</label>
+                                                <select name="pack_size" ngModel required
+                                                    (change)="getPackSizes($event.target.selectedIndex)">
+                                                    <option></option>
+                                                    <option *ngFor="let cnt of countries" [value]="cnt.country_name">{{
+                                                        cnt.country_name
+                                                        }}
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <label>Packing Type:</label>
+                                                <select name="packing_type" [(ngModel)]="packing_type"
+                                                (change)="setBatchQty($event.target.selectedIndex)"  required>
+                                                    <option> </option>
+                                                    <option>Sale </option>
+                                                    <option>Sample(PS)</option>
+                                                    <option>Both</option>
+                                                </select>
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                                *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                                                <label>Sale Qty:</label>
+                                                <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()"
+                                                    [(ngModel)]="sale_qty" [readonly]="packing_type == 'Sale'"
+                                                    [max]="bfr_batch_size"
+                                                    required>
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                                                *ngIf="packing_type=='Sample(PS)' || packing_type=='Both'">
+                                                <label>PS Qty:</label>
+                                                <input type="text" name="ps_qty" [(ngModel)]="ps_qty"
+                                                [max]="bfr_batch_size"
+                                                    [readonly]="packing_type=='Both' || is_both_types == 'Sample(PS)'">
+                                            </div>
+                                            <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                <button class="btn btn-success btn-sm" style="margin-top:20px" (click)="addCountry(cntForm)">Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Sr No
+                                            </th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Country</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Pack
+                                                Size</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Packing Type</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Sale
+                                                Qty</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                PS
+                                                Qty</th>
+                                            <th
+                                                style="text-align: left; background-color: rgb(14, 67, 112); color: white">
+                                                Action</th>
+                                        </tr>
+                                        <tr *ngFor="let result of country_configuration; let i = index">
+                                            <td style="text-align: left;">{{ i+1 }}</td>
+                                            <td style="text-align: left;">{{ result.country_name }}</td>
+                                            <td style="text-align: left;">{{ result.pack_size }}</td>
+                                            <td style="text-align: left;">{{ result.packing_type }}</td>
+                                            <td style="text-align: left;">{{ result.sale_qty }}</td>
+                                            <td style="text-align: left;">{{ result.ps_qty }}</td>
+                                            <td style="text-align: center;">
+                                                <clr-icon shape="trash" class="is-error" (click)="deleteCountry(i)">
+                                                </clr-icon>
+                                            </td>
+                                        </tr>
+                                        <tr *ngIf="country_configuration?.length == 0">
+                                            <td colspan="7">No. Records Found</td>
+                                        </tr>
+                                    </table>
+
+                                  
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="pack_multiple_countries=='No'">
+                        <label> Pack Size:</label>
+                        <select name="pack_size" ngModel required
+                            (change)="getPackingMaterial($event.target.selectedIndex)">
+                            <option></option>
+                            <option *ngFor="let st of pack_sizes" [value]="st.pack_size">
+                                {{st.pack_size}}-{{st.pack_unit}}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="pack_multiple_countries=='No'">
+                        <label>Packing Type:</label>
+                        <select name="packing_type" [(ngModel)]="packing_type" required>
+                            <option> </option>
+                            <option>Sale </option>
+                            <option>Sample(PS)</option>
+                            <option>Both</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="packing_type=='Sale' || packing_type=='Both'">
+                        <label>Sale Qty:</label>
+                        <input type="text" name="sale_qty" (input)="setpsQtyBatchSize()" [(ngModel)]="sale_qty">
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+                        *ngIf="packing_type=='>Sample(PS)' || packing_type=='Both'">
+                        <label>PS Qty:</label>
+                        <input type="text" name="ps_qty" [(ngModel)]="ps_qty" [readonly]="packing_type=='Both'">
+                    </div>
+
+
+
+                    <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                        <label>No Of Batches (Proposed) (Nos):</label>
+                        <input type="number" name="number_of_batches" [(ngModel)]="number_of_batches"
+                            style="background-color:#1e8cc5; color:white" (input)="calculateBatchQty()" required
+                           >
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                        <label>Total Quantity To Plan (Kg): </label>
+                        <input type="number" name="planned_qty" style="background-color:#1e8cc5; color:white"
+                            [(ngModel)]="planned_qty" (input)="setNoOfBatches()" [readonly]="plan_type=='Batch Wise'"
+                            required>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                        <label>No Of Batches Can Be Planned</label>
+                        <input style="background-color:green; color:white" type="text" name="lowest_batch"
+                            [(ngModel)]="lowest_batch" readonly>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12" readonly>
+                        <label> Quantity Can Be Planned :</label>
+                        <input style="background-color:green; color:white" type="text" name="can_plan_qty"
+                            [(ngModel)]="can_plan_qty" readonly>
+                    </div>
+                    <!-- <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12" *ngIf="plan_type=='Batch Wise'">
+                    <label> Quantity Can be planned (RM):</label>
+                    <input type="text" name="can_plan_pm_qty" [(ngModel)]="can_plan_pm_qty" readonly>
+                </div> -->
+
+
+
+                    <!-- <div class="clr-col-lg-3 clr-col-lg-3 clr-col-md-4 clr-col-sm-12">
+                    <label>No Lowest Of Batches can be planned (PM):</label>
+                    <input type="text" name="pm_lowest_batch" [(ngModel)]="pm_lowest_batch" readonly>
+                </div> -->
+
+                </div>
+                <h3 style="margin-top: 5px;">Raw Materials:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Material Type</th>
+                        <th>Material Code</th>
+                        <th>Material Name</th>
+                        <th>Unit Qty</th>
+                        <!-- <th>Overages (%)</th> -->
+                        <!-- <th>Total Qty</th> -->
+                        <th>Batch Qty(Kg)</th>
+                        <th>Plan Qty</th>
+                        <th>Available Stock</th>
+                        <th>No Of Batches Can Be Planed</th>
+                        <th>Short Qty</th>
+
+                    </tr>
+                    <tr *ngFor="let comp of raw_materials; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comp.material_type }}</td>
+                        <td>{{ comp.material_Code }} {{ comp.material_code }}</td>
+                        <td>{{ comp.material_name1 }} {{ comp.material_name }} </td>
+                        <td>{{ comp.qty }} {{ comp.unit }}</td>
+                        <!-- <td>{{ comp.overages }}</td> -->
+                        <!-- <td>{{ comp.total_qty }}</td> -->
+                        <td>{{ comp.batch_qty }}</td>
+                        <td>{{ comp.plan_qty }}</td>
+                        <td>{{ comp.avbl_stock }}</td>
+                        <td>{{ comp.can_plan_batches }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                            comp.shortage_qty }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                            }}</td>
+
+                    </tr>
+                   
+                </table>
+
+
+
+                <h4 style="margin-top: 5px;">Packing Materials:</h4>
+                <div *ngFor="let cnt of final_packing_materials_list; let i = index">
+                    <table style="width: 100%;">
+                        <tr style="background-color: maroon; color: white;font-weight: bold;">
+                            <td style="text-align: left;">Country Name:</td>
+                            <td style="text-align: left;"> {{cnt.country_name}}</td>
+
+                            <td style="text-align: left;">Pack Size</td>
+                            <td style="text-align: left;">{{cnt.pack_size}}</td>
+
+
+                            <td style="text-align: left;">Sale Type Type</td>
+                            <td style="text-align: left;">{{cnt.pack_type}}</td>
+
+                            <td style="text-align: left;">Batch Size</td>
+                            <td style="text-align: left;">{{cnt.batch_size}}</td>
+                        </tr>
+
+                    </table>
+                    <table class="table">
+
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Material Type</th>
+                            <th>Material Code</th>
+                            <th>Material Name</th>
+                            <th>Unit Qty</th>
+                            <th>Overages (%)</th>
+                            <th>Total Qty</th>
+                            <th>Batch Qty(Kg)</th>
+                            <th>Plan Qty</th>
+                            <th>Available Stock</th>
+                            <th>No Of Batches Can Be Planed.</th>
+                            <th>Short Qty</th>
+
+                        </tr>
+                        <tr *ngFor="let comp of countries1; let i = index">
+                            <td>{{ i + 1 }}.</td>
+                            <td>{{ comp.material_subtype }}</td>
+                            <td>{{ comp.material_code }}</td>
+                            <td>{{ comp.material_name }}</td>
+                            <td>{{ comp.qty }} {{ comp.unit_name }}</td>
+                            <td>{{ comp.overages }}</td>
+                            <td>{{ comp.total_qty }}</td>
+                            <td>{{ comp.batch_qty }}</td>
+                            <td>{{ comp.plan_qty }}</td>
+                            <td>{{ comp.avbl_stock }}</td>
+                            <!-- <td>{{ comp.avbl_stock / comp.batch_qty }}</td> -->
+                            <td>{{ comp.can_plan_batches.toFixed(2) }}</td>
+
+                            <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                                comp.shortage_qty }}</td>
+                            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                                }}</td>
+
+                        </tr>
+                        <!-- <tr *ngIf="raw_materials?.length == 0">
+                            <td colspan="8">No Records Found!</td>
+                        </tr> -->
+                    </table>
+                </div>
+                <div *ngIf="multi_packing=='Yes'">
+                <table class="table" *ngFor="let comps of country_configuration; let i = index">
+
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Material Type</th>
+                        <th>Material Code</th>
+                        <th>Material Name</th>  
+                        <th>Unit Qty</th>
+                        <th>Overages (%)</th>   
+                        <th>Total Qty</th>
+                        <th>Batch Qty(kg)</th>
+                        <th>Plan Qty</th>
+                        <th>Available Stock</th>
+                        <th>No Of Batches Can Be Planed..</th>
+                        <th>Short Qty</th>
+ 
+                    </tr>
+                    <tr *ngFor="let comp of comps.packs; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comp.material_subtype }}</td>
+                        <td>{{ comp.material_code }}</td>
+                        <td>{{ comp.material_name }}</td>
+                        <td>{{ comp.qty }} {{ comp.unit_name }}</td>
+                        <td>{{ comp.pm_overages }}</td>
+                        <td>{{ comp.total_qty }}</td>
+                        <td>{{ comp.batch_qtyqqqq }}</td>
+                        <td>{{ comp.plan }}</td>
+                        <td>{{ comp.balance_qty  }}</td>
+                        <td>{{ comp.can_plan }}</td>
+                        <td>{{ comp.can_plan_batches?.toFixed(2) }}</td>
+                        <!-- <td>{{ (comp.balance_qty - comp.plan).toFixed(2) }}</td> -->
+                        <td *ngIf="comp.short_qt>=0 " style="color:green">{{comp.short_qt}}</td>
+                        <td *ngIf="comp.short_qt<=0 " style="color:red">{{comp.short_qt}}</td>
+                        <!-- <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                            comp.shortage_qty }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                            }}</td> -->
+
+                    </tr>
+                  
+                </table>
+            </div>
+                <div *ngIf="multi_packing=='No'">
+                <table class="table" >
+
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Material Type</th>
+                        <th>Material Code</th>
+                        <th>Material Name</th>  
+                        <th>Unit Qty</th>
+                        <th>Overages (%)</th>   
+                        <th>Total Qty</th>
+                        <th>Batch Qty(Kg)</th>
+                        <th>Plan Qty</th>
+                        <th>Available Stock</th>
+                        <th>No Of Batches Can Be Planed...</th>
+                        <th>Short Qty</th>
+ 
+                    </tr>
+                    <tr *ngFor="let comp of packs; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ comp.material_subtype }}</td>
+                        <td>{{ comp.material_code }}</td>
+                        <td>{{ comp.material_name }}</td>
+                        <td>{{ comp.qty }} {{ comp.unit_name }}</td>
+                        <td>{{ comp.pm_overages }}</td>
+                        <td>{{ comp.total_qty }}</td>
+                        <td>{{ comp.batch_qtyqqqq }}</td>
+                        <td>{{ comp.plan }}</td>
+                        <td>{{ comp.balance_qty  }}</td>
+                        <td>{{ comp.can_plan }}</td>
+                        <td>{{ comp.can_plan_batches }}</td>
+                        <!-- <td>{{ (comp.balance_qty - comp.plan).toFixed(2) }}</td> -->
+                        <td>{{comp.short_qt}}</td>
+                        <!-- <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                            comp.shortage_qty }}</td>
+                        <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                            }}</td> -->
+
+                    </tr>
+                   
+                </table>
+            </div>
+
+            </div>
+            <div class="clr-row">
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Plan For:<span style="color: red">*</span></label>
+                    <select name="plan_for" ngModel required (change)="checkRequiredfor($event.target.value)">
+                        <option>Own</option>
+                        <option>Client</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12" *ngIf="isClients">
+                    <label>Client Name:<span style="color: red">*</span></label>
+                    <select name="client_code" ngModel required (change)="getClientPos($event.target.value)">
+                        <option></option>
+                        <option *ngFor="let client of clients" [value]="client.client_code">{{ client.c_name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isClients">
+                    <label>PO Number: </label>
+                    <select name="client_po_no" ngModel required (change)="getPoDetails($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let po of poList" [value]="po.po_no">
+                            {{po.po_no}}
+                        </option>
+                    </select>
+
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isClients">
+                    <label>PO Date.</label>
+                    <input type="text" name="client_po_date" [(ngModel)]="selectedPO['po_date']" required readonly>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isClients">
+                    <label>PO Qty: </label>
+                    <input type="number" name="client_po_qty" [(ngModel)]="selectedPO['order_qty']" required readonly>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="isClients">
+                    <label> Unit:</label>
+                    <input type="text" name="client_po_unit" [(ngModel)]="selectedPO['unit']" required readonly>
+                    <!-- <select name="client_po_unit" ngModel required>
+                        <option></option>
+                        <option *ngFor="let st of units" [value]="st.unit">
+                            {{st.unit}}
+                        </option>
+                    </select> -->
+                </div>
+
+            </div>
+
+        </form>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" style="background-color:#1e8cc5; color:white"
+            (click)="saveBatchPlan(batchForm,'Proposed Qty')">Plan With Proposed QTY</button>
+        <button class="btn btn-primary" style="background-color:green; color:white"
+            (click)="saveBatchPlan(batchForm,'Available Qty')">Plan With Available QTY</button>
+    </div>
+    <!-- <div class="card-footer">
+        <button class="btn btn-primary" *ngIf="selectedResult['status'] == 'not available'">GENERATE INDEND FOR STORTAGE
+            QTY</button>
+        <button class="btn btn-primary"
+            *ngIf="selectedResult['status'] !== 'not available'  &&  selectedResult['shortage'] !== 'yes'"
+            (click)="saveBatchPlan(batchForm)">SAVE</button>
+        <div *ngIf="selectedResult['shortage'] == 'yes'" style="text-align: center;">
+            <h3 style="color: red;">Shortage Quantity!</h3>
+        </div>
+    </div> -->
+</div>

@@ -1,0 +1,3546 @@
+<?php
+    require '../../db.php';
+    require '../../token.php';
+    require '../../tcpdf/tcpdf.php';
+    header('Access-Control-Allow-Origin: *');
+    date_default_timezone_set("Asia/Kolkata");
+    $token = $_GET["token"];
+    $timestamp = time();
+    $entry_date = date("Y-m-d h:i:s", $timestamp);
+    $input = json_decode(file_get_contents('php://input'),true);
+
+    $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
+    $result = $conn->query($sql);
+    $_GET["emp_id"] = "";
+    $_GET["department"] = "";
+    if($result->num_rows > 0){
+    while($row = $result->fetch_assoc()){
+	    $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
+	    $string = explode("$",$string);
+	    $_GET["emp_id"] = $string[0];
+	    $_GET["department"] = $string[1];
+	    break;
+    }
+
+    $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "'.$_GET["type"].'", "actiontime": "'.$entry_date.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'"}';
+    $myfile = file_put_contents('../../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+
+    if ($_GET["type"] == "getPendingTestingReport") {
+        // print_r($_GET);exit;
+       
+       $sql="SELECT DISTINCT t.id ,t.* , m.material_subtype, m.material_name, m.grade ,  g.grade as gradeName , t1.status as t_status
+             FROM testing t 
+            LEFT JOIN material m ON t.material_code=m.material_code 
+             LEFT JOIN grade g on g.id = m.grade LEFT JOIN testing_tests t1 ON t.testing_no=t1.testing_no
+            WHERE  t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_RDS"]."' and t.status='inprocess'";//inprocess
+       
+                                //old code vivek
+       /* $sql = "SELECT t1. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no,
+                s2.specification_no,t.testing_no,s2.reference_type,s2.limits,m.material_subtype, m.material_name, m.grade ,
+                g.grade as gradeName  FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT 
+                join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT 
+                join test_methods t3 on t3.test_id=s2.id  LEFT JOIN material m on t1.material_code=m.material_code LEFT 
+                JOIN grade g ON g.id=m.grade  WHERE t1.status='inprocess' ORDER BY t.id DESC";*/
+      
+      
+      
+                                //old code
+      
+        /* $sql = "SELECT t.* , m.material_subtype, m.material_name, m.grade ,  g.grade as gradeName 
+        FROM testing t 
+        LEFT JOIN material m ON t.material_code=m.material_code 
+       
+        LEFT JOIN grade g on g.id = m.grade
+        
+        Where  (t.status='active' || t.status='pending')  and t.is_RDS = ".$_GET["is_RDS"]." ORDER BY t.id DESC";
+
+        * changed removed active 13_02 t.status='active' ||*/
+       
+        $output = Array();
+          
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["observation"] = "";
+                $sql1 = "SELECT t.* , 
+                        (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+                     FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'   order by id desc";
+            //   echo  $sql1 = "SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' and t.specification_no='".$row["specification_no"]."'  order by id desc";
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                       // print_r(); exit ;
+                       // $sql2 = "SELECT * FROM spec_tests WHERE specification_no=(SELECT specification_no FROM testing WHERE testing_no='".$row["testing_no"]."') AND test='".$row1["test"]."' AND subtest='".$row1["subtest"]."'";
+                        $sql2 = "SELECT * FROM spec_tests WHERE id = '".$row1["spec_test_no"]."' ";
+                     
+                        $result2 = $conn->query($sql2);
+                        if ($result2->num_rows > 0) {
+                            while ($row2 = $result2->fetch_assoc()) {
+                                $row1["limit_type"] = $row2["limit_type"] ;
+                                $row1["limits"] = $row2["limits"] ;
+                                if ($row1["observation"] !== "pass") {
+                                    if ($row2["limit_type"] == "Limits") {
+                                        if ($row1["result"] >= $row2["lower_limit"] && $row1["result"] <= $row2["upper_limit"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "LessThan") {
+                                        if ($row1["result"] <= $row2["lessthan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "MoreThan") {
+                                        if ($row1["result"] >= $row2["morethan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "Compliances") {
+                                        if ($row1["result"] == "complies") {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ($row1["observation"] == "fail") {
+                            $row["observation"] = "fail";
+                        }
+                        $output1[] = $row1;
+                    }
+                }
+                $row["tests"] = $output1;
+                  $q= "SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('".$row['grade']."')";
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+   else if ($_GET["type"] == "getPendingTestingReport_erp") {
+        // print_r($_GET);exit;
+       
+       $sql="SELECT DISTINCT t.id ,t.* , m.material_subtype, m.material_name, m.grade , g.grade as gradeName , t1.status as t_status,s.ar_no as arno,c.grn_date ,s.batch_no FROM testing t
+            LEFT JOIN material m ON t.material_code=m.material_code LEFT JOIN grade g on g.id = m.grade LEFT JOIN testing_tests t1 ON t.testing_no=t1.testing_no LEFT
+            JOIN sampling s ON t.grn_no=s.grn_no LEFT JOIN challan_materials c on t.grn_no=c.grn_no
+            WHERE  t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_RDS"]."' and t.status='inprocess'";//inprocess
+       
+                                //old code vivek
+       /* $sql = "SELECT t1. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no,
+                s2.specification_no,t.testing_no,s2.reference_type,s2.limits,m.material_subtype, m.material_name, m.grade ,
+                g.grade as gradeName  FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT 
+                join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT 
+                join test_methods t3 on t3.test_id=s2.id  LEFT JOIN material m on t1.material_code=m.material_code LEFT 
+                JOIN grade g ON g.id=m.grade  WHERE t1.status='inprocess' ORDER BY t.id DESC";*/
+      
+      
+      
+                                //old code
+      
+        /* $sql = "SELECT t.* , m.material_subtype, m.material_name, m.grade ,  g.grade as gradeName 
+        FROM testing t 
+        LEFT JOIN material m ON t.material_code=m.material_code 
+       
+        LEFT JOIN grade g on g.id = m.grade
+        
+        Where  (t.status='active' || t.status='pending')  and t.is_RDS = ".$_GET["is_RDS"]." ORDER BY t.id DESC";
+
+        * changed removed active 13_02 t.status='active' ||*/
+       
+        $output = Array();
+          
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["observation"] = "";
+                $sql1 = "SELECT t.* , 
+                        (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+                     FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'  AND t.specification_no='".$row["specification_no"]."' and t.testing_Date!='' order by id asc";
+            //   echo  $sql1 = "SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' and t.specification_no='".$row["specification_no"]."'  order by id desc";
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                       // print_r(); exit ;
+                       // $sql2 = "SELECT * FROM spec_tests WHERE specification_no=(SELECT specification_no FROM testing WHERE testing_no='".$row["testing_no"]."') AND test='".$row1["test"]."' AND subtest='".$row1["subtest"]."'";
+                        $sql2 = "SELECT * FROM spec_tests WHERE id = '".$row1["spec_test_no"]."' ";
+                     
+                        $result2 = $conn->query($sql2);
+                        if ($result2->num_rows > 0) {
+                            while ($row2 = $result2->fetch_assoc()) {
+                                $row1["limit_type"] = $row2["limit_type"] ;
+                                $row1["limits"] = $row2["limits"] ;
+                                if ($row1["observation"] !== "pass") {
+                                    if ($row2["limit_type"] == "Limits") {
+                                        if ($row1["result"] >= $row2["lower_limit"] && $row1["result"] <= $row2["upper_limit"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "LessThan") {
+                                        if ($row1["result"] <= $row2["lessthan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "MoreThan") {
+                                        if ($row1["result"] >= $row2["morethan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "Compliances") {
+                                        if ($row1["result"] == "complies") {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ($row1["observation"] == "fail") {
+                            $row["observation"] = "fail";
+                        }
+                        $output1[] = $row1;
+                    }
+                }
+                $row["tests"] = $output1;
+                  $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+   else if ($_GET["type"] == "getPendingTestingReport_micro") {
+        // print_r($_GET);exit;
+       
+       $sql="select * from micro_test where status='inprocess' and is_RDS='".$_GET['is_RDS']."'";//inprocess
+       
+                           
+       
+        $output = Array();
+          
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["observation"] = "";
+                // $sql1 = "SELECT t.* , 
+                //         (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+                //      FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+                //   $sql1 = "SELECT * FROM micro_spec_test WHERE micro_test_id = '".$row["id"]."' ";
+                   $sql1 = "SELECT *,a.status as m_status FROM micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id where a.micro_test_id='".$row["id"]."' and a.plant_id=".$_GET["plant_id"]." ";
+                $output1 = Array();
+                $result2 = $conn->query($sql1);
+                // if ($result1->num_rows > 0) {
+                //     while ($row1 = $result1->fetch_assoc()) {
+                //       // print_r(); exit ;
+                //       // $sql2 = "SELECT * FROM spec_tests WHERE specification_no=(SELECT specification_no FROM testing WHERE testing_no='".$row["testing_no"]."') AND test='".$row1["test"]."' AND subtest='".$row1["subtest"]."'";
+                //       echo  $sql2 = "SELECT * FROM micro_spec_test WHERE micro_test_id = '".$row["id"]."' ";
+                     
+                //         $result2 = $conn->query($sql2);
+                        if ($result2->num_rows > 0) {
+                            while ($row2 = $result2->fetch_assoc()) {
+                                // $row2["limit_type"] = $row2["limit_type"] ;
+                                // $row2["limits"] = $row2["limits"] ;
+                                // if ($row2["observation"] !== "pass") {
+                                //     if ($row2["limit_type"] == "Limits") {
+                                //         if ($row2["result"] >= $row2["lower_limit"] && $row2["result"] <= $row2["upper_limit"]) {
+                                //             $row2["observation"] = "pass";
+                                //         } else {
+                                //             $row2["observation"] = "fail";
+                                //         }
+                                //     } else if ($row2["limit_type"] == "LessThan") {
+                                //         if ($row2["result"] <= $row2["lessthan"]) {
+                                //             $row2["observation"] = "pass";
+                                //         } else {
+                                //             $row2["observation"] = "fail";
+                                //         }
+                                //     } else if ($row2["limit_type"] == "MoreThan") {
+                                //         if ($row2["result"] >= $row2["morethan"]) {
+                                //             $row2["observation"] = "pass";
+                                //         } else {
+                                //             $row2["observation"] = "fail";
+                                //         }
+                                //     } else if ($row2["limit_type"] == "Compliances") {
+                                //         if ($row2["result"] == "complies") {
+                                //             $row2["observation"] = "pass";
+                                //         } else {
+                                //             $row2["observation"] = "fail";
+                                //         }
+                                //     }
+                                // }
+                        $output1[] = $row2;
+                            }
+                        }
+                        // if ($row1["observation"] == "fail") {
+                        //     $row["observation"] = "fail";
+                        // }
+                //     }
+                // }
+                $row["tests"] = $output1;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+    elseif ($_GET["type"] == "getPendingTestingReport_finish") {
+        // print_r($_GET);exit;
+       
+    //   $sql="SELECT DISTINCT t.id ,t.* , m.material_subtype, m.material_name, m.grade ,  g.grade as gradeName 
+    //          FROM testing t 
+    //         LEFT JOIN material m ON t.material_code=m.material_code 
+    //          LEFT JOIN grade g on g.id = m.grade LEFT JOIN testing_tests t1 ON t.testing_no=t1.testing_no
+    //          WHERE t1.status='pending'";//inprocess
+    $sql="SELECT a.*,b.product_type,b.product_name,b.grade FROM samplingfg a left join product b on a.product_code=b.product_code left JOIN testing_tests c on a.sampling_no=c.fg_sampling_no WHERE c.status='pending' group by b.product_type,b.product_name,b.grade,a.id";
+       
+                                //old code vivek
+       /* $sql = "SELECT t1. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no,
+                s2.specification_no,t.testing_no,s2.reference_type,s2.limits,m.material_subtype, m.material_name, m.grade ,
+                g.grade as gradeName  FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT 
+                join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT 
+                join test_methods t3 on t3.test_id=s2.id  LEFT JOIN material m on t1.material_code=m.material_code LEFT 
+                JOIN grade g ON g.id=m.grade  WHERE t1.status='inprocess' ORDER BY t.id DESC";*/
+      
+      
+      
+                                //old code
+      
+        /* $sql = "SELECT t.* , m.material_subtype, m.material_name, m.grade ,  g.grade as gradeName 
+        FROM testing t 
+        LEFT JOIN material m ON t.material_code=m.material_code 
+       
+        LEFT JOIN grade g on g.id = m.grade
+        
+        Where  (t.status='active' || t.status='pending')  and t.is_RDS = ".$_GET["is_RDS"]." ORDER BY t.id DESC";
+
+        * changed removed active 13_02 t.status='active' ||*/
+       
+        $output = Array();
+          
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row["observation"] = "";
+            //  echo   $sql1 = "SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+            // echo   $sql1 = "SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.fg_sampling_no='".$row["sampling_no"]."' order by id desc";
+          $sql1="   SELECT *,t.status as t_status FROM testing_tests t LEFT JOIN spec_tests st on t.specification_no=t.specification_no and t.test=st.test and t.spec_test_no=st.id  WHERE t.status!='inprocess' and t.status!='pending' and t.fg_sampling_no='".$row["sampling_no"]."'
+";
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                       // print_r(); exit ;
+                       // $sql2 = "SELECT * FROM spec_tests WHERE specification_no=(SELECT specification_no FROM testing WHERE testing_no='".$row["testing_no"]."') AND test='".$row1["test"]."' AND subtest='".$row1["subtest"]."'";
+                        $sql2 = "SELECT * FROM spec_tests WHERE id = '".$row1["spec_test_no"]."' ";
+                     
+                        $result2 = $conn->query($sql2);
+                        if ($result2->num_rows > 0) {
+                            while ($row2 = $result2->fetch_assoc()) {
+                                $row1["limit_type"] = $row2["limit_type"] ;
+                                $row1["limits"] = $row2["limits"] ;
+                                if ($row1["observation"] !== "pass") {
+                                    if ($row2["limit_type"] == "Limits") {
+                                        if ($row1["result"] >= $row2["lower_limit"] && $row1["result"] <= $row2["upper_limit"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "LessThan") {
+                                        if ($row1["result"] <= $row2["lessthan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "MoreThan") {
+                                        if ($row1["result"] >= $row2["morethan"]) {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    } else if ($row2["limit_type"] == "Compliances") {
+                                        if ($row1["result"] == "complies") {
+                                            $row1["observation"] = "pass";
+                                        } else {
+                                            $row1["observation"] = "fail";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ($row1["observation"] == "fail") {
+                            $row["observation"] = "fail";
+                        }
+                        $output1[] = $row1;
+                    }
+                }
+                $row["tests"] = $output1;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getRejectedTestingReport") {
+        $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON 
+        t.material_code=m.material_code WHERE t.status='active' AND m.material_type='Raw Material'";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                
+                $sql1 = "SELECT * FROM testing_tests WHERE user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $sql2 = "SELECT * FROM spec_tests WHERE specification_no=(SELECT specification_no FROM testing WHERE testing_no='".$row["testing_no"]."') AND test='".$row1["test"]."' AND subtest='".$row1["subtest"]."'";
+                        $result2 = $conn->query($sql2);
+                        if ($result2->num_rows > 0) {
+                            while ($row2 = $result2->fetch_assoc()) {
+                                if ($row1["fail_status"] == "active") {
+                                    $row1["result"] = $row1["correct_result"];
+                                    $row1["fail_status"] = "pending";
+                                }
+                                if ($row2["limit_type"] == "Limits") {
+                                    if ($row1["result"] >= $row2["lower_limit"] && $row1["result"] <= $row2["upper_limit"]) {
+                                        $row1["observation"] = "pass";
+                                    } else {
+                                        $row1["observation"] = "fail";
+                                    }
+                                } else if ($row2["limit_type"] == "LessThan") {
+                                    if ($row1["result"] <= $row2["lessthan"]) {
+                                        $row1["observation"] = "pass";
+                                    } else {
+                                        $row1["observation"] = "fail";
+                                    }
+                                } else if ($row2["limit_type"] == "MoreThan") {
+                                    if ($row1["result"] >= $row2["morethan"]) {
+                                        $row1["observation"] = "pass";
+                                    } else {
+                                        $row1["observation"] = "fail";
+                                    }
+                                } else if ($row2["limit_type"] == "Compliances") {
+                                    if ($row1["result"] == "complies") {
+                                        $row1["observation"] = "pass";
+                                    } else {
+                                        $row1["observation"] = "fail";
+                                    }
+                                }
+                                
+                                $sql3 = "UPDATE testing_tests SET observation='".$row1["observation"]."' WHERE id=". $row1["id"];
+                                $conn->query($sql3);
+                            }
+                        }
+                        if ($row1["observation"] == "fail" && $row1["fail_status"] == "pending") {
+                            $output1[] = $row1;
+                        }
+                    }
+                }
+                if (count($output1) > 0) {
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                }
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "testing_correction") {
+        
+            // $sql = "update testing set correction='oos' where testing_no='".$_GET["testing_no"]."'";
+            // if ($conn->query($sql)) {
+              
+             
+                $sql2 = "UPDATE testing_tests SET correction='oos' and error='".$input["error"]."' WHERE id=".$_GET["id"];
+               if ($conn->query($sql2)) {
+                    $sql3 = "INSERT INTO oos_correction(
+                                                        Plant_id,
+                                                        testing_test_id,
+                                                        testing_no,
+                                                        specification_no,
+                                                        sampling_no,
+                                                        checklist,
+                                                        correct_result,
+                                                        ERROR,
+                                                        error_type,
+                                                        description,
+                                                        classification,
+                                                        immediate_action,
+                                                        immediate_cause,
+                                                        incident_description,
+                                                        related_to,
+                                                        TYPE,oos_no,oos_date
+                                                    )
+                                                    VALUES(
+                                                        '".$_GET["plant_id"]."',
+                                                        '".$_GET["id"]."',
+                                                        '".$_GET["testing_no"]."',
+                                                        '".$_GET["specification_no"]."',
+                                                        '".$_GET["sampling_no"]."',
+                                                        '".json_encode($input["checkPointData"])."',
+                                                        '".$input["correct_result"]."',
+                                                        '".$input["error"]."',
+                                                        '".$input["error_type"]."',
+                                                        '".$input["description"]."',
+                                                        '".$input["classification"]."',
+                                                        '".$input["immediate_action"]."',
+                                                        '".$input["immediate_cause"]."',
+                                                        '".$input["incident_description"]."',
+                                                        '".$input["related_to"]."',
+                                                        '".$input["type"]."',
+                                                        '".$input["oos_no"]."',
+                                                        '".$input["oos_date"]."'
+                                                    ) ";
+                     $conn->query($sql3);
+                     echo "{\"status\":\"success\"}";
+               } 
+            // }
+            else {
+                echo "{\"status\":\"".$conn->error."\"}";
+            }
+        
+        
+    }
+    else if ($_GET["type"] == "testing_correction_incident") {
+        
+            // $sql = "update testing set correction='incident' where testing_no='".$_GET["testing_no"]."'";
+            // if ($conn->query($sql)) {
+              
+             
+            echo    $sql2 = "UPDATE testing_tests SET correction='incident' WHERE id=".$_GET["id"];
+               if ($conn->query($sql2)) {
+                echo    	$sql3 = "INSERT INTO incident (user_no, department, related_to, category, type, classification, 
+		description, immediate_action, initiate_by, initiate_date,sampling_no,specification_no,testing_test_id,error,error_type ) VALUES 
+		('".$_GET["user_no"]."', '".$_GET["department"]."', '".$input["related_to"]."', '".$input["category"]."', '".$input["type"]."', 
+		'".$input["classification"]."', '".$input["description"]."', '".$input["immediate_action"]."', '".$_GET["emp_id"]."', '$entry_date', '".$_GET["sampling_no"]."'
+		, '".$_GET["specification_no"]."', '".$_GET["testing_test_id"]."', '".$input["error"]."', '".$input["error_type"]."')";
+		
+                     $conn->query($sql3);
+                     echo "{\"status\":\"success\"}";
+            //   } 
+            } else {
+                echo "{\"status\":\"".$conn->error."\"}";
+            }
+        
+        
+    }
+    else if ($_GET["type"] == "reportError") {
+        if ($input["form_type"] == "error1") {
+            $sql = "INSERT INTO incident (related_to, category, type, justification, cause) VALUES ('Typographical Mistake', 'Unplanned Incident', 'Minor', '".$input["incident_description"]."', '".$input["immediate_cause"]."')";
+            if ($conn->query($sql)) {
+                $last_id = $conn->insert_id;
+                echo "{\"status\":\"success\"}";
+                $sql2 = "UPDATE testing_tests SET fail_status='active', fail_form='Incident Reporting Form', fail_no='".$last_id."', correct_result='".$input["correct_result"]."' WHERE id=".$input["test_no"];
+                $conn->query($sql2);
+            } else {
+                echo "{\"status\":\"".$conn->error."\"}";
+            }
+        } else {
+            echo "{\"status\":\"success\"}";
+        }
+    } 
+    else if ($_GET["type"] == "checkTesting") {
+
+                     $data1 =$input["spec_tests"];
+                     
+             $isRejct=true;
+                for ($i = 0; $i < count($data1); $i++) 
+                {
+                     $row2 = $data1[$i];
+                    if($row2["test_remark"]=='Reject'){
+                      $isRejct=false;
+                        
+                        }
+                    
+                }
+                if($isRejct==true){
+                            $sql = "UPDATE testing SET status='".$_GET["status"]."', check_by='".$_GET["emp_id"]."', check_date='$entry_date' WHERE id='".$_GET["id"]."'";
+
+                }
+                else{
+        $sql = "UPDATE testing SET status='".$_GET["status"]."', check_by='".$_GET["emp_id"]."', check_date='$entry_date',correction='YES' WHERE id='".$_GET["id"]."'";
+                }
+                
+       $data =$input["spec_tests"];
+      
+        if ($conn->query($sql)) {
+           
+               
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+                
+                $sql1 = "Update testing_tests set checked_by = '".$_GET["emp_id"]."', checked_date='$entry_date' , checker_action = '".$row1["test_remark"]."'  WHERE id='".$row1["id"]."'";
+                    
+                     $conn->query($sql1);
+            }
+            
+            
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "checkTesting_micro") {
+   //for trial //   echo  $sql = "UPDATE micro_test SET status='active', check_by='".$_GET["emp_id"]."', check_date='$entry_date' WHERE id='".$_GET["id"]."'";
+      echo  $sql = "UPDATE micro_test SET status='".$_GET["status"]."', check_by='".$_GET["emp_id"]."', check_date='$entry_date' WHERE id='".$_GET["id"]."'";
+       $data =$input["spec_tests"];
+      
+        if ($conn->query($sql)) {
+           
+               
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+                
+              echo  $sql1 = "Update micro_spec_test set checked_by = '".$_GET["emp_id"]."', checked_date='$entry_date' , checker_action = '".$row1["test_action"]."'  WHERE spec_test_id='".$row1["id"]."'";
+                    
+                     $conn->query($sql1);
+            }
+            
+            
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "checkTesting_finish") {
+        $sql = "UPDATE samplingfg SET status='".$_GET["status"]."', check_by='".$_GET["emp_id"]."', check_date='$entry_date' WHERE id='".$_GET["id"]."'";
+       $data =$input["spec_tests"];
+      
+        if ($conn->query($sql)) {
+           
+               
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+                
+                $sql1 = "Update testing_tests set checked_by = '".$_GET["emp_id"]."', checked_date='$entry_date' , checker_action = '".$row1["test_action"]."'  WHERE id='".$row1["id"]."'";
+                    
+                     $conn->query($sql1);
+            }
+            
+            
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "approveTesting") {
+        $sql = "UPDATE testing SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+         // echo $sql;
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+        if($_GET["status"]=='Approved'){
+       $sql = "UPDATE stock_book SET approve_qty='".$_GET["approve_qty"]."',release_date= '".date("Y-m-d")."'   ,status='Approved' WHERE grn_no='".$_GET["grn_no"]."'";
+       $conn->query($sql);
+    }
+        
+        
+        
+    } 
+    else if ($_GET["type"] == "getCheckedTestingReport") {
+        $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code
+                where t.status in('checked','reject') and t.is_RDS='".$_GET["is_RDS"]."' order by t.id desc";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+                $output1 = Array();
+                //  echo      $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                //               (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                //               (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' and t.specification_no='".$row["specification_no"]."'    order by id desc";
+                       $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'     order by id desc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= "SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('".$row['grade']."')";
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    
+else if ($_GET["type"] == "getCheckedTestingReport_erp") {
+        $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status in('checked','reject')  and t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_RDS"]."'  order by 1 desc";
+        // $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code
+        //         where t.status in('checked','reject') and t.is_RDS='".$_GET["is_RDS"]."' order by t.id desc";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+                $output1 = Array();
+                //  echo      $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                //               (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                //               (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' and t.specification_no='".$row["specification_no"]."'    order by id desc";
+                       $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' AND t.specification_no='".$row["specification_no"]."' and t.checker_action!=''     order by id asc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    else if ($_GET["type"] == "getCheckedTestingReport_micro") {
+  $sql = "select * from micro_test where status='checked' and is_RDS='".$_GET["is_RDS"]."'";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+        //  echo  $sql1 = "SELECT a.*,b.test,b.subtest FROM micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id where a.micro_test_id='".$row["id"]."' and a.plant_id=".$_GET["plant_id"]." ";
+           $sql1 = "SELECT a.*,b.test,b.subtest,c.alalsis_end_date,c.alalsis_end_time,c.alalsis_start_date,c.alalsis_start_time FROM micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id left join micro_test c on a.micro_test_id=c.id where a.micro_test_id='".$row["id"]."' and a.plant_id=".$_GET["plant_id"]." ";
+
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    else if ($_GET["type"] == "getCheckedTestingReport_finish") {
+        // $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code
+        //         where t.status in('checked','reject') order by 1 desc";
+        $sql="SELECT *,a.id as fg_id FROM samplingfg a left join product b on a.product_code=b.product_code where a.status in('checked','reject') order by 1 desc";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+            //   $sql1="SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+            $sql1="SELECT *,t.status as t_status FROM testing_tests t LEFT JOIN spec_tests st on t.specification_no=t.specification_no and t.test=st.test and t.spec_test_no=st.id  WHERE t.status!='inprocess' and t.status!='pending' and t.fg_sampling_no='".$row["sampling_no"]."'";
+            
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    // else if ($_GET["type"] == "approveTesting") {
+    //     $sql = "UPDATE testing SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+    //     if ($conn->query($sql)) {
+    //         echo "{\"status\":\"success\"}";
+    //         $sql = "UPDATE stock_book SET status='Approved' WHERE material_code='".$_GET["material_code"]."' AND batch_no='".$_GET["batch_no"]."'";
+    //         $conn->query($sql);
+    //     } else {
+    //         echo "{\"status\":\"".$conn->error."\"}";
+    //     }
+    // } 
+    else if ($_GET["type"] == "approveTesting_micro") {
+        $sql = "UPDATE micro_test SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+            $sql = "UPDATE stock_book SET status='Approved' WHERE material_code='".$_GET["material_code"]."' AND batch_no='".$_GET["batch_no"]."'";
+            $conn->query($sql);
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } 
+    else if ($_GET["type"] == "approveTesting_finish") {
+        $sql = "UPDATE samplingfg SET status='".$_GET["status"]."', approve_by='".$_GET["emp_id"]."', approve_date='$entry_date' WHERE id='".$_GET["id"]."'";
+        if ($conn->query($sql)) {
+            echo "{\"status\":\"success\"}";
+            $sql = "UPDATE stock_book SET status='Approved' WHERE material_code='".$_GET["material_code"]."' AND batch_no='".$_GET["batch_no"]."'";
+            $conn->query($sql);
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    } 
+    else if ($_GET["type"] == "getTestingReport_finish") {
+        // $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code
+        //         where t.status='Approved'";
+            $sql="    SELECT * FROM samplingfg a left join product b on a.product_code=b.product_code where a.status='Approved' order by 1 desc";
+        // $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t 
+        // JOIN material m ON
+        // t.material_code=m.material_code AND t.status='Approved'";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+            //   $sql1="SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+               $sql1="SELECT *,t.status as t_status FROM testing_tests t LEFT JOIN spec_tests st on t.specification_no=t.specification_no and t.test=st.test and t.spec_test_no=st.id  WHERE t.status!='inprocess' and t.status!='pending' and t.fg_sampling_no='".$row["sampling_no"]."'";
+
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getTestingReport_finish_rds") {
+    
+            $sql="    SELECT * FROM samplingfg a left join product b on a.product_code=b.product_code where a.status='inprocess' order by 1 desc";
+      
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+            //   $sql1="SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+                                //050423
+            //   $sql1="SELECT *,t.status as t_status FROM testing_tests t LEFT JOIN spec_tests st on t.specification_no=t.specification_no and t.test=st.test and t.spec_test_no=st.id  WHERE t.status='inprocess' and t.status!='pending' and t.fg_sampling_no='".$row["sampling_no"]."'";
+           $sql1="SELECT *,a.result as t_result,a.remark as a_remark FROM testing_tests a left join samplingfg b on a.specification_no=b.specification_no WHERE  a.specification_no='".$row["specification_no"]."' and a.status='inprocess'";
+
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getTestingReport") {
+         $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade,v.vendor_name FROM testing t LEFT JOIN material m ON t.material_code=m.material_code LEFT JOIN mst_vendor_materials mv ON m.material_code=mv.material_code
+                          LEFT JOIN vendor v ON mv.manufacturer_code = v.vendor_no where t.status='Approved'";
+        // $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t 
+        // JOIN material m ON
+        // t.material_code=m.material_code AND t.status='Approved'";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+                // $sql1 = "SELECT a.*,b.limit_type,b.reference_type,b.limits FROM testing_tests a join spec_tests b on a.spec_test_no = b.id  
+                // WHERE a.user_no='".$_GET["user_no"]."' AND testing_no='".$row["testing_no"]."'";
+            //   $sql1="SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares,
+            //             s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,
+            //             s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT
+            //             join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT
+            //             join test_methods t3 on t3.test_id=s2.id WHERE t.user_no='".$_GET["user_no"]."' AND t.testing_no='".$row["testing_no"]."'";
+               
+            //   $sql1="SELECT t.* , 
+            //             (select reference_type from spec_tests st where  st.test=t.test and st.subtest =t.subtest limit 1) as reference_type
+            //          FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' order by id desc";
+             $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'     order by id desc";
+                $output1 = Array();
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    }
+    // else if ($_GET["type"] == "getTestingReport") {
+    //     $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t 
+    //     JOIN material m ON
+    //     t.material_code=m.material_code AND t.status='Approved'";
+    //     $output = Array();
+    //     $result = $conn->query($sql);
+    //     if ($result->num_rows > 0) {
+    //     while ($row = $result->fetch_assoc()) {
+        
+    //     $sql1 = "SELECT * FROM testing_tests WHERE user_no='".$_GET["user_no"]."' AND 
+    //     testing_no='".$row["testing_no"]."'";
+    //             $output1 = Array();
+    //             $result1 = $conn->query($sql1);
+    //             if ($result1->num_rows > 0) {
+    //                 while ($row1 = $result1->fetch_assoc()) {
+    //                     $output1[] = $row1;
+    //                 }
+    //             }
+    //             //if (count($output1) > 0) {
+    //                 $row["spec_tests"] = $output1;
+    //                 $output[] = $row;
+    //             //}
+    //         }
+    //     }
+    //     echo json_encode($output);
+    // }
+    else if ($_GET["type"] == "getPendingAllocationTestings") {
+        $output = Array();
+         $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code  order BY specification.id desc limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status='pending' and t.plant_id='".$_GET["plant_id"]."'  order by 1 desc";
+
+         
+          
+        $result = $conn->query($sql);
+         
+       
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                   $row["ar_no"] = $row["arno"];
+                $output1 = Array();
+                $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                        
+                 WHERE specification_no in(SELECT specification_no FROM specification WHERE material_code='".$row["material_code"]."')and specification_no='".$row["specification_no"]."'
+                  and plant_id=".$_GET["plant_id"]   ;          
+                     
+
+                 
+                
+                $result2 = $conn->query($sql2);
+                if ($result2->num_rows > 0) {
+                    while ($row2 = $result2->fetch_assoc()) {
+
+                       $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+                
+                    $r = $conn->query($q);
+                       if ($r->num_rows > 0) {
+                        $row2["methodID"] = 1 ;
+                       }else{
+                        $row2["methodID"] =0 ;
+
+                       }
+                        if($row2["test_type"]!="Microbiology")
+                        $output1[] = $row2;
+                    }
+                }
+                $row["spec_tests"] = $output1;
+                $row["grn_grade_name"] = '';
+                $output2 = [];
+                $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+                $result3 = $conn->query($sql3);
+                if ($result3->num_rows > 0) {
+                    while ($row3 = $result3->fetch_assoc()) {
+
+                        $output2[] = $row3;
+                        $grn_grade_data = json_decode($row3["grn_grade"],true);
+                        $row["grn_grade_name"] = $row3["grn_grade"];
+                       
+                    }
+                }
+
+                $row["grn_grade"] = $output2;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+   
+   
+    } 
+    else if ($_GET["type"] == "getPendingAllocationTestings_micro") {
+        $output = Array();
+         $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status='pending' and t.plant_id='".$_GET["plant_id"]."' order by 1 desc";
+
+         
+          
+        $result = $conn->query($sql);
+         
+       
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                   $row["ar_no"] = $row["arno"];
+                $output1 = Array();
+                $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                        
+                 WHERE specification_no in(SELECT specification_no FROM specification WHERE material_code='".$row["material_code"]."')
+                  and plant_id=".$_GET["plant_id"]   ;          
+                     
+
+                 
+                
+                $result2 = $conn->query($sql2);
+                if ($result2->num_rows > 0) {
+                    while ($row2 = $result2->fetch_assoc()) {
+
+                       $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+                
+                    $r = $conn->query($q);
+                       if ($r->num_rows > 0) {
+                        $row2["methodID"] = 1 ;
+                       }else{
+                        $row2["methodID"] =0 ;
+
+                       }
+                        if($row2["test_type"]=="Microbiology")
+                        $output1[] = $row2;
+                    }
+                }
+                $row["spec_tests"] = $output1;
+                $row["grn_grade_name"] = '';
+                $output2 = [];
+                $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+                $result3 = $conn->query($sql3);
+                if ($result3->num_rows > 0) {
+                    while ($row3 = $result3->fetch_assoc()) {
+
+                        $output2[] = $row3;
+                        $grn_grade_data = json_decode($row3["grn_grade"],true);
+                        $row["grn_grade_name"] = $row3["grn_grade"];
+                       
+                    }
+                }
+
+                $row["grn_grade"] = $output2;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+   
+   
+    } 
+    else if ($_GET["type"] == "getPendingAllocationTestings_finish") {
+        $output = Array();
+        //  $sql = "SELECT   t.*, 
+        //  (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+        //  (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+        //  (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+        //  (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+        //  (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+        //  (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+        //  (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+        //  FROM testing t
+        //  where t.status='pending' having  (vendor_coa='NO') order by 1 desc";
+        $sql="SELECT * FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code and c.spec_type='Finish Product'";
+
+         
+          
+        $result = $conn->query($sql);
+         
+       
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                   $row["ar_no"] = $row["arno"];
+                $output1 = Array();
+                $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                        
+                 WHERE specification_no in(SELECT specification_no FROM specification WHERE product_code='".$row["product_code"]."')
+                  and plant_id=".$_GET["plant_id"]   ;          
+                     
+
+                 
+                
+                $result2 = $conn->query($sql2);
+                if ($result2->num_rows > 0) {
+                    while ($row2 = $result2->fetch_assoc()) {
+
+                       $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+                
+                    $r = $conn->query($q);
+                       if ($r->num_rows > 0) {
+                        $row2["methodID"] = 1 ;
+                       }else{
+                        $row2["methodID"] =0 ;
+
+                       }
+                        if($row2["test_type"]!="Microbiology")
+                        $output1[] = $row2;
+                    }
+                }
+                $row["spec_tests"] = $output1;
+                $row["grn_grade_name"] = '';
+                $output2 = [];
+                $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+                $result3 = $conn->query($sql3);
+                if ($result3->num_rows > 0) {
+                    while ($row3 = $result3->fetch_assoc()) {
+
+                        $output2[] = $row3;
+                        $grn_grade_data = json_decode($row3["grn_grade"],true);
+                        $row["grn_grade_name"] = $row3["grn_grade"];
+                       
+                    }
+                }
+
+                $row["grn_grade"] = $output2;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+   
+   
+    } 
+ else if ($_GET["type"] == "getAwatingERPAllocationTestings") {
+    $output = Array();
+     $sql = "SELECT   t.*, 
+     (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+     (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+     (select grade from grade  where grade.id = grade limit 1)  as gradeName ,
+     
+     (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+     
+      (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+     
+     FROM testing t 
+     where
+     t.status='awaiting'  and is_RDS=0  and t.plant_id='".$_GET["plant_id"]."' order by 1 desc";
+            // $sql="SELECT * FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code and c.spec_type='Finish Product'";
+
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+            $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                    
+             WHERE specification_no in(SELECT specification_no FROM specification WHERE material_code='".$row["material_code"]."' and specification_no='".$row["specification_no"]."')
+              and plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]!="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            $row["spec_tests"] = $output1;
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+              $q1= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q1);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['m_gradeName'] = $prodLatest['gradeName'];
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+ else if ($_GET["type"] == "getAwatingERPAllocationTestings_micro2") {
+    $output = Array();
+     $sql = " select *,b.material_name,a.id as mid from micro_test a left JOIN material b on a.material_code=b.material_code where a.status='awaiting' and a.is_RDS='".$_GET["is_RDS"]."'";
+    //  and is_RDS=0 order by 1 desc";
+            // $sql="SELECT * FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code and c.spec_type='Finish Product'";
+
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+        //   echo $sql2 = "SELECT * FROM  micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id where a.micro_test_id='".$row["id"]."' and a.plant_id=".$_GET["plant_id"]   ;          
+            $sql2 = "SELECT *,a.status as m_status FROM micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id LEFT JOIN test_methods c on a.spec_test_id=c.spec_test_id where a.micro_test_id='".$row["mid"]."' and a.plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+                    $row2["equipment_instruments"] = json_decode($row2["equipment_instruments"]);
+                    $row2["chemical_reagents"] = json_decode($row2["chemical_reagents"]);
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]=="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            
+            $row["spec_tests"] = $output1;
+              
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+            
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+else if($_GET["type"]=="get_methods"){
+echo	$sql = "SELECT * FROM test_methods WHERE spec_test_id='".$_GET["id"]."'";
+		$result = $conn->query($sql);
+	if($result->num_rows > 0){
+		$output = Array();
+		while($row = $result->fetch_assoc()){
+			$output[] = $row;
+		}
+	}
+	echo json_encode($output);
+}
+ else if ($_GET["type"] == "getAwatingERPAllocationTestings_micro1") {
+    $output = Array();
+     $sql = " select * from micro_test";
+    //  and is_RDS=0 order by 1 desc";
+            // $sql="SELECT * FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code and c.spec_type='Finish Product'";
+
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+            $sql2 = "SELECT * FROM  micro_spec_test a left JOIN spec_tests b on b.id=a.spec_test_id where a.micro_test_id='".$row["id"]."' and a.plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]=="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            $row["spec_tests"] = $output1;
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+ else if ($_GET["type"] == "getAwatingERPAllocationTestings_micro") {
+    $output = Array();
+     $sql = "SELECT   t.*, 
+     (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+     (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+     (select grade from grade  where grade.id = grade limit 1)  as gradeName ,
+     
+     (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+     
+      (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa 
+     
+     FROM testing t
+     where
+     t.status='inprocess'  and is_RDS=0 order by 1 desc";
+            // $sql="SELECT * FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code and c.spec_type='Finish Product'";
+
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+            $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                    
+             WHERE specification_no in(SELECT specification_no FROM specification WHERE material_code='".$row["material_code"]."')
+              and plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]=="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            $row["spec_tests"] = $output1;
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+ else if ($_GET["type"] == "getAwatingERPAllocationTestings_finish") {
+    $output = Array();
+    //  $sql = "SELECT   t.*, 
+    //  (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+    //  (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+    //  (select grade from grade  where grade.id = grade limit 1)  as gradeName ,
+     
+    //  (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+     
+    //   (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa 
+     
+    //  FROM testing t
+    //  where
+    //  t.status='inprocess'  and is_RDS=0 order by 1 desc";
+            $sql="SELECT *,b.grade as pgrade FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code where c.spec_type='Finish Product' and a.allocation_status='inprocess' and a.is_RDS='0' ";//
+
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+            $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                    
+             WHERE specification_no in(SELECT specification_no FROM specification WHERE product_code='".$row["product_code"]."')
+              and plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]!="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            $row["spec_tests"] = $output1;
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+
+
+else if ($_GET["type"] == "getAwatingERDPAllocationTestings") {
+    $output = Array();
+     $sql = "SELECT   t.*, 
+     (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+     (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+     (select grade from grade  where grade.id = grade limit 1)  as gradeName ,
+     (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+     
+      (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa 
+     
+     FROM testing t
+     where
+     t.status='inprocess'  and is_RDS=1 order by 1 desc";
+
+      
+    $result = $conn->query($sql);
+     
+   
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+
+            $output1 = Array();
+            $sql2 = "SELECT spec_tests.*  FROM spec_tests 
+                    
+             WHERE specification_no in(SELECT specification_no FROM specification WHERE material_code='".$row["material_code"]."')
+              and plant_id=".$_GET["plant_id"]   ;          
+                 
+
+             
+            
+            $result2 = $conn->query($sql2);
+            if ($result2->num_rows > 0) {
+                while ($row2 = $result2->fetch_assoc()) {
+
+                   $q = 'select * from test left join test_methods on test_methods.test_id = test.id where  test.test = "'.$row2["test"].'"';
+            
+                $r = $conn->query($q);
+                   if ($r->num_rows > 0) {
+                    $row2["methodID"] = 1 ;
+                   }else{
+                    $row2["methodID"] =0 ;
+
+                   }
+                    if($row2["test_type"]!="Microbiology")
+                    $output1[] = $row2;
+                }
+            }
+            $row["spec_tests"] = $output1;
+            $row["grn_grade_name"] = '';
+            $output2 = [];
+            $sql3 = "select * from challan_materials  where grn_no='".$row["grn_no"]."'";
+            $result3 = $conn->query($sql3);
+            if ($result3->num_rows > 0) {
+                while ($row3 = $result3->fetch_assoc()) {
+
+                    $output2[] = $row3;
+                    $row["grn_grade_name"] = $row3["grn_grade"];
+                   
+                }
+            }
+
+            $row["grn_grade"] = $output2;
+            $output[] = $row;
+        }
+    }
+    echo json_encode($output);
+}
+    
+    else if ($_GET["type"] == "allocateTestingPerson") {
+      
+        if($_GET['testing_type']=='1')
+        {
+            $Is_RDs = 1;
+        }
+        elseif($_GET['testing_type']=='2')
+        {
+            $Is_RDs = 0;
+        }
+
+        // print_r( $input['spec_tests']); 
+
+        // exit;
+       $sql = "UPDATE testing SET allocation='".$input["allocation"]."',  testing_person='done', status='awaiting',is_RDS='".$Is_RDs."', specification_no='".$input["specification_no"]."' WHERE testing_no='".$input["testing_no"]."'";
+   
+     if ($conn->query($sql)) {
+            $data = $input['spec_tests'];
+            for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+
+                if($row1["methodID"]=='') $method = "Yes"  ; else $method = "No" ;
+
+             
+                $sql1 = "INSERT INTO testing_tests (user_no, 
+                                                    testing_no, 
+                                                    test, 
+                                                    subtest, 
+                                                    description, 
+                                                    isoutside, 
+                                                    person, 
+                                                    person_alt,
+                                                    ismethod,
+                                                    method_details,
+                                                    outside_testing,
+                                                    specification_no) 
+                                          VALUES ('".$_GET["user_no"]."',
+                                                 '".$input["testing_no"]."',
+                                                 '".$row1["test"]."',
+                                                 '".$row1["subtest"]."','
+                                                 ".$row1["description"]."', 
+                                                 '".$row1["isoutside"]."', 
+                                                 '".$row1["testing_person"]["id"]."', 
+                                                 '".$row1["testing_person_alt"]["id"]."', 
+                                                 '".$method."',
+                                                 '".$row1["methodID"]."',
+                                                 '".$row1["lab_name"]."',
+                                                 '".$input["specification_no"]."')"; 
+                $conn->query($sql1);
+            }
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if($_GET["type"] == "allocateTestingPerson_micro") {
+        $sql="insert INTO micro_test(alalsis_end_date,
+                    alalsis_end_time,
+                    alalsis_start_date,
+                    alalsis_start_time,
+                    approve_by,
+                    approve_date,
+                    ar_no,
+                    check_by,
+                    check_date,
+                    entry_by,
+                    entry_date,
+                    grade,
+                    gradeName,
+                    grn_grade,
+                    grn_grade_name,
+                    grn_no,
+                    inward_no,
+                    is_RDS,
+                    iscoa,
+                    material_code,
+                    recheck,
+                    sampling_no,
+                    specification_no,
+                    status,
+                    testing_no,
+                    testing_person,
+                    testing_type_s,
+                    user_no,
+                    vendor_coa
+                    
+                )
+                values(
+                    '".$input["alalsis_end_date"]."',
+                    '".$input["alalsis_end_time"]."',
+                    '".$input["alalsis_start_date"]."',
+                    '".$input["alalsis_start_time"]."',
+                    '".$input["approve_by"]."',
+                    '".$input["approve_date"]."',
+                    '".$input["ar_no"]."',
+                    '".$input["check_by"]."',
+                    '".$input["check_date"]."',
+                    '".$input["entry_by"]."',
+                    '".$input["entry_date"]."',
+                    '".$input["grade"]."',
+                    '".$input["gradeName"]."',
+                    '".json_encode($input["grn_grade"])."',
+                    '".$input["grn_grade_name"]."',
+                    '".$input["grn_no"]."',
+                    '".$input["inward_no"]."',
+                    '".$_GET["testing_type_s"]."',
+                    '".$input["iscoa"]."',
+                    '".$input["material_code"]."',
+                    '".$input["recheck"]."',
+                    '".$input["sampling_no"]."',
+                    '".$input["specification_no"]."',
+                    'awaiting',
+                    '".$input["testing_no"]."',
+                    '".$input["testing_person"]."',
+                    '".$input["testing_type_s"]."',
+                    '".$input["user_no"]."',
+                    '".$input["vendor_coa"]."')";
+                    if($conn->query($sql)){
+            $last_id = $conn->insert_id;
+
+        foreach($input["spec_tests"] as $spec_tests){
+    		
+        	$sql="insert INTO micro_spec_test(micro_test_id,spec_test_id,alternate_chemist,calculation,conditions,description,for_micro,instruments,ismethod,
+        	is_outside,less_than,limit_type,limits,method_details,more_than,outside_testing,person,plant_id,procedures,reagents,reference_type,
+        	release_stability,remark,retest,sample_qty,solutions,specification_no,stage,status,subtest_test,test_type,tm_no,unit,upper_limit,user_no)
+            values(".$last_id.",
+                '".$spec_tests["id"]."',
+                '".$spec_tests["alternate_chemist"]."',
+                '".$spec_tests["calculation"]."',
+                '".$spec_tests["conditions"]."',
+                '".$spec_tests["description"]."',
+                '".$spec_tests["for_micro"]."',
+                '".$spec_tests["instruments"]."',
+                '".$spec_tests["ismethod"]."',
+                '".$spec_tests["is_outside"]."',
+                '".$spec_tests["less_than"]."',
+                '".$spec_tests["limit_type"]."',
+                '".$spec_tests["limits"]."',
+                '".$spec_tests["method_details"]."',
+                '".$spec_tests["more_than"]."',
+                '".$spec_tests["outside_testing"]."',
+                '".$spec_tests["person"]."',
+                '".$spec_tests["plant_id"]."',
+                '".$spec_tests["procedures"]."',
+                '".$spec_tests["reagents"]."',
+                '".$spec_tests["reference_type"]."',
+                '".$spec_tests["release_stability"]."',
+                '".$spec_tests["remark"]."',
+                '".$spec_tests["retest"]."',
+                '".$spec_tests["sample_qty"]."',
+                '".$spec_tests["solutions"]."',
+                '".$spec_tests["specification_no"]."',
+                '".$spec_tests["stage"]."',
+                '".$spec_tests["status"]."',
+                '".$spec_tests["subtest_test"]."',
+                '".$spec_tests["test_type"]."',
+                '".$spec_tests["tm_no"]."',
+                '".$spec_tests["unit"]."',
+                '".$spec_tests["upper_limit"]."',
+                '".$spec_tests["user_no"]."')";
+    	 $conn->query($sql);
+        }
+                    
+                            echo "{\"status\":\"success\"}";
+                        } else {
+                            echo "{\"status\":\"".$conn->error."\"}";
+                        }
+        
+    }
+    
+    else if ($_GET["type"] == "allocateTestingPerson_finish") {
+      
+        if($_GET['testing_type']=='1')
+        {
+            $Is_RDs = 1;
+        }
+        elseif($_GET['testing_type']=='2')
+        {
+            $Is_RDs = 0;
+        }
+
+        // print_r( $input['spec_tests']); 
+
+        // exit;
+       $sql = "UPDATE samplingfg SET   testing_person='done', allocation_status='inprocess',is_RDS='".$Is_RDs."', specification_no='".$input["specification_no"]."' WHERE sampling_no='".$_GET["sampling_no"]."'";
+   
+     if ($conn->query($sql)) {
+            $data = $input['spec_tests'];
+            for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+
+                if($row1["methodID"]=='') $method = "Yes"  ; else $method = "No" ;
+
+             
+                $sql1 = "INSERT INTO testing_tests (user_no, 
+                                                    testing_no, 
+                                                    fg_sampling_no,
+                                                    test, 
+                                                    subtest, 
+                                                    description, 
+                                                    isoutside, 
+                                                    person, 
+                                                    person_alt,
+                                                    ismethod,
+                                                    method_details,
+                                                    outside_testing) 
+                                          VALUES ('".$_GET["user_no"]."',
+                                                 '".$input["testing_no"]."',
+                                                 '".$_GET["sampling_no"]."',
+                                                 '".$row1["test"]."',
+                                                 '".$row1["subtest"]."','
+                                                 ".$row1["description"]."', 
+                                                 '".$row1["isoutside"]."', 
+                                                 '".$row1["testing_person"]["id"]."', 
+                                                 '".$row1["testing_person_alt"]["id"]."', 
+                                                 '".$method."',
+                                                 '".$row1["methodID"]."',
+                                                 '".$row1["lab_name"]."')"; 
+                $conn->query($sql1);
+            }
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+    }
+    else if ($_GET["type"] == "getPendingTestingForms") {
+        $sql = "SELECT t.*, m.material_name, m.grade as m_grade, m.material_type FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.user_no='".$_GET["user_no"]."' AND m.material_type='Raw Material' and  t.status='awaiting'  and is_RDS=1 and t.plant_id='".$_GET["plant_id"]."' order by 1 desc ";
+        $result = $conn->query($sql);
+        $output = Array();
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+
+
+                // $methodDataQuert  = "select method_details from spec_tests where specification_no='".$row["specification_no"]."'";
+                // $methodDataResult = $conn->query($methodDataQuert);
+
+                
+                // $row["methodDataRecord"] = json_decode($methodDataResult->fetch_assoc()["method_details"]);
+                // $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."' AND status='pending' AND person='".$_GET["emp_id"]."'";
+                // //  $sql1 = "SELECT t3. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.id=s2.id  WHERE t.testing_no='".$row["testing_no"]."' and t.status='pending'"; //s2.specification_no='".$row["specification_no"]."' AND 
+
+                // $result1 = $conn->query($sql1);
+                // if ($result1->num_rows > 0) {
+                //     while ($row1 = $result1->fetch_assoc()) {
+                        
+                //         $row1["method_details"] = json_decode($row1["method_details"]);
+                //           $row1["chemical_reagents"] = json_decode($row1["chemical_reagents"]);
+                //          $row1["balance"] = json_decode($row1["balance"]);
+                //          $row1["equipment_instruments"] = json_decode($row1["equipment_instruments"]);
+                //          $row1["glasswares"] = json_decode($row1["glasswares"]);
+                            
+                //         $descriptions = $row1["method_details"];
+                //         for ($i = 0; $i < count($descriptions); $i++) {
+                //             $data = $descriptions[$i];
+                //             if ($data->option == "chemical") {
+                //                 $chemicals = $data->list;
+                //                 for ($j = 0; $j < count($chemicals); $j++) {
+                //                     $chemical = $chemicals[$j];
+                //                     $output2 = Array();
+                //                     $sql3 = "SELECT * FROM chemicals WHERE chemical_no='".$chemical->id."' AND received_qty > issue_qty";
+                //                     $result3 = $conn->query($sql3);
+                //                     if ($result3->num_rows > 0) {
+                //                         while ($row3 = $result3->fetch_assoc()) {
+                //                             $output2[] = $row3;
+                //                         }
+                //                     }
+                //                     $chemical->batches = $output2;
+                //                     $chemicals[$j] = $chemical;
+                //                 }
+                //                 $data->list = $chemicals;
+                //             }
+                //             $descriptions[$i] = $data;
+                //         }
+                //         $output1[]= $row1;
+                //     }
+                // }
+                
+                
+                // if (count($output1) > 0) {
+                //     $row["tests"] = $output1;
+                   
+                // }
+                // $output[] = $row;
+                
+                
+                                                                    // NEW CODE FOR TRIAL
+                                                                    
+                
+                
+
+                $output1 = Array();
+                
+                $sql1="SELECT *,t.id as ttt_id,t.status as t_status FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.test=t.test AND s2.subtest=t.subtest LEFT join test_methods t3 on t3.test_id=s2.id WHERE t.testing_no='".$row["testing_no"]."' AND s2.specification_no='".$row["specification_no"]."'";
+                //  $sql1 = "SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.test_id=s2.id  WHERE  t.testing_no='".$row["testing_no"]."' "; // 
+               //working 
+                //  $sql1 = "SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.test_id=s2.id  WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'"; // 
+                // $sql1 = "SELECT * FROM spec_tests WHERE specification_no='".$row["specification_no"]."'";
+                // $sql1 = "SELECT t3. *,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.id=s2.id WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["method_details"] = json_decode($row1["method_details"]);
+                         $row1["chemical_reagents"] = json_decode($row1["chemical_reagents"]);
+                         $row1["balance"] = json_decode($row1["balance"]);
+                         $row1["equipment_instruments"] = json_decode($row1["equipment_instruments"]);
+                         $row1["glasswares"] = json_decode($row1["glasswares"]);
+                        $output1[] = $row1;
+                    }
+                }
+                $row["tests"] = $output1;
+                  $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['m_grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                $output[] = $row;
+            
+                
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getTestinglog") {
+        $sql = "SELECT t.*, m.material_name, m.grade, m.material_type FROM testing t LEFT JOIN material m ON t.material_code=m.material_code  order by 1 desc ";
+        $result = $conn->query($sql);
+        $output = Array();
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+
+                                              // NEW CODE FOR TRIAL
+                                                                    
+                
+                $output1 = Array();
+                
+                $sql1="SELECT *,t.id as ttt_id,t.status as t_status FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.test=t.test AND s2.subtest=t.subtest LEFT join test_methods t3 on t3.test_id=s2.id WHERE t.testing_no='".$row["testing_no"]."' AND s2.specification_no='".$row["specification_no"]."'";
+                //  $sql1 = "SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.test_id=s2.id  WHERE  t.testing_no='".$row["testing_no"]."' "; // 
+               //working 
+                //  $sql1 = "SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.test_id=s2.id  WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'"; // 
+                // $sql1 = "SELECT * FROM spec_tests WHERE specification_no='".$row["specification_no"]."'";
+                // $sql1 = "SELECT t3. *,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.id=s2.id WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["method_details"] = json_decode($row1["method_details"]);
+                         $row1["chemical_reagents"] = json_decode($row1["chemical_reagents"]);
+                         $row1["balance"] = json_decode($row1["balance"]);
+                         $row1["equipment_instruments"] = json_decode($row1["equipment_instruments"]);
+                         $row1["glasswares"] = json_decode($row1["glasswares"]);
+                        $output1[] = $row1;
+                    }
+                }
+                $row["tests"] = $output1;
+                $output[] = $row;
+            
+                
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getPendingTestingForms_finish") {
+        // $sql = "SELECT t.*, m.material_name, m.grade, m.material_type FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.user_no='".$_GET["user_no"]."' AND m.material_type='Raw Material' and  t.status='inprocess'  and is_RDS=1 order by 1 desc ";
+                   $sql="SELECT *,b.grade as pgrade FROM samplingfg a LEFT JOIN product b on a.product_code=b.product_code left join specification c on a.product_code=c.product_code where c.spec_type='Finish Product' and a.allocation_status='inprocess' and a.is_RDS='1' ";//
+
+        $result = $conn->query($sql);
+        $output = Array();
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+
+
+                
+
+                $output1 = Array();
+                //  $sql1 = "SELECT t. *,t.method_details,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no,t.testing_no, s2.specification_no,t.testing_no,s2.reference_type,s2.limits FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.test_id=s2.id  WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'"; // 
+                // $sql1 = "SELECT * FROM spec_tests WHERE specification_no='".$row["specification_no"]."'";
+              
+                // $sql1 = "SELECT t3. *,t.status,t3.chemical_reagents,t3.balance,t3.equipment_instruments,t3.glasswares, s2.specification_no FROM testing_tests t left join testing t1 ON t.testing_no=t1.testing_no LEFT join sampling s on t1.sampling_no=s.sampling_no LEFT JOIN spec_tests s2 on s2.specification_no=s.specification_no LEFT join test_methods t3 on t3.id=s2.id WHERE s2.specification_no='".$row["specification_no"]."' AND t.testing_no='".$row["testing_no"]."' and t.status='pending'";
+            $sql1="   SELECT * FROM testing_tests a left join samplingfg b on a.fg_sampling_no=b.sampling_no LEFT JOIN spec_tests c on b.specification_no=c.specification_no LEFT JOIN test_methods d on d.test_id=c.id WHERE a.specification_no='".$row["specification_no"]."' and a.fg_sampling_no='".$row["sampling_no"]."' and b.status='pending' GROUP by a.id,b.id,c.id,d.id";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["method_details"] = json_decode($row1["method_details"]);
+                         $row1["chemical_reagents"] = json_decode($row1["chemical_reagents"]);
+                         $row1["balance"] = json_decode($row1["balance"]);
+                         $row1["equipment_instruments"] = json_decode($row1["equipment_instruments"]);
+                         $row1["glasswares"] = json_decode($row1["glasswares"]);
+                         $output1[] = $row1;
+                        
+                    }
+                }
+                $row["tests"] = $output1;
+                $output[] = $row;
+            
+                
+            }
+        }
+        echo json_encode($output);
+    }
+    else if ($_GET["type"] == "getRejectedTestingForms") {
+        $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status in('checked','reject')  and t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_rds"]."' and t.correction='YES'  order by 1 desc";
+         $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+             
+                $output1 = Array();
+                     $sql1="SELECT t.* ,t.id as test_id, (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."' AND t.specification_no='".$row["specification_no"]."' and t.checker_action='Reject'     order by id asc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    else if ($_GET["type"] == "oos_check") {
+       echo   $sql = "UPDATE testing_tests SET  correction='primary_checking' WHERE id='".$_GET["testing_test_id"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+    }
+    else if ($_GET["type"] == "oos_check_sec") {
+       echo   $sql = "UPDATE testing_tests SET  correction='secondary_checking' WHERE id='".$_GET["testing_test_id"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+    }
+    else if ($_GET["type"] == "oos_approved") {
+       echo   $sql = "UPDATE testing_tests SET  correction='oos_approved' WHERE id='".$_GET["testing_test_id"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+    }
+    else if ($_GET["type"] == "getRejectedTestingForms_primary_oos") {
+        $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status in('checked','reject')  and t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_rds"]."' and t.correction='pending'  order by 1 desc";
+         $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+             
+                $output1 = Array();
+                     $sql1="SELECT DISTINCT t.id, t.*,b.id as oos_id,b.testing_test_id, b.testing_no, b.specification_no, b.sampling_no, b.checklist, b.correct_result, b.error, b.error_type, b.description, b.classification, b.immediate_action, b.immediate_cause, b.incident_description, b.related_to, b.type, b.oos_no, b.oos_date ,t.id as test_id, (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type , (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description , (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests t left join oos_correction b on t.id=b.testing_test_id
+                     WHERE t.testing_no='".$row["testing_no"]."' AND t.specification_no='".$row["specification_no"]."' and t.checker_action='Reject'  and t.correction='oos'   order by id asc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["checklist"] = json_decode($row1["checklist"]);
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    else if ($_GET["type"] == "getRejectedTestingForms_secondary_oos") {
+        $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status in('checked','reject')  and t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_rds"]."' and t.correction='primary'  order by 1 desc";
+         $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+             
+                $output1 = Array();
+                     $sql1="SELECT DISTINCT t.id, t.*,b.id as oos_id,b.testing_test_id, b.testing_no, b.specification_no, b.sampling_no, b.checklist, b.correct_result, b.error, b.error_type, b.description, b.classification, b.immediate_action, b.immediate_cause, b.incident_description, b.related_to, b.type, b.oos_no, b.oos_date ,t.id as test_id, (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type , (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description , (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests t left join oos_correction b on t.id=b.testing_test_id
+                     WHERE t.testing_no='".$row["testing_no"]."' AND t.specification_no='".$row["specification_no"]."' and t.checker_action='Reject'  and t.correction='primary_checking'   order by id asc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["checklist"] = json_decode($row1["checklist"]);
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    else if ($_GET["type"] == "getRejectedTestingForms_approval_oos") {
+        $sql = "SELECT   t.*, 
+         (select material_name from master_material  where material_code = t.material_code limit 1)  as material_name,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grade ,
+         (select grade from master_material  where material_code = t.material_code limit 1)  as grades ,
+         (select GROUP_CONCAT(grade.grade) from grade where grade.id  in( grades)) as gradeName ,
+         (select specification_no from specification  where specification.material_code = t.material_code limit 1)  as specification_no ,
+         
+         (select vendor_coa from challan_materials  where challan_materials.grn_no = t.grn_no limit 1)  as vendor_coa  ,
+         (select ar_no from sampling  where t.grn_no = sampling.grn_no limit 1)  as arno  
+         
+         FROM testing t
+         where t.status in('checked','reject')  and t.plant_id='".$_GET["plant_id"]."' and t.is_RDS='".$_GET["is_rds"]."' and t.correction='secondary'  order by 1 desc";
+         $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+           
+            while ($row = $result->fetch_assoc()) {
+                
+             
+                $output1 = Array();
+                     $sql1="SELECT DISTINCT t.id, t.*,b.id as oos_id,b.testing_test_id, b.testing_no, b.specification_no, b.sampling_no, b.checklist, b.correct_result, b.error, b.error_type, b.description, b.classification, b.immediate_action, b.immediate_cause, b.incident_description, b.related_to, b.type, b.oos_no, b.oos_date ,t.id as test_id, (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type , (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description , (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests t left join oos_correction b on t.id=b.testing_test_id
+                     WHERE t.testing_no='".$row["testing_no"]."' AND t.specification_no='".$row["specification_no"]."' and t.checker_action='Reject'  and t.correction='secondary_checking'   order by id asc";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $row1["checklist"] = json_decode($row1["checklist"]);
+                        $output1[] = $row1;
+                    }
+                }
+                
+                    $row["tests"] = $output1;
+                      $q= 'SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('.$row['grade'].')';
+            $resQ = $conn->query($q);
+           $prodLatest = $resQ->fetch_assoc();
+           $row['gradeName'] = $prodLatest['gradeName'];
+                    $output[] = $row;
+                 
+            }
+        }
+        echo json_encode($output);
+    } 
+    // else if ($_GET["type"] == "getRejectedTestingForms") {
+    //     $sql = "SELECT t.*, m.material_name, m.grade, m.material_type FROM testing t LEFT JOIN material m 
+    //     ON t.material_code=m.material_code WHERE t.user_no='".$_GET["user_no"]."' AND t.status='reject'";
+    //     $result = $conn->query($sql);
+    //     $output = Array();
+         
+    //     if ($result->num_rows > 0) {
+    //         while ($row = $result->fetch_assoc()) {
+                
+    //             $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."' AND status='Non Complies' ";
+               
+    //             $result1 = $conn->query($sql1);
+    //             if ($result1->num_rows > 0) {
+    //                 while ($row1 = $result1->fetch_assoc()) {
+                        
+    //                     $row1["method_details"] = json_decode($row1["method_details"]);
+                            
+    //                     $descriptions = $row1["method_details"];
+    //                     for ($i = 0; $i < count($descriptions); $i++) {
+    //                         $data = $descriptions[$i];
+    //                         if ($data->option == "chemical") {
+    //                             $chemicals = $data->list;
+    //                             for ($j = 0; $j < count($chemicals); $j++) {
+    //                                 $chemical = $chemicals[$j];
+    //                                 $output2 = Array();
+    //                                 $sql3 = "SELECT * FROM chemicals WHERE chemical_no='".$chemical->id."' AND received_qty > issue_qty";
+    //                                 $result3 = $conn->query($sql3);
+    //                                 if ($result3->num_rows > 0) {
+    //                                     while ($row3 = $result3->fetch_assoc()) {
+    //                                         $output2[] = $row3;
+    //                                     }
+    //                                 }
+    //                                 $chemical->batches = $output2;
+    //                                 $chemicals[$j] = $chemical;
+    //                             }
+    //                             $data->list = $chemicals;
+    //                         }
+    //                         $descriptions[$i] = $data;
+    //                     }
+    //                     $output1[]= $row1;
+    //                 }
+    //             }
+                
+                
+    //             if (count($output1) > 0) {
+    //                 $row["tests"] = $output1;
+                   
+    //             }
+    //             $output[] = $row;
+                
+    //         }
+    //     }
+    //     echo json_encode($output);
+    // } 
+    // else if ($_GET["type"] == "saveTestingForm") {
+    //     error_reporting(0);
+    //      /*$sql = "UPDATE testing_tests SET result='".$input["result"]."', remark='".$input["remark"]."',
+    //     start_time='".$input["start_time"]."', end_time='".$input["end_time"]."', status='active', 
+    //     descriptions='".json_encode($input["descriptions"])."' WHERE id='".$input["test_no"]."'";
+    //     if ($conn->query($sql) == TRUE) {
+    //         $descriptions = $input["descriptions"];
+    //         for ($i = 0; $i < count($descriptions); $i++) {
+    //             $data = $descriptions[$i];
+    //             if ($data['option'] == "chemical") {
+    //                 $chemicals = $data['list'];
+    //                 for ($j = 0; $j < count($chemicals); $j++) {
+    //                     $chemical = $chemicals[$j];
+    
+    //                     $sql1 = "INSERT INTO chemical_issue (chemical_no, batch_no, qty, purpose, status, entry_by, entry_date) VALUES ('".$chemical['id']."', '".$chemical['batch_no']."', '".$chemical['qty']."', 'TESTING', 'approve', '".$_GET["emp_id"]."', '$entry_date')"; 
+    //                     $conn->query($sql1);
+    
+    //                     $sql1 = "SELECT * FROM chemicals WHERE chemical_no='".$chemical['id']."' AND batch_no='".$chemical['batch_no']."'";
+    //                     $result = $conn->query($sql1);
+    //                     if ($result->num_rows > 0) {
+    //                         while($row = $result->fetch_assoc()) {
+    //                             $received_qty = $row["received_qty"];
+    //                             $issue_qty = $row["issue_qty"];
+    //                             $issue_qty += +$chemical['qty'];
+    //                             $sql1 = "UPDATE chemicals SET issue_qty='$issue_qty' WHERE id='".$row['id']."'";
+    //                             $conn->query($sql1);
+    //                             break;
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         $sql = "INSERT INTO equipment_uses (equipment_no, batch_no, activity, cleaning_type, start_time, end_time, operator, entry_by, entry_date) VALUES ('".$input["equipment"]."', '', 'Testing', '".$input["cleaning_type"]."', '".$start_time."', '".$end_time."', '".$_GET["emp_id"]."', '".$_GET["emp_id"]."', '".$entry_date."')";
+    //         $conn->query($sql); */
+            
+    //      $success = false;    
+    //      $sql = "select * from testing_tests where id = '".$input["id"]."' "     ;   
+    //      $result = $conn->query($sql);
+    //                     if ($result->num_rows > 0) {
+    //                         while($row = $result->fetch_assoc()) {
+    //           $sql1="INSERT INTO testing_tests(plant_id, user_no, testing_no, test, subtest, description, ismethod, method_details, isoutside, person, result,
+    //         remark, start_time, end_time, descriptions, status, observation, fail_status, fail_form, fail_no, correct_result, specification_no, spec_test_no, limits,
+    //         testing_person, batch_no, grn_no, outside_testing, lab_no, checked_by, checked_date, checker_remarks, checker_action, old_result, retest_start_date, retest_start_time,
+    //         retest_remarks, retested_by, retest_date,incident_oos_no) VALUES (
+    //         '".$row["plant_id"]."','".$row["user_no"]."','".$row["testing_no"]."','".$row["test"]."','".$row["subtest"]."',
+    //         '".$row["description"]."','".$row["ismethod"]."','".$row["method_details"]."','".$row["isoutside"]."','".$row["person"]."',
+    //          '".$input["correction_result"]."','".$row["remark"]."','".$row["start_time"]."','".$row["end_time"]."','".$row["descriptions"]."',
+    //         '".$input['status']."','".$row["observation"]."','".$row["fail_status"]."','".$row["fail_form"]."','".$row["fail_no"]."',
+    //         '".$row["correct_result"]."','".$row["specification_no"]."','".$row["spec_test_no"]."','".$row["limits"]."','".$row["testing_person"]."',
+    //         '".$row["batch_no"]."','".$row["grn_no"]."','".$row["outside_testing"]."','".$row["lab_no"]."','".$row["checked_by"]."',
+    //           '".$row["checked_date"]."','".$row["checker_remarks"]."','".$row["checker_action"]."','".$row["result"]."','".$input["tested_date"]."','".$input["tested_time"]."',
+    //             '".$input["retest_remarks"]."','".$input["tested_by"]."', '".$entry_date."','".$input["incident_oos_no"]."')"   ;
+                
+               
+                                 
+    //                             $conn->query($sql1);
+    //                             break;
+    //                         }
+    //                     }    
+      
+      
+       
+    //     $sql = "SELECT * FROM testing_tests WHERE id='".$input["id"]."' AND status='rejected'";
+       
+    //      if($conn->query($sql))   { 
+    //         echo "{\"status\":\"success\"}";
+    //     } else {
+    //         echo "{\"status\":\"failed\"}";
+    //     }
+        
+    // }
+    else if ($_GET["type"] == "saveTestingForm") {
+              echo    $sql = "UPDATE testing_tests  SET remark='".$input["remark"]."', result='".$input["result"]."',end_time='".$input["end_time"]."',status='inprocess' WHERE id='".$_GET["id"]."'";
+  if ($conn->query($sql)) {
+      
+      
+    //   $sql1="update testing set status='inprocess' where testing_no=''".$input["testing_no"]."''";
+      
+      
+      
+      
+   $conn->query($sql1);
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+      
+    }
+    else if ($_GET["type"] == "saveTestingawaitForm") {
+                //   $sql = "UPDATE testing_tests  SET remark='".$input["remark"]."', result='".$input["result"]."',end_time='".$input["end_time"]."',status='inprocess' WHERE id='".$input["test_no"]."'";
+      $sql1="update testing set status='inprocess' where testing_no='".$_GET["testing_no"]."'";
+  if ($conn->query($sql)) {
+      
+      
+      
+      
+      
+      
+   $conn->query($sql1);
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+      
+    }
+    else if ($_GET["type"] == "saveTestingawaitForm_micro") {
+                //   $sql = "UPDATE testing_tests  SET remark='".$input["remark"]."', result='".$input["result"]."',end_time='".$input["end_time"]."',status='inprocess' WHERE id='".$input["test_no"]."'";
+      $sql1="update micro_test  set status='inprocess' where testing_no='".$_GET["testing_no"]."'";
+  if ($conn->query($sql)) {
+      
+      
+      
+      
+      
+      
+   $conn->query($sql1);
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+      
+    }
+    else if ($_GET["type"] == "saveTestingForm_micro") {
+                  $sql = "UPDATE micro_spec_test  SET remark='".$input["remark"]."', result='".$input["result"]."',end_time='".$input["end_time"]."',status='inprocess' WHERE spec_test_id='".$_GET["spec_test_id"]."'";
+  if ($conn->query($sql)) {
+      
+      
+//   echo   $sql1="update micro_test set status='inprocess' where id=''".$input["micro_test_id"]."''";
+      
+      
+      
+      
+   $conn->query($sql1);
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+      
+    }
+    else if ($_GET["type"] == "saveTestingForm_finish") {
+     $sql = "UPDATE testing_tests  SET remark='".$input["remark"]."', result='".$input["result"]."',end_time='".$input["end_time"]."',status='inprocess' WHERE fg_sampling_no='".$input["sampling_no"]."'";
+  if ($conn->query($sql)) {
+      
+      
+      $sql1="UPDATE samplingfg set status='inprocess' where specification_no='".$_GET["specification_no"]."'";
+      
+      
+      
+   $conn->query($sql1);
+            
+            
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"".$conn->error."\"}";
+        }
+        
+      
+    }
+    else if ($_GET["type"] == "saveTestingForm_ERP_micro") {
+        error_reporting(0);
+       
+        
+     echo   $sql = "UPDATE micro_test SET alalsis_start_date ='".$input["start_date"]."', alalsis_start_time='".$input["start_time"]."',
+        alalsis_end_date='".$input["end_date"]."', alalsis_end_time='".$input["end_time"]."',
+        status='inprocess' WHERE id='".$_GET["tid"]."'";
+       
+        if ($conn->query($sql) == TRUE) {
+             $data =$input["spec_tests"];
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+           echo     $sql1 = "update micro_spec_test set status='".$row1["status"]."' where spec_test_id='".$row1["spec_test_id"]."'";
+              
+                $conn->query($sql1);
+            }
+        
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"failed\"}";
+        }
+        
+        $sql = "";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            
+        } else {
+            $sql = "";
+            $conn->query($sql);
+        }
+    }
+    else if ($_GET["type"] == "saveTestingForm_ERP") {
+        error_reporting(0);
+       
+        
+        $sql = "UPDATE testing SET alalysis_start_date='".$input["start_date"]."', alalysis_start_time='".$input["start_time"]."',
+        alalysis_end_date='".$input["end_date"]."', alalysis_end_time='".$input["end_time"]."',
+        status='inprocess' WHERE id='".$input["id"]."'";
+       
+        if ($conn->query($sql) == TRUE) {
+             $data =$input["spec_tests"];
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+                $sql1 = "INSERT INTO testing_tests (user_no, testing_no, test, subtest, description, isoutside,
+                 method_details,result,testing_person,start_time,end_time,specification_no,spec_test_no,testing_date,testing_start_time,testing_end_time,testing_status) VALUES ('".$_GET["user_no"]."',
+                '".$input["testing_no"]."','".$row1["test"]."',
+                '".$row1["subtest"]."','".$row1["description"]."', '".$row1["isoutside"]."',
+                '".$row1["method_details"]."', '".$row1["result"]."','".$row1["tested_by"]."','".$input["start_time"]."',
+                '".$input["end_time"]."','".$row1["specification_no"]."','".$row1["id"]."','".$row1["testing_date"]."','".$row1["start_time"]."','".$row1["end_time"]."','".$row1["status"]."')";
+              
+                $conn->query($sql1);
+            }
+          /*  $descriptions = $input["descriptions"];
+            for ($i = 0; $i < count($descriptions); $i++) {
+                $data = $descriptions[$i];
+                if ($data['option'] == "chemical") {
+                    $chemicals = $data['list'];
+                    for ($j = 0; $j < count($chemicals); $j++) {
+                        $chemical = $chemicals[$j];
+    
+                        $sql1 = "INSERT INTO chemical_issue (chemical_no, batch_no, qty, purpose, status, entry_by, entry_date) VALUES ('".$chemical['id']."', '".$chemical['batch_no']."', '".$chemical['qty']."', 'TESTING', 'approve', '".$_GET["emp_id"]."', '$entry_date')"; 
+                       $conn->query($sql1);
+    
+                        $sql1 = "SELECT * FROM chemicals WHERE chemical_no='".$chemical['id']."' AND batch_no='".$chemical['batch_no']."'";
+                        $result = $conn->query($sql1);
+                        if ($result->num_rows > 0) {
+                            while($row = $result->fetch_assoc()) {
+                                $received_qty = $row["received_qty"];
+                                $issue_qty = $row["issue_qty"];
+                                $issue_qty += +$chemical['qty'];
+                                $sql1 = "UPDATE chemicals SET issue_qty='$issue_qty' WHERE id='".$row['id']."'";
+                               $conn->query($sql1);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+             $sql = "INSERT INTO equipment_uses (equipment_no, batch_no, activity, cleaning_type, start_time, end_time, operator, entry_by, entry_date) VALUES ('".$input["equipment"]."', '', 'Testing', '".$input["cleaning_type"]."', '".$start_time."', '".$end_time."', '".$_GET["emp_id"]."', '".$_GET["emp_id"]."', '".$entry_date."')";
+            $conn->query($sql); */
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"failed\"}";
+        }
+        
+        $sql = "SELECT * FROM testing_tests WHERE testing_no='".$input["testing_no"]."' AND status='pending'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            
+        } else {
+            $sql = "UPDATE testing SET status='active' WHERE testing_no='".$input["testing_no"]."'";
+            $conn->query($sql);
+        }
+    }
+    
+    else if ($_GET["type"] == "saveTestingForm_ERP_finish") {
+        error_reporting(0);
+       
+        
+        $sql = "UPDATE  samplingfg SET alalysis_start_date='".$input["start_date"]."', alalysis_start_time='".$input["start_time"]."',
+        alalysis_end_date='".$input["end_date"]."', alalysis_end_time='".$input["end_time"]."',
+        testing_status='active' WHERE id='".$input["id"]."'";
+       
+        if ($conn->query($sql) == TRUE) {
+             $data =$input["spec_tests"];
+         for ($i = 0; $i < count($data); $i++) {
+                $row1 = $data[$i];
+                $sql1 = "INSERT INTO testing_tests (user_no, testing_no, test, subtest, description, isoutside,
+                 method_details,result,testing_person,start_time,end_time,status,specification_no,spec_test_no,fg_sampling_no) VALUES ('".$_GET["user_no"]."',
+                '".$input["testing_no"]."','".$row1["test"]."',
+                '".$row1["subtest"]."','".$row1["description"]."', '".$row1["isoutside"]."',
+                '".$row1["method_details"]."', '".$row1["result"]."','".$row1["tested_by"]."','".$input["start_time"]."',
+                '".$input["end_time"]."','".$row1["status"]."','".$row1["specification_no"]."','".$row1["id"]."','".$input["sampling_no"]."')";
+              
+                $conn->query($sql1);
+            }
+ 
+            echo "{\"status\":\"success\"}";
+        } else {
+            echo "{\"status\":\"failed\"}";
+        }
+        
+        $sql = "SELECT * FROM testing_tests WHERE testing_no='".$input["testing_no"]."' AND status='pending'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            
+        } else {
+            $sql = "UPDATE samplingfg SET testing_status='active' WHERE testing_no='".$input["testing_no"]."'";
+            $conn->query($sql);
+        }
+    }
+    
+    
+    else if($_GET['type'] == 'ARReportlog'){
+       $_GET['filename'] = 'A. R. Report'; $_GET['pdftype'] = 'onlyheader';  include("../../pdfimp2.php");
+        $html= '
+        <h2 style="text-align:center">A. R. Report</h2>
+        <style>td { border:solid 1px BCBBBA;}</style>
+        <table cellpadding="5">
+            <thead>
+                <tr>
+                    <td style="background-color:#DDDAD9; width:100%; text-align:center;"><b>A. R. Report</b></td>
+                </tr>
+                <tr><td style="border:none;"></td></tr>
+                <tr style="background-color:#DDDAD9;">
+                    <td style="width:15%;">A R No.</td>
+                    <td style="width:15%;">Sampling No</td>
+                    <td style="width:20%;">Specification No</td>
+                    <td style="width:20%;">Material Name</td>
+                    <td style="width:15%;">Material Code</td>
+                    <td style="width:15%;">Material Grade</td>
+                   
+                </tr>
+            </thead>
+            <tbody>';
+            $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.status='approve' AND m.material_type='Raw Material'";
+            $output = Array();
+            $result = $conn->query($sql);
+            if ($result->num_rows > 0) {
+                while ($row = $result->fetch_assoc()) {
+                    
+                  
+                 $html.='
+                    <tr>
+                        <td style="width:15%;">'.$row['ar_no'].'</td>
+                        <td style="width:15%">'.$row['sampling_no'].'</td>
+                        <td style="width:20%">'.$row['specification_no'].'</td>
+                        <td style="width:20%">'.$row['material_name'].'</td>
+                        <td style="width:15%">'.$row['material_code'].'</td>
+                        <td style="width:15%">'.$row['grade'].'</td>
+                       
+                    </tr>';
+                }
+            }
+            $html.='
+            </tbody>
+        </table>
+        <div></div>';
+        EOD;
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('coa.pdf', 'I');
+    }
+    else if($_GET['type'] == 'ARReportdigital'){
+        $sql = "SELECT * FROM testing WHERE ar_no='".$_GET["ar_no"]."'";
+        $result = $conn->query($sql);
+        if($result->num_rows > 0){
+            while($row = $result->fetch_assoc()){
+                $_GET['filename'] = 'A. R. Report'; $_GET['pdftype'] = 'onlyheader';  include("../../pdfimp2.php");
+                
+                $sql2 = "SELECT * FROM material WHERE material_code='".$row["material_code"]."'";
+                $result2 = $conn->query($sql2);
+                $row2 = $result2->fetch_assoc();
+                $html.= '
+                <h2 style="text-align:center">A. R. Report</h2>
+                <style>td { border:solid 1px BCBBBA;}</style>
+                <table cellpadding="5">
+                    <thead>
+                        <tr>
+                            <td style="background-color:#DDDAD9; width:100%; text-align:center;"><b>A. R. Report</b></td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2" style="width:30%;"></td>
+                            <td rowspan="2" style="width:30%;"></td>
+                            <td style="width:40%;">Copy No :</td>
+                        </tr>
+                        <tr>
+                            <td>Issued By :</td>
+                        </tr>
+                        <tr>
+                            <td>Product Name:</td>
+                            <td>A.R. NO.: '.$row['ar_no'].'</td>
+                            <td>Batch No. :</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="width:20%;"><b>A. R. No.</b></td>
+                            <td style="width:30%">'.$row['ar_no'].'</td>
+                            <td style="width:20%"><b>Material Code</b></td>
+                            <td style="width:30%">'.$row['material_code'].'</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2"><b>Name of Material / Product</b></td>
+                            <td rowspan="2">';
+                            $sql4 = "SELECT * FROM material WHERE material_code='".$row['material_code']."'";
+                            $result4 = $conn->query($sql4);
+                            if($result4->num_rows > 0){
+                                while ($row4 = $result4->fetch_assoc()) {
+                                    $html.=''.$row4['material_name'].'';
+                                }
+                            }
+                            $html.='</td>
+                            <td><b>Document No.</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>Version No.</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>Batch No /Lot No</b></td>
+                            <td></td>
+                            <td><b>Supersedes</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2"><b>Batch Size</b></td>
+                            <td rowspan="2"></td>
+                            <td><b>Mfg Date</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>Exp. Date</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2"><b>Sample Quntity</b></td>
+                            <td rowspan="2"></td>
+                            <td><b>Specification Reference No.</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>SAP Reference No.</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>Sample By /Date</b></td>
+                            <td></td>
+                            <td><b>Analysis Completion Date</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td><b>Reference</b></td>
+                            <td></td>
+                            <td><b>Effective Date</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" style="border:none; text-align:center;"><br><br><b>TESTS</b><br></td>
+                        </tr>
+                        <tr style="font-weight:bold">
+                            <td style="width:7%;">Sr No.</td>
+                            <td style="width:20%;">Test</td>
+                            <td style="width:20%;">Subtest</td>
+                            <td style="width:27%;">Specification</td>
+                            <td style="width:26%;">Result</td>
+                        </tr>';
+                        $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."'";
+                        $result1 = $conn->query($sql1);
+                        if($result1->num_rows > 0){
+                            $counter = 1;
+                            while ($row1 = $result1->fetch_assoc()) {
+                            $html.='<tr>
+                                    <td>'.$counter++.'</td>
+                                    <td><b>'.$row1['test'].'</b></td>
+                                    <td>'.$row1['subtest'].'</td>
+                                    <td>'.$row1['description'].'</td>
+                                    <td>'.$row1['result'].'</td>
+                                </tr>';
+                            }
+                        }
+                        $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."'";
+                        $result1 = $conn->query($sql1);
+                        if($result1->num_rows > 0){
+                            $counter = 1;
+                            while ($row1 = $result1->fetch_assoc()) {
+                            $html.='
+                            <tr>
+                                <td style="width:3%; border:none;">'.$counter++.'</td>
+                                <td style="width:97%; border:none;"><b>'.$row1['test'].'</b> : </td>
+                            </tr>
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="border:none;"><b>Observation</b> - '.$row1['observation'].'</td>
+                            </tr>
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="border:none;">Acceptance criteria:';
+                                $sql3 = "SELECT * spec_tests WHERE 	specification_no='".$row['specification_no']."' ";
+                                $result3 = $conn->query($sql3);
+                                if($result3->num_rows > 0){
+                                    while ($row3 = $result3->fetch_assoc()) {
+                                        
+                                    }
+                                }
+                                $html.='</td>
+                            </tr>
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="text-align:center;"><b>The Test complies/ Does not Comply</b></td>
+                            </tr>
+                            <tr>
+                                <td style="border:none;"></td>
+                                <td style="width:48%;"><b>Analysed By / Date</b></td>
+                                <td style="width:49%;"><b>Checked By / Date</b></td>
+                            </tr>';
+                        }
+                    }
+                    $html.='
+            </table>
+            <div></div>';
+            }
+            EOD;
+            $pdf->writeHTML($html, true, false, false, false, '');
+            $pdf->Output('coa.pdf', 'I');
+        }else{
+            echo "Invalid Testing No.";
+        }
+    }
+    else if ($_GET["type"] == "downloadTestingLog") {
+        $_GET['filename'] = 'TestingLog'; $_GET['pdftype'] = 'onlyheader'; include("../../pdfimp2.php");
+        $html= "";
+
+        $html.='
+        <h2 style="text-align:center">TestingLog</h2>
+        <table border="1" cellpadding="5">
+            <tr style="background-color:#DDDAD9;font-weight:bold; border: solid 1px black">
+                <td style="width:12%;">Date</td>
+                <td style="width:12%;">A.R.No</td>
+                <td style="width:12%;">Sampling No</td>
+                <td style="width:14%;">Specification No</td>
+                <td style="width:12%;">Testing No</td>
+                <td style="width:14%;">Material Name</td>
+                <td style="width:12%;">Material Code</td>
+                <td style="width:12%;">Material Grade</td>
+            </tr>';
+       $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.status='Approved' ";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+            $html.='<tr>
+                <td style="width:12%;">'.date('d-m-Y',strtotime($row['entry_date'])).'</td>
+                <td style="width:12%;">'.$row['ar_no'].'</td>
+                <td style="width:12%;">'.$row['sampling_no'].'</td>
+                <td style="width:14%;">'.$row['specification_no'].'</td>
+                <td style="width:12%;">'.$row['testing_no'].'</td>
+                <td style="width:14%;">'.$row['material_name'].'</td>
+                <td style="width:12%;">'.$row['material_code'].'</td>
+                <td style="width:12%;">'.$row['grade'].'</td>
+            </tr>';
+            }
+        }
+        $html.="</table>";
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('TestingLog.pdf', 'I');
+    }
+    else if ($_GET["type"] == "download") {
+        $_GET['filename'] = ''; $_GET['pdftype'] = 'onlyheader'; include("../../pdfimp2.php");
+        $html= "";
+        $output = array();
+        $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.status='approve' AND m.material_type='Raw Material' AND t.testing_no='".$_GET["testing_no"]."'";
+        $output = Array();
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $html.='<h3 style="text-align:center;">CERTIFICATE OF ANALYSIS</h3>
+                <table border="1" cellpadding="5">
+                    <tr>
+                        <td style="width:100%;">
+                            <table style="border:none;">
+                                <tr>
+                                    <td style="width:15%;  border:none;"><b>Material Type</b></td>
+                                    <td style="width:45%; border:none;" >:'.$row['material_subtype'].' </td>
+                                    <td style="width:40%; border:none;"><b>AR.No</b>:'.$row['ar_no'].'</td>
+                                </tr>
+                                <tr>
+                                    <td style="width:15%;  border:none;"><b>Material Name</b></td>
+                                    <td style="width:45%; border:none;" >:'.$row['material_name'].' </td>
+                                    <td style="width:40%;  border:none;"><b>Release Date</b>:'.$row['entry_date'].'</td>
+                                </tr>
+                                <tr>
+                                    <td style="width:15%;  border:none;  border:none;"><b>Code No</b></td>
+                                    <td style="width:45%;  border:none;">:'.$row['material_code'].'</td>
+                                    <td style="width:40%;  border:none;"><b>G.R.NO</b>:'.$row['grn_no'].'</td>
+                                </tr>';
+                            $sql1 = "SELECT c.*, v.vendor_name FROM challan c LEFT JOIN vendor v ON c.vendor_no=v.vendor_no WHERE c.challan_no=(SELECT challan_no FROM challan_materials WHERE grn_no='".$row["grn_no"]."')";
+                            $result1 = $conn->query($sql1);
+                            if ($result1->num_rows > 0) {
+                                while ($row1 = $result1->fetch_assoc()) {
+                                    $html.='
+                                    <tr>
+                                        <td style="width:15%;  border:none;"><b>Suppliers</b></td>
+                                        <td style="width:45%; border:none;">: '.$row1["vendor_name"].'</td>
+                                        <td style="width:40%;  border:none;"><b>Challan No</b>:'.$row1["challan_no"].'</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:15%;  border:none;"><b>Spec No</b></td>
+                                         <td style="width:45%; border:none;">:'.$row['specification_no'].'</td>
+                                        <td style="width:40%;  border:none;"><b>Challan Date</b>: '.$row1["challan_date"].'</td>
+                                    </tr>';
+                                }
+                            }
+                            $html.='          
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:100%;">
+                            <table border="1" cellpadding="5">
+                                <tr>
+                                    <td style="width:40%;"><b>Test</b></td>
+                                    <td style="width:30%;"><b>Specification</b></td>
+                                    <td style="width:30%;"><b>Result</b></td>
+                                </tr>';
+                                $output1 = array();
+                                $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."'";
+                                $result1 = $conn->query($sql1);
+                                $j=1;
+                                if ($result1->num_rows > 0) {
+                                    while ($row1 = $result1->fetch_assoc()) {
+                            $html.='<tr>
+                                        <td style="width:40%;">'.$row1['test'].'</td>
+                                        <td style="width:30%;">'.$row1['limits'].'</td>
+                                        <td style="width:30%;">'.$row1['result'].'</td>
+                                    </tr>';
+                                    }
+                                }
+                            $html.='</table>
+                        </td>
+                    </tr>';
+                    $html.='<tr>
+                        <td style="width:100%;"><b>Conclusion: THe above Sample Complies as per IP.</b> In  the opinion of the undersigned,the sample referred
+                        to above is of Standard quality as define in act and the rules mode there under for the result given here-above "This computer generated Certificate of analysis
+                        is valid without signature"</td><br>
+                        <b>Note:</b><br>
+                        <div></div>
+                    </tr>
+                    <tr>
+                        <td style="width:50%;"><div></div><b>Prepared By</b>'.$row['entry_by'].'</td>
+                        <td style="width:50%;"><div></div><b>Approved By</b>'.$row['approve_by'].'</td>
+                    </tr>';
+                 $html.="
+                 </table>";
+            }
+        }
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Testing Report.pdf', 'I');
+    }
+    else if($_GET["type"]=='updateTestingStatus') {
+    //   echo  $sql = "UPDATE testing SET  correction='pending' WHERE testing_no='".$_GET["testingID"]."'";
+    //       if ($conn->query($sql2)) { echo "{\"status\":\"success\"}";
+    //           } 
+    //         // }
+    //         else {
+    //             echo "{\"status\":\"".$conn->error."\"}";
+    //         }
+        
+        
+	    $sql = "UPDATE testing SET  correction='pending' WHERE testing_no='".$_GET["testingID"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+   
+    }
+    else if($_GET["type"]=='updateTestingStatus_primary_oos') {
+    //   echo  $sql = "UPDATE testing SET  correction='pending' WHERE testing_no='".$_GET["testingID"]."'";
+    //       if ($conn->query($sql2)) { echo "{\"status\":\"success\"}";
+    //           } 
+    //         // }
+    //         else {
+    //             echo "{\"status\":\"".$conn->error."\"}";
+    //         }
+        
+        
+	    $sql = "UPDATE testing SET  correction='primary' WHERE testing_no='".$_GET["testingID"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+   
+    }
+    else if($_GET["type"]=='updateTestingStatus_secondary_oos') {
+    //   echo  $sql = "UPDATE testing SET  correction='pending' WHERE testing_no='".$_GET["testingID"]."'";
+    //       if ($conn->query($sql2)) { echo "{\"status\":\"success\"}";
+    //           } 
+    //         // }
+    //         else {
+    //             echo "{\"status\":\"".$conn->error."\"}";
+    //         }
+        
+        
+	    $sql = "UPDATE testing SET  correction='secondary' WHERE testing_no='".$_GET["testingID"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+   
+    }
+    else if($_GET["type"]=='updateTestingStatus_approve_oos') {
+    //   echo  $sql = "UPDATE testing SET  correction='pending' WHERE testing_no='".$_GET["testingID"]."'";
+    //       if ($conn->query($sql2)) { echo "{\"status\":\"success\"}";
+    //           } 
+    //         // }
+    //         else {
+    //             echo "{\"status\":\"".$conn->error."\"}";
+    //         }
+        
+        
+	    $sql = "UPDATE testing SET  correction='YES' WHERE testing_no='".$_GET["testingID"]."'";
+	    if ($conn->query($sql)) {
+	        echo "{\"status\":\"success\"}";
+	    } else {
+	        echo "{\"status\":\"".$conn->error."\"}";
+	    }
+	
+   
+    }
+   else if($_GET['type'] == 'downloadTestingRDSReport'){
+        $_GET['filename'] = ''; $_GET['pdftype'] = 'onlyheader'; include("../../pdfimp2.php");
+        
+        
+        $sql = "SELECT * FROM testing WHERE testing_no='".$_GET['testing_no']."'";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $html .= '<h3 style="text-align:center;">Raw Data Sheet</h3>
+                        <table  style="text-align:left;">
+                        <tr>
+                            <td style="width:23%">Department</td>
+                             <td style="width:31%">Quality Control Department</td>
+                            <td style="width:29%">Material Code:</td>
+                             <td style="width:17%">'.$row["material_code"].'</td>
+                        </tr>';
+                
+                $sql1 = "SELECT * FROM material WHERE material_code='".$row["material_code"]."'";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $html.='<tr>
+                            <td style="width:23%" rowspan="2">Name of Material / Product</td>
+                             <td style="width:31%;vertical-align: middle;" rowspan="2">'.$row1["material_name"].'</td>
+                            <td style="width:29%">SAP No.</td>
+                             <td style="width:17%">Jul,2018</td>
+                        </tr>';
+                    }
+                }
+                $html.='
+                <tr>
+                    <td style="width:29%">Version No.</td>
+                     <td style="width:17%">02</td>
+                </tr>
+                <tr>
+                    <td style="width:23%" rowspan="2">Batch Size</td>
+                     <td style="width:31%;vertical-align: middle;" rowspan="2">ATP003</td>
+                    <td style="width:29%">Mfg Date</td>
+                     <td style="width:17%">Jul,2018</td>
+                </tr>
+                <tr>
+                    <td style="width:29%">Exp. Date</td>
+                     <td style="width:17%">Jul,2018</td>
+                </tr>
+                <tr>
+                    <td style="width:23%" rowspan="2">Sample Quantity</td>
+                     <td style="width:31%;vertical-align: middle;" rowspan="2">ATP003</td>
+                    <td style="width:29%">Specification Refrence No.</td>
+                     <td style="width:17%">'.$row['specification_no'].'</td>
+                </tr>
+                <tr>
+                    <td style="width:29%">SAP Reference No.</td>
+                     <td style="width:17%">23</td>
+                </tr>
+                <tr>
+                    <td style="width:23%">Sample By / Date</td>
+                     <td style="width:31%">'.$row['entry_by'].' '.$row['entry_date'].'</td>
+                    <td style="width:29%">Analysis Completion Date</td>
+                     <td style="width:17%">20/08/2016</td>
+                </tr>
+                <tr>
+                    <td style="width:23%">Reference</td>
+                     <td style="width:31%">test</td>
+                    <td style="width:29%">Effective Date</td>
+                     <td style="width:17%">20/08/2016</td>
+                </tr>
+            </table>
+            <h2 style="text-align: center;">ANALYTICAL REPORT SUMMARY</h2>
+            
+                        <table border="1" cellpadding="2">
+                            <tr>
+                                <td style="width:40%;text-align:center; height:20px;"><b>Test</b></td>
+                                <td style="width:30%; text-align:center; height:20px;"><b>Specification</b></td>
+                                <td style="width:30%; text-align:center; height:20px;"><b>Result</b></td>
+                            </tr>';
+                            $output1 = array();
+                             $sql1 = "SELECT * FROM testing_tests WHERE testing_no='".$row["testing_no"]."'";
+                            $result1 = $conn->query($sql1);
+                            $j=1;
+                            if ($result1->num_rows > 0) {
+                                while ($row1 = $result1->fetch_assoc()) {
+                        $html.='<tr>
+                                    <td style="width:40%; height:20px;"> '.$row1['test'].'</td>
+                                    <td style="width:30%; height:20px;"> '.$row1['subtest'].'</td>
+                                    <td style="width:30%; height:20px;"> '.$row1['result'].'</td>
+                                </tr>';
+                                }
+                            }
+                       
+                 
+            
+            $html.='</table>';
+            }
+        }
+        
+        $sql = "SELECT * FROM testing_tests WHERE testing_no='T-01' GROUP BY test";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            $i = 1;
+            $alphabet = range('A', 'Z');
+            while ($row = $result->fetch_assoc()) {
+                $html .= '<h3>'.$i.'. '.$row["test"].'</h3>';
+                $sql1 = "SELECT * FROM testing_tests WHERE testing_no='T-01' WHERE test='".$row["test"]."' AND subtest !=''";
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $html.='<span><b>'.$alphabet[$i].'. Observation:</b> '.$row["result"].'</span><br>';
+                        $html.='<span><b>Acceptance criteria:</b><br>'.$row["description"].'</span><br>';
+                        if ($row["status"] == "approve") {
+                            $html.='<table cellpadding="5"><tr><td colspan="2" style="text-align: center;">The Test complies</td></tr><tr><td style="text-align: center;">Analysed By/Date: '.$row["person"].'</td><td style="text-align: center;">Checked By/Date:</td></tr></table>';
+                        } else {
+                            $html.='<table cellpadding="5"><tr><td colspan="2" style="text-align: center;">The Test Not Comply</td></tr><tr><td style="text-align: center;">Analysed By/Date: '.$row["person"].'</td><td style="text-align: center;">Checked By/Date:</td></tr></table>';
+                        }
+                    }
+                } else {
+                    $html.='<span><b>Observation:</b> '.$row["result"].'</span><br>';
+                    $html.='<span><b>Acceptance criteria:</b><br>'.$row["description"].'</span><br>';
+                    if ($row["status"] == "approve") {
+                        $html.='<table cellpadding="5"><tr><td colspan="2" style="text-align: center;">The Test complies</td></tr><tr><td style="text-align: center;">Analysed By/Date: '.$row["person"].'</td><td style="text-align: center;">Checked By/Date:</td></tr></table>';
+                    } else {
+                        $html.='<table cellpadding="5"><tr><td colspan="2" style="text-align: center;">The Test Not Comply</td></tr><tr><td style="text-align: center;">Analysed By/Date: '.$row["person"].'</td><td style="text-align: center;">Checked By/Date:</td></tr></table>';
+                    }
+                }
+                $i++;
+            }
+        }
+        
+
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Testing RDS Report.pdf', 'I');
+    }
+    else if ($_GET["type"] == "ARReport") {
+        $_GET['filename'] = 'A. R. Report'; $_GET['pdftype'] = 'onlyheader'; include("../../pdfimp2.php");
+        $html= "";
+         $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON t.material_code=m.material_code WHERE t.status='Approved' AND t.id='".$_GET['id']."' ";
+       
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+       $html.='
+        <h2 style="text-align:center">A. R. Report</h2>
+        <table cellpadding="5" border="1">
+            <tr>
+                <td style="width:25%;"><b>A. R. No.:</b></td>
+                <td style="width:25%;">'.$row['ar_no'].'</td>
+                <td style="width:25%;"><b>Specification No.:</b></td>
+                <td style="width:25%;">'.$row['specification_no'].'</td>
+            </tr>
+            <tr>
+                <td style="width:25%;"><b>Material Code:</b></td>
+                <td style="width:25%;">'.$row['material_code'].'</td>
+                <td style="width:25%;"><b>Material Name:</b></td>
+                <td style="width:25%;">'.$row['material_name'].'</td>
+            </tr>
+            <tr>
+                <td style="width:25%;"><b>Grade:</b></td>
+                <td style="width:25%;">'.$row['grade'].'</td>
+                <td style="width:25%;"><b>Chemical Name:</b></td>
+                <td style="width:25%;">'.$row['chemical_name'].'</td>
+            </tr></table>';
+            }
+        }
+        $html.='<div></div>
+        <h3>Tests:</h3>
+        <table cellpadding="5" border="1">
+            <tr>
+                <td style="width:10%; text-align:centre;"><b>Test</b></td>
+                <td style="width:15%; text-align:centre;"><b>Subtest</b></td>
+                <td style="width:15%; text-align:centre;"><b>Description</b></td>
+                <td style="width:15%; text-align:centre;"><b>Limits</b></td>
+                <td style="width:15%; text-align:centre;"><b>Result</b></td>
+                <td style="width:15%; text-align:centre;"><b>Reference Type</b></td>
+                <td style="width:15%; text-align:centre;"><b>Analysed By</b></td>
+            </tr>';
+            $sql1 = "SELECT * FROM testing_tests WHERE id='".$_GET["id"]."'";
+              
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    
+                
+                if (count($output1) > 0) {
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                
+            $html.='<tr>
+                <td style="width:10%;">'.$row1['test'].'</td>
+                <td style="width:15%;">'.$row1['subtest'].'</td>
+                <td style="width:15%;">'.$row1['description'].'</td>
+                <td style="width:15%;">'.$row1['limits'].'</td>
+                <td style="width:15%;">'.$row1['correct_result'].'</td>
+                <td style="width:15%;">'.$row1['material_type'].'</td>
+                <td style="width:15%;">'.$row1['analysed_by'].'</td>
+            </tr>';
+                }
+                    }
+                }
+        $html.='</table>';
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Testing RDS Report.pdf', 'I');
+                
+                    
+                
+       }
+    else if ($_GET["type"] == "downloadTestingReportDigital") {
+        $_GET['filename'] = 'A. R. Report'; $_GET['pdftype'] = 'onlyheader'; include("../../pdfimp2.php");
+        $html= "";
+         $sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade,p.plant_name,p.plant_full_address FROM testing t LEFT JOIN material m ON t.material_code=m.material_code left join plant p on t.plant_id=p.plant_id WHERE t.status='Approved' AND t.id='".$_GET['id']."' ";
+       
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+       $html.='
+        <h2 style="text-align:center">A. R. Report</h2>
+        <table cellpadding="5" border="1">
+            <tr>
+                <td style="width:25%;"><b>A. R. No.:</b></td>
+                <td style="width:25%;">'.$row['ar_no'].'</td>
+                <td style="width:25%;"><b>Specification No.:</b></td>
+                <td style="width:25%;">'.$row['specification_no'].'</td>
+            </tr>
+            <tr>
+                <td style="width:25%;"><b>Material Code:</b></td>
+                <td style="width:25%;">'.$row['material_code'].'</td>
+                <td style="width:25%;"><b>Material Name:</b></td>
+                <td style="width:25%;">'.$row['material_name'].'</td>
+            </tr>
+            <tr>
+                <td style="width:25%;"><b>Grade:</b></td>
+                <td style="width:25%;">'.$row['grade'].'</td>
+                <td style="width:25%;"><b>Chemical Name:</b></td>
+                <td style="width:25%;">'.$row['chemical_name'].'</td>
+            </tr></table>';
+            }
+        }
+        $html.='<div></div>
+        <h3>Tests:</h3>
+        <table cellpadding="5" border="1">
+            <tr>
+                <td style="width:10%; text-align:centre;"><b>Test</b></td>
+                <td style="width:15%; text-align:centre;"><b>Subtest</b></td>
+                <td style="width:15%; text-align:centre;"><b>Description</b></td>
+                <td style="width:15%; text-align:centre;"><b>Limits</b></td>
+                <td style="width:15%; text-align:centre;"><b>Result</b></td>
+                <td style="width:15%; text-align:centre;"><b>Reference Type</b></td>
+                <td style="width:15%; text-align:centre;"><b>Analysed By</b></td>
+            </tr>';
+            $sql1 = "SELECT * FROM testing_tests WHERE id='".$_GET["id"]."'";
+              
+                $result1 = $conn->query($sql1);
+                if ($result1->num_rows > 0) {
+                    while ($row1 = $result1->fetch_assoc()) {
+                        $output1[] = $row1;
+                    
+                
+                if (count($output1) > 0) {
+                    $row["tests"] = $output1;
+                    $output[] = $row;
+                
+            $html.='<tr>
+                <td style="width:10%;">'.$row1['test'].'</td>
+                <td style="width:15%;">'.$row1['subtest'].'</td>
+                <td style="width:15%;">'.$row1['description'].'</td>
+                <td style="width:15%;">'.$row1['limits'].'</td>
+                <td style="width:15%;">'.$row1['correct_result'].'</td>
+                <td style="width:15%;">'.$row1['material_type'].'</td>
+                <td style="width:15%;">'.$row1['analysed_by'].'</td>
+            </tr>';
+                }
+                    }
+                }
+        $html.='</table>
+         <table border="1" cellpadding="3">
+      <tr style="background-color:black; color:white;">
+      <td style="width: 250px;text-align:center;"><b>Checked By & Digital Signed By</b></td>
+      <td style="width: 40px;text-align:center;"><img src="../../upload/pdf/sign.jpg" style="width:20px;height:20px;"></td>
+      <td style="width: 250px;text-align:center;"><b>Approved By & Digital Signed By</b></td>
+  </tr>
+  <tr>
+      <td style="width: 270px;" >
+          <table>
+              <tr>
+                  <td style="width:70px;">Name</td>
+                  <td style="width:191px;">:' . $row['check_by'] . '</td>
+                 
+              </tr>
+              <tr>
+              <td style="width:70px;">ID</td>
+              <td style="width:70px;">:' . $row['firstname'] . '</td>
+              <td style="width: 50px;">Department</td>
+              <td style="width: 81px;">:Quality Control</td>
+          </tr>
+          <tr>
+              <td style="width:70px;">Designation</td>
+              <td style="width:191px;">:</td>
+          </tr>
+            
+              <tr>
+                  <td style="width:70px;">Date</td>
+                  <td style="width:70px;">:' . date('d-m-Y', strtotime($row['check_date'])) . '</td>
+                  <td style="width: 50px;">Time</td>
+                  <td style="width: 81px;">:' . date('H:i:s', strtotime($row['check_date'])) . '</td>
+              </tr>
+              <br>
+          <tr>
+          <td style="width: 270px;font-size:15px;">For, '.$row['plant_name'].' </td>
+          </tr>
+          </table>
+          
+      </td>
+      <td style="width: 270px;">
+          <table >
+              <tr>
+                  <td style="width:70px;">Name</td>
+                  <td style="width:191px;">:' . $row['approve_by'] . '</td>
+                 
+              </tr>
+              <tr>
+                  <td style="width: 70px;">ID</td>
+                  <td style="width:60px;">:' . $row['firstname1'] . '</td>
+                  <td style="width: 50px;">Department</td>
+                  <td style="width: 81px;">:Quality Control</td>
+              </tr>
+              <tr>
+                  <td style="width:70px;">Designation</td>
+                  <td style="width:191px;">:</td>
+              </tr>
+              
+              <tr>
+              <td style="width:70px;">Date</td>
+              <td style="width:70px;">:' . date('d-m-Y', strtotime($row['approve_date'])) . '</td>
+              <td style="width: 40px;">Time</td>
+              <td style="width: 81px;">:' . date('H:i:s', strtotime($row['approve_date'])) . '</td>
+          </tr>
+          <br>
+          <tr>
+          <td style="width: 265px;font-size:15px;">For, '.$row['plant_name'].' </td>
+          </tr>
+          </table>
+      </td>
+  </tr>
+  <tr>
+              <td style="width: 540px;text-align:center">' . $row['plant_full_address'] . '</td>
+              </tr>
+</table>';
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Testing RDS Report.pdf', 'I');
+                
+                    
+                
+       }
+       else if($_GET['type'] == 'downloadTestingCOAReport'){
+       $_GET['filename'] =''; $_GET['pdftype']='onlyheader'; include("../../pdfimp2.php");
+       //$sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t LEFT JOIN material m ON 
+       //t.material_code=m.material_code  WHERE t.testing_no='".$_GET["testing_no"]."'"; 
+      //$sql = "SELECT t.*, m.material_type, m.material_subtype, m.material_name, m.grade FROM testing t 
+     // LEFT JOIN material m  ON t.material_code=m.material_code WHERE t.status='approve' AND m.material_type='Raw Material'";
+         
+            //$result = $conn->query($sql);
+            //if ($result->num_rows > 0) {
+               // while ($row = $result->fetch_assoc()) {
+                    // $sql2 = "SELECT * FROM sampling WHERE specification_no='".$row["specification_no"]."'";
+               // $result2 = $conn->query($sql2);
+               // if ($result2->num_rows > 0) {
+                   // while ($row2 = $result2->fetch_assoc()) {
+                   
+                   
+                 $sql="  select t. *,m.material_name,t.material_code, m.material_code as mCode, v.material_code, st.specification_no, st.test, st.limits, 
+                 v.vendor_name,c.qty,s.entry_date,s.sample_qty,s.batch_no,s.mfg_date,s.exp_date,tt.result from testing t LEFT JOIN material m on t.material_code = m.material_code
+                 LEFT JOIN vendor v on m.material_type = v.material_type left join spec_tests st on t.specification_no= st.specification_no left join testing_tests tt on t.testing_no= tt.testing_no
+                 LEFT JOIN challan_materials c ON m.material_code=c.material_code LEFT JOIN sampling s on t.grn_no=s.grn_no WHERE t.testing_no='".$_GET["testing_no"]."';  ";
+                  $result = $conn->query($sql);
+    $row = $result->fetch_assoc();{
+                   $html.= '
+                         <style>td { border:solid 1px BCBBBA;}</style>
+                        <table cellpadding="2">
+                            <tr>
+                                <td style="background-color:#DDDAD9; width:540px; text-align:center;">CERTIFICATE OF ANALYSIS</td>
+                            </tr>
+                        </table>
+                        <div></div>
+                        <table cellpadding="2" border="0.1">
+                            <tr>
+                                <td  style="width:108px">Material </td>
+                                  <td style="width:162px;">'.$row['material_name'].'</td>
+                                <td style="width:108px">AR No</td>
+                                <td style="width:162px;">'.$row['ar_no'].'</td>
+                            </tr>
+                            <tr>
+                                <td style="width:108px">Completion Date</td>
+                                <td style="width:162px">'.$row['alalysis_end_date'].'</td>
+                                <td style="width:108px">Analysis Date</td>
+                                <td style="width:162px">'.$row['alalysis_start_date'].'</td>
+                              </tr>
+                            <tr>
+                                <td style="width:108px">Mfg. Date</td>
+                                 <td style="width:162px">'.$row['mfg_date'].'</td>
+                                 <td style="width:108px">Exp. Date</td>
+                                 <td style="width:162px">'.$row['exp_date'].'</td>
+                            </tr>
+                            <tr>
+                                <td style="width:108px">GRN No</td>
+                                 <td style="width:162px">'.$row['grn_no'].'</td>
+                                <td style="width:108px">Batch No</td>
+                                 <td style="width:162px">'.$row['batch_no'].'</td>
+                            </tr>
+                            <tr>
+                             <td style="width:108px">Sampling Date</td>
+                              <td style="width:162px">'.$row['entry_date'].'</td>
+                              <td style="width:108px">Material Code</td>
+                              <td style="width:162px">'.$row['mCode'].'</td>
+                            </tr>
+                            <tr>
+                                <td style="width:108px">Sampled By</td>
+                              <td style="width:162px">'.$row['entry_by'].'</td>
+                              <td style="width:108px">Spec. No. :</td>
+                            <td style="width:162px">'.$row['specification_no'].'</td>
+                            </tr>
+                            <tr>
+                                <td style="width:108px">Vendor Name</td>
+                              <td style="width:162px">'.$row['vendor_name'].'</td>
+                              <td style="width:108px">Mfg.Name</td>
+                              <td style="width:162px">'.$row['vendor_name'].'</td>
+                            </tr>
+                            ';
+                    
+    }
+    
+        
+                        $html.=' </table>
+                        <div></div>
+                        <table cellpadding="2" border="0.1">
+                           
+                       
+                             <tr style="background-color:#DDDAD9; width:100%; ">
+                                <td style="width:54px;"><b>Sr No.</b></td>
+                                <td style="width:121.5px;"><b>Test</b></td>
+                                <td style="width:121.5px;"><b>Limits</b></td>
+                                <td style="width:121.5px;"><b>Results</b></td>
+                                <td style="width:121.5px;"><b>Ref Type</b></td>
+                         </tr>';
+                                //   $sql1 = "SELECT * FROM spec_tests WHERE specification_no='".$row["specification_no"]."'";
+                                    $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'     order by id desc";
+                            $result1 = $conn->query($sql1);
+                            if($result1->num_rows > 0){
+                                $counter = 1;
+                                while ($row1 = $result1->fetch_assoc()) {
+                      
+                                    $html.='<tr>
+                                        <td style="width:10%;">'.$counter++.'</td>
+                                        <td style="width:121.5px;">'.$row1['test'].'</td>
+                                        <td style="width:121.5px;">'.$row1['limits'].'</td>
+                                        <td style="width:121.5px;">'.$row1['result'].'</td>
+                                        <td style="width:121.5px;">'.$row1['reference_type'].'</td>
+                                    </tr>';
+        
+                                
+                
+                                }}
+                                
+                                
+                                
+            
+                     $html.='
+                        </table>
+                        <div></div>  <div></div>
+                        <table>
+                            <tr>
+                                <td style="border:none; width:70.2px;">Conclusion :</td>
+                                <td style="border:none; width:469.8px;">The conclusion of the undersigned about the above mentioned product Complies as per';
+                                $sql1="SELECT t.* , (select reference_type from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as reference_type ,
+                              (select description from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as description ,
+                              (select limits from spec_tests st where st.test=t.test and st.subtest =t.subtest limit 1) as limits FROM testing_tests  t WHERE t.testing_no='".$row["testing_no"]."'     order by id desc";
+                            $result1 = $conn->query($sql1);
+                            if($result1->num_rows > 0){
+                                $counter = 1;
+                                while ($row1 = $result1->fetch_assoc()) {
+                      
+                                    $html.='  '.$row1['reference_type'].',';
+        
+                                
+                
+                                }}
+                                $html.=' Specification Laid down specification and is of a standard quality mentioned there-in and released for Manufacture Packing / Distribution.</td>
+                            </tr>
+                        </table>
+                        <div></div>  <div></div>  <div></div>  <div></div>  <div></div>
+                     <table cellpadding="2" border="0.1">
+       <tr>
+       <td style="width:135px;text-align:center"><b></b></td>
+        <td style="width:135px;text-align:center"><b>Prepared By</b></td>
+         <td style="width:135px;text-align:center"><b>Checked By</b></td>
+          <td style="width:135px;text-align:center"><b>Approved By</b></td>
+       </tr>
+        <tr>
+       <td style="width:135px;text-align:center"><b>Sign/Date</b></td>
+        <td style="width:135px;text-align:center">'.$row['entry_date'].'</td>
+         <td style="width:135px;text-align:center">'.$row['check_date'].'</td>
+          <td style="width:135px;text-align:center">'.$row['approve_date'].'</td>
+       </tr>
+       <tr>
+       <td style="width:135px;text-align:center"><b>Name/ID</b></td>
+        <td style="width:135px;text-align:center">'.$row['entry_by'].'</td>
+         <td style="width:135px;text-align:center">'.$row['check_by'].'</td>
+          <td style="width:135px;text-align:center">'.$row['approve_by'].'</td>
+       </tr>
+       <tr>
+       <td style="width:135px;text-align:center"><b>Designation</b></td>
+        <td style="width:135px;text-align:center">'.$row['designation'].'</td>
+         <td style="width:135px;text-align:center">'.$row['designation'].'</td>
+          <td style="width:135px;text-align:center">'.$row['designation'].'</td>
+       </tr>
+       </table>';
+                
+         
+        
+        EOD;
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Testing COA Report.pdf', 'I');
+    }
+} else {
+    echo "{\"status\":\"invalid\"}";
+}
+$conn->close();
+?>

@@ -1,0 +1,322 @@
+  <div class="card" *ngIf="loading">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Generated Workorders</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="wowise-loading-wrap">
+        <span class="loader"></span>
+        <p>Loading work orders…</p>
+        <p class="text-muted small">Processing in small chunks to keep the page responsive.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" *ngIf="!loading && !isConci">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">WO-wise Shortages
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+       <button class="btn btn-sm btn-warning" routerLink="/planning/Wowisecancellog">
+         <clr-icon shape="history"></clr-icon> Cancellation Log
+       </button>
+       <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+     <div class="search-container wowise-search-row">
+    <label for="tableSearchInput">Search PO/FO:</label>
+  <input type="text" id="tableSearchInput" class="wowise-search-input"
+       placeholder="Filter by order, client, product, WO, material…"
+       [(ngModel)]="searchText"
+       (ngModelChange)="applyFilter()">
+  <button type="button" class="btn btn-sm btn-primary wowise-consolidate-btn" (click)="consolidateMaterials()">
+    Consolidate Material
+  </button>
+</div>
+    <p class="wowise-hint">
+      Work orders appear here after <strong>Send for Requirement Analysis</strong> on Generate WO (To Be Not Plan).
+      Review shortages per WO, then consolidate and proceed to Shortages.
+    </p>
+    <div class="card-text">
+
+<div class="wowise-order" *ngFor="let order of pendingpoDisplay; trackBy: trackByOrder">
+  <div class="wowise-order-head" [class.wowise-order-head--collapsed]="!order._orderExpanded">
+    <button
+      type="button"
+      class="btn btn-sm btn-icon wowise-acc-toggle wowise-acc-toggle--order"
+      (click)="toggleOrderCollapse(order, $event)"
+      [attr.aria-expanded]="order._orderExpanded"
+      title="Expand / collapse order panel"
+    >
+      <clr-icon [attr.shape]="order._orderExpanded ? 'angle down' : 'angle right'"></clr-icon>
+    </button>
+    <div class="wowise-head-text" (click)="toggleOrderCollapse(order, $event)" style="cursor: pointer;">
+    <strong>Order:</strong> {{ order.order_no || '-' }}
+    <span class="wowise-tag wowise-tag--combi" *ngIf="order.is_combi_child">Combi SFG</span>
+    &nbsp;|&nbsp; <strong>Client:</strong> {{ order.client_name || '-' }} ({{ order.client_code || '-' }})
+    &nbsp;|&nbsp; <strong>Product:</strong> {{ order.product_name || '-' }} ({{ order.product_code || '-' }})
+    <span class="text-muted small" *ngIf="order.is_combi_child && order.parent_product_code">
+      — Combi parent: {{ order.parent_product_code }}
+    </span>
+    <span class="text-muted small" *ngIf="order.is_combi_child && order.kit_qty">
+      — Kit qty: {{ order.kit_qty }}
+    </span>
+    <span class="text-muted small" *ngIf="order.fo_code && order.fo_code !== order.order_no">
+      — FO: {{ order.fo_code }}
+    </span>
+    <span class="text-muted small" *ngIf="order.WorkOrders?.length">
+      — {{ order.WorkOrders.length }} WO(s), {{ order._totalMaterialLines || 0 }} material line(s)
+    </span>
+    </div>
+    <div class="wowise-head-actions" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="btn btn-sm btn-danger wowise-head-btn"
+        (click)="cancelOrder(order, $event)"
+        [disabled]="order._cancelling"
+        title="Cancel this order and all its work orders"
+      >
+        <span *ngIf="order._cancelling" class="spinner spinner-inline"></span>
+        Cancel Order
+      </button>
+      <label class="wowise-head-select-label" title="Select all work orders in this order">
+        <input
+          type="checkbox"
+          class="wowise-wo-check"
+          [ngModel]="isOrderAllWoSelected(order)"
+          (ngModelChange)="toggleOrderSelect(order, $event)"
+        />
+      </label>
+    </div>
+  </div>
+
+  <div class="wowise-order-body" *ngIf="order._orderExpanded">
+  <div class="wowise-wo" *ngFor="let wo of order.WorkOrders; trackBy: trackByWo"
+    [class.wowise-wo--selected]="wo._selected">
+    <div class="wowise-wo-head">
+      <input
+        type="checkbox"
+        class="wowise-wo-check"
+        [(ngModel)]="wo._selected"
+        (ngModelChange)="onWoSelectionChange()"
+        (click)="$event.stopPropagation()"
+        title="Select this work order for consolidation"
+      >
+      <button
+        type="button"
+        class="btn btn-sm btn-icon wowise-acc-toggle"
+        (click)="toggleWo(wo, $event)"
+        [attr.aria-expanded]="wo._expanded"
+        title="Expand / collapse"
+      >
+        <clr-icon [attr.shape]="wo._expanded ? 'angle down' : 'angle right'"></clr-icon>
+      </button>
+      <div class="wowise-head-text" (click)="toggleWo(wo, $event)" style="cursor: pointer;">
+      <strong>WO:</strong> {{ wo.workorder_no || '-' }}
+      <span class="wowise-tag wowise-tag--combi" *ngIf="wo.is_combi_child">Combi SFG</span>
+      &nbsp;|&nbsp; <strong>MFR:</strong> {{ wo.mfr_no || '-' }}
+      &nbsp;|&nbsp; <strong>BFR:</strong> {{ wo.bfr_no || '-' }}
+      &nbsp;|&nbsp; <strong>Batch:</strong> {{ wo.batch_size || '-' }} {{ wo.planUnit || '' }}
+      <span class="text-muted small" *ngIf="wo.is_combi_child && wo.kit_qty">
+        — Kit qty: {{ wo.kit_qty }}
+      </span>
+      <span class="text-muted small" *ngIf="wo._materialsAll?.length">
+        — {{ wo._materialsAll.length }} material line(s)
+      </span>
+      </div>
+      <button
+        type="button"
+        class="btn btn-sm btn-danger wowise-head-btn"
+        (click)="cancelWo(wo, $event)"
+        [disabled]="wo._cancelling"
+        title="Cancel this work order"
+      >
+        <span *ngIf="wo._cancelling" class="spinner spinner-inline"></span>
+        Cancel WO
+      </button>
+    </div>
+
+    <div class="wowise-vscroll-wrap" *ngIf="wo._expanded">
+      <div class="datagrid-wrapper wowise-mat-datagrid">
+        <clr-datagrid [clrDgStickyHeader]="true" class="wowise-mat-grid">
+          <clr-dg-column class="wowise-col-type">Type</clr-dg-column>
+          <clr-dg-column>Material</clr-dg-column>
+          <clr-dg-column>Code</clr-dg-column>
+          <clr-dg-column class="cell-num">Required Qty</clr-dg-column>
+          <clr-dg-column class="cell-num">Stock in hand</clr-dg-column>
+          <clr-dg-column class="cell-num">Stock balance</clr-dg-column>
+          <clr-dg-column class="cell-num">Shortage</clr-dg-column>
+          <clr-dg-column>Unit</clr-dg-column>
+
+          <clr-dg-row *ngFor="let mat of wo._displayMaterials; trackBy: trackByMaterial"
+            [style.--wowise-row-bg]="mat.bg_color"
+            [class.wowise-row--short]="(mat.rm_shortage ?? 0) > 0"
+            [class.wowise-row--ok]="(mat.rm_shortage ?? 0) <= 0">
+            <clr-dg-cell [ngClass]="materialTypeTextClass(mat)">{{ mat.material_type || (isRmMaterialRow(mat) ? 'Raw Material' : 'Packing Material') }}</clr-dg-cell>
+            <clr-dg-cell class="cell-material" [title]="mat.material_name || ''">{{ mat.material_name || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ mat.material_code || '-' }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num">{{ mat.required_qty ?? '0' }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-avail">{{ mat.available_stock_qty ?? '0' }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-avail">{{ mat.rm_remaining ?? 0 }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-short-qty">{{ mat.rm_shortage ?? 0 }}</clr-dg-cell>
+            <clr-dg-cell>{{ mat.unit || mat.Matunit || '-' }}</clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>No materials for this work order.</clr-dg-placeholder>
+        </clr-datagrid>
+      </div>
+    </div>
+
+    <div class="wowise-more-mat" *ngIf="wo._expanded && wo._hasMoreMaterials">
+      <button type="button" class="btn btn-sm btn-link" (click)="showMoreMaterialsForWo(wo, $event)">
+        Show more materials ({{ wo._displayMaterials?.length || 0 }} / {{ wo._materialsAll?.length || 0 }})
+      </button>
+    </div>
+  </div>
+  </div>
+</div>
+
+  <div class="card-footer wowise-footer">
+     <span *ngIf="hasMoreOrders" class="wowise-footer-msg">
+       Showing {{ pendingpoDisplay.length }} of {{ totalOrdersCount }} orders.
+       <button type="button" class="btn btn-sm btn-outline" (click)="showMoreOrders()">Show more (+15)</button>
+       <button type="button" class="btn btn-sm btn-outline" (click)="showMoreOrdersLarge()">Show more (+50, max 120)</button>
+     </span>
+     <button class="btn btn-success" (click)="consolidateSelectedMaterials()" [disabled]="selectedWoCount === 0">
+       Consolidate Selected Material<span *ngIf="selectedWoCount > 0"> ({{ selectedWoCount }})</span>
+     </button>
+     <button class="btn btn-primary" (click)="consolidateMaterials()">Consolidate Materials</button>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+  <div class="card" *ngIf="!loading && isConci">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Consolidated Material
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+       <button type="button" class="btn btn-sm btn-warning" (click)="revertConsolidation()">Revert Consolidation</button>
+       <button type="button" class="btn btn-sm btn-success" (click)="downloadConsolidatedExcel()">
+         <clr-icon shape="download"></clr-icon> Excel Download
+       </button>
+       <button type="button" class="btn btn-sm btn-outline" (click)="backToWorkOrders()">Back to Work Orders</button>
+       <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+     <div class="search-container">
+    <label for="tableSearchInputConci">Search:</label>
+  <input type="text" id="tableSearchInputConci"
+       placeholder="Material code / name…"
+       [(ngModel)]="searchText"
+       (ngModelChange)="applyFilter1()">
+</div>
+    <div class="card-text">
+
+      <div class="wowise-conci-toolbar">
+        <div class="wowise-conci-toolbar-right">
+          <span class="wowise-footer-msg" *ngIf="selectedConsolidatedCount">
+            {{ selectedConsolidatedCount }} selected
+          </span>
+          <button type="button" class="btn btn-sm btn-success"
+            (click)="proceedSelectedIndents()"
+            [disabled]="indentProcessing || selectedConsolidatedCount === 0">
+            <span *ngIf="indentProcessing" class="spinner spinner-inline"></span>
+            Proceed to Shortages<span *ngIf="selectedConsolidatedCount"> ({{ selectedConsolidatedCount }})</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-primary wowise-proceed-all"
+            (click)="proceedAllIndents()"
+            [disabled]="indentProcessing || shortageMaterialCount === 0"
+            title="Raise indents for all shortage materials">
+            <span *ngIf="indentProcessing" class="spinner spinner-inline"></span>
+            Proceed All<span *ngIf="shortageMaterialCount"> ({{ shortageMaterialCount }})</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="datagrid-wrapper wowise-conci-datagrid">
+        <clr-datagrid [clrDgStickyHeader]="true" class="wowise-conci-grid">
+          <clr-dg-column class="wc-col-check">
+            <input type="checkbox" [ngModel]="allConsolidatedSelected"
+              (ngModelChange)="toggleConsolidatedSelectAll($event)"
+              title="Select all shortage materials not yet sent to Shortages" />
+          </clr-dg-column>
+          <clr-dg-column class="wowise-col-type">Type</clr-dg-column>
+          <clr-dg-column>Material</clr-dg-column>
+          <clr-dg-column>Code</clr-dg-column>
+          <clr-dg-column>Plan Month</clr-dg-column>
+          <clr-dg-column>Forecast No</clr-dg-column>
+          <clr-dg-column>Group Code</clr-dg-column>
+          <clr-dg-column>Client Group</clr-dg-column>
+          <clr-dg-column>Product</clr-dg-column>
+          <clr-dg-column>Required Qty</clr-dg-column>
+          <clr-dg-column>Stock in hand</clr-dg-column>
+          <clr-dg-column>Stock balance</clr-dg-column>
+          <clr-dg-column>Shortage</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *ngFor="let mat of autoConsolidated; trackBy: trackByMaterial"
+            [class.wowise-row--short]="mat._hasShort"
+            [class.wowise-row--ok]="!mat._hasShort">
+            <clr-dg-cell class="wc-col-check">
+              <input type="checkbox" [(ngModel)]="mat._selected" (ngModelChange)="onConsolidatedRowSelect(mat)"
+                [disabled]="mat._indentRaised"
+                [title]="mat._indentRaised ? 'Already sent to Shortages' : 'Select to proceed to Shortages'" />
+            </clr-dg-cell>
+            <clr-dg-cell [ngClass]="materialTypeTextClass(mat)">{{ mat.material_type || (isRmMaterialRow(mat) ? 'Raw Material' : 'Packing Material') }}</clr-dg-cell>
+            <clr-dg-cell [title]="mat.material_name || '-'">{{ mat.material_name || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ mat.material_code || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ mat._planMonths }}</clr-dg-cell>
+            <clr-dg-cell [title]="mat._forecastNos">{{ mat._forecastNos }}</clr-dg-cell>
+            <clr-dg-cell [title]="mat._groupCodes">{{ mat._groupCodes }}</clr-dg-cell>
+            <clr-dg-cell [title]="mat._clientGroups">{{ mat._clientGroups }}</clr-dg-cell>
+            <clr-dg-cell [title]="mat._products">{{ mat._products }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num">{{ mat._req }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-avail">{{ mat._rmInHand }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-avail">{{ mat._rmBalance }}</clr-dg-cell>
+            <clr-dg-cell class="cell-num wowise-short-qty">{{ mat._rmShort }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="btn btn-sm"
+                [ngClass]="mat._indentRaised ? 'btn-outline' : 'btn-success'"
+                (click)="proceedIndentForMaterial(mat)"
+                [disabled]="indentProcessing || !mat._hasShort || mat._indentRaised"
+                [title]="mat._indentRaised ? 'Already proceeded to Shortages' : 'Proceed this material to Shortages'">
+                {{ mat._indentRaised ? 'Proceeded' : 'Proceed' }}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-placeholder>No consolidated materials.</clr-dg-placeholder>
+        </clr-datagrid>
+      </div>
+
+  <div class="card-footer wowise-footer">
+     <span class="wowise-footer-msg" *ngIf="selectedConsolidatedCount">
+       {{ selectedConsolidatedCount }} material(s) selected
+     </span>
+     <button
+       class="btn btn-primary"
+       (click)="proceedSelectedIndents()"
+       [disabled]="indentProcessing || selectedConsolidatedCount === 0">
+       <span *ngIf="indentProcessing" class="spinner spinner-inline"></span>
+       Proceed to Shortages
+     </button>
+     <button class="btn btn-outline" (click)="revertConsolidation()" [disabled]="indentProcessing">Revert Consolidation</button>
+     <button class="btn btn-success" (click)="downloadConsolidatedExcel()" [disabled]="indentProcessing">
+       <clr-icon shape="download"></clr-icon> Excel Download
+     </button>
+    </div>
+
+    </div>
+  </div>
+</div>

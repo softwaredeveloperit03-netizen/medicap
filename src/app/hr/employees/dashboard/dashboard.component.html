@@ -1,0 +1,191 @@
+<app-qc-module-dashboard-shell
+  themeVariant="marketing"
+  sidebarNavMode="modules"
+  [showDeptToolbar]="false"
+  dashboardTitle="Employees"
+  sectionLabel="Employees Section"
+  sidebarTitle="Employees Modules"
+  closeRouterLink="/hr"
+  searchPlaceholder="Search modules"
+  [cards]="cards"
+  paletteStorageKey="hr-employees-dashboard-dashboard-component"
+  sidebarStorageKey="hr-employees-dashboard-dashboard-component_sidebar"
+>
+  <div qcDashboardBottom class="emp-analytics">
+    <div class="emp-analytics__bar">
+      <div class="emp-analytics__bar-left">
+        <i class="fas fa-chart-pie" aria-hidden="true"></i>
+        <div>
+          <strong>Employee Distribution Analytics</strong>
+          <span>Dept · Plant · Location · Grade · Gender · Age · Qualification · Experience · Permanent vs Contract</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="emp-analytics__eye"
+        (click)="toggleAnalytics()"
+        [attr.aria-expanded]="showAnalytics"
+        [attr.title]="showAnalytics ? 'Hide analytics' : 'View analytics'"
+      >
+        <i class="fas" [ngClass]="showAnalytics ? 'fa-eye-slash' : 'fa-eye'"></i>
+        <span>{{ showAnalytics ? 'Hide' : 'View' }}</span>
+      </button>
+    </div>
+
+    <div class="emp-analytics__body" *ngIf="showAnalytics">
+      <div class="emp-kpi-grid">
+        <div class="emp-kpi" *ngFor="let k of kpiCards" [attr.data-tone]="k.tone">
+          <span class="emp-kpi__icon"><i class="fas" [ngClass]="k.icon"></i></span>
+          <div>
+            <span class="emp-kpi__label">{{ k.label }}</span>
+            <strong class="emp-kpi__value">{{ kpis[k.key] || 0 }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="emp-charts">
+        <article class="emp-chart-card">
+          <h4>Gender Ratio · Pie</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="genderPie"></canvas></div>
+        </article>
+        <article class="emp-chart-card">
+          <h4>Permanent vs Contract</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="typePie"></canvas></div>
+        </article>
+        <article class="emp-chart-card">
+          <h4>Age Distribution</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="ageBar"></canvas></div>
+        </article>
+        <article class="emp-chart-card">
+          <h4>Qualification Distribution</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="qualBar"></canvas></div>
+        </article>
+        <article class="emp-chart-card">
+          <h4>Experience Distribution</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="expLine"></canvas></div>
+        </article>
+        <article class="emp-chart-card">
+          <h4>Designation-wise Employees</h4>
+          <div class="emp-chart-wrap"><canvas #chartCanvas data-ref="desigBar"></canvas></div>
+        </article>
+      </div>
+
+      <div class="emp-special">
+        <article class="emp-chart-card">
+          <h4>Tree Map · Department-wise Employees</h4>
+          <div class="treemap">
+            <div
+              class="treemap__cell"
+              *ngFor="let d of byDepartment; let i = index"
+              [ngStyle]="treemapStyle(d, byDepartment)"
+              [style.background]="['#2563eb','#0ea5e9','#16a34a','#d97706','#7c3aed','#db2777','#0891b2','#64748b'][i % 8]"
+              [title]="d.label + ': ' + d.value"
+            >
+              <strong>{{ d.value }}</strong>
+              <span>{{ d.label }}</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="emp-chart-card">
+          <h4>Organization Chart · Dept → Designation</h4>
+          <div class="org">
+            <div class="org__root">Plant Workforce</div>
+            <div class="org__branches">
+              <div class="org__dept" *ngFor="let o of orgChart">
+                <div class="org__dept-head">{{ o.label }} <small>({{ o.value }})</small></div>
+                <div class="org__roles">
+                  <span *ngFor="let c of o.children">{{ c.label }} · {{ c.value }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="emp-chart-card emp-chart-card--wide">
+          <h4>Department Heat Map · Gender mix</h4>
+          <div class="heat-wrap" *ngIf="heatMap.rows?.length; else noHeat">
+            <table class="heat">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th *ngFor="let c of heatMap.columns">{{ c }}</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of heatMap.rows">
+                  <td class="heat__label">{{ row.department }}</td>
+                  <td *ngFor="let c of heatMap.columns" [style.background]="heatColor(row.cells[c])">
+                    {{ row.cells[c] || 0 }}
+                  </td>
+                  <td><strong>{{ row.total }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noHeat><p class="empty">No heat-map data</p></ng-template>
+        </article>
+      </div>
+
+      <div class="emp-mini-grids">
+        <div class="emp-mini">
+          <h4>Plant-wise</h4>
+          <ul>
+            <li *ngFor="let x of byPlant"><span>{{ x.label }}</span><strong>{{ x.value }}</strong></li>
+          </ul>
+        </div>
+        <div class="emp-mini">
+          <h4>Location-wise</h4>
+          <ul>
+            <li *ngFor="let x of byLocation"><span>{{ x.label }}</span><strong>{{ x.value }}</strong></li>
+          </ul>
+        </div>
+        <div class="emp-mini">
+          <h4>Grade-wise</h4>
+          <ul>
+            <li *ngFor="let x of byGrade"><span>{{ x.label }}</span><strong>{{ x.value }}</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="emp-tables">
+        <div class="emp-table-card">
+          <h4>Department-wise Employees</h4>
+          <div class="emp-table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Department</th><th>Count</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let d of byDepartment; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ d.label }}</td>
+                  <td><strong>{{ d.value }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="emp-table-card">
+          <h4>Latest Employees</h4>
+          <div class="emp-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Emp Id</th><th>Name</th><th>Dept</th><th>Designation</th><th>Gender</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let e of recentEmployees">
+                  <td>{{ e.emp_id }}</td>
+                  <td>{{ e.firstname }} {{ e.lastname }}</td>
+                  <td>{{ e.department }}</td>
+                  <td>{{ e.designation }}</td>
+                  <td>{{ e.gender || '—' }}</td>
+                </tr>
+                <tr *ngIf="!recentEmployees?.length"><td colspan="5">No data</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-qc-module-dashboard-shell>

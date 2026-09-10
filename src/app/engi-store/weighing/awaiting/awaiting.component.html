@@ -1,0 +1,320 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Of Received Material</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/engi-store/weighing"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+ 
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getPendingWeighingMaterials()"  >
+                    <option></option>
+                    <option>Engg Store Mech</option>
+                    <option>Engg Store Elect</option>
+                    <option>Stationary</option>
+                    <option>Housekeeping</option>
+                    <option>Canteen</option>
+                    <option>Building Material</option>
+                    <option>Machine Spares (Dedicated)</option>
+                    <option>Machine Spares (Common)</option>
+                    <option>QC Materials</option>
+                    <option>IT Materials</option>
+                    <option>Others</option>
+                    <option>Service</option>
+                    <option>Equipment</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+              <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                  <clr-dg-column>Receivig No./Dt.</clr-dg-column>
+                  <clr-dg-column>Material Type</clr-dg-column>
+                  <clr-dg-column>PO No./Dt.</clr-dg-column>
+                  <clr-dg-column>Packaging Slip/Dt.</clr-dg-column>
+                  <clr-dg-column>Vendor Name</clr-dg-column>
+                  <clr-dg-column>Material Name</clr-dg-column>
+                  <clr-dg-column>Material Code</clr-dg-column>
+                  <clr-dg-column>Billign Qty.</clr-dg-column>
+                  <clr-dg-column>Short. Qty.</clr-dg-column>
+                  <clr-dg-column>Damage Qty.</clr-dg-column>
+                  <clr-dg-column>Received Qty.</clr-dg-column>
+                  <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          
+                  <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                      <clr-dg-cell>{{ result.receiving_no}} / {{ result.receiving_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.po_no}} / {{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.ch_no}} / {{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.qty }}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.short_qty || 0}}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.hold_qty || 0}}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.received_qty }} {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>
+                            <button *ngIf="result.damage == 'No' || result.damage == 'DONE'" class="btn btn-sm btn-info" (click)="viewResult(result)">{{'common.view' | translate}}</button>
+                            <button *ngIf="result.damage != 'No' && result.damage != 'DONE'" class="btn btn-sm btn-danger" >Damage Container Found</button>
+                      </clr-dg-cell>
+                  </clr-dg-row>
+
+              </clr-datagrid>
+            </div>
+ 
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger"routerLink="/engi-store/weighing">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Of Containers</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="isView = false"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <h3>Challan Details:</h3>
+        <table class="table table-border" style="border: 1px solid black;">
+          <tr>
+            <td style="text-align: left;"><b>Receiving No.:</b></td>
+            <td style="text-align: left;">{{ selectedResult['receiving_no'] }}</td>
+            <td style="text-align: left;"><b>Receiving Dt. :</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['receiving_date'] |date: 'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Name:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_name'] }}</td>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['material_code'] }}</td>
+          </tr>
+          <tr >
+            <td style="text-align: left;"><b>Vendor No. :</b></td>
+            <td style="text-align: left;">{{ selectedResult['vendor_no'] }}</td>
+            <td style="text-align: left;"><b>Vendor Name :</b></td>
+            <td style="text-align: left;">{{ selectedResult['vendor_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_type'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_subtype'] }}</td>
+            <td style="text-align: left;"><b>Qty:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedResult['qty']}} {{selectedResult['unit'] }}</td>
+          </tr>
+          <!-- <tr>
+            <td style="text-align: left;"><b>Material For:</b></td>
+            <td style="text-align: left;">{{ selectedResult['materialForName'] }}</td>
+          </tr> -->
+        </table>
+      <br>
+      <form #weighingForm="ngForm">
+        <div class="clr-row">
+           
+            <div  class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Weighing Type : <span style="color:red;">*</span></strong></label>
+              <select name="weighing_procedure" [(ngModel)]="selectedResult['weighing_procedure']" required  >
+                <option></option>
+                <option>Counting</option>
+                <option>Weighing</option>
+              </select>
+            </div>
+
+            <div  class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Balance(Verification) : <span style="color:red;">*</span></strong></label>
+              <select name="balance" [(ngModel)]="selectedResult['balance']" required  >
+                <option></option>
+                <option *ngFor="let balance of balances; let i = index" [value]="balance.equipment_code">{{balance.equipment_name }} - {{balance.equipment_code }}</option>
+              </select>
+            </div>
+
+            <div  class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label><strong>Criteria For Weighing Checking : <span style="color:red;">*</span></strong></label>
+              <select name="weighing_critiera" [(ngModel)]="weighing_critiera"   required>
+                <option></option>
+                <option>10%</option>
+                <option>100%</option>
+                <option>√n +1</option>
+              </select>
+            </div>
+        </div>
+
+        <h3>Labeling Details:</h3>
+        <div class="clr-row">
+            <table class="table table-border" >
+              <tr>
+                <td style="font-weight:bolder; background-color:aqua;">Medicap Lot No</td>
+                <td style="font-weight:bolder; background-color:aqua;">Batch Qty</td>
+                <td style="font-weight:bolder; background-color:aqua;">Pack Size</td>
+                <td style="font-weight:bolder; background-color:aqua;">{{'common.unit' | translate}}</td>
+                <td style="font-weight:bolder; background-color:aqua;">No Of Containers</td>
+                <td style="font-weight:bolder; background-color:aqua;">Mfg / Exp Date</td>
+                <td style="font-weight:bolder; background-color:aqua;">Action:</td>
+              </tr>
+              <tr *ngFor="let list of selectedResult['batches'] ;let i=index">
+                <td style="font-weight: bolder;color: blue;">{{list.batch_no}}</td>
+                <td style="font-weight: bolder;color: blue;">{{list.qty_received}}</td>
+                <td style="font-weight: bolder;color: blue;">{{list.pack_size || 'NA'}}</td>
+                <td style="font-weight: bolder;color: blue;">{{list.unit}}</td>
+                <td style="font-weight: bolder;color: blue;">{{ list.total_containers }}</td>
+                <td style="font-weight: bolder;color: blue;">{{list.mfg_date | date: 'dd-MM-yyyy'}} / {{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+                <td style="font-weight: bolder;color: blue;" >
+                    <button class="btn btn-sm btn-primary" (click)="proceed(list)" *ngIf="list['status'] == 'pending'"> Proceed</button>
+                    <button class="btn btn-sm btn-primary" *ngIf="list['status'] == 'approve'">Done</button>
+                </td>
+              </tr>
+            </table>
+        </div>
+
+        <h3>Checklist:</h3>
+        <div class="clr-row">
+          <table class="table table-border">
+            <tr>
+              <th style=" background-color: aquamarine; "><strong>{{'common.table.srNo' | translate}}</strong></th>
+              <th style=" background-color: aquamarine; text-align: left; "><strong>Parameters</strong></th>
+              <th style=" background-color: aquamarine; "><strong>Remarks <span style="color: red;">*</span></strong></th>
+            </tr>
+            <tr *ngFor="let hr of checkPointData;let i = index" >
+              <td ><strong>{{i+1.}}</strong></td>
+              <td style="text-align:left;">{{hr.check_point}}</td>
+              <td style="margin: 0;padding: 0;">
+                      <input *ngIf="hr.evl_pr=='1'"  type="text" min="0" name="check{{i}}" [(ngModel)]="hr.check" style="margin: 0;">
+                      <select  name="check{{i}}" [(ngModel)]="hr.check" required style="margin: 0;" *ngIf="hr.evl_pr!='1'">
+                        <option ></option>
+                        <option *ngIf="hr.evl_pr=='2'">Yes</option>
+                        <option *ngIf="hr.evl_pr=='2'">No</option>
+                        <option *ngIf="hr.evl_pr=='3'">OK</option>
+                        <option *ngIf="hr.evl_pr=='3'">Not Ok</option>
+                        <option *ngIf="hr.evl_pr=='4'" >Satisfactory</option>
+                        <option *ngIf="hr.evl_pr=='4'" >Not Satisfactory</option>
+                        <option *ngIf="hr.evl_pr=='5'">Applicable</option>
+                        <option *ngIf="hr.evl_pr=='5'">Not Applicable</option>
+                        <option *ngIf="hr.evl_pr=='6'">Cleaned</option>
+                        <option *ngIf="hr.evl_pr=='6'">Not Cleaned</option>
+                        <option *ngIf="hr.evl_pr=='7'">Sealed </option>
+                        <option *ngIf="hr.evl_pr=='7'">Unsealed</option>
+                        <option *ngIf="hr.evl_pr=='8'">Verified</option>
+                        <option *ngIf="hr.evl_pr=='8'">Not Verfied</option>
+                        <option *ngIf="hr.evl_pr=='9'">Covered</option>
+                        <option *ngIf="hr.evl_pr=='9'">Uncovered</option>
+                        <option>NA</option>
+                    </select>
+              </td>
+            </tr>
+
+          </table>
+        </div> 
+
+      </form>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="saveWeighings(weighingForm)">{{'common.save' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+  
+
+ <clr-modal [(clrModalOpen)]="isProceed" [clrModalSize]="'xl'">
+  <h3 class="modal-title">PHYSICAL VERIFICATION REPORT</h3>
+  <div class="modal-body">
+    <form #containerData="ngForm" class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12-clr-col-xs-12">
+          <table class="table table-border">
+            <tr>
+              <td style="background-color: rgb(14, 67, 112); color: white;font-size:15px;" colspan="8"><strong>PHYSICAL VERIFICATION REPORT</strong></td>
+            </tr>
+            <tr>
+              <td style="background-color: rgb(14, 67, 112); color: white" rowspan="2"><strong>{{'common.table.srNo' | translate}}</strong></td>
+              <td style="background-color: green; color: white;" colspan="3"><strong>Supplier Claim</strong></td>
+              <td style="background-color: yellow; color: black;" colspan="3"><strong>Actual Receipt</strong></td>
+              <td style="background-color: red; color: white;" rowspan="2"><strong>Diffrence If Any</strong></td>
+            </tr>
+            <tr>
+              <td style="background-color: green; color: white;" > 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Gross Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>No.Of Box</strong></span>  
+              </td>
+              <td style="background-color: green; color: white;" > 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Tare Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>Qty. Per Box</strong></span>  
+              </td>
+              <td style="background-color: green; color: white;" > 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Net Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>Actual Qty.</strong></span>  
+              </td>
+              <td style="background-color: yellow; color: black;"> 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Gross Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>No.Of Box</strong></span>  
+              </td>
+              <td style="background-color: yellow; color: black;"> 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Tare Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>Qty. Per Box</strong></span>  
+              </td>
+              <td style="background-color: yellow; color: black;"> 
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Weighing'"><strong>Net Wt.</strong></span>
+                  <span *ngIf="selectedResult['weighing_procedure'] == 'Counting'"><strong>Actual Qty.</strong></span>  
+              </td>
+            </tr>
+            <tr *ngFor="let number of numbers;let i=index">
+              <td style="font-weight: bold;"> {{number.container_no}}</td>
+              <td style="margin: 0;padding: 0;">
+                <input type="number" name="lbgross_weight{{i}}" [(ngModel)]="number.lbgross_weight" requiredstyle="margin: 0;">
+              </td>
+              <td style="margin: 0;padding: 0;">
+                <input type="number" name="lbtare_weight{{i}}" [(ngModel)]="number.lbtare_weight"  required style="margin: 0;">
+              </td>
+              <td style="margin: 0;padding: 0;"> 
+                <input type="number" name="lbnet_weight{{i}}" [(ngModel)]="number.lbnet_weight"  required style="margin: 0;">
+              </td>
+              <td style="margin: 0;padding: 0;">
+                <input type="number" name="acgross_weight{{i}}" [(ngModel)]="number.acgross_weight"  required style="margin: 0;">
+              </td>
+              <td style="margin: 0;padding: 0;">
+                <input type="number" name="actare_weight{{i}}" [(ngModel)]="number.actare_weight"  required style="margin: 0;">
+              </td>
+              <td style="margin: 0;padding: 0;">
+                <input type="number" name="acnet_weight{{i}}" [(ngModel)]="number.acnet_weight"  required style="margin: 0;">
+              </td>
+              <td style="font-weight: bold;"> {{+number.lbnet_weight - +number.acnet_weight}}</td>
+            </tr>
+          </table>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+      <button class="btn btn-outline" (click)="saveWeighingsList(containerData)">{{'common.save' | translate}}</button>
+      <button  class="btn btn-danger" (click)="isProceed=false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

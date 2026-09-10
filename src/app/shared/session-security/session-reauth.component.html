@@ -1,0 +1,65 @@
+<div class="reauth-backdrop" *ngIf="visible" (mousedown)="$event.stopPropagation()">
+  <div class="reauth-modal" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+    <div class="reauth-head">
+      <i class="fas fa-shield-halved"></i>
+      <div>
+        <h3>Session Re-authorisation</h3>
+        <p>Your session was idle for more than 10 minutes. Confirm your identity to continue.</p>
+      </div>
+    </div>
+
+    <div class="reauth-tabs">
+      <button type="button" [class.reauth-tab--active]="loginMode === 'pin'" (click)="setMode('pin')">4-Digit PIN</button>
+      <button type="button" [class.reauth-tab--active]="loginMode === 'password'" (click)="setMode('password')">Password</button>
+    </div>
+
+    <div class="reauth-user">
+      <label>User</label>
+      <div>{{ displayUser }}</div>
+    </div>
+
+    <div class="reauth-field" *ngIf="loginMode === 'pin'">
+      <label>4-Digit Session PIN</label>
+      <div class="reauth-pin-row" (paste)="onPinPaste($event)">
+        <input *ngFor="let d of pinDigits; let i = index"
+               [id]="'reauth-pin-' + i"
+               type="text"
+               inputmode="numeric"
+               pattern="[0-9]*"
+               maxlength="1"
+               autocomplete="one-time-code"
+               [attr.placeholder]="null"
+               [attr.name]="'reauthPin' + i"
+               aria-label="PIN digit {{ i + 1 }}"
+               class="reauth-pin-box"
+               (input)="onPinInput(i, $event)"
+               (keydown)="onPinKeydown(i, $event)"
+               (keydown.enter)="confirm()" />
+      </div>
+      <p class="reauth-hint">Default PIN is <strong>{{ defaultPin }}</strong> until you change it via Change Session PIN on the login page.</p>
+    </div>
+
+    <div class="reauth-field" *ngIf="loginMode === 'password'">
+      <label for="reauth-password">Password</label>
+      <input
+        id="reauth-password"
+        name="reauthPassword"
+        type="password"
+        autocomplete="current-password"
+        [value]="password"
+        (input)="onPasswordInput($event)"
+        (keydown.enter)="confirm()"
+        class="reauth-password-input"
+      />
+    </div>
+
+    <div class="reauth-error" *ngIf="error">{{ error }}</div>
+
+    <div class="reauth-actions">
+      <button type="button" class="reauth-btn reauth-btn--ghost" (click)="logout()" [disabled]="busy">Logout</button>
+      <button type="button" class="reauth-btn reauth-btn--primary" (click)="confirm()" [disabled]="busy">
+        {{ busy ? 'Verifying…' : 'Continue' }}
+      </button>
+    </div>
+  </div>
+</div>

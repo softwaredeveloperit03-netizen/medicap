@@ -1,0 +1,108 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  dashboardTitle = 'Control Sample';
+  sectionLabel = 'Control Sample Section';
+  closeRouterLink = '/qc';
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  cards: DeptCard[] = [
+    { id: 'new', title: 'New', route: 'new', icon: 'fa-plus-circle', category: 'Control', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'log', title: 'Log', route: 'log', icon: 'fa-list', category: 'Control', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'expired', title: 'Expired', route: 'expired', icon: 'fa-clock', category: 'Control', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'distroy', title: 'Destroy', route: 'distroy', icon: 'fa-trash-alt', category: 'Control', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'review', title: 'Review', route: 'review', icon: 'fa-search', category: 'Control', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'new-review', title: 'New Review', route: 'new-review', icon: 'fa-file-alt', category: 'Control', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'rack', title: 'Rack', route: 'rack', icon: 'fa-th-large', category: 'Control', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'withdrawal', title: 'Withdrawal', route: 'withdrawal', icon: 'fa-hand-holding', category: 'Control', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'finish', title: 'Finish', route: 'finish', icon: 'fa-box', category: 'Control', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'raw', title: 'Raw', route: 'raw', icon: 'fa-vial', category: 'Control', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'packing', title: 'Packing', route: 'packing', icon: 'fa-box-open', category: 'Control', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+  ];
+
+  constructor(public service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit() {
+    this.get_rights();
+    const savedPalette = localStorage.getItem('qc_controlsample_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.cards.map(c => c.category))));
+  }
+
+  getFilteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.cards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_i: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('qc_controlsample_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  rights: any;
+  dept_head = 'No';
+  trainig_cordinator = 'No';
+  loggedInDept: string | null = null;
+
+  get_rights() {
+    this.service.get('hr/employee.php?type=getrights&emp_id=' + localStorage.getItem('emp_id') + '&dep_name=' + encodeURIComponent(this.loggedInDept || ''))
+      .subscribe((response: any) => {
+        this.rights = response;
+        if (this.rights && this.rights[0]) {
+          this.dept_head = this.rights[0].dept_head || 'No';
+          this.trainig_cordinator = this.rights[0].trainig_cordinator || 'No';
+        }
+      });
+  }
+}

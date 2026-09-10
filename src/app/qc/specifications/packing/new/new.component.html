@@ -1,0 +1,901 @@
+﻿<!-- <div *ngIf="righ=='Grant'"> -->
+<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Material
+        Specification</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/master/specification/raw/log">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <form [formGroup]="rowMaterialForm">
+
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Specification:<span style="color:red">*</span></label>
+            <select name="specification" formControlName="rm_spec" (change)="checkSpec($event.target.value)">
+              <option *ngFor="let item of specList;let i= index;" [value]="item.value">{{ item.label }}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type:<span style="color: red">*</span></label>
+            <select name="material_type" formControlName="rm_matType"
+              (change)="getSubMaterials(rowMaterialForm.value.rm_matType)">
+              <option *ngFor="let item of matTypeList;let i= index;" [value]="item.value">{{ item.label }}</option>
+            </select>
+          </div>
+ 
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label *ngIf="material_type =='Semi Finished Goods' || material_type =='Finish Product' ">Product Type:<span style="color: red">*</span></label>
+            <label *ngIf="material_type =='Raw Material' || material_type =='Pharma Raw Material' || material_type =='Packing Material' ">Sub Type:<span style="color: red">*</span></label>
+            <select name="material_subtype" formControlName="rm_matSubType" (change)="getMaterialsBySubType()">
+              <option *ngFor="let type of sub_types" [ngValue]="type"> {{type.material_subtype}} </option>
+            </select>
+          </div>
+ 
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label *ngIf="material_type =='Semi Finished Goods' || material_type =='Finish Product' ">Product Name:<span style="color: red">*</span></label>
+            <label *ngIf="material_type =='Raw Material' || material_type =='Packing Material' ">Material Name:<span style="color: red">*</span></label>
+            
+            <select  name="material_name" ngModel (change)="getDetails($event.target.selectedIndex)" required>
+              <option></option>
+              <option *ngFor="let material of materials" [value]="material.material_code">{{material.material_name}} ( {{material.material_code}} )</option>
+            </select>
+            
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label *ngIf="material_type!='Finish Product'"> Material Code:</label>
+            <input  type="text" class="form-control" formControlName="rm_matCode" disabled>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Grade Type:<span style="color:red">*</span></label>
+              <div *ngIf="material_type !== 'Finish Product'" 
+                style="border: 1px solid #ced4da; padding: 5px; border-radius: 4px; min-height: 38px; display: flex; align-items: center; background-color: #f8f9fa;">
+                <span>{{ selectedProd['grade'] }}</span>
+              </div>
+              <div *ngIf="material_type=='Finish Product'" style="border: 1px solid #ced4da; padding: 5px; border-radius: 4px; min-height: 38px; display: flex; align-items: center; background-color: #f8f9fa;">
+                <span>{{gradeProd}}</span>
+              </div>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="grade_type=='Single Grade'">
+            <label>Grade..:<span style="color:red">*</span></label>
+            <select name="grade" [(ngModel)]="grade" required>
+              <option *ngFor="let g of grades" [value]="g.id">{{g.grade}}
+              </option>
+            </select>
+          </div>
+
+
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="grade_type=='Multi Grade'">
+            <label>Grade.:<span style="color:red">*</span></label>
+            <p-multiSelect [options]="grades" name="grade" [(ngModel)]="grade" optionLabel="grade"></p-multiSelect>
+          </div>
+        </div>
+
+
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <div class="card">
+              <div class="card-header" style="text-align: center">
+                <div class="clr-row" style="margin-bottom: -10px;">
+                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                    Version Control</div>
+                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                    <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow()">
+                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-block">
+                <div class="row container-fluid">
+
+                  <div class="clr-row">
+                    <!-- {{specification}} -->
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                      <label>Specification No.:<span style="color:red">*</span></label>
+                      <input type="text" name="spec_no" formControlName="spec_no" required
+                        [readonly]="rowMaterialForm.value.rm_spec == 'New'">
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" >
+                      <label>Revision No:<span style="color:red">*</span></label>
+                      <input type="text" name="version_no" formControlName="version_no" required
+                        [readonly]="rowMaterialForm.value.rm_spec == 'New'">
+                      <!-- <input *ngIf="specification == 'New'" type="text" name="version_no" [(ngModel)]="version_no"
+                      readonly tabindex="-1"> -->
+                    </div>
+                    <!-- {{rowMaterialForm.value.rm_spec}} -->
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                      <label>Supersede No:<span style="color:red">*</span></label>
+                      <input type="text" name="supersede_no" formControlName="supersede_no" ngModel
+                        [readonly]="rowMaterialForm.value.rm_spec=='New'">
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                      <label>Supersede Ver. No:<span style="color:red">*</span></label>
+                      <input type="text" name="supersede_no" formControlName="supersede_ver_no" ngModel
+                        [readonly]="rowMaterialForm.value.rm_spec=='New'">
+                    </div>
+
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                      *ngIf="specification == 'Existing'">
+                      <label>Review Month:</label>
+                      <input type="date" name="review_date" formControlName="review_date" ngModel >
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="specification == 'New'">
+                      <label>Review Date:<span style="color:red">*</span><small>(From Effective Date)</small></label>
+                      <select name="review_date" formControlName="review_date_select" ngModel="12" required>
+                        <option value="12">12 Months</option>
+                        <option value="18">18 Months</option>
+                        <option value="24">24 Months</option>
+                        <option value="36">36 Months</option>
+                      </select>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+   
+
+
+      <div class="clr-row"  >
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                Sampling Plan
+                <select name="sampling_plan" [(ngModel)]="sampling_plan" style="width: 50%;">
+                  <option>Test Specific</option>
+                  <option>Fixed</option>
+                </select>
+              </div>
+              <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow()">
+                  <clr-icon shape="eye" class="is-warning"></clr-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="card-block" *ngIf="sampling_plan != 'Fixed'">
+            <div class="row container-fluid">
+              <form [formGroup]="samplingForm">
+                <div class="clr-row" *ngIf="plant_id != 149 " >
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Sampling:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalchemical_qty" name="totalchemical_qty" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Chemical:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalchemical_qty" name="totalchemical_qty" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Physical Sample Qty:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="total_physical_qty" name="total_physical_qty" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Micro:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalmicro_qty" name="totalmicro_qty" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Indentification qty:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="indentification_qty" name="indentification_qty" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Control Sample<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="control_sample_type" name="control_sample_type" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="control_sample_type === 'Applicable'">
+                    <label>Control Sample Criteria:<span style="color:red">*</span></label>
+                    <input type="text" name="control_sample_criteria" formControlName="control_sample_criteria" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="control_sample_type === 'Applicable'">
+                    <label>Control Sample:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="control_sample" name="control_sample" readonly>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Additional Sample:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" name="additional_sample" formControlName="additional_sample" (change)="calc_total_sample_qty()" required>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Unit:<span style="color:red">*</span></label>
+                    <select name="unit" formControlName="unit" required (change)="newUnit($event.target.value)">
+                      <option *ngFor="let type of Units" [value]="type.value"> {{type.value}} </option>
+                    </select>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Total Sample Qty:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalsample_qty" name="totalsample_qty" [(ngModel)]="totalsample_qty" required readonly>
+                  </div>
+                </div>
+                <div class="clr-row" *ngIf="plant_id == 149 ">
+                   
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" >
+                    <label>Control Sample Qty(g)::<span style="color:red">*</span></label>
+                    <input type="number" OnlyNumdigit="true" formControlName="control_sample" [(ngModel)]="control_sample"  name="control_sample"  (input)="addSample()" required>
+                  </div>
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" >
+                    <label>Analysis Sample Qty(g):<span style="color:red">*</span></label>
+                    <input type="number" OnlyNumdigit="true" formControlName="additional_sample" [(ngModel)]="additional_sample"  name="additional_sample" required  (input)="addSample()">
+                  </div>
+             
+            
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Total Sample Qty (g):<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalsample_qty" name="totalsample_qty" [(ngModel)]="totalsample_qty" required readonly>
+                  </div>
+
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Unit:<span style="color:red">*</span></label>
+                    <input type="text" name="unit" formControlName="unit" [(ngModel)]="uom"    readonly>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="card-block" *ngIf="sampling_plan == 'Fixed'">
+            <div class="row container-fluid">
+              <form [formGroup]="samplingForm">
+                <div class="clr-row">
+               
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12"  >
+                    <label> Sample Qty :<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalchemical_qty"  name="totalchemical_qty" [(ngModel)]="totalchemical_qty" required (input)="calc_total_sample_qtyFiexed()">
+                  </div>
+                  
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12"  >
+                    <label>Control Sample:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="control_sample"  name="control_sample" [(ngModel)]="control_sample" required (input)="calc_total_sample_qtyFiexed()">
+                  </div>
+
+                  <div  class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Additional Sample:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" name="additional_sample" formControlName="additional_sample" [(ngModel)]="additional_sample" (input)="calc_total_sample_qtyFiexed()" required>
+                  </div>
+
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                    <label>Total Sample Qty:<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="totalsample_qty" name="totalsample_qty" [(ngModel)]="totalsample_qty" required readonly>
+                  </div>
+
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="material_type !='Semi Finished Goods' &&  material_type !='Finish Product' ">
+                    <label>Sampling Unit :<span style="color:red">*</span></label>
+                    <input type="text" OnlyNumdigit="true" formControlName="unit" name="unit" [(ngModel)]="samplingUnit" required readonly>
+                  </div>
+
+                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type =='Semi Finished Goods' || material_type =='Finish Product' ">
+                    <label>Unit:<span style="color:red">*</span></label>
+                    <select name="unit" formControlName="unit" required (change)="newUnit($event.target.value)">
+                      <option *ngFor="let type of Units" [value]="type.value"> {{type.value}} </option>
+                    </select>
+                  </div>
+
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+ 
+
+
+      <div class="clr-row">
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                Add Specification </div>
+              <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow()">
+                  <clr-icon shape="eye" class="is-warning"></clr-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="card-block" *ngIf="material_subtype!=='Excipient'">
+            <div class="row container-fluid">
+
+              <div class="clr-row">
+                <div class="card-text">
+                  <form [formGroup]="AddSpecificationTest">
+                    <div class="clr-row">
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Test Type:<span style="color:red">*</span></label>
+                        <select name="test_type" formControlName="test_type"
+                          (change)="getMicroCheck($event.target.value)"
+                          [class.ng-inv]=" AddSpecificationTest.controls.test_type.hasError('required')  && submitted">
+                          <option *ngFor="let type of testType" [value]="type.value">
+                            {{type.label}}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Test:<br></label>
+                        <select name="selectedTest" formControlName="selectedTest"
+                          (change)="getSubtest1($event.target.selectedIndex)" required>
+                          <option></option>
+                          <option *ngFor="let test of tests" [value]="test.test">
+                            {{test.test}} - {{test.test_method_no}}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Subtest:<br></label>
+                        <select name="selectedSubTest" formControlName="selectedSubTest"   >
+                          <option></option>
+                          <option *ngFor="let test of specSubTests" [value]="test.subtest"> {{test.subtest}} </option>
+                        </select>
+                      </div> 
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Select Limit :<span style="color:red">*</span></label>
+                        <select name="limit" formControlName="limit" required>
+                          <option *ngFor="let type of limits" [value]="type.value">
+                            {{type.label}}
+                          </option>
+                        </select>
+                      </div>
+                      <div *ngIf="material_type !== 'Finish Product'" class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Reference:</label>
+                        <select name="reference" formControlName="reference" [(ngModel)]="reference" required>
+                          <option></option>
+                          <option *ngFor="let g of selMaterialGrade">{{g.grade}}
+                          </option>
+                        </select>
+                      </div>
+
+                       <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Finish Product'">
+                        <label>Stability Indicating:<span style="color:red">*</span></label>
+                        <select name="stability_indicating" formControlName="stability_indicating" required>
+                          <option *ngFor="let type of retestApp" [value]="type.value">
+                            {{type.label}}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="sampling_plan != 'Fixed'">
+                        <label>Sample Qty:</label>
+                        <input type="text" name="sample_qty" formControlName="sample_qty">
+                      </div>
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Finish Product'">
+                        <label>Shelf Life Limit:<span style="color:red">*</span></label>
+                       <!-- <textarea rows="2" name="shelf_life_limit" formControlName="shelf_life_limit" ngModel></textarea> -->
+                          <select name="shelf_life_limit" formControlName="shelf_life_limit" required>
+                       <option>Same As Release</option>
+                           <option>Different</option>
+                          </select>
+                      </div>
+                      <!-- <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Finish Product'">
+                        <label>Stability Indicating:<span style="color:red">*</span></label>
+                        <select name="stability_indicating" formControlName="stability_indicating" required>
+                           <option></option>
+                           <option>Same As Release</option>
+                           <option>Different</option>
+                        </select>
+                      </div> -->
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Finish Product'">
+                        <label>Bulk Release:<span style="color:red">*</span></label>
+                        <select name="bulk_release" formControlName="bulk_release" required>
+                           <option></option>
+                           <option>Applicable</option>
+                           <option>Not Applicable</option>
+                        </select>
+                      </div>
+
+                      
+                       <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">
+                        <label>Stock Tranfer Order(STO):<span style="color:red">*</span></label>
+                        <select name="sto" formControlName="sto" required>
+                           <option></option>
+                           <option>Applicable</option>
+                           <option>Not Applicable</option>
+                        </select>
+                      </div>
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label>Out Side Testing:<span style="color:red">*</span></label>
+                        <select name="outside_testing" formControlName="outside_testing"
+                          [class.ng-inv]=" AddSpecificationTest.controls.outside_testing.hasError('required')  && submitted"
+                          ngModel required>
+                          <option *ngFor="let type of retestApp" [value]="type.value">
+                            {{type.label}}
+                          </option>
+                        </select>
+                      </div>
+                       <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">
+                        <label>Recurring Inspection:<span style="color:red">*</span></label>
+                        <select name="retest_applicable" formControlName="retest_applicable" required>
+                          <option *ngFor="let type of retestApp" [value]="type.value">
+                            {{type.label}}
+                          </option>
+                        </select>
+                      </div>
+                       <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="AddSpecificationTest.value.retest_applicable == 'Applicable' && material_type=='Raw Material' || material_type =='Pharma Raw Material'">
+                        <label>Recurring Sample Qty:<span style="color:red">*</span></label>
+
+                        <input type="text"name="req_sample_qty" formControlName="req_sample_qty" required>
+                       
+                      </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12"  >
+                        <label>Test Method:</label>
+                        <input type="text"   name="stp_no"   formControlName="stp_no" ngModel> 
+                      </div>
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"  *ngIf="AddSpecificationTest.value.limit == 'Description'">
+                        <label>Description:</label>
+                        <textarea rows="2" name="descr" formControlName="descr" ngModel></textarea>
+                      </div>
+                      <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="AddSpecificationTest.value.limit == 'Compliances'">
+                        <label>Compliances Criteria:</label>
+                        <input type="text"   name="compCriteria"   formControlName="compCriteria" ngModel> 
+                      </div>
+                    
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="AddSpecificationTest.value.limit == 'Range'">
+                        <label *ngIf="AddSpecificationTest.value.limit == 'Range'">Lower Limit:</label>
+                        <input type="text" formControlName="lower_limit" name="lower_limit" ngModel required [class.ng-inv]=" AddSpecificationTest.controls.upper_limit.hasError('max')">
+                      </div>
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf=" AddSpecificationTest.value.limit == 'Not MoreThan'">
+                        <label *ngIf="AddSpecificationTest.value.limit == 'Not MoreThan'">Not More Than:</label>
+                        <input type="text" formControlName="lower_limit" name="lower_limit" ngModel required>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="AddSpecificationTest.value.limit == 'Range' ">
+                        <label *ngIf="AddSpecificationTest.value.limit == 'Range'">Upper Limit:</label>
+                        <input type="text" formControlName="upper_limit" name="upper_limit" ngModel
+                          [class.ng-invalid]=" AddSpecificationTest.invalid">
+                        <mat-error *ngIf="AddSpecificationTest.controls.upper_limit.hasError('max')">
+                          Value can't be less than lower limit
+                        </mat-error>
+                      </div>
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf=" AddSpecificationTest.value.limit == 'Not LessThan'">
+                        <label *ngIf="AddSpecificationTest.value.limit == 'Not LessThan'">Not Less Than:</label>
+                        <input type="text" formControlName="upper_limit" name="upper_limit" ngModel required>
+                      </div>
+
+                      
+
+                      <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="AddSpecificationTest.value.limit == 'Range' || AddSpecificationTest.value.limit == 'Not LessThan' || AddSpecificationTest.value.limit == 'Not MoreThan'">
+                        <label>Unit:<span style="color:red">*</span></label>
+                        <select name="unit" formControlName="unit">
+                          <option></option>
+                          <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-primary" (click)="addTests(testForm)">{{'common.add' | translate}}</button>
+              </div>
+
+              <div class="card-block">
+                <div class="card-text">
+                  <table class="table table-border">
+                    <tr>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test Type</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limit Type</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limits</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;" *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">Reference Type</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;"  *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">Retest</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;"  *ngIf="material_type=='Finish Product'">Stability</th>
+                      <th style="text-align: left; background-color: rgb(14, 67, 112); color: white; width: 10px;">
+                        Action</th>
+                    </tr>
+                    <tr *ngFor="let comp of companies; let i = index">
+
+                      <td style="text-align:left">{{comp.test_type}}</td>
+                      <td style="text-align:left">{{comp.selectedTest}}</td>
+                      <td style="text-align:left">{{comp.selectedSubTest}}</td>
+                      <td style="text-align:left">{{comp.limit}}</td>
+                      <td style="text-align:left">{{comp.limits || '-'}}</td>
+                      <td style="text-align:left" *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">{{comp.reference}}</td>
+                      <td style="text-align:left"  *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">{{comp.retest_applicable}}</td>
+                      <td style="text-align:left" *ngIf="material_type=='Finish Product'">{{comp.stability_indicating}}</td>
+                      <td style="text-align: center;">
+                        <clr-icon shape="trash" class="is-error" (click)="deleteProduct(i)"></clr-icon>
+                      </td>
+                    </tr>
+                    <tr *ngIf="companies.length === 0">
+                      <td colspan="9" style="height: 40px;">No Record found</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <div class="clr-row">
+      <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+              Client Specific Tests</div>
+            <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow()">
+                <clr-icon shape="eye" class="is-warning"></clr-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block" *ngIf="material_subtype!=='Excipient'">
+          <div class="row container-fluid">
+
+            <form [formGroup]="ClientTest">
+              <div class="clr-row">
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                  <label>Client Name:<span style="color:red">*</span></label>
+                  <select name="client_code" formControlName="client_code"
+                    [class.ng-inv]=" ClientTest.controls.client_code.hasError('required')  && submitted" required
+                    (change)="getClientName($event.target.selectedIndex)">
+                    <option *ngFor="let client of clients;let i=index" [ngValue]="client">
+                      {{client.TrdNm}}
+                    </option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                  <label>Test Type:<span style="color:red">*</span></label>
+                  <select name="test_type" formControlName="test_type"
+                    (change)="getMicroCheckClient($event.target.value)"
+                    [class.ng-inv]=" ClientTest.controls.test_type.hasError('required')  && submitted"
+                    (change)="getMicroCheck($event.target.value)" required>
+                    <option value="Chemical">Chemical</option>
+                    <option value="Microbiology">Microbiology</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Test:<br></label>
+
+                  <select name="test" formControlName="selectedTest"
+                    (change)="getSubtestClient($event.target.selectedIndex)">
+                    <option></option>
+                    <option *ngFor="let test of ctests" [ngValue]="test">{{ test.test }}</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label> Sub Test:<br></label>
+                  <select name="selectedSubTest" formControlName="selectedSubTest"  >
+                    <option *ngFor="let test of subtestsClient" [ngValue]="test.subtest">
+                      {{test.subtest}}
+                    </option>
+                  </select>
+                </div>
+ 
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                  <label>Select Limit :<span style="color:red">*</span></label>
+                  <select name="limit" [class.ng-inv]="ClientTest?.controls?.limit?.hasError('required')  && submitted"
+                    formControlName="limit" required>
+                    <option>{{'common.description' | translate}}</option>
+                    <option>Range</option>
+                    <option>Not LessThan</option>
+                    <option>Not MoreThan</option>
+                  </select>
+                </div>
+
+                <div *ngIf="material_type !== 'Finish Product'"
+                class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <label>Reference:</label>
+                <select name="reference" formControlName="reference" [(ngModel)]="reference" required>
+                  <option></option>
+                  <option *ngFor="let g of selMaterialGrade">{{g.grade}}
+                  </option>
+                </select>
+               </div>
+                
+              
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="material_type=='Finish Product'">
+                  <label>Stability Indicating:<span style="color:red">*</span></label>
+                  <select name="stability_indicating" formControlName="stability_indicating" ngModel required>
+                    <option>Applicable</option>
+                    <option>Not Applicable</option>
+                  </select>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="material_type!='Packing Material'">
+                  <label>Sample Qty:</label>
+                  <input type="text" name="sample_qty"
+                    [class.ng-inv]=" ClientTest.controls.sample_qty.hasError('required')  && submitted"
+                    formControlName="sample_qty" ngModel>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type=='Raw Material' || material_type =='Pharma Raw Material'">
+                        <label>Stock Tranfer Order(STO):<span style="color:red">*</span></label>
+                        <select name="sto" formControlName="sto" required>
+                           <option></option>
+                           <option>Applicable</option>
+                           <option>Not Applicable</option>
+                        </select>
+                      </div>
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="ClientTest.value.limit == 'Description'">
+                  <label>Description:</label>
+                  <textarea rows="2" name="descr" formControlName="descr" ngModel></textarea>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="ClientTest.value.limit == 'Range' || ClientTest.value.limit == 'Not MoreThan'">
+                  <label *ngIf="ClientTest.value.limit == 'Not MoreThan'">Not More Than:</label>
+                  <label *ngIf="ClientTest.value.limit !== 'Not MoreThan'">Maximum Lower Limit:</label>
+                  <input type="text" name="upper_limit" formControlName="upper_limit" ngModel required>
+
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="ClientTest.value.limit == 'Range' || ClientTest.value.limit == 'Not LessThan'">
+                  <label *ngIf="ClientTest.value.limit == 'Not LessThan'">Not Less Than:</label>
+                  <label *ngIf="ClientTest.value.limit !== 'Not LessThan'">Maximum Upper Limit:</label>
+
+                  <input type="text" name="lower_limit" formControlName="lower_limit" ngModel required>
+                </div>
+
+                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+                  *ngIf="ClientTest.value.limit == 'Range' || ClientTest.value.limit == 'Not LessThan' || ClientTest.value.limit == 'Not MoreThan'">
+                  <label>Unit:<span style="color:red">*</span></label>
+                  <select name="unit" ngModel formControlName="unit" required>
+                    <option *ngFor="let unit of units" [value]="unit.unit">{{ unit.unit }}</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+            <div class="card-footer">
+              <button class="btn btn-primary" (click)="addClient(client)">{{'common.add' | translate}}</button>
+            </div>
+            <div class="card-block">
+              <div class="card-text">
+                <table class="table table-border">
+                  <tr>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Client Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Client Name</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test Type</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limit Type</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limits</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Reference</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;"  *ngIf="material_type=='Finish Product'">Stability</th>                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white; width: 10px;">Action
+                    </th>
+                  </tr>
+                  <tr *ngFor="let comp of clientList; let i = index">
+                    <td style="text-align:left">{{comp.client_code.client_code}}</td>
+                    <td style="text-align:left">{{comp.TrdNm}}</td>
+                    <td style="text-align:left">{{comp.test_type}}</td>
+                    <td style="text-align:left">{{comp.test}}</td>
+                    <td style="text-align:left">{{comp.selectedSubTest}}</td>
+                    <td style="text-align:left">{{comp.limit}}</td>
+                    <td style="text-align:left">{{comp.limits}}</td>
+                    <td style="text-align:left">{{comp.reference}}</td>
+                    <td style="text-align:left" *ngIf="material_type=='Finish Product'">{{comp.stability_indicating}}</td>              
+                      <td style="text-align: center;">
+                      <clr-icon shape="trash" class="is-error" (click)="deleteClient(i)"></clr-icon>
+                    </td>
+                  </tr>
+                  <tr *ngIf="clientList.length === 0">
+                    <td colspan="9" style="height: 40px;">No Record Found</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> -->
+
+
+    <div class="card" *ngIf="specification == 'Existing'">
+      <div class="card-block">
+        <div class="card-title">Revision History</div>
+        <div class="card-text">
+          <form [formGroup]="revisionHistory">
+            <div class="clr-row">
+              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <label>Revision No:<span style="color:red">*</span></label>
+                <input type="text" id="spec_no" name="spec_no" formControlName="spec_no" ngModel>
+              </div>
+              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="plant_id != '72'">
+                <label>Version No:</label>
+                <input type="text" name="ver_no" formControlName="ver_no" ngModel>
+                <!-- [class.ng-inv]=" revisionHistory.controls.ver_no.hasError('required')  && submitted"  -->
+              </div>
+              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="plant_id != '72'">
+                <label>Change Control No:<span style="color:red">*</span></label>
+                <input type="text" name="change_mode" formControlName="change_mode"
+                  [class.ng-inv]=" revisionHistory.controls.change_mode.hasError('required')  && submitted"
+                  formControlName="change_mode" ngModel Required>
+              </div>
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label>Reason for change / Rev.Description:<span style="color:red">*</span></label>
+                <input type="text" name="change_reason" formControlName="change_reason"
+                  [class.ng-inv]=" revisionHistory.controls.change_reason.hasError('required')  && submitted"
+                  formControlName="change_reason" ngModel required>
+              </div>
+              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                <label>Effective Date:<span style="color:red">*</span></label>
+                <input type="date" name="effective_date" formControlName="effective_date"
+                  [class.ng-inv]=" revisionHistory.controls.effective_date.hasError('required')  && submitted"
+                  formControlName="effective_date" ngModel required>
+              </div>
+              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+              *ngIf="plant_id == '58' || plant_id == '59'">
+                <label>Training required:<span style="color:red">*</span></label>
+                <select name="training" [class.ng-inv]="revisionHistory.controls.training.hasError('required')  && submitted"
+                formControlName="training" required>
+                <option></option>
+                <option>YES</option>
+                <option>NO</option>
+              </select>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn btn-primary" (click)="addRevision(revisionHistory)">{{'common.add' | translate}}</button>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table table-border">
+            <tr>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Revision No</th>
+              <th *ngIf="plant_id != '72'" style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Version No</th>
+              <th *ngIf="plant_id != '72'" style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Change Control No.</th>
+              <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Reason for change</th> -->
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Revision Description</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Effective Date</th>
+              <th *ngIf="plant_id == '58' || plant_id == '59'" style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Training Required</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+            </tr>
+            <tr *ngFor="let user of revisionList; let i = index">
+              <td style="text-align: left;">{{ i+1 }}</td>
+              <td style="text-align: left;">{{user.spec_no}}</td>
+              <td *ngIf="plant_id != '72'" style="text-align: left;">{{user.ver_no}}</td>
+              <td *ngIf="plant_id != '72'" style="text-align: left;">{{user.change_mode}}</td>
+              <td style="text-align: left;">{{user.change_reason}}</td>
+              <td style="text-align: left;">{{user.effective_date | date: 'dd-MM-yyyy'}}</td>
+              <td *ngIf="plant_id == '58' || plant_id == '59'" style="text-align: left;">{{user.training}}</td>
+              <td style="text-align: left;" style="text-align: center;">
+                <clr-icon shape="trash" class="is-error" (click)="deleteRevision(i)"></clr-icon>
+              </td>
+            </tr>
+            <tr *ngIf="revisionList.length === 0">
+              <td colspan="7" style="height: 40px;">No Record found</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" *ngIf="specification == 'New'">
+      <div class="card-block">
+        <div class="card-title">Revision History</div>
+        <div class="card-text">
+          <table class="table">
+            <tr>
+              <th>Sr</th>
+              <th>Specification No</th>
+              <th>Version No</th>
+              <th> Cc Type</th>
+              <th> Cc No</th>
+              <th>Reason for change</th>
+              <th>Effective Date</th>
+            </tr>
+            <tr *ngFor="let user of revisionList; let i = index">
+              <td>{{ i+1 }}</td>
+              <td>{{user.spec_no}}</td>
+              <td>{{user.ver_no}}</td>
+              <td>
+                <select name="cc_no" [(ngModel)]="cc_no">
+                  <option>Applicable</option>
+                  <option>Not Applicable</option>
+                </select>
+              </td>
+              <td *ngIf="cc_no=='Not Applicable'">
+                {{user.change_mode}}
+              </td>
+              <td *ngIf="cc_no=='Applicable'">
+                <input type="text">
+              </td>
+              <td>{{user.change_reason}}</td>
+              <td>{{user.effective_date}}</td>
+            </tr>
+            <tr *ngIf="revisionList?.length === 0">
+              <td colspan="5" style="height: 40px;">No Record found</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer"  >
+      <button class="btn btn-primary" (click)="addMaterial(rowMaterialForm)">{{'common.save' | translate}}</button>
+    </div>
+  </div>
+</div>
+  
+<!-- </div> -->
+
+<clr-modal [(clrModalOpen)]="isNewLocation">
+  <h3 class="modal-title">Add New Unit</h3>
+  <div class="modal-body">
+    <form #unitForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <label>Unit Name:</label>
+          <input type="text" name="unit" [(ngModel)]="unit1" required>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveUnit(unitForm)">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isStorage" clrModalClosable="false">
+  <h3 class="modal-title">New Storage Condition </h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <label>Storage Condition:</label>
+        <input type="text" name="storage_condition" [(ngModel)]="storage_condition" required>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="saveStorage()">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isSample" clrModalClosable="false">
+  <h3 class="modal-title">New Sampling plan </h3>
+  <div class="modal-body">
+    <div class="clr-row">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <label>Sampling Plan:</label>
+        <input type="text" name="sampling_plan" [(ngModel)]="sampling_plan" required>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="saveSampling()">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>
+ 
+
+
+<clr-modal [(clrModalOpen)]="isGrade" clrModalClosable="false">
+  <h3 class="modal-title">New Special Grade </h3>
+  <div class="modal-body">
+    <form #test="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <label>Special Grade:</label>
+          <input type="text" name="special_grade" ngModel required>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="saveGrade(test)">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>

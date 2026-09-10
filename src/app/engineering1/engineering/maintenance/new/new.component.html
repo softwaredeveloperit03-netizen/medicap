@@ -1,0 +1,396 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+      <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Replacement Of Equipment</div>
+              <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+               <button class="btn btn-sm btn-danger" routerLink="/engineering/maintenance" >
+                  <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+              </button>
+              </div>
+          </div>
+      </div>
+      <div class="card-block">
+          <div class="card-text">
+              <table class="table table-border">
+                  <tr>
+                    <th  style="background-color: aqua;font-weight: bold;">EBM No.</th>
+                      <th style="background-color: aqua;font-weight: bold;">Equipment Id</th>
+                      <th style="background-color: aqua;font-weight: bold;text-align: left;">Equipment Name</th>
+                      <th style="background-color: aqua;font-weight: bold;">Location</th>
+                      <th style="background-color: aqua;font-weight: bold;">Date Of Incident</th>
+                      <th style="background-color: aqua;font-weight: bold;">Raised By</th>
+                      <th style="background-color: aqua;font-weight: bold;">Raised On</th>
+                      <th style="background-color: aqua;font-weight: bold;">{{'common.status' | translate}}</th>
+                      <th style="background-color: aqua;font-weight: bold;">Replacement Details</th>
+                      <th style="background-color: aqua;font-weight: bold;">Replacement Report</th>
+                   </tr>
+                  <tr *ngFor="let result of results; let i = index">
+                      <td >{{ result.ebm_no }}</td>
+                      <td >{{ result.equipment_code }}</td>
+                      <td style="text-align: left;">{{ result.equipment_name }}</td>
+                      <td >{{ result.location }}</td>
+                      <td>{{ result.date_of_incident }}</td>
+                      <td>{{ result.raised_by }}</td>
+                      <td>{{ result.Raised_on }}</td>
+                      <td>{{ result.status }}</td>
+                      <td>
+                          <button [disabled]="result.replacement_status !='Pending'" class="btn btn-sm btn-info" (click)="view(i)">Replacement Details</button>
+                      </td>
+                      <td>
+                          <button [disabled]="result.replacement_status =='Pending'" class="btn btn-sm btn-info" (click)="view1(i)">Replacement / Modification Report</button>
+                      </td>
+                  </tr>
+                  <tr *ngIf="results?.length == 0">
+                      <td colspan="10">{{'common.noRecords' | translate}}</td>
+                  </tr>
+              </table>
+          </div>
+      </div>
+  </div>
+</div>
+
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+      <div class="card-header">Replacement Of Equipment</div>
+      <div class="card-block">
+          <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+                  <h3>1. Equipment Details </h3>
+                  <table class="table table-border">
+                      <tr>
+                          <td style="text-align: left;"><b>Equipment name :</b> {{selectedResult['equipment_name']}}</td>
+                          <td style="text-align: left;"><b>Tag No. :</b> {{selectedResult['tag_no']}}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;"><b>Location :</b> {{selectedResult['location']}}</td>
+                          <td style="text-align: left;"><b>Date Of Incident :</b> {{selectedResult['date_of_incident']}}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;"><b>Record Raised By :</b> {{selectedResult['raised_by']}}</td>
+                          <td style="text-align: left;"><b>Record Raised On :</b> {{selectedResult['Raised_on']}}</td>
+                      </tr>
+                  </table>
+                  <h3>2. Description Of Breakdown / Modification</h3>
+                  <table class="table ">
+                      <tr>
+                          <td >
+                              <textarea name="descrip_breakd"  rows="5" [(ngModel)]="selectedResult['descrip_breakd']" readonly></textarea>
+                          </td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;"><b>Removal From Service Required :</b> {{selectedResult['removal_from_service']}}</td>
+                      </tr>
+
+                  </table>
+                  <h3>3. Work Proposed To Address Breakdown / Modification </h3>
+        
+                  <table class="table table-border">
+                      <tr *ngFor="let data of selectedResult['steps_data'];let i = index;">
+                          
+                          <td style="text-align: left;">* {{data.step}}</td>
+                      </tr>
+                  </table>
+                  <h3>4. Pre-Approval (As Required) </h3>
+        
+                  <table *ngIf="selectedResult['preApproval'] == 'Done'" class="table table-border">
+                      <tr>
+                          <td style="text-align: left;"><b>Approved By :</b> {{selectedResult['preApprove_by']}}</td>
+                          <td style="text-align: left;"><b>Approved On :</b> {{selectedResult['preApprove_on']}}</td>
+                      </tr>
+                  </table>
+                  <table *ngIf="selectedResult['preApproval'] != 'Done'"  class="table table-border">
+                      <tr>
+                          <td style="text-align: left;"><b>Not Required</b></td>
+                      </tr>
+                  </table>
+                  <h3>5. Preliminary Assessment To Quality Due To Breakdown / Modification <b>( {{selectedResult['performed']}} )</b> </h3>
+        
+                  <table *ngIf="selectedResult['prili_req'] == 'Done'" class="table table-border">
+                      <tr>
+                          <td colspan="2" style="text-align: left;"><b>Potential Impact To Quality :</b> {{selectedResult['potential_impact']}}</td>
+                      </tr>
+                      <tr>
+                          <td colspan="2" style="text-align: left;">
+                              <textarea name="prelim_comment"  rows="2"  [(ngModel)]="selectedResult['prelim_comment']" readonly ></textarea>
+                          </td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;"><b>Approved By QA Delegate:</b> {{selectedResult['prelimApproved_by']}}</td>
+                          <td style="text-align: left;"><b>Approved Date :</b> {{selectedResult['prelim_Approved_on']}}</td>
+                      </tr>
+                  </table>
+                  <table *ngIf="selectedResult['prili_req'] != 'Done'"  class="table table-border">
+                      <tr>
+                          <td style="text-align: left;"><b>Not Required</b></td>
+                      </tr>
+                  </table>
+                  <h3>6. Description Of repair  / Modification Work Undertaken</h3>
+                  <table class="table ">
+                      <tr>
+                          <td colspan="2">
+                              <textarea name="description_repair"  rows="5" [(ngModel)]="selectedResult['description_repair']" readonly></textarea>
+                          </td>
+                          
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;"><b>Sign:</b> {{selectedResult['repairAdded_by']}}</td>
+                          <td style="text-align: left;"><b>Date :</b> {{selectedResult['repairDesc_on']}}</td>
+                      </tr>
+                  </table>
+              </div>
+            </div>
+               
+            <form #attendForm="ngForm">
+                <div class="clr-row" >
+                  <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12" >
+  
+                    <table class="table table-border">
+                      <tr>
+                        <td colspan="2"><b>Faulty Equipment</b></td>
+                        <td colspan="2"><b>Replacement Equipment</b></td>
+                      </tr>
+                      <tr>
+                        <td colspan="2"><b>Equipment Name :</b> {{selectedResult['equipment_name']}}</td>
+                        <td colspan="2" style="margin: 0;padding: 0;">
+                          <select name="equipment" ngModel (change)="selectedEquipment($event.target.selectedIndex)"  required>
+                            <option disabled></option>
+                            <option *ngFor="let eq of equipments" >{{ eq.equipment_name }} ( {{ eq.equipment_code }} )</option>
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><b>equipment Id :</b></td>
+                        <td>{{selectedResult['equipment_code']}}</td>
+                        <td><b>equipment Id :</b></td>
+                        <td>{{selectedEquip['equipment_code']}}</td>
+                      </tr>
+                      <tr>
+                        <td><b>Model :</b></td>
+                        <td>{{selectedResult['model']}}</td>
+                        <td><b>Model :</b></td>
+                        <td>{{selectedEquip['model']}}</td>
+                      </tr>
+                      <tr>
+                        <td><b>Serial No. :</b></td>
+                        <td>{{selectedResult['serial_no']}}</td>
+                        <td><b>Serial No. :</b></td>
+                        <td>{{selectedEquip['serial_no']}}</td>
+                      </tr>
+                    </table>
+
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Like For Like Replacement Of Rquipment : <span style="color: red;">*</span>:</label>
+                    <select name="replacementlikerequired" [(ngModel)]="replacementlikerequired"  required>
+                      <option></option>
+                      <option>Required</option>
+                      <option>Not Required</option>
+                    </select>                     
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Comments:</label>
+                    <textarea type="text" name="replacement_comments" ngModel ></textarea>
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Assessed By <span style="color: red;">*</span>:</label>
+                    <select name="assessed_by" ngModel required>
+                      <option *ngFor="let eq of employees" >{{ eq.emp_id }}</option>
+                    </select>                       
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Approved By <span style="color: red;">*</span>:</label>
+                    <select name="repl_approved_by" ngModel required>
+                      <option *ngFor="let eq of employees" >{{ eq.emp_id }}</option>
+                    </select>                       
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Update Details On ELB -019 <span style="color: red;">*</span>:</label>
+                    <select name="update_details_elb" ngModel  required>
+                      <option></option>
+                      <option>YES</option>
+                      <option>NO</option>
+                      <option>NA</option>
+                    </select>                   
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Update Details On Relevent Calibration<span style="color: red;">*</span>:</label>
+                    <select name="update_details_calibration" ngModel  required>
+                      <option></option>
+                      <option>YES</option>
+                      <option>NO</option>
+                      <option>NA</option>
+                    </select>                   
+                  </div>
+                  <div *ngIf="replacementlikerequired == 'Required'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Implemented By<span style="color: red;">*</span>:</label>
+                    <select name="implemented_by" ngModel required>
+                      <option *ngFor="let eq of employees" >{{ eq.emp_id }}</option>
+                    </select>                       
+                  </div>
+                
+                </div>
+            </form>
+            
+          </div>
+      </div>
+      <div class="card-footer">
+          <button  class="btn btn-primary" (click)="addreplesment(attendForm)">{{'common.save' | translate}}</button>
+          <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+  </div>
+</div>
+
+
+
+
+
+<clr-modal [(clrModalOpen)]="isViewData" clrModalSize="xl" [clrModalClosable]="true">
+  <h3 class="modal-title">Equipment Replacement Report</h3>
+  <div class="modal-body">
+          <div class="clr-row">
+               <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Description/Equipment Name :</label>
+                  <input type="text" name="equipment_name" [(ngModel)]="selectedResult['equipment_name']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Tag Number :</label>
+                  <input type="text" name="tag_no" [(ngModel)]="selectedResult['tag_no']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Location :</label>
+                  <input type="text" name="location" [(ngModel)]="selectedResult['location']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Date Of Incident :</label>
+                  <input type="date" name="date_of_incident" [(ngModel)]="selectedResult['date_of_incident']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Record Raised in ELB-012 By :</label>
+                 <input type="date" name="raised_by" [(ngModel)]="selectedResult['raised_by']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Record Raised On :</label>
+                  <input type="date" name="Raised_on" [(ngModel)]="selectedResult['Raised_on']" readonly>
+              </div>
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12" >
+                  <label>Removal From Service Required :</label>
+                  <input type="text" name="removal_from_service" [(ngModel)]="selectedResult['removal_from_service']" readonly>
+              </div>
+          </div>
+       
+          <form #attendForm="ngForm">
+              <div  class="clr-row" >
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+                  <label>Repair/Replacement/Modification Report & Effective Checks :</label>
+                  <textarea name="replacement_report"  rows="5" ngModel required></textarea>
+              </div>
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+                <h3>Checks Following Repair/Replacement Or Modification </h3>
+              </div>
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" >
+ 
+                <table class="table tab-border">
+                  <tr>
+                    <td style="text-align: left;"><b>Describe Equipment Fit For Use ?</b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="fit_for_use" ngModel required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                      </select>  
+  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>If No,Detected From Calibration/Maintenance Log.</b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="if_no_cali_main" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>Equipment Return To Service ,If Removed As Per Service 2?.</b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="return_to_service" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>Date Equipment Return To Service?</b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <input type="date" name="date_return" ngModel  required>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>Replaced Equipment Relesed For Used ?</b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="relsed_for_use" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>ELB-19 Update With Equipment Details? </b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="elb_update_eq_details" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>Faulty Equipment Disposed Of ? </b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="equp_disposed" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left;"><b>Finance Notified Of Disposal? </b></td>
+                    <td style="margin: 0;padding: 0;">
+                      <select name="finance_notified" ngModel  required>
+                        <option></option>
+                        <option>YES</option>
+                        <option>NO</option>
+                        <option>NA</option>
+                      </select>  
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+             
+              
+  
+              </div>
+          </form>
+
+
+
+  </div>
+  <div class="modal-footer">
+      <button  class="btn btn-primary" (click)="savereplacementReport(attendForm)">{{'common.save' | translate}}</button>
+       <button type="button" class="btn btn-danger" (click)="isViewData = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

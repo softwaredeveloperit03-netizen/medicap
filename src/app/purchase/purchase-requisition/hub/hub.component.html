@@ -1,0 +1,140 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Requisition</div>
+            <div class="clr-col-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-success" routerLink="/purchase/purchase-requisition/rmpm">
+                    RM/PM Requisition
+                </button>
+                <button class="btn btn-sm btn-success" routerLink="/purchase/purchase-requisition/general">
+                    GM Requisition
+                </button>
+                <button class="btn btn-sm" routerLink="/purchase" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="clr-row" style="margin-bottom: 10px;">
+                <div class="clr-col-lg-3 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <select class="form-control" style="width: 100%;"
+                        [(ngModel)]="materialType" (change)="getMaterialRequisitions($event.target.value)">
+                        <option value="RM/PM Material">RM/PM Material</option>
+                        <option value="General Material">General Material</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                    <input type="text" class="form-control" style="width: 100%;"
+                        [(ngModel)]="searchQuery" placeholder="Search material requisition...">
+                </div>
+            </div>
+
+            <div class="card-block">
+                <div class="card-text">
+                    <clr-datagrid [clrDgLoading]="loading">
+
+                        <clr-dg-column>Sr.</clr-dg-column>
+                        <clr-dg-column>Date</clr-dg-column>
+                        <clr-dg-column>Request No</clr-dg-column>
+                        <clr-dg-column>Material Type</clr-dg-column>
+                        <clr-dg-column>Materials</clr-dg-column>
+                        <clr-dg-column>Entered By</clr-dg-column>
+                        <clr-dg-column>Status</clr-dg-column>
+                        <clr-dg-column>Action</clr-dg-column>
+
+                        <clr-dg-row *clrDgItems="let indend of filteredResults; let i = index">
+                            <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}.</clr-dg-cell>
+                            <clr-dg-cell>{{ indend.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+                            <clr-dg-cell>{{ indend.request_no }}</clr-dg-cell>
+                            <clr-dg-cell>{{ indend.material_type }}</clr-dg-cell>
+                            <clr-dg-cell>
+                                <ul style="margin: 0; padding-left: 16px;">
+                                    <li *ngFor="let item of indend.materials">{{ item.material_name }}</li>
+                                </ul>
+                            </clr-dg-cell>
+                            <clr-dg-cell>{{ indend.entry_by }}</clr-dg-cell>
+                            <clr-dg-cell>{{ indend.status }}</clr-dg-cell>
+                            <clr-dg-cell>
+                                <button class="btn btn-sm btn-info" (click)="view(indend)">{{'common.view' | translate}}</button>
+                                <!-- <button class="btn btn-sm btn-success" (click)="check(indend)">Check</button> -->
+                            </clr-dg-cell>
+                        </clr-dg-row>
+
+                        <clr-dg-footer>
+                            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+                                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                                of {{ pagination.totalItems }}
+                            </clr-dg-pagination>
+                        </clr-dg-footer>
+                    </clr-datagrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Requisition Details
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="viewf()" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                <tr>
+                    <td style="text-align: left;width: 20%;">Request No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['request_no'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 20%;">Requisition By:</td>
+                    <td style="text-align: left;">{{ selectedResult['entry_by'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 20%;">Status:</td>
+                    <td style="text-align: left;">{{ selectedResult['status'] }}</td>
+                </tr>
+            </table>
+            <h3>Materials:</h3><br>
+            <div class="card-block" style="padding-right: 0px; overflow-x: auto;">
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-10">
+                        <table class="table table-border">
+                            <tr>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Sr. No.</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Material/Item Code</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Material/Item Name</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.department' | translate}}</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Preferred Vendor</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Requisition Qty</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.unit' | translate}}</th>
+                            </tr>
+                            <tr *ngFor="let material of materials; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td>{{ displayValue(material.material_code) }}</td>
+                                <td>{{ displayValue(material.material_name) }}</td>
+                                <td>{{ displayValue(material.grade) }}</td>
+                                <td>{{ displayValue(material.department) }}</td>
+                                <td>{{ displayValue(material.vendor_name) }}</td>
+                                <td>{{ displayValue(material.req_qty) }}</td>
+                                <td>{{ displayValue(material.unit) }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+</div>

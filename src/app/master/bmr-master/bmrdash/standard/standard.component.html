@@ -1,0 +1,2056 @@
+<div class="card" *ngIf="!isView && !isStart">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Master eBMR</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/master/bmr-master">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">Date</th>
+                    <th style="text-align: left;">Dosage Form</th>
+                    <th style="text-align: left;">Product Code</th>
+                    <th style="text-align: left;">Product Name</th>
+                    <!-- <th style="text-align: left;">MFR No.</th>
+                    <th style="text-align: left;">Average Wt.</th> -->
+                    <th>Action</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td style="text-align: left;">{{ result.entry_date | date:'dd-MM-yyyy' }}</td>
+                    <td style="text-align: left;">{{ result.dosage_form }}</td>
+                    <td style="text-align: left;">{{ result.product_code }}</td>
+                    <td style="text-align: left;">{{ result.product_name }}</td>
+                    <!-- <td style="text-align: left;">{{ result.mfr_no }}</td>
+                    <td style="text-align: left;">{{ result.average_weight }} {{ result.unit }}</td> -->
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="card" *ngIf="isView && !isStart">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-2" style="color: aliceblue;margin-top: -2px;text-align: center;">MFR No:{{
+                selectedResult['mfr_no'] }}</div>
+            <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: center;">Master Manufacturing Record</div>
+            <div class="clr-col-lg-2" style="color: aliceblue;margin-top: -2px;text-align: center;">Average Wt.: {{
+                selectedResult['average_weight'] }} {{ selectedResult['unit'] }}</div>
+            <div class="clr-col-lg-2" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">CLOSE</button>
+            </div>
+        </div>
+    </div>
+    <form #processForm3="ngForm">
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border" style="margin: 0px;">
+                <tr>
+                    <td style="text-align: left;background: gainsboro;color: black">Product Name:</td>
+                    <td style="text-align: left;background: gainsboro;color: black" colspan="3">{{
+                        selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+                </tr>
+                <tr *ngIf="selectedResult['manufactured_under']!='Own'">
+                    <!-- <td style="text-align: left;">BMR No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['bmr_no'] }}</td> -->
+                    <td style="text-align: left;">For Client:</td>
+                    <td style="text-align: left;">{{ selectedResult['manufactured_for'] }}</td>
+                </tr>
+                <tr>
+                    <!-- <td style="text-align: left;">PLAN No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td> -->
+                    <td style="text-align: left;">Product Code:</td>
+                    <td style="text-align: left;" colspan="3">{{ selectedResult['product_code'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">No. of Lots:</td>
+                    <td style="text-align: left;"></td>
+                    <td style="text-align: left;">Lot No.:</td>
+                    <td style="text-align: left;"></td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;"><b>Dosage Form</b></td>
+                    <td style="text-align: left;">{{selectedResult['dosage_form']}}</td>
+                    <td style="text-align: left;"><b>Shelf Life</b></td>
+                    <td style="text-align: left;">{{selectedResult['shelf_life']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;"><b>Label Claim</b></td>
+                    <td style="text-align: left;" colspan="3">
+                    <table>
+                        <tr *ngFor="let label of selectedResult['label_claim'];let i=index;">
+                            <td>{{i+1}}</td>
+                            <td>apperance-{{label.apperance}},each unit type-{{label.each_unit_type}},</td>
+                        </tr>
+                    </table>
+                        <!-- {{selectedResult['label_claim']}} -->
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;"><b>prepare std bmr</b></td>
+                    <td style="text-align: left;" >
+                    <select>
+                        <option>With Batch Size</option>
+                        <option>without Batch Size</option>
+                    </select>
+                    </td>
+                    <td style="text-align: left;"><b>Mfr No</b></td>
+                    <td style="text-align: left;" >
+                        <select (change)="selectMfr($event.target.selectedIndex)">
+                           
+                            <option *ngFor="let data of selectedResult['unitformula']">{{data.mfr_no}}</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;"><b>Batch Size</b></td>
+                    <td style="text-align: left;" colspan="3">{{selectedResult['batch_size']}}</td>
+                </tr>
+            </table>
+            <br>
+            <!-- <button class="btn btn-primary" (click)="stageMaster()">Add Stage Master</button> -->
+            
+        </div>
+        
+        <form #processForm1="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Process type: <span style="color: red">*</span></label>
+                    <input type="text" name="process_type" ngModel required>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Stage: <span style="color: red">*</span></label>
+                    <input type="text" name="stage" ngModel required>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Step:</label>
+                    <input type="text" name="step" ngModel required>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <button class="btn btn-primary" (click)="addnewProcess1(processForm1)" style="margin-top:30px;">ADD</button>
+                </div>
+            </div>
+        </form>
+        <table class="table">
+            <tr>
+                <th>Process type</th>
+                <th>Stage</th>
+                <th>Step</th>
+            </tr>
+            <tr *ngFor="let result of processes1">
+                <td>{{ result.process_type }}</td>
+                <td>{{ result.stage }}</td>
+                <td>{{ result.step }}</td>
+            </tr>
+        </table> 
+        <form #dataForm="ngForm">
+       <table class="table table-border" >
+                    <tr>
+                      <th style="width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                      <th style="background-color: rgb(14, 67, 112); color: white;">Equipment Name</th>
+                      <th style="background-color: rgb(14, 67, 112); color: white;">Make</th>
+                      <th style="background-color: rgb(14, 67, 112); color: white;">Capacity</th>
+                      <th style="width: 13%;background-color: rgb(14, 67, 112); color: white;">ADD</th>
+                    </tr>
+                    <tr>
+                      <td>0</td>
+                      <td style="padding: 0px;">
+                        <select name="eqp.equipment_name" ngModel (change)="selectEquipment($event.target.selectedIndex)" style="height: 33px;margin: 0px;">
+                          <option *ngFor="let equipment of equipmentsType">{{ equipment.equipment_name}}</option>
+                        </select>
+                      </td>
+                      <td>{{ selectedEquipment['make'] }}</td>
+                      <td>{{ selectedEquipment['capacity'] }}</td>
+                      <td>
+                        <button class="btn btn-sm btn-icon" (click)="addEquipment(i)">ADD</button>
+                      </td> 
+                    </tr>
+                    <tr *ngFor="let user of eqData; let j = index">
+                        <!-- <tr *ngFor="let user of equipementListData; let j = index"> -->
+                            
+                        <td>{{ j + 1 }}.</td>
+                        <td>{{ user.equipment_name }}</td>
+                        <td>{{ user.make }}</td>
+                        <td>{{ user.capacity }}</td>
+                        <td>#</td>
+                      </tr>
+                   
+                  </table>
+                  </form>
+                
+    </div>
+</form>
+    
+    <button class="btn btn-sm btn-info" (click)="start(processForm3)" >start</button>
+
+</div>
+
+<div class="card" *ngIf="isStart ">
+    <button class="btn btn-sm btn-danger" (click)="isStart = false">CLOSE</button>
+
+    <div class="card-block" >
+        <div class="card-text">
+           
+           
+            <!-- <button class="btn btn-primary" (click)="stageMaster()">Add Stage Master</button> -->
+            <div class="clr-row" style="border: 2px solid darkorchid;margin-left: 2px;margin-right: 2px;">
+                <div class="clr-col-lg-2 clr-col-md-2"
+                    style="padding: 0px;border-right: 2px solid black;background: antiquewhite;">
+                    <table class="table table-border" style="margin: 0px;">
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(0, -1)">BMR APPROVAL PAGE</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(1, -1)">GENERAL INSTRUCTIONS</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(2, -1)">ABBRIVATION</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(3, -1)">BMR Checklist</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(4, -1)">Product Description</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(5, -1)">Unit Formula for Raw Material</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(6, -1)">Standard Batch Formula</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(7, -1)">Equipment List</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(8, -1)">Dispensing</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(9, -1)">IPQC Checks</td>
+                        </tr>
+                    </table>
+                    <h4 style="margin-top: 0px;">Manufacturing Stages:</h4>
+                    <table class="table table-border" style="margin-top: 0px;">
+                        <!-- <tr *ngFor="let stage of selectedResult['stages']; let i = index">                      
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(stage.page_no, i)">{{ stage.stage }}</td>
+                        </tr> -->
+                        <tr *ngFor="let stage of selectedResult['stages']; let i = index">
+                            <td style="cursor: pointer;" class="clickable" (click)="selectPage(stage.page_no, i)">{{ stage.stage }}</td>
+                        </tr>
+                        <tr>
+                            <td><button class="btn btn-primary btn-sm" (click)="isNewStage = true">ADD NEW</button></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="clr-col-lg-8 clr-col-md-8" style="padding: 0px;border-right: 2px solid black;height:250px;height: 550px;">
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 0">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">BMR Approval Page:</div>
+                            <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                <table class="table table-border">
+                                    <tr>
+                                        <td style="text-align: left;">PLAN No.:</td>
+                                        <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+                                        <td style="text-align: left;">BMR No.:</td>
+                                        <td style="text-align: left;">{{ selectedResult['bmr_no'] }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left;">Product Code:</td>
+                                        <td style="text-align: left;">{{ selectedResult['product_code'] }}</td>
+                                        <td style="text-align: left;">Product Name:</td>
+                                        <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left;">Medicap Lot No:</td>
+                                        <td style="text-align: left;">{{ selectedResult['batch_no'] }}</td>
+                                        <td style="text-align: left;">Batch Size:</td>
+                                        <td style="text-align: left;">{{ selectedResult['batch_size'] }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 1">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">General Instructions:</div>
+                            <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                <form #generalForm="ngForm">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th style="width: 50px;">Sr.</th>
+                                            <th>Instruction</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        <tr>
+                                            <td>0.</td>
+                                            <td style="padding: 0px;">
+                                                <input type="text" name="instruction" ngModel required style="margin: 0px;">
+                                            </td>
+                                            <td style="padding: 0px;vertical-align: middle;">
+                                                <button class="btn btn-sm btn-info" (click)="addGeneralList(generalForm)">ADD</button>
+                                            </td>
+                                        </tr>
+                                        <tr *ngFor="let instruction of selectedResult['instructions']; let i = index">
+                                            <td>{{ i + 1 }}.</td>
+                                            <td style="text-align: left;">{{ instruction }}</td>
+                                            <td> <clr-icon shape="trash" class="is-error" (click)="deleteGeneralInstruction(i)"></clr-icon> </td>
+                                        </tr>
+                                        <tr>
+                                            <td *ngIf="selectedResult['instructions']?.length == 0">No Records Found!</td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 2">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Abbrivations:</div>
+                            <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                <form #abbrForm="ngForm">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th style="width: 50px;">Sr.</th>
+                                            <th>Short Form</th>
+                                            <th>Full Form</th>
+                                            <th>Action</th>
+                                        </tr>
+                                        <tr>
+                                            <td>0.</td>
+                                            <td style="padding: 0px;">
+                                                <input type="text" name="short_form" ngModel required style="margin: 0px;">
+                                            </td>
+                                            <td style="padding: 0px;">
+                                                <input type="text" name="full_form" ngModel required style="margin: 0px;">
+                                            </td>
+                                            <td style="padding: 0px;vertical-align: middle;">
+                                                <button class="btn btn-sm btn-info" (click)="addAbbreviationList(abbrForm)">ADD</button>
+                                            </td>
+                                        </tr>
+                                        <tr *ngFor="let instruction of selectedResult['abbreviation']; let i = index">
+                                            <td>{{ i + 1 }}.</td>
+                                            <td style="text-align: left;">{{ instruction.short_form }}</td>
+                                            <td style="text-align: left;">{{ instruction.full_form }}</td>
+                                            <td> <clr-icon shape="trash" class="is-error" (click)="deleteAbbreviationList(i)"></clr-icon> </td>
+                                        </tr>
+                                        <tr>
+                                            <td *ngIf="selectedResult['abbreviation']?.length == 0">No Records Found!</td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- //BMR Checklist empty/// -->
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 3">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">BMR Checklist:</div>
+                            <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                <form #bmrcheck="ngForm">
+                                    <div class="clr-row">
+                                        <table class="table">
+                                            <tr>
+                                                <th>Sr.</th>
+                                                <th>BMR Checklist</th>
+                                                <th>Add</th>
+                                            </tr>
+                                            <tr>
+                                                <td>1.</td>
+                                                <td style="padding: 0px;"><input type="text" name="bmr_check" style="margin: 0px;" ngModel required></td>
+                                                <td><button class="btn btn-primary" (click)="addBMRChecks(bmrcheck)">Add</button></td>
+                                            </tr>
+                                             <tr *ngFor="let bmr of selectedResult['bmr_checklist'];let i = index">
+                                                <td>{{ i+1 }}</td>
+                                                <td>{{ bmr.bmr_check }}</td>
+                                                <td><button class="btn btn-info btn-sm" (click)="deletebmr(i)">Delete</button></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                 
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 5">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Unit Formula For Materials:</div>
+                            <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                <table class="table">
+                                    <tr>
+                                        <th>Sr.</th>
+                                        <th style="text-align: left;">Material type</th>
+                                        <th style="text-align: left;">Material Code</th>
+                                        <th style="text-align: left;">Material Name</th>
+                                        <th style="text-align: left;">Grade</th>
+                                        <th>Qty</th>
+                                        <th>Overages</th>
+                                        <th style="text-align: left;">Role</th>
+                                        <th>Process</th>
+                                    </tr>
+                                    <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+                                        <td>{{ i + 1 }}.</td>
+                                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                                        <td style="text-align: left;">{{ comp.grade }}</td>
+                                        <td>{{ comp.qty }} {{ comp.unit }}</td>
+                                        <td>{{ comp.overages }}</td>
+                                        <td style="text-align: left;">{{ comp.role }}</td>
+                                       <td style="text-align: left;">{{ comp.process }}</td>
+                                    </tr>
+                                    <tr *ngIf="selectedResult['raw_materials'].length == 0">
+                                      <td colspan="7">No Records Found!</td>
+                                    </tr>
+                                  </table>
+                                  <h3>Packing Materials</h3>
+                                  <table class="table">
+                                    <tr>
+                                        <th>Sr.</th>
+                                        <th style="text-align: left;">Material type</th>
+                                        <th style="text-align: left;">Material Code</th>
+                                        <th style="text-align: left;">Material Name</th>
+                                        <th style="text-align: left;">Grade</th>
+                                        <th>Qty</th>
+                                        <th>Overages</th>
+                                        <th style="text-align: left;">Role</th>
+                                        <th>Process</th>
+                                    </tr>
+                                    <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+                                        <td>{{ i + 1 }}.</td>
+                                        <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                                        <td style="text-align: left;">{{ comp.material_code }}</td>
+                                        <td style="text-align: left;">{{ comp.material_name }}</td>
+                                        <td style="text-align: left;">{{ comp.grade }}</td>
+                                        <td>{{ comp.qty }} {{ comp.unit }}</td>
+                                        <td>{{ comp.overages }}</td>
+                                        <td style="text-align: left;">{{ comp.role }}</td>
+                                       <td style="text-align: left;">{{ comp.process }}</td>
+                                    </tr>
+                                    <tr *ngIf="selectedResult['packing_materials'].length == 0">
+                                      <td colspan="7">No Records Found!</td>
+                                    </tr>
+                                  </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 6">
+                        <div class="card-block">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Standard Batch Formula:</div>
+                            <div class="card-text">
+                                <div class="clr-row">
+                                    <div class="clr-col-lg-12 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Standard Batch Size:</label>
+                                    <input type="text" name="batch_size" [(ngModel)]="batch_size" readonly tabindex="-1" >
+                                    </div>
+                                </div>
+                                <h4>Raw Materials:</h4>
+                                <table class="table">
+                                  <tr>
+                                      <th>Sr.</th>
+                                      <th style="text-align: left;">Material type</th>
+                                      <th style="text-align: left;">Material Code</th>
+                                      <th style="text-align: left;">Material Name</th>
+                                      <th style="text-align: left;">Grade</th>
+                                      <th>Qty</th>
+                                      <th>Overages</th>
+                                      <th style="text-align: left;">Role</th>
+                                      <th>Batch Qty</th>
+                                  </tr>
+                                  <tr *ngFor="let comp of selectedResult['raw_materials']; let i = index">
+                                      <td>{{ i + 1 }}.</td>
+                                      <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                                      <td style="text-align: left;">{{ comp.material_code }}</td>
+                                      <td style="text-align: left;">{{ comp.material_name }}</td>
+                                      <td style="text-align: left;">{{ comp.grade }}</td>
+                                      <td>{{ comp.qty }} {{ comp.unit }}</td>
+                                      <td>{{ comp.overages }}</td>
+                                      <td style="text-align: left;">{{ comp.role }}</td>
+                                      <td>{{ comp.batch_qty }}</td>
+                                  </tr>
+                                  <tr *ngIf="selectedResult['raw_materials']?.length == 0">
+                                    <td colspan="8">No Records Found!</td>
+                                  </tr>
+                                </table>
+                                <h3>Packing Materials</h3>
+                                <table class="table">
+                                  <tr>
+                                      <th>Sr.</th>
+                                      <th style="text-align: left;">Material type</th>
+                                      <th style="text-align: left;">Material Code</th>
+                                      <th style="text-align: left;">Material Name</th>
+                                      <th style="text-align: left;">Grade</th>
+                                      <th>Qty</th>
+                                      <th>Overages</th>
+                                      <th style="text-align: left;">Batch Qty</th>
+                                      <th>Process</th>
+                                  </tr>
+                                  <tr *ngFor="let comp of selectedResult['packing_materials']; let i = index">
+                                      <td>{{ i + 1 }}.</td>
+                                      <td style="text-align: left;">{{ comp.material_subtype }}</td>
+                                      <td style="text-align: left;">{{ comp.material_code }}</td>
+                                      <td style="text-align: left;">{{ comp.material_name }}</td>
+                                      <td style="text-align: left;">{{ comp.grade }}</td>
+                                      <td>{{ comp.qty }} {{ comp.unit }}</td>
+                                      <td>{{ comp.overages }}</td>
+                                      <td style="text-align: left;">{{ comp.batch_qty }}</td>
+                                     <td style="text-align: left;">{{ comp.process }}</td>
+                                  </tr>
+                                  <tr *ngIf="selectedResult['packing_materials'].length == 0">
+                                    <td colspan="7">No Records Found!</td>
+                                  </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 7">
+                        <div class="card-block">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Equipment List:</div>
+                          <div class="card-text">
+                            <form #equipForm="ngForm">
+                              <table class="table">
+                                <tr>
+                                  <th style="text-align: left;">Stage</th>
+                                  <th style="text-align: left;">Equipment Name</th>
+                                </tr>
+                                <tr *ngFor="let equipment of selectedResult['equipments'] let i = index">
+                                  <td style="text-align: left;">{{ equipment.stage }}</td>
+                                  <td style="text-align: left;">{{ equipment.equipment_name }}</td>
+                                </tr>
+                              </table>
+                            </form>
+                          </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 8">
+                        <div class="card-block">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Dispensing:</div>
+                            <div class="card-text">
+                                <h3>Instructions:</h3>
+                                <ul>
+                                    <li>Use nose mask and hand gloves during operation</li>
+                                    <li>Check for line clearance as per SOP No.___________________, cleaning & sanitization as per SOP No.__________________</li>
+                                    <li>Check for quality control approved label and necessary details like Material name, item code, Vendors name, B.No., T.R. No., 
+                                        Retest Date etc on Raw material before dispensing</li>
+                                    <li> Check & transfer the Primary raw material required for the Batch to the dispensing area dispense the material under dispensing 
+                                        booth</li>
+                                    <li> Make necessary entries in the BMR.</li>
+                                    <li>Attach duly filled dispensed material label to the dispensed raw material.
+                                    </li>
+                                </ul>
+                            
+                                <table class="table table-border">
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Observation</th>
+                                        <th>Checked By(prod)</th>
+                                        <th>Verified By(QA)</th>
+                                    </tr>
+                                    <tr *ngFor="let res of lineClearance">
+                                        <td style="text-align: left;">{{ res.Description }}</td>
+                                        <td>{{ res.Observation }}</td>
+                                        <td>{{ res.check_by }}</td>
+                                        <td>{{ res.verify_date }}</td>
+                                    </tr>
+                                </table>
+                                <h3>Raw Material Sheet</h3>
+                                <table class="table">
+                                    <tr>
+                                        <th>Sr.</th>
+                                        <th>Material Description</th>
+                                        <th>T.R. No</th>
+                                        <th>Net Wt.</th>
+                                        <th>Tare Wt.</th>
+                                        <th>Gross Wt.</th>
+                                        <th>Wt. By </th>
+                                        <th>Chk. By(RM) /Dt</th>
+                                        <th>Ver. By 
+                                            (QA) /Dt</th>
+                                    </tr>
+                                    <tr>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 9">
+                        <div class="card-block">
+                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">IPQC Checks:</div>
+                            <button class="btn btn-info" (click) ="ipqcnewForm()">New</button>
+                            <div class="card-text">
+                                <table class="table">
+                                    <tr>
+                                        <th>Specification</th>
+                                        <th>Limit Type</th>
+                                        <th>Lower Limit</th>
+                                        <th>Upper Limit</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                    <tr *ngFor="let res of ipqccheck">
+                                         <td>{{ res.specification }}</td>
+                                         <td>{{ res.limit_type }}</td>
+                                         <td>{{ res.lower_limit }}</td>
+                                         <td>{{ res.upper_limit }} {{ res.limit_unit}}</td>
+                                         <td>{{ res.frequency }} {{ res.freq_unit}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- <div > -->
+                    <div *ngFor="let stage of selectedResult['stages']">
+                        <div class="card" style="margin:0px;" >
+                        <div class="card" style="margin:0px;" *ngIf="selectedPage == stage['page_no']">
+                            <div class="card-block" style="padding-right: 0px;">
+                                <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">{{stage['stage'] }}:</div>
+                                <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th>Expected Start Date</th>
+                                            <th>Actual Start Date</th>
+                                            <th>Expected Complete Date</th>
+                                            <th>Actual Complete Date</th>
+                                        </tr>
+                                        <tr>
+                                            <td>{{ stage['expected_start_date'] | date: 'dd-MM-yyyy' }}</td>
+                                            <td>{{ stage['expected_complete_date'] | date: 'dd-MM-yyyy' }}</td>
+                                            <td>{{ stage['start_date'] | date: 'dd-MM-yyyy' }}</td>
+                                            <td>{{ stage['complete_date'] | date: 'dd-MM-yyyy' }}</td>
+                                        </tr>
+                                    </table>
+
+                                <div class="card" *ngIf="stage['isinstruction'] != ''">
+                                        <form #addinstructionList="ngForm">
+                                    <div class="card-block">
+                                            <div class="card-title">Instructions</div>
+                                            <div class="card-text">
+                                                 <form #addinstruction="ngForm">
+                                                    <table class="table table-border">
+                                                        
+
+                                                        <tr style="background-color: rgb(14, 67, 112); color: white;">
+
+                                                            <th style="width: 50px;">Sr.</th>
+                                                            <th>Instructions</th>
+                                                            <th style="width: 70px;">Action</th>
+                                                        </tr>
+                                                       
+                                                        <tr>
+                                                            <td></td>
+                                                            <td style="padding: 0px;">
+                                                                <input type="text" style="padding: 0px; margin: 0px;" name="instruction" ngModel required>
+                                                            </td>
+                                                         
+                                                            
+                                                            <td style="padding: 0px; vertical-align: middle;">
+                                                                <button class="btn btn-info btn-sm"
+                                                                    (click)="addInstruction(addinstruction)">Add</button>
+                                                            </td>
+                                                        </tr>
+                                                   
+                                                    
+                                                        <tr *ngFor="let c of instructionList; let i = index">
+                                                            <td>{{i+1}}.</td>
+                                                            <td style="text-align: left;">{{ c.instruction}}</td>
+                                                            <td> 
+                                                                <clr-icon shape="trash" class="is-error"
+                                                                    (click)="delInstruction(i)"></clr-icon>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                     </form>
+                                                </div>
+                                                <div class="card-footer">
+                                                    <button class="btn btn-primary"
+                                                    (click)="saveInstruction(addinstructionList)">Save</button>
+                                                </div>
+                                            </div>
+                                            </form>
+                                </div>
+
+                                    <div class="card" *ngIf="stage['isprocedure'] != ''">
+                                        <form #ProcedureForm="ngForm">
+                                        <div class="card-block">
+                                            <div class="card-title">Procedures</div>
+                                            <div class="card-text">
+                                                <form #isProcedureForm="ngForm">
+                                                    <table class="table table-border">
+                                                        <tr style="background-color: rgb(14, 67, 112); color: white;">
+                                                            <th style="width: 50px;">Sr.</th>
+                                                            <th>Procedures</th>
+                                                            <th style="width: 70px;">Action</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td></td>
+                                                            <td style="padding: 0px;">
+                                                                <input type="text"
+                                                                    style="padding: 0px; margin: 0px;"
+                                                                    name="procedure" ngModel required>
+                                                            </td>
+                                                            <td style="padding: 0px; vertical-align: middle;">
+                                                                <button class="btn btn-info btn-sm"
+                                                                    (click)="addProcedure(isProcedureForm)">Add</button>
+                                                            </td>
+                                                        </tr>
+                                                        <tr *ngFor="let c of procedureList; let i = index">
+                                                            <td>{{i+1}}.</td>
+                                                            <td style="text-align: left;">{{c.procedure}}</td>
+                                                            <td>
+                                                                <clr-icon shape="trash" class="is-error"
+                                                                    (click)="delProcedure(i)"></clr-icon>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary"
+                                                (click)="saveProcedure(ProcedureForm)">Save</button>
+                                        </div>
+                                        </form>
+                                    </div>
+
+                                    <div class="card" *ngIf="stage['isclerance'] == '1'">
+                                        <form #lineCleance="ngForm">
+                                        <div class="card-block">
+                                            <div class="card-title" style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">Line Clearance</div>
+                                            <clr-checkbox-container clrInline>
+                                                <label>Check Applicable:</label>
+                                                <clr-checkbox-wrapper *ngFor="let option of options">
+                                                  <input type="checkbox" clrCheckbox name="options" [value]="option.option" [(ngModel)]="option.status"/>
+                                                  <label>{{ option.name }}</label>
+                                                </clr-checkbox-wrapper>                                               
+                                              </clr-checkbox-container>
+                                              <div *ngFor="let option of options; let i = index">
+                                                <h3>{{ option['name'] }}:</h3>
+                                                  <div *ngIf="option['status']">
+                                         
+                                  
+                                             
+                                  
+                                                    <div class="card" *ngIf="option['option'] == 'qa'">
+                                                        <div class="card-header" style="text-align: center">
+                                                          <div class="clr-row" style="margin-bottom: -10px;">
+                                                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">QA Checklist</div>
+                                                            <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                              <button class="btn btn-sm btn-info btn-icon">
+                                                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                              </button>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                        <div class="card-block">
+                                              
+                                                          <form #checkForm="ngForm">
+                                                            <div class="clr-row">
+                                              
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Checkpoint Particulars:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="check_point" ngModel #check_point="ngModel" required>
+                                                              </div>
+                                            
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Description:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="description" ngModel #description="ngModel">
+                                                              </div>
+                                                              
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Evaluation Parameter:<span style="color: red;">*</span></label>
+                                                                <select name="evaluation_parameter" [(ngModel)]="evaluation_parameter" required>
+                                                                  <option></option>
+                                                                  <option value="1">Remarks</option>
+                                                                  <option value="2">Yes/No</option>
+                                                                  <option value="3">Ok/Not Ok</option>
+                                                                  <option value="4">Satisfactory/Not Satisfactory</option>
+                                                                  <option value="5">Applicable/Not Applicable</option>
+                                                                  <option value="6">Cleaned/Not Cleaned</option>
+                                                                  <option value="7">Sealed/ Unsealed</option>
+                                                                  <option value="8">Verified/ Not Verified</option>
+                                                                  <option value="9">Covered / Uncovered</option>
+                                                                  <option value="10">Exceptional / Above Average / Average/ Below Average / Unsatisfactory</option>
+                                                                </select>
+                                                              </div>
+                                            
+                                                          
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <button class="btn btn-success" (click)="addData(checkForm)" style="margin-top:30px;">Add</button>
+                                                              </div>
+                                                            </div>
+                                                          </form>
+                                              
+                                              
+                                                          <div class="card-text">
+                                                            <div class="row container-fluid">
+                                                              <table class="table table-border">
+                                                                <tr>
+                                                                  <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Checklist Heading</th>
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Description</th>
+                                              
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Parameter</th>
+                                                                  <!-- <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Type</th> -->
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                                </tr>
+                                              
+                                                                <tr *ngFor="let add of  checklistList; ;let i=index">
+                                                                  <td>{{i+1}}.</td>
+                                                                  <td style="text-align: left;">{{add.check_point}}</td>
+                                                                  <td style="text-align: left;">{{add.description}}</td>
+                                                                  <td style="text-align: left;">{{add.evaluation_parameter}}</td>
+                                                                  <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                              
+                                                                  <td>
+                                                                    <clr-icon shape="trash" class="is-error" (click)="delData(i)"></clr-icon>
+                                                                  </td>
+                                                                </tr>
+                                              
+                                                              </table>
+                                              
+                                                            </div>
+                                                          </div>
+                                                        </div>                                             
+                                                      </div>                                                                
+                                                    <div class="card" *ngIf="option['option'] == 'production'">
+                                                        <div class="card-header" style="text-align: center">
+                                                          <div class="clr-row" style="margin-bottom: -10px;">
+                                                            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">production Checklist</div>
+                                                            <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                              <button class="btn btn-sm btn-info btn-icon">
+                                                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                              </button>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                        <div class="card-block">
+                                              
+                                                          <form #checkForm1="ngForm">
+                                                            <div class="clr-row">
+                                              
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Checkpoint Particulars:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="check_point" ngModel #check_point="ngModel" required>
+                                                              </div>
+                                            
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Description:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="description" ngModel #description="ngModel">
+                                                              </div>
+                                                              
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Evaluation Parameter:<span style="color: red;">*</span></label>
+                                                                <select name="evaluation_parameter" [(ngModel)]="evaluation_parameter" required>
+                                                                  <option></option>
+                                                                  <option value="1">Remarks</option>
+                                                                  <option value="2">Yes/No</option>
+                                                                  <option value="3">Ok/Not Ok</option>
+                                                                  <option value="4">Satisfactory/Not Satisfactory</option>
+                                                                  <option value="5">Applicable/Not Applicable</option>
+                                                                  <option value="6">Cleaned/Not Cleaned</option>
+                                                                  <option value="7">Sealed/ Unsealed</option>
+                                                                  <option value="8">Verified/ Not Verified</option>
+                                                                  <option value="9">Covered / Uncovered</option>
+                                                                  <option value="10">Exceptional / Above Average / Average/ Below Average / Unsatisfactory</option>
+                                                                </select>
+                                                              </div>
+                                            
+                                                          
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <button class="btn btn-success" (click)="addDataProd(checkForm1)" style="margin-top:30px;">Add</button>
+                                                              </div>
+                                                            </div>
+                                                          </form>
+                                              
+                                              
+                                                          <div class="card-text">
+                                                            <div class="row container-fluid">
+                                                              <table class="table table-border">
+                                                                <tr>
+                                                                  <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Checklist Heading</th>
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Description</th>
+                                              
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Parameter</th>
+                                                                  <!-- <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Type</th> -->
+                                                                  <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                                </tr>
+                                              
+                                                                <tr *ngFor="let add of  prod_checklistList; ;let i=index">
+                                                                  <td>{{i+1}}.</td>
+                                                                  <td style="text-align: left;">{{add.check_point}}</td>
+                                                                  <td style="text-align: left;">{{add.description}}</td>
+                                                                  <td style="text-align: left;">{{add.evaluation_parameter}}</td>
+                                                                  <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                              
+                                                                  <td>
+                                                                    <clr-icon shape="trash" class="is-error" (click)="delDataProd(i)"></clr-icon>
+                                                                  </td>
+                                                                </tr>
+                                              
+                                                              </table>
+                                              
+                                                            </div>
+                                                          </div>
+                                                        </div>                                             
+                                                      </div>                                                                
+                                  
+                                               
+                                  
+                                              </div>
+                                              <div *ngIf="!option['status']">
+                                                <h5 style="color: red;">Not Selected</h5>
+                                              </div>
+                                          </div>
+                                            <!-- <div class="card-text">
+                                                <small>Note: Add Instructions for Line Clearance of Perticular Area / Equipment / Process.</small>
+                                                <table class="table table-border">
+                                                    <tr>
+                                                        <td style="text-align: left;width: 20%;">Equipment ID:</td>
+                                                        <td style="text-align: left;" colspan="3"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="text-align: left;width: 20%;">Previous Product:</td>
+                                                        <td style="text-align: left;"></td>
+                                                        <td style="text-align: left;width: 20%;">Medicap Lot No:</td>
+                                                        <td style="text-align: left;"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="text-align: left;">Cleaning Done By:</td>
+                                                        <td style="text-align: left;" colspan="3"></td>
+                                                    </tr>
+                                                </table>
+                                                <form #addcheckList="ngForm">
+                                                    <table class="table table-border">
+                                                        <tr>
+                                                            <th style="width: 50px;">Sr.</th>
+                                                            <th>Description</th>
+                                                            <th style="width: 5%;">Action</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td></td>
+                                                            <td style="padding: 0px;">
+                                                                <input type="text" style="padding: 0px; margin: 0px;" name="checkpoints" ngModel required>
+                                                            </td>
+                                                            <td style="padding: 0px; vertical-align: middle;">
+                                                                <button class="btn btn-info btn-sm" (click)="addList(addcheckList)">Add</button>
+                                                            </td>
+                                                        </tr>
+                                                        <tr *ngFor="let c of checkList; let i = index">
+                                                            <td>{{i+1}}.</td>
+                                                            <td style="text-align: left;">{{c.checkpoints}}</td>
+                                                            <td>
+                                                                <clr-icon shape="trash" class="is-error" (click)="del(i)"></clr-icon>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </form>
+                                            </div> -->
+                                        </div>
+                                    </form>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveClearance(lineCleance)">Save</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card" *ngIf="stage['isequipment'] != ''">
+                                        <form #saveEquipmentForm="ngForm">
+                                        <div class="card-block">
+                                            <div class="card-title">Equipments:</div>
+                                            <div class="card-text">
+                                                <form #formData="ngForm">
+                                                    <div class="clr-row">
+                                                        <div class="clr-col-lg-9">
+                                                            <label>Equipments:</label>
+                                                            <!-- <p-multiSelect [options]="eqData"   name="equipments" ngModel optionLabel="equipment_name">
+                                                                                                                
+                                                            </p-multiSelect> -->
+                                                            <select name="equipments" ngModel  (change)="selectEquipment_data($event.target.selectedIndex)" >
+                                                                <option *ngFor="let g of eqData" >{{g.equipment_name}}
+                                                                </option>    
+                                                              </select>
+                                                            
+                                                        </div>
+                                                        <div class="clr-col-lg-3">
+                                                            <label>Action:</label>
+                                                            <button class="btn btn-primary" (click)="addEquipment_data(i)">Add</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                                
+                                                <table class="table">
+                                                    <tr>
+                                                        <th>Sr.</th>
+                                                        <th style="text-align: left;">Equipment Name</th>
+                                                        <th>Delete</th>
+                                                    </tr>
+                                                    <tr *ngFor="let res of eqDatas ;let i=index">
+                                                        <td>{{ i+1}}</td>
+                                                        <td style="text-align: left;">{{ res.equipment_name }}</td>
+                                                        <td>
+                                                            <clr-icon shape="trash" class="is-error" (click)="deleteEquipments(i)"></clr-icon>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveEquipment(saveEquipmentForm)">save</button>
+                                        </div>
+                                        </form>
+                                        
+                                    </div>
+                                    
+                                    <div class="card" *ngIf="stage[isinprocess] == 'YES'">
+                                        <div class="card-block">
+                                            <div class="card-title">Inprocess Checks</div>
+                                            <div class="card-text">
+                                                <form #inprocessForm="ngForm">
+                                                    <div class="clr-row">
+                                                    
+                                                        <div class="clr-col-lg-4">
+                                                            <label>Inprocess Frequency</label>
+                                                            <input type="text" name="inprocess_frequency"
+                                                                [(ngModel)]="frequency" required style="width:70%;">
+                                                            <select name="inprocess_freq_unit" ngModel
+                                                                style="width:30%;">
+                                                                <option>min</option>
+                                                                <option>hours</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="clr-col-lg-2">
+                                                            <label>Production:</label>
+                                                            <select name="inprocess_production"
+                                                                [(ngModel)]="isProduction" required>
+                                                                <option>YES</option>
+                                                                <option>NO</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="clr-col-lg-2">
+                                                            <label>QA:</label>
+                                                            <select name="inprocess_qa" [(ngModel)]="isQa" required>
+                                                                <option>YES</option>
+                                                                <option>NO</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="clr-col-lg-2">
+                                                            <label>QC:</label>
+                                                            <select name="inprocess_qc" [(ngModel)]="isQc" required>
+                                                                <option>YES</option>
+                                                                <option>NO</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-text" >
+                                                        <form #addCheck="ngForm">
+                                                            <table class="table table-border">
+                                                                <tr>
+                                                                    <th style="width: 50px;">Sr.</th>
+                                                                    <th>Inprocess Checks</th>
+                                                                    <th style="width: 70px;">Action</th>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td></td>
+                                                                    <td style="padding: 0px;">
+                                                                        <input type="text"
+                                                                            style="padding: 0px; margin: 0px;"
+                                                                            name="inprocessChecks" ngModel required>
+                                                                    </td>
+                                                                    <td style="padding: 0px; vertical-align: middle;">
+                                                                        <button class="btn btn-info btn-sm"
+                                                                            (click)="addInprocess(addCheck)">Add</button>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr *ngFor="let c of inprocessList; let i = index">
+                                                                    <td>{{i+1}}.</td>
+                                                                    <td style="text-align: left;">{{c.inprocessChecks}}
+                                                                    </td>
+                                                                    <td>
+                                                                        <clr-icon shape="trash" class="is-error"
+                                                                            (click)="delInprocess(i)"></clr-icon>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </form>
+                                                    </div>
+                                                    <table class="table table-border">
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Time</th>
+                                                            <th *ngFor="let c of inprocessList;">{{c.inprocessChecks}}
+                                                            </th>
+                                                            <th *ngIf="isProduction == 'YES'">Done By</th>
+                                                            <th *ngIf="isQa == 'YES'">Check By</th>
+                                                            <th *ngIf="isQc == 'YES'">Review By</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td [attr.colspan]="inprocessList.length + 5">No Records
+                                                                Found!</td>
+                                                        </tr>
+                                                    </table>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary"
+                                                (click)="saveInprocess(inprocessForm)">Save</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Environment Checks -->
+                                    <div class="card" *ngIf="stage['isenvironment'] == 'YES'">
+                                        <!-- //blank// -->
+                                        
+                                        <!-- //If Data FIll// -->
+                                        <div class="card-block">
+                                            <div class="card-header" style="text-align: center">
+                                                <div class="clr-row" style="margin-bottom: -10px;">
+                                                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Environment Checks </div>
+                                                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                    <button class="btn btn-sm btn-info btn-icon">
+                                                        {{stage['stage'] }}
+                                                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            <div class="card-text">
+                                                <form #envForm="ngForm">
+                                                 
+
+
+                                                    <div class="card-block">
+                                              
+                                                        <form #EnvForm="ngForm">
+                                                          <div class="clr-row">
+                                            
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Date:<span style="color: red;">*</span></label>
+                                                              <input type="date" name="date" ngModel >
+                                                            </div>
+                                          
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Time:<span style="color: red;">*</span></label>
+                                                              <input type="time" name="time" ngModel>
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>temp ℃:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="temp" ngModel >
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Humidity%:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="humidity" ngModel >
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Done By%:<span style="color: red;">*</span></label>
+                                                              <select name="done_by" ngModel  >
+                                                                <option></option>
+                                                                <option *ngFor="let dat of labors">{{dat.firstname}} {{dat.middlename}} {{dat.lastname}}</option>
+                                                              </select>
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Room Name:<span style="color: red;">*</span></label>
+                                                              <select name="section" ngModel  >
+                                                                <option></option>
+                                                                <option *ngFor="let dat of sections">{{dat.section_name}}</option>
+                                                              </select>
+                                                            </div>
+                                                            
+                                                           
+                                          
+                                                        
+                                                            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <button class="btn btn-success" (click)="addEnv(EnvForm)" style="margin-top:30px;">Add</button>
+                                                            </div>
+                                                          </div>
+                                                        </form>
+                                            
+                                            
+                                                        <div class="card-text">
+                                                          <div class="row container-fluid">
+                                                            <table class="table table-border">
+                                                              <tr>
+                                                                <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Date</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Time</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">temp</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Humidity</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Done By</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                              </tr>
+                                            
+                                                              <tr *ngFor="let add of  environmentList; ;let i=index">
+                                                                <td>{{i+1}}.</td>
+                                                                <td style="text-align: left;">{{add.date}}</td>
+                                                                <td style="text-align: left;">{{add.time}}</td>
+                                                                <td style="text-align: left;">{{add.temp}}</td>
+                                                                <td style="text-align: left;">{{add.humidity}}</td>
+                                                                <td style="text-align: left;">{{add.done_by}}</td>
+                                                                <td style="text-align: left;">{{add.section}}</td>
+                                                                <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                            
+                                                                <td>
+                                                                  <clr-icon shape="trash" class="is-error" (click)="delEnv(i)"></clr-icon>
+                                                                </td>
+                                                              </tr>
+                                            
+                                                            </table>
+                                            
+                                                          </div>
+                                                        </div>
+                                                      </div>                                                   
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer" *ngIf="environmentList!= ''">
+                                            <button class="btn btn-primary" (click)="saveEnv(envForm)">Save</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card"  *ngIf="stage['isweighing'] == 'YES'">
+                                        <div class="card-block">
+                                            <div class="card-header" style="text-align: center">
+                                                <div class="clr-row" style="margin-bottom: -10px;">
+                                                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing</div>
+                                                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                    <button class="btn btn-sm btn-info btn-icon">
+                                                        {{stage['stage'] }}
+                                                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            <div class="card-text">
+                                                <form #WForm="ngForm">
+                                                 
+
+
+                                                    <div class="card-block">
+                                              
+                                                        <form #WgForm="ngForm">
+                                                          <div class="clr-row">
+                                            
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Container No:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="container_no" ngModel >
+                                                            </div>
+                                          
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Gross Weight:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="gross_wt" ngModel>
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Tare Weight:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="tare_wt" ngModel >
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Net Weight:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="net_wt" ngModel >
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Remark:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="remark" ngModel >
+
+                                                            </div>                                                         
+
+                                                            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <button class="btn btn-success" (click)="addWeighings(WgForm)" style="margin-top:30px;">Add</button>
+                                                            </div>
+                                                          </div>
+                                                        </form>
+                                            
+                                            
+                                                        <div class="card-text">
+                                                          <div class="row container-fluid">
+                                                            <table class="table table-border">
+                                                              <tr>
+                                                                <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Container No</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Gross Weight</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Tare Weight</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Net Weight</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Remark</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                              </tr>
+                                            
+                                                              <tr *ngFor="let add of  weighingsList; ;let i=index">
+                                                                <td>{{i+1}}.</td>
+                                                                <td style="text-align: left;">{{add.container_no}}</td>
+                                                                <td style="text-align: left;">{{add.gross_wt}}</td>
+                                                                <td style="text-align: left;">{{add.tare_wt}}</td>
+                                                                <td style="text-align: left;">{{add.net_wt}}</td>
+                                                                <td style="text-align: left;">{{add.remark}}</td>
+                                                                <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                            
+                                                                <td>
+                                                                  <clr-icon shape="trash" class="is-error" (click)="delWeighings(i)"></clr-icon>
+                                                                </td>
+                                                              </tr>
+                                            
+                                                            </table>
+                                            
+                                                          </div>
+                                                        </div>
+                                                      </div>                                                   
+                                                </form>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="card-footer" >
+                                            <button class="btn btn-primary" (click)="saveWeighings(WForm)">Save</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card"  *ngIf="selectedStage['initial_checks']  !== ''">
+                                        <div class="card-block">
+                                            <div class="card-header" style="text-align: center">
+                                                <div class="clr-row" style="margin-bottom: -10px;">
+                                                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Initial Checks</div>
+                                                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                    <button class="btn btn-sm btn-info btn-icon">
+                                                        {{stage['stage'] }}
+                                                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            <div class="card-text">
+                                                <form #InitialForm="ngForm">
+                                                 
+
+
+                                                    <div class="card-block">
+                                              
+                                                        <form #Initial="ngForm">
+                                                          <div class="clr-row">
+                                            
+                                                            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Checkpoint Particulars:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="check_point" ngModel #check_point="ngModel" required>
+                                                              </div>
+                                            
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Description:<span style="color: red;">*</span></label>
+                                                                <input type="text" name="description" ngModel #description="ngModel">
+                                                              </div>
+                                                              
+                                                              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Evaluation Parameter:<span style="color: red;">*</span></label>
+                                                                <select name="evaluation_parameter" [(ngModel)]="evaluation_parameter" required>
+                                                                  <option></option>
+                                                                  <option value="1">Remarks</option>
+                                                                  <option value="2">Yes/No</option>
+                                                                  <option value="3">Ok/Not Ok</option>
+                                                                  <option value="4">Satisfactory/Not Satisfactory</option>
+                                                                  <option value="5">Applicable/Not Applicable</option>
+                                                                  <option value="6">Cleaned/Not Cleaned</option>
+                                                                  <option value="7">Sealed/ Unsealed</option>
+                                                                  <option value="8">Verified/ Not Verified</option>
+                                                                  <option value="9">Covered / Uncovered</option>
+                                                                  <option value="10">Exceptional / Above Average / Average/ Below Average / Unsatisfactory</option>
+                                                                </select>
+                                                              </div>                                                        
+
+                                                            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <button class="btn btn-success" (click)="addInitialCheck(Initial)" style="margin-top:30px;">Add</button>
+                                                            </div>
+                                                          </div>
+                                                        </form>
+                                            
+                                            
+                                                        <div class="card-text">
+                                                          <div class="row container-fluid">
+                                                            <table class="table table-border">
+                                                              <tr>
+                                                                <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+                                                                <th style="background-color: rgb(14, 67, 112); color: white;">Checkpoint</th>
+                                                                <th style="background-color: rgb(14, 67, 112); color: white;">Description</th>
+
+                                                                <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Parameter</th>
+                                                                <!-- <th style="background-color: rgb(14, 67, 112); color: white;">Evaluation Type</th> -->
+                                                                <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                              </tr>
+                                            
+                                                              <tr *ngFor="let add of  initialCheckList; ;let i=index">
+                                                                <td>{{i+1}}.</td>
+                                                                <td style="text-align: left;">{{add.check_point}}</td>
+                                                                <td style="text-align: left;">{{add.description}}</td>
+                                                                <td style="text-align: left;">{{add.evaluation_parameter}}</td>
+                                                                <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                            
+                                                                <td>
+                                                                  <clr-icon shape="trash" class="is-error" (click)="delInitialCheck(i)"></clr-icon>
+                                                                </td>
+                                                              </tr>
+                                            
+                                                            </table>
+                                            
+                                                          </div>
+                                                        </div>
+                                                      </div>                                                   
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer" >
+                                            <button class="btn btn-primary" (click)="saveInitialChecks(InitialForm)">Save</button>
+                                        </div>
+                                    </div> 
+                                    <div class="card"  *ngIf="selectedStage['initial_checks'] == ''">
+                                        <div class="card-block">
+                                            <div class="card-title">Initial Checks</div>
+                                            <div class="card-text">
+                                               <form #invFreq="ngForm">
+                                                <div class="clr-row">
+                                                    <div class="clr-col-lg-9 clr-col-md-9 clr-col-sm-12">
+                                                        <label>Frequency</label>
+                                                        <input type="text" name="initial_frequency" ngModel style="width:30%">
+                                                        <select name="initial_freq_unit" style="width:40%" ngModel required>
+                                                            <option>min</option>
+                                                            <option>hours</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                               </form>
+
+                                                <form #initialCheck="ngForm">
+                                                    <table class="table">
+                                                        <tr>
+                                                            <th>Sr.No</th>
+                                                            <th>Checks</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>0</td>
+                                                            <td style="padding: 0px;">
+                                                                <input type="text" style="padding: 0px; margin: 0px;"
+                                                                    name="check" ngModel required>
+                                                            </td>
+                                                            <td style="padding: 0px; vertical-align: middle;">
+                                                                <button class="btn btn-info btn-sm"
+                                                                    (click)="addInitialCheck(initialCheck)">Add</button>
+                                                            </td>
+                                                        </tr>
+                                                        <tr *ngFor="let c of initialCheckList; let i = index">
+                                                            <td>{{i+1}}.</td>
+                                                            <td style="text-align: left;">{{c.check}}</td>
+                                                            <td>
+                                                                <clr-icon shape="trash" class="is-error"
+                                                                    (click)="delInitialCheck(i)"></clr-icon>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                    <table class="table table-border">
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Time</th>
+                                                            <th *ngFor="let c of initialCheckList;">{{c.check}}</th>
+                                                            <th>Done By</th>
+                                                            <th>Check By</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td [attr.colspan]="initialCheckList.length + 6">No Records Found!</td>
+                                                        </tr>
+                                                    </table>
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveInitialChecks(invFreq)">Save</button>
+                                        </div>
+                                    </div> 
+                                    <!-- ////Chck Specification/// -->
+                                    <div class="card">
+                                        <div class="card-block">
+                                            <div class="card-title">IPQC Checks</div>
+                                            <div class="card-text" >
+                                                <div class="card-text">
+                                                    <form #ipchecks="ngForm">
+                                                        <table class="table">
+                                                            <tr>
+                                                                <th></th>
+                                                                <th>Specification</th>
+                                                                <th>Limit Type</th>
+                                                                <th>Lower Limit</th>
+                                                                <th>Upper Limit</th>
+                                                                <th>Frequency</th>
+                                                            </tr>
+                                                            <tr *ngFor="let res of ipqccheck; let i=index">
+                                                                <th><input type="checkbox" name="check{{i}}" [(ngModel)]="res.check" required></th>
+                                                                 <td>{{ res.specification }}</td>
+                                                                 <td>{{ res.limit_type }}</td>
+                                                                 <td>{{ res.lower_limit }}</td>
+                                                                 <td>{{ res.upper_limit }} {{ res.limit_unit}}</td>
+                                                                 <td>{{ res.frequency }} {{ res.freq_unit}}</td>
+                                                            </tr>
+                                                        </table>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveIPQCCheckpoints()">save</button>
+                                        </div>
+                                    </div> 
+
+                                    <div class="card" *ngIf="stage['issieve'] == 'YES'">
+                                        <div class="card-block">
+                                            <div class="card-header" style="text-align: center">
+                                                <div class="clr-row" style="margin-bottom: -10px;">
+                                                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Sieve</div>
+                                                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                    <button class="btn btn-sm btn-info btn-icon">
+                                                        {{stage['stage'] }}
+                                                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            <div class="card-text">
+                                                <form #Sieve="ngForm">
+                                                 
+
+
+                                                    <div class="card-block">
+                                              
+                                                        <form #SieveForm="ngForm">
+                                                          <div class="clr-row">
+                                            
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Sieve Size:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="sieve" ngModel >
+                                                            </div>
+                                          
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Integrity:<span style="color: red;">*</span></label>
+                                                              <select name="integrity" ngModel>
+                                                                <option></option>    
+                                                                <option>Ok</option>    
+                                                                <option>Not Ok</option>    
+                                                            </select>
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Checker<span style="color: red;">*</span></label>
+                                                                <select name="done_by" ngModel  >
+                                                                  <option></option>
+                                                                  <option *ngFor="let dat of labors">{{dat.firstname}} {{dat.middlename}} {{dat.lastname}}</option>
+                                                                </select>
+                                                              </div>
+                                                              <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Date:<span style="color: red;">*</span></label>
+                                                                <input type="date" name="date" ngModel >
+                                                              </div>
+                                                              <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Time:<span style="color: red;">*</span></label>
+                                                                <input type="time" name="time" ngModel >
+                                                              </div>
+                                                              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <button class="btn btn-success" (click)="addIntegrity(SieveForm)" style="margin-top:30px;">Add</button>
+                                                              </div>
+                                                          </div>
+                                                        </form>
+                                            
+                                            
+                                                        <div class="card-text">
+                                                          <div class="row container-fluid">
+                                                            <table class="table table-border">
+                                                              <tr>
+                                                                <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Sieve Size</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Integrity</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Checker</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                              </tr>
+                                            
+                                                              <tr *ngFor="let add of  integrityCheckList; ;let i=index">
+                                                                <td>{{i+1}}.</td>
+                                                                <td style="text-align: left;">{{add.sieve}}</td>
+                                                                <td style="text-align: left;">{{add.integrity}}</td>
+                                                                <td style="text-align: left;">{{add.done_by}}</td>
+                                                                <td style="text-align: left;">{{add.date}}</td>
+                                                                <td style="text-align: left;">{{add.time}}</td>
+
+                                                                <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                            
+                                                                <td>
+                                                                  <clr-icon shape="trash" class="is-error" (click)="delIntegrity(i)"></clr-icon>
+                                                                </td>
+                                                              </tr>
+                                            
+                                                            </table>
+                                            
+                                                          </div>
+                                                        </div>
+                                                      </div>                                                   
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveSieve(Sieve)">Save</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="card" *ngIf="stage['isscreen'] == 'YES'">
+                                        <div class="card-block">
+                                            <div class="card-header" style="text-align: center">
+                                                <div class="clr-row" style="margin-bottom: -10px;">
+                                                  <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Screen</div>
+                                                  <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                                                    <button class="btn btn-sm btn-info btn-icon">
+                                                        {{stage['stage'] }}
+                                                      <clr-icon shape="eye" class="is-warning"></clr-icon>
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            <div class="card-text">
+                                                <form #Screen="ngForm">
+                                                 
+
+
+                                                    <div class="card-block">
+                                              
+                                                        <form #ScreenForm="ngForm">
+                                                          <div class="clr-row">
+                                            
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Screen Size:<span style="color: red;">*</span></label>
+                                                              <input type="text" name="screen" ngModel >
+                                                            </div>
+                                          
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                              <label>Integrity:<span style="color: red;">*</span></label>
+                                                              <select name="integrity" ngModel>
+                                                                <option></option>    
+                                                                <option>Ok</option>    
+                                                                <option>Not Ok</option>    
+                                                            </select>
+                                                            </div>
+                                                            <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Checker<span style="color: red;">*</span></label>
+                                                                <select name="done_by" ngModel  >
+                                                                  <option></option>
+                                                                  <option *ngFor="let dat of labors">{{dat.firstname}} {{dat.middlename}} {{dat.lastname}}</option>
+                                                                </select>
+                                                              </div>
+                                                              <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Date:<span style="color: red;">*</span></label>
+                                                                <input type="date" name="date" ngModel >
+                                                              </div>
+                                                              <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <label>Time:<span style="color: red;">*</span></label>
+                                                                <input type="time" name="time" ngModel >
+                                                              </div>
+                                                              <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                                                <button class="btn btn-success" (click)="addScreen(ScreenForm)" style="margin-top:30px;">Add</button>
+                                                              </div>
+                                                          </div>
+                                                        </form>
+                                            
+                                            
+                                                        <div class="card-text">
+                                                          <div class="row container-fluid">
+                                                            <table class="table table-border">
+                                                              <tr>
+                                                                <th style="background-color:rgb(14, 67, 112); color: white;">Sr No.</th>
+
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Sieve Size</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Integrity</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Checker</th>
+                                                               <th style="background-color: rgb(14, 67, 112); color: white;">Action</th>
+                                                              </tr>
+                                            
+                                                              <tr *ngFor="let add of  ScreenCheckList; ;let i=index">
+                                                                <td>{{i+1}}.</td>
+                                                                <td style="text-align: left;">{{add.screen}}</td>
+                                                                <td style="text-align: left;">{{add.integrity}}</td>
+                                                                <td style="text-align: left;">{{add.done_by}}</td>
+                                                                <td style="text-align: left;">{{add.date}}</td>
+                                                                <td style="text-align: left;">{{add.time}}</td>
+
+                                                                <!-- <td style="text-align: left;">{{add.evaluation_type}}</td> -->
+                                            
+                                                                <td>
+                                                                  <clr-icon shape="trash" class="is-error" (click)="delScreen(i)"></clr-icon>
+                                                                </td>
+                                                              </tr>
+                                            
+                                                            </table>
+                                            
+                                                          </div>
+                                                        </div>
+                                                      </div>                                                   
+                                                </form>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button class="btn btn-primary" (click)="saveScreen(Screen)">Save</button>
+                                        </div>
+                                    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2" style="padding: 0px;background: antiquewhite;">
+                    <table class="table table-border" style="margin: 0px;">
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Incident Report</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Maintenance Note</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Deviation Report</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isEnvironmentCheck = true">
+                                Environmental Checkpoints</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isEquipmentUsage = true">Equipment
+                                Usages Log</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="sheet()">Technical Info. Sheet</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Label Printing</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable"  (click)="isWahRinseWater = true">Wash / Rinse Sample</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Inprocess Report</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Shift Change</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Power Failure</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isYieldStatement = true">Yield
+                                Statement</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable">Online Rejection</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <clr-modal [(clrModalOpen)]="isWahRinseWater" clrModalSize="xl" (clrModalClosable)="false">
+                    <h3 class="modal-title">Wash/Rinse Water</h3>
+                    <div class="modal-body">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="text-align:left;padding:0px;" >Previous Product Name</td>
+                                <td>
+                                    <input type="text" name="pre" ngModel readonly style="padding: 0px;">
+                                </td>
+                                <td style="text-align:left">Medicap Lot No</td>
+                                <td style="padding:0px;" colspan="3">
+                                    <input type="text" name="batch_no" ngModel style="margin:0px" readonly>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;padding:0px;">Current Product Name:</td>
+                                <td colspan="3"><input type="text" name="current_product" ngModel style="margin:0px;" readonly></td>
+                                <td style="text-align: left;padding:0px;">Medicap Lot No </td>
+                                <td><input type="text" name="batch" ngModel readonly style="margin:0px;"></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;padding:0px;">Cleaning Done By:</td>
+                                <td><input type="text" name="current_product" ngModel style="margin:0px;" readonly></td>
+                                <td style="text-align: left;padding:0px;">cleaning Check By </td>
+                                <td><input type="text" name="batch" ngModel readonly style="margin:0px;"></td>
+                                <td style="text-align: left;padding:0px;">sample Collected By QA Date</td>
+                                <td><input type="text" name="batch" ngModel readonly style="margin:0px;"></td>
+                            </tr>
+                        </table>
+                        <table class="table table-border">
+                            <tr>
+                              <th rowspan="2">Sr.No.</th>
+                              <th rowspan="2">Name Of Equipment</th>
+                              <th rowspan="2">Cleaning Done By</th>
+                              <th colspan="2">Cleaning Visually verification</th>
+                              <th rowspan="2">Q.C. Result</th>
+                              <th rowspan="2">Remarks</th>
+                            </tr>
+                            <tr>
+                                <td>By Prod</td>
+                                <td>By QA</td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary">save</button>
+                        <button type="button" class="btn btn-danger" (click)="isWahRinseWater = false">close</button>
+                    </div>
+                </clr-modal>
+
+                <clr-modal [(clrModalOpen)]="isnewIpqcForm" clrModalSize="xl" (clrModalClosable)="false">
+                    <h3 class="modal-title">New IPQC checks</h3>
+                    <div class="modal-body">
+                        <form #ipqc="ngForm">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-4">
+                                    <label>Specification</label>
+                                    <input type="text" name="specification" ngModel required>
+                                </div>
+            
+                                <div class="clr-col-lg-4">
+                                    <label>Limits Type</label>
+                                   <select name="limit_type" ngModel (change)="getLimits($event.target.value)" required>
+                                       <option></option>
+                                       <option value="LessThan">Not LessThan</option>
+                                       <option value="MoreThan">Not MoreThan</option>
+                                       <option value="Compliences">Compliences</option>
+                                       <option value="Range">Range</option>
+                                   </select>
+                                </div>
+                                <div class="clr-col-lg-2" *ngIf="islessthan">
+                                    <label>Lower Than</label>
+                                    <input type="text" name="lower_limit" ngModel required>
+                                </div>
+                                <div  class="clr-col-lg-2" *ngIf="ismorethan">
+                                    <label>More Than</label>
+                                    <input type="text" name="upper_limit" ngModel required>
+                                </div>
+    
+                                <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"  *ngIf="isrange">
+                                    <label *ngIf="limit == 'Not MoreThan'">Not More Than:</label>
+                                    <label *ngIf="limit !== 'Not MoreThan'"> Lower Limit:</label>
+                                    <input type="text" name="lower_limit" ngModel required>
+                                  </div>
+                                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="isrange">
+                                    <label *ngIf="limit == 'Not LessThan'">Not Less Than:</label>
+                                    <label *ngIf="limit !== 'Not LessThan'"> Upper Limit:</label>
+                                    <input type="text" name="upper_limit" ngModel required>
+                                  </div>
+                                  <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Unit:<span style="color:red">*</span></label>
+                                    <select name="limit_unit" ngModel required>
+                                      <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                                    </select>
+                                  </div>
+                                <div class="clr-col-lg-4">
+                                    <label>Frequency</label>
+                                    <input type="text" name="frequency" style="width: 40%;" ngModel required>
+                                    <select name="freq_unit" ngModel style="width: 30%;">
+                                        <option>min</option>
+                                        <option>Hr.</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" (click)="saveIPQCChecks(ipqc)">save</button>
+                        <button type="button" class="btn btn-danger" (click)="isnewIpqcForm = false">close</button>
+                    </div>
+                </clr-modal>
+
+                <clr-modal [(clrModalOpen)]="isTISheet" clrModalSize="xl" (clrModalClosable)="false">
+                    <h3 class="modal-title">TI Sheets</h3>
+                    <div class="modal-body">
+                        <table class="table">
+                            <tr>
+                                <td>Stage</td>
+                                <td>Test</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary">save</button>
+                        <button type="button" class="btn btn-danger" (click)="isTISheet = false">close</button>
+                    </div>
+                </clr-modal>
+
+            </div>
+        </div>
+    </div>
+</div>
+<clr-modal [(clrModalOpen)]="newStageMaster" clrModalSize="lg" (clrModalClosable)="false">
+    <div class="modal-title">Add New Stage</div>
+    <div class="modal-body">
+        <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label>Dosage Form: <span style="color: red">*</span></label>
+                <select name="dosage_form" [(ngModel)]="dosage_form" required>
+                    <option></option>
+                    <option *ngFor="let dosage of dosages">{{ dosage.dosage_form }}</option>
+                </select>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12" *ngIf="dosage_form !== 'TABLET'">
+                <label>Process Type: <span style="color: red">*</span></label>
+                <input type="text" name="process_type" [(ngModel)]="process_type" required>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12" *ngIf="dosage_form == 'TABLET'">
+                <label>Process Type: <span style="color: red">*</span></label>
+                <select name="process_type" [(ngModel)]="process_type" required>
+                    <option>WET GRANULATION</option>
+                    <option>DRY GRANULATION</option>
+                </select>
+            </div>
+        </div>
+        <h3>New Process:</h3>
+        <form #processForm="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Stage: <span style="color: red">*</span></label>
+                    <input type="text" name="stage" ngModel required>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <label>Step:</label>
+                    <input type="text" name="step" ngModel required>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                    <button class="btn btn-primary" (click)="addnewProcess(processForm)" style="margin-top:30px;">ADD</button>
+                </div>
+            </div>
+        </form>
+        <table class="table">
+            <tr>
+                <th>Stage</th>
+                <th>Step</th>
+            </tr>
+            <tr *ngFor="let result of processes">
+                <td>{{ result.stage }}</td>
+                <td>{{ result.step }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" (click)="saveProcess()">SAVE</button>
+        <button class="btn btn-danger" (click)="newStageMaster = false">Close</button>
+    </div>
+</clr-modal>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isNewStage" clrModalSize="lg" (clrModalClosable)="false">
+    <div class="modal-title">Add New Stages</div>
+    <div class="modal-body">
+        <form #stageForm="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-3">
+                    <label *ngIf="plant_type != 'API/ Excipients'">Dosage Form:</label>
+                    <label *ngIf="plant_type == 'API/ Excipients'">Product Type:</label>
+                    <select name="dosage_form" ngModel  (change)="getStageMasterDetails($event.target.selectedIndex)" required>
+                        <option></option>
+                        <option *ngFor ="let res of stagemaster" [value]="res.dosage_form">{{ res.dosage_form }}</option>
+                    </select>
+                </div>
+
+                <div class="clr-col-3">
+                    <label>Process Type:</label>
+                    <select name="process_type" ngModel required (change)="stagess($event.target.selectedIndex)">
+                     
+                        <option *ngFor ="let res of select_Stage" [value]="res.process_type">{{ res.process_type }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-3">
+                    <label>Stage :</label>
+                    <select name="stage" [(ngModel)]="stage" required (change)="stepssss($event.target.selectedIndex)">
+                        <!-- <option></option> -->
+                        <!-- <option *ngFor ="let res of selectStage1" [value]="res.stage">{{ res.stage }}</option> -->
+                        <option *ngFor ="let res of selected_stages" [value]="res.stage">{{ res.stage }}</option>
+                    </select>
+                </div>
+                <div class="clr-col-3">
+                    <label>Step :</label>
+                    <select name="stage" [(ngModel)]="stape" required >
+                        <!-- <option></option> -->
+                        <option *ngFor ="let res of selectedsteps"  >{{ res.step }}</option>
+                    </select>
+                </div>
+                <div style="overflow-x: scroll;">
+                    <table class="table">
+                        <tr>
+                            <th>Procedure</th>
+                            <th>Line Clearance</th>
+                            <th>Equipments</th>
+                            <th>Instructions</th>
+                            <th>Environment Checks</th>
+                            <th>Weighing</th>
+                            <th>Initial Checks</th>
+                            <th>Sieve Intigrity</th>
+                            <th>Screen Intigrity</th>
+                            <th>InProcess Checks</th>
+                            <th>Wash/Rinse Water</th>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" name="isprocedure" ngModel required></td>
+                            <td><input type="checkbox" name="isclerance" [(ngModel)]="isclerance" ></td>
+                            <td><input type="checkbox" name="isequipment" [(ngModel)]="isequipment" ></td>
+                            <td><input type="checkbox" name="isinstruction" [(ngModel)]="isinstruction" ></td>
+                            <td><input type="checkbox" name="isenvironment" [(ngModel)]="isenvironment" ></td>
+                            <td><input type="checkbox" name="isweighing" [(ngModel)]="isweighing" ></td>
+                            <td><input type="checkbox" name="isinitial" [(ngModel)] ="isinitial"></td>
+                            <td><input type="checkbox" name="issieve" [(ngModel)] ="issieve"></td>
+                            <td><input type="checkbox" name="isscreen" [(ngModel)] ="isscreen"></td>
+                            <td><input type="checkbox" name="isinprocess" [(ngModel)] ="isinprocess"></td>
+                            <td><input type="checkbox" name="iswash" [(ngModel)] ="iswash"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" (click)="saveStage(stageForm)">Save</button>
+        <button class="btn btn-danger" (click)="isNewStage = false">Close</button>
+    </div>
+</clr-modal>

@@ -1,0 +1,148 @@
+﻿<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">USAGE LOG RECORD OF BOD INCUBATOR</div>
+                <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                    <button class="btn btn-sm" (click)="isNew=true" style="background-color: green;color: white;" *ngIf="isuser == 'Yes'">
+                        New
+                     </button>
+                  <button class="btn btn-sm" routerLink="/microbiology/incubator" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                  </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+              <div class="card-text">
+                <div class="clr-row">
+                    <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                        <label>From Date:</label>
+                        <input type="date" name="from_date" [(ngModel)]="from_date">
+                    </div>
+                    <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                        <label>To Date:</label>
+                        <input type="date" name="to_date" [(ngModel)]="to_date" [max]="to_date">
+                    </div>
+                    <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                       <button class="btn btn-danger"(click)="getAutoclave()" style="margin-top: 27px;">{{'common.search' | translate}}</button>
+                    </div>
+                </div>
+                <form #formData="ngForm">
+                    <table class="table table-border">
+                        <tr>
+                            <th style="text-align:center;"rowspan="2">{{'common.date' | translate}}</th>
+                            <th style="text-align:center;"rowspan="2">Bod-Incubator</th>
+                            <th style="text-align:center;"rowspan="2">Activity</th>
+                            <th style="text-align:center;"rowspan="2">Medicap Lot No</th>
+                            <th style="text-align:center;"colspan="2">Incubation on</th>
+                            <th style="text-align:center;"rowspan="2">Done by</th>
+                            <th style="text-align:center;"colspan="2">Incubation complete on</th>
+                            <th style="text-align:center;"rowspan="2">Done by</th>
+                            <th style="text-align:center;"rowspan="2">{{'common.remarks' | translate}}</th> 
+                        </tr>
+                        <tr>
+                            <th>Time</th>
+                            <th>{{'common.date' | translate}}</th>
+                            <th>Time</th>
+                            <th>{{'common.date' | translate}}</th>
+                        </tr>
+                        <tr *ngFor="let result of results;let i=index">
+                            <td>{{result.entry_date | date : 'dd-MM-yyyy'}}</td>
+                            <td>{{result.equipment_code}}</td>
+                            <td>{{result.activity}}</td>
+                            <td>{{result.batch_no}}</td>
+                            <td>{{result.time_on}}</td>
+                            <td>{{result.date_on | date:'dd-MM-yyyy'}}</td>
+                            <td>{{result.entry_by}}</td>
+                            <td>{{result.complete_time}}</td>
+                            <td>{{result.complete_date | date : 'dd-MM-yyyy'}}</td>
+                            <td *ngIf="result.status !== 'PENDING'">{{result.complete_by}}</td>
+                            <td *ngIf="result.status == 'PENDING'"><button class="btn btn-sm btn-info" (click)="complete(i)">Complete</button></td>
+                            <td>{{result.remark}}</td>
+                        </tr>
+                        <tr *ngIf="results?.length==0">
+                            <td colspan="15"><strong>No Record Found!</strong></td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+            </div>
+         </div>
+         <div class="card-footer">
+            <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+         </div>
+    </div>
+</div>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isNew" [clrModalSize]="'xl'">
+    <h3 class="modal-title">USAGE LOG RECORD OF BOD INCUBATOR</h3>
+    <div class="modal-body">
+        <form #lab="ngForm">
+            <div class="clr-row">
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Bod-Incubator:</label>
+                    <select name="equipment_code" ngModel required >
+                        <option *ngFor="let labour of incubators" [value]="labour.equipment_code">{{labour.equipment_code}}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Activity:</label>
+                    <input type="text" name="activity" ngModel required >
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Medicap Lot No:</label>
+                    <input type="text" name="batch_no" ngModel required (ngModelChange)="onValueChange($event)">
+                    <small *ngIf="flag" class="text-danger" style="color:red">only numbers are allowed</small>
+
+                </div>
+            </div>
+            <div class="clr-row">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+                    <h4>Incubation on:</h4>
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Time:</label>
+                    <input type="time" name="time_on" ngModel required >
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Date:</label>
+                    <input type="date" name="date_on" ngModel required >
+                </div>
+                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>Remarks:</label>
+                    <input type="text" name="remark" ngModel required >
+                </div>
+            </div>
+            <div class="clr-row">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+                    <h4>Incubation complete on:</h4>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3">
+                    <label>Time:</label>
+                    <input type="time" name="time_complete" ngModel required >
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3">
+                    <label>Date:</label>
+                    <input type="date" name="date_complete" >
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3">
+                    <label>Done by:</label>
+                    <input type="text" name="done_complete" >
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3">
+                    <label>Remarks:</label>
+                    <input type="text" name="remark1"  >
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" [disabled]="flag"  (click)="save(lab)">{{'common.save' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+      </div>
+</clr-modal>

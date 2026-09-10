@@ -1,0 +1,143 @@
+<div class="indt indt-rmpmpo" *ngIf="!isView">
+  <div class="card indt-rmpmpo__card">
+    <div class="card-header indt-rmpmpo__header">
+      <div class="indt-rmpmpo__header-row">
+        <h2 class="indt-rmpmpo__title">Purchase Requisition Processing</h2>
+        <button type="button" class="btn btn-sm indt-rmpmpo__btn indt-rmpmpo__btn--close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase Requisition' }">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+    <div class="card-block indt-rmpmpo__body">
+      <div class="card-text">
+        <div class="indt-rmpmpo__toolbar">
+          <select class="indt-rmpmpo__type-select" [(ngModel)]="forType" (change)="getPendingIndends($event.target.value)">
+            <option value="RMPM">RM/PM Material</option>
+            <option value="GEN">General Material</option>
+          </select>
+          <div class="indt-raw__search-row">
+            <label class="indt-raw__search-label">Search</label>
+            <input type="text" class="indt-raw__search-input" placeholder="Search table..." [(ngModel)]="searchQuery" aria-label="Search table">
+          </div>
+        </div>
+        <clr-datagrid class="indt-rmpmpo__datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+          <clr-dg-column [clrDgSortable]="false">Sr. No.</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Purchase Requisition No</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Materials</clr-dg-column>
+          <!-- <clr-dg-column [clrDgSortable]="false">Material For</clr-dg-column> -->
+          <clr-dg-column [clrDgSortable]="false">Entered By</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.table.action' | translate}}</clr-dg-column>
+          <clr-dg-row *clrDgItems="let indend of results; let i = index" [clrDgItem]="indend">
+            <clr-dg-cell>{{ i + 1 }}.</clr-dg-cell>
+            <clr-dg-cell>{{ indend.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.request_no }}</clr-dg-cell>
+            <clr-dg-cell>
+              <ul class="indt__mat-list">
+                <li *ngFor="let item of indend.materials; let j = index">{{ item.material_name }}</li>
+              </ul>
+            </clr-dg-cell>
+            <!-- <clr-dg-cell>
+              <ul class="indt__mat-list">
+                <li *ngFor="let item of indend.materials; let j = index">
+                  <span *ngIf="item.purpose=='Work Order'"><ul><li *ngFor="let data of item.required_for">{{ data.work_order_no }}</li></ul></span>
+                </li>
+              </ul>
+            </clr-dg-cell> -->
+            <clr-dg-cell>{{ indend.entry_by }}</clr-dg-cell>
+            <clr-dg-cell>{{ formatStatus(indend.status) }}</clr-dg-cell>
+            <clr-dg-cell><button type="button" class="btn btn-sm indt-rmpmpo__btn indt-rmpmpo__btn--view" (click)="view(indend)">{{'common.view' | translate}}</button></clr-dg-cell>
+          </clr-dg-row>
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50]">Purchase Requisitions per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} Purchase Requisitions
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="indt indt-rmpmpo" *ngIf="isView">
+  <div class="card indt-rmpmpo__card">
+    <div class="card-header indt-rmpmpo__header">
+      <div class="indt-rmpmpo__header-row">
+        <h2 class="indt-rmpmpo__title">Purchase Requisition For Approval</h2>
+        <button type="button" class="btn btn-sm indt-rmpmpo__btn indt-rmpmpo__btn--close" (click)="isView = false">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+    <div class="card-block indt-rmpmpo__body">
+      <div class="card-text indt-rmpmpo__form">
+        <table class="indt-rmpmpo__info-table table table-border">
+          <tr>
+            <td class="indt-rmpmpo__info-label">Request No.:</td>
+            <td class="indt-rmpmpo__info-value">{{ selectedResult['request_no'] || '-' }}</td>
+            <td class="indt-rmpmpo__info-label">Purchase Requisition No.:</td>
+            <td class="indt-rmpmpo__info-value">{{ selectedResult['indend_no'] || 'Awaiting' }}</td>
+            <td class="indt-rmpmpo__info-label">Purchase Requisition By:</td>
+            <td class="indt-rmpmpo__info-value">{{ selectedResult['entry_by'] || '-' }}</td>
+            <td class="indt-rmpmpo__info-label">Requirement Date:</td>
+            <td class="indt-rmpmpo__info-value">{{ requirementDate ? (requirementDate | date:'dd-MM-yyyy') : '-' }}</td>
+          </tr>
+        </table>
+        <h3 class="indt-rmpmpo__subtitle">Materials:</h3>
+        <form #approve="ngForm">
+          <div class="indt-rmpmpo__table-wrap">
+            <table class="indt-rmpmpo__table table table-border">
+              <thead>
+                <tr>
+                  <th class="indt-rmpmpo__th">Action ( Select <input type="checkbox" name="allIndent" [(ngModel)]="allIndent" (change)="checkIndent()" required class="indt-rmpmpo__checkbox" aria-label="Select all"> All )</th>
+                  <th class="indt-rmpmpo__th">Material/Item Code</th>
+                  <th class="indt-rmpmpo__th">Material/Item Name</th>
+                  <th class="indt-rmpmpo__th">Grade</th>
+                  <th class="indt-rmpmpo__th">{{'common.department' | translate}}</th>
+                  <th class="indt-rmpmpo__th">Preferred Vendor</th>
+                  <th class="indt-rmpmpo__th">Purchase Requisition Qty</th>
+                  <th class="indt-rmpmpo__th">{{'common.unit' | translate}}</th>
+                  <th class="indt-rmpmpo__th">Order Qty</th>
+                  <th class="indt-rmpmpo__th">Quotation</th>
+                  <th class="indt-rmpmpo__th">TAX %</th>
+                  <th class="indt-rmpmpo__th">Gross</th>
+                  <th class="indt-rmpmpo__th">TAX Amt</th>
+                  <th class="indt-rmpmpo__th">Net</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let material of materials; let i = index">
+                  <td><input type="checkbox" name="check{{ i }}" [(ngModel)]="material.check" required class="indt-rmpmpo__checkbox" [attr.aria-label]="'Select row ' + (i + 1)"></td>
+                  <td>{{ material.material_code }}</td>
+                  <td>{{ material.material_name }}</td>
+                  <td>{{ material.grade || 'NA' }}</td>
+                  <td>{{ material.department }}</td>
+                  <td>{{ material.vendor_name || 'NA' }}</td>
+                  <td>{{ material.req_qty }}</td>
+                  <td>{{ material.unit }}</td>
+                  <td><input type="number" name="order_qty{{ i }}" class="indt-rmpmpo__cell-input" [(ngModel)]="material['order_qty']" (keyup)="calculation(material)" required></td>
+                  <td>
+                    <select *ngIf="material['vendors'].length > 0" name="vendor_no{{ i }}" class="indt-rmpmpo__cell-select" ngModel (change)="selectQuotation($event.target.selectedIndex, material)" required>
+                      <option></option>
+                      <option *ngFor="let vendor of material['vendors']; let j = index">{{ vendor.vendor_name }} ({{ vendor.quotation_amt }} {{ vendor.currency }} / {{ vendor.quotation_per }})</option>
+                    </select>
+                    <button *ngIf="material['vendors'].length == 0" type="button" class="btn btn-sm indt-rmpmpo__btn indt-rmpmpo__btn--danger">Add Quotation</button>
+                  </td>
+                  <td>{{ material.gst_per }}</td>
+                  <td>{{ material['gross_total'] | number:'0.0-2' }}</td>
+                  <td>{{ material['gst_total'] | number:'0.0-2' }}</td>
+                  <td>{{ material['net_total'] | number:'0.0-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer indt-rmpmpo__footer">
+      <button type="button" class="indt-rmpmpo__btn indt-rmpmpo__btn--primary" (click)="approveIndend('approve')">{{'common.approve' | translate}}</button>
+      <button type="button" class="indt-rmpmpo__btn indt-rmpmpo__btn--danger" (click)="approveIndend('Rejected')">{{'common.reject' | translate}}</button>
+      <button type="button" class="indt-rmpmpo__btn indt-rmpmpo__btn--close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

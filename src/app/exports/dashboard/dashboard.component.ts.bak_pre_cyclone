@@ -1,0 +1,102 @@
+import { Component, OnInit } from '@angular/core';
+
+interface DashCard {
+  id: string;
+  title: string;
+  description: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  managementCards: DashCard[] = [
+    { id: 'authorization', title: 'New Authorization', description: 'Create new authorization', route: 'authorization', icon: 'fa-certificate', category: 'Exports', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'checking', title: 'Checking', description: 'Checking module', route: 'checking', icon: 'fa-clipboard-check', category: 'Exports', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'log', title: 'Log', description: 'Export log', route: 'log', icon: 'fa-list-alt', category: 'Exports', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'landed', title: 'Landed', description: 'Landed module', route: 'landed', icon: 'fa-list-alt', category: 'Exports', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
+  ];
+
+  searchQuery = '';
+  selectedCategory = 'All';
+  selectedSidebarModule: 'ALL' | 'EXPORTS' = 'ALL';
+  getFilteredCards(): DashCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.managementCards.filter((c) => {
+      const matchSidebar =
+        this.selectedSidebarModule === 'ALL' ||
+        (this.selectedSidebarModule === 'EXPORTS' && c.category === 'Exports');
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().includes(q) || c.category.toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+      return matchSidebar && matchCategory && matchSearch;
+    });
+  }
+
+  getSidebarCards(): DashCard[] {
+    return this.managementCards.filter((c) => {
+      if (this.selectedSidebarModule === 'ALL') {
+        return true;
+      }
+      return c.category === 'Exports';
+    });
+  }
+
+  selectSidebarModule(module: 'ALL' | 'EXPORTS'): void {
+    this.selectedSidebarModule = module;
+    this.selectedCategory = 'All';
+    this.searchQuery = '';
+  }
+
+  showAllTabs(): void {
+    this.selectSidebarModule('ALL');
+  }
+
+  trackByCardId(_index: number, card: DashCard): string {
+    return card.id;
+  }
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+  showPalette = false;
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('exports_dashboard_palette', palette.name);
+    } catch (e) {}
+  }
+
+  constructor() { }
+
+  ngOnInit(): void {
+    const savedPalette = localStorage.getItem('exports_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) this.selectedPalette = found;
+    }
+  }
+}

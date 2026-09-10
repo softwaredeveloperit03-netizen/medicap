@@ -1,0 +1,273 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">LMR Manufacturing</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/production/lmr/batch">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th style="text-align: left;">Company Unit</th>
+                    <th>Plan No</th>
+                    <th>LMR No.</th>
+                    <th style="text-align: left;">Product Type</th>
+                    <th>Product Code</th>
+                    <th style="text-align: left;">Product Name</th>
+                    <th>Grade</th>
+                    <th>Batch size</th>
+                    <th>Medicap Lot No</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let res of results;let i=index;">
+                    <td>{{i+1}}</td>
+                    <td style="text-align: left;">{{ res.company_unit }}</td>
+                    <td>{{ res.plan_no }}</td>
+                    <td>{{ res.lmr_no }}</td>
+                    <td>{{ res.product_type }}</td>
+                    <td style="text-align: left;">{{ res.product_code }}</td>
+                    <td style="text-align: left;">{{ res.product_name }}</td>
+                    <td>{{ res.grade }}</td>
+                    <td>{{ res.batch_size }}</td>
+                    <td>{{ res.batch_no }}</td>
+                    <td><button class="btn btn-sm" (click)="view(i)">Proceed</button></td>
+                </tr>
+                <tr *ngIf="results?.length==0">
+                    <td colspan="11">No Record Found!</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">LOT Manufacturing</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" (click)="isView=false">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <h3>Product Details:</h3>
+            <table class="table">     
+                <!-- <tr>
+                    <td style="text-align: left; border:1px solid black;"><b>Company Unit</b></td>
+                    <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['company_unit']}}</td>      
+                </tr> -->
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                </tr>
+                
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b> Product Type</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['product_type']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left; border:1px solid black;"><b>LOT No</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+                    <td style="text-align: left; border:1px solid black;"><b> Batch Size</b></td>
+                    <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                </tr>
+            </table>
+        
+            <h3>Stages:</h3>
+            <form #stageForm="ngForm">
+                <table class="table">
+                    <tr>
+                        <th style="text-align: left;">Sr.</th>
+                        <th style="text-align: left;">Stage</th>
+                        <th>Test</th>
+                        <th>{{'common.date' | translate}}</th>
+                        <th>Started Time</th>
+                        <th>Completed Time</th>
+                        <th style="text-align: left;">{{'common.table.action' | translate}}</th>
+                    </tr>
+                    <tr *ngFor="let comp of selectedResult['stages']; let i = index">
+                        <td style="text-align: left;">{{ i + 1 }}.</td>
+                        <td style="text-align: left;">{{ comp.stage }}</td>
+                        <td>{{ comp.isTesting }}</td>
+                        <td>{{ comp.start_date }}</td>
+                        <td>{{ comp.start_time }}</td>
+                        <td>{{ comp.complete_time }}</td>
+                        <td style="text-align: left;" *ngIf="selectedResult['current_stage'] == comp.stage">
+                            <button *ngIf="comp.status == 'pending'" class="btn btn-sm btn-info" (click)="start(comp.stage, i)">START STAGE</button>
+                            <button *ngIf="comp.status == 'start' && comp.isInfo == 'pending'" class="btn btn-sm btn-info" (click)="viewStages(i)">Proceed</button>
+                            <button *ngIf="comp.isInfo == 'done'" class="btn btn-sm btn-info" (click)="showStages(i)">{{'common.view' | translate}}</button>
+                        </td>
+                        <td style="text-align: left;" *ngIf="comp.status == 'complete'">
+                            <button *ngIf="comp.isInfo == 'done'" class="btn btn-sm btn-info" (click)="showStages(i)">{{'common.view' | translate}}</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="selectedResult['stages'].length == 0">
+                        <td colspan="4">{{'common.noRecords' | translate}}</td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</div>
+
+<!-- //////////////////stage start////////////// -->
+<clr-modal [(clrModalOpen)]="isShow" clrModalSize="xl">
+    <h3 class="modal-title"> Stage Details:</h3>
+    <div class="modal-body">
+        <form #stagedata="ngForm">
+            <div *ngIf="selectedStage['isTesting']=='yes' && selectedStage['isInfo']=='pending'"> 
+                <table class="table">     
+                    <tr>
+                        <!-- <td style="text-align: left; border:1px solid black;"><b>Company Unit</b></td>
+                        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedResult['company_unit']}}</td>       -->
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b> Product Type</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_type']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Grade</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b> Batch size</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_size']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b> Medicap Lot No</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['batch_no']}}</td>
+ 
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>Stage</b></td>
+                        <td style="text-align: left; border:1px solid black;" colspan="3">{{selectedStage['stage']}}</td>
+                    </tr>  
+                </table>
+                <div class="clr-row" style="margin-top: 20px;">
+                    <div class="clr-col-lg-4">
+                        <label> Equipment Type</label>
+                        <select name="equipment_type" [(ngModel)]="equipment_type" (change)="getEquipmentTypes()" required>
+                            <option></option>
+                            <option *ngFor="let eq of selectedStage['equipments'];" [value]="eq.equipment_type">{{eq.equipment_type}}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4">
+                        <label> Equipment Name</label>
+                        <select name="equipment_name" (change)="getcode($event.target.selectedIndex)" ngModel required>
+                            <option></option>
+                            <option *ngFor="let eq of equipmentCode;" [value]="eq.equipment_name">{{eq.equipment_name}}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4">
+                        <label> Equipment Code</label>
+                        <select name="equipment_code" ngModel required>
+                            <option></option>
+                            <option *ngFor="let eq of selectequip['equipments'];" [value]="eq.equipment_code">{{eq.equipment_code}}</option>
+                        </select>
+                    </div>
+               
+                    <div class="clr-col-lg-4 clr-col-md-4">
+                        <label> Samlple Qty</label>
+                       <input type="text" name="sample_qty" ngModel required>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4">
+                        <label>{{'common.unit' | translate}}</label>
+                        <select name="unit" ngModel required>
+                            <option></option>
+                            <option *ngFor="let unit of units;" [value]="unit.unit">{{ unit.unit}}</option>
+                        </select>
+                    </div>
+                </div>     
+            </div>   
+        </form>       
+     
+    </div>
+    <div class="modal-footer" *ngIf="selectedStage['isInfo']=='pending'">
+        <button type="button" class="btn btn-primary" (click)="sendsample(stagedata)">send to sample</button>
+      <button type="button" class="btn btn-danger" (click)="isShow = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+
+<!-- ///////  Done stages popup -->
+
+
+<clr-modal [(clrModalOpen)]="isStageDone" clrModalSize="xl">
+    <h3 class="modal-title"> Stage Details:</h3>
+    <div class="modal-body">
+        <div *ngIf="selectedStage['isTesting']=='yes' && selectedStage['isInfo']=='done'">
+            <table class="table">
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Company Unit:</td>
+                    <td colspan="3"  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['company_unit']}}</td>
+                </tr>
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Product Name:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult['product_name']}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">Product Code:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['product_code']}}</td>
+                </tr>
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Sample Qty:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['sample_qty']}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{'common.unit' | translate}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['unit']}}</td>
+                </tr>
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Equipment ID:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['equipment_code']}}</td>
+                    <td  style="text-align: left;border: 1px solid black;">Stage</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['stage']}}</td>
+                </tr>
+                <tr>
+                    <td  style="text-align: left;border: 1px solid black;">Medicap Lot No:</td>
+                    <td  style="text-align: left;border: 1px solid black;">{{ selectedResult['batch_no']}}</td>
+                    <td style="text-align: left;border: 1px solid black;">TI NO.</td>
+                    <td style="text-align: left;border: 1px solid black;">{{ selectedTechnicalInfo['ti_no']}}</td>
+                </tr>
+                
+            </table>
+            <h3>Tests:</h3>
+            <table class="table">
+              <tr>
+                  <th>{{'common.table.srNo' | translate}}</th>
+                  <th style="text-align: left;">Test</th>
+                  <th style="text-align: left;">Subtest</th>
+                  <th style="text-align: left;">{{'common.description' | translate}}</th>
+                  <th style="text-align: left;">Limits</th>
+                  <th style="text-align: left;">Result</th>
+              </tr>
+              <tr *ngFor="let res of selectedTechnicalInfo['tests'];let i=index">
+                  <td>{{ i+1 }}</td>
+                  <td style="text-align: left;"> {{ res.test }}</td>
+                  <td style="text-align: left;"> {{ res.subtest }}</td>
+                  <td style="text-align: left;">{{ res.description }}</td>
+                  <td style="text-align: left;">{{ res.limits }}</td>
+                  <td style="text-align: left;">{{ res.result }}</td>
+              </tr>
+              <tr *ngIf="selectedTechnicalInfo['tests']?.length==0">
+                <td colspan="6">No Record Found!</td>
+              </tr>
+            </table>
+        </div>
+        <h3 *ngIf="selectedTechnicalInfo['status'] !== 'done'" style="text-align: center; color: red;">Inprocess Sampling or Testing Pending</h3>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" *ngIf="selectedTechnicalInfo['status'] == 'done' && selectedResult['current_stage'] == selectedTechnicalInfo['stage']" (click)="complete(this.selectedTechnicalInfo['stage'])">COMPLETE STAGE</button>
+        <button type="button" class="btn btn-danger" (click)="isStageDone = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>

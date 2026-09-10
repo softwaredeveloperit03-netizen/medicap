@@ -1,0 +1,155 @@
+<div class="card card-3d" *ngIf="!isView && !is_view_work_order">
+  <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">QA Approved Batches
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/fproduction/ebmr">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="clr-row form-container">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">Product Name:</label>
+          <input class="input-3d" type="text" name="product_name" [(ngModel)]="product_name" placeholder="Product Name" required>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">From Date</label>
+          <input class="input-3d" type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">To Date</label>
+          <input class="input-3d" type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+          <button class="btn btn-danger btn-3d" (click)="getPlans()" style="margin-top: 33px;">Search</button>
+        </div>
+      </div>
+      <div class="card-text">
+        <clr-datagrid class="datagrid-3d" [clrDgLoading]="loading">
+  
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Plan No.</clr-dg-column>
+          <clr-dg-column>Medicap Lot No</clr-dg-column>
+          <clr-dg-column>Dossage Form</clr-dg-column>
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Batch Size</clr-dg-column>
+         
+          <clr-dg-column>Action</clr-dg-column>
+  
+          <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result" class="row-3d">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.plan_no}}</clr-dg-cell>
+            <clr-dg-cell>{{ result.batch_number}}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.batch_size }}</clr-dg-cell>
+
+            <clr-dg-cell *ngIf="result.dispensing_status=='Request Sent'"> Request Sent </clr-dg-cell>
+            <clr-dg-cell class="cell-3d" *ngIf="result.dispensing_status!='Request Sent'">
+              <button class="btn btn-sm btn-info btn-3d" *ngIf="result.batch_number!=' '" (click)="sendDispenseRequest(i)">Send Dispensing Request</button> 
+              <button class="btn btn-sm btn-danger btn-3d" *ngIf="result.batch_number==' '"  disabled>QA Approval Pending</button> 
+            </clr-dg-cell>
+           
+            <!-- <clr-dg-cell *ngIf="result.dispensing_status!='Request Sent'"><button class="btn btn-sm btn-info"
+                (click)="sendDispenseRequest(i)">Send Dispensing Request</button> </clr-dg-cell> -->
+          </clr-dg-row>
+        
+        </clr-datagrid>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary btn-3d" (click)="download()">Download</button>
+    </div>
+  </div>
+
+  <div class="card card-3d" style="margin: 0px;" *ngIf="isView">
+    <div class="card-block" style="padding-right: 0px;">
+      <div class="card-title title-3d">Yield Reconciliation:</div>
+      <div class="card-text text-3d">            
+            <form #yeild_form="ngForm">
+                <table class="table table-border">
+                    <tr>
+                        <td>Stage Name</td>
+                        <td style="padding: 0px;text-align:left">
+                            <select name="stage_name" [(ngModel)]="stage_name">
+                                <option>Sifiting</option>
+                                <option>Blending</option>
+                                <option>Packing</option>
+                            </select>
+                        </td>                                                                                        
+                    </tr>                                       
+                    <tr>
+                        <td>stage Input Qty</td>
+                        <td style="padding: 0px;text-align:left">
+                            <input type="text" name="stage_input_qty" style="margin: 0px;" [(ngModel)]="stage_input_qty" required>
+
+                        </td>                                                                                          
+                    </tr>                                       
+                    
+                    <!-- <tr>                                      
+                    <td colspan="2"><button class="btn btn-outline-info" (click)="saveblend(blend)">save</button></td>
+                    </tr> -->
+                </table>
+                <h3>Weight Table</h3>
+                <form #yeild="ngForm">
+                <table class="table table-border">
+                    <tr>
+                        <td>Container No</td>
+                        <td>Gross Wt.</td>
+                        <td>tare wt.</td>
+                        <td>Net wt</td>
+                        <td>Action</td>
+                    </tr>
+                    <tr *ngFor="let data of saveyeild_list;">
+                        <td>{{data.container_no}}</td>
+                        <td>{{data.gross_wt}}</td>
+                        <td>{{data.tare_wt}}</td>
+                        <td>{{data.net_wt}}</td>
+                    </tr>
+                   
+                 
+                      
+                    <tr>
+                        <td>
+                            <input type="text" name="container_no" style="margin: 0px;" [(ngModel)]="container_no" required>
+                        </td>
+                        <td>
+                            <input type="text" name="gross_wt" style="margin: 0px;" [(ngModel)]="gross_wt" required>
+                        </td>
+                        <td>
+                            <input type="text" name="tare_wt" style="margin: 0px;" [(ngModel)]="tare_wt" required>
+                        </td>
+                        <td>
+                            <input type="text" name="net_wt" style="margin: 0px;" [(ngModel)]="net_wt" required>
+                        </td>
+                            <td>
+                                <button class="btn btn-outline-info" (click)="saveyeild(yeild)" [disabled]="yeild_per!='0'">Add</button>
+                            </td>
+
+                    </tr>
+                    <tr>
+                      <td>total weight:</td>
+                      <td>{{total_weight}}</td>
+                      <td>yield:</td>
+                      <td>{{yeild_per1}}{{yeild_per}}</td>
+                </tr>  
+                <h3>Or Input Manually</h3>
+                <p>yield</p>
+                <input type="text" name="yeild_per" [(ngModel)]="yeild_per" [disabled]="saveyeild_list.length!='0'">
+                </table>         
+                </form>
+                <button class="btn btn-sm btn-info"
+                  (click)="sendDispenseRequest(yeild_form)">Send Dispensing Request</button> 
+             
+        </form>
+
+
+        </div>
+    </div>
+</div>

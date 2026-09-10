@@ -1,0 +1,200 @@
+<div class="fluid-container">
+    <div class="card recv-page" *ngIf="!isNew">
+        <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Location Master</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm btn-success" (click)="isNew = true">{{'common.new' | translate}}</button>
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/rack">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+        <div class="card-block">
+            <div class="card-text">
+                <form #rackForm="ngForm" class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Section : <span style="color:red;">*</span></strong></label>
+                        <select name="section_name" [(ngModel)]="section_name" required   (change)="getLaneBySection($event.target.value)">
+                            <option></option>
+                            <option *ngFor="let section of sections;" value="{{section.section_name}}">{{ section.section_name }}</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Lane : <span style="color:red;">*</span></strong></label>
+                        <select name="laneNO" [(ngModel)]="laneNOFilter" required (change)="getRacksByLaneForSearch($event.target.value)">
+                            <option></option>
+                            <option *ngFor="let lane of lanes;" value="{{lane.laneNO}}">{{ lane.laneNO }}</option>
+                         </select>
+                    </div>
+
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Rack : <span style="color:red;">*</span></strong></label>
+                        <select name="rack_no" [(ngModel)]="rack_noFilter" required  >
+                            <option></option>
+                            <option *ngFor="let rack of racks;" value="{{rack.rack_no}}">{{ rack.rack_no }}</option>
+                         </select>
+                    </div>
+
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <br><button class="btn btn-primary" (click)="getLocationByRacks()">{{'common.search' | translate}}</button>
+                        <br><button class="btn btn-success" (click)="getAllLocation()">Get All Location</button>
+                    </div>
+
+                    <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Location Count : <span style="color:green;">{{ locations?.length }}</span></strong></label>
+                    </div>
+                
+                </form>
+     
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <div class="datagrid-wrapper">
+                            <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                                <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                                <clr-dg-column>Room Name</clr-dg-column>
+                                <clr-dg-column>Lane No.</clr-dg-column>
+                                <clr-dg-column>Rack No.</clr-dg-column>
+                                <clr-dg-column>Location No.</clr-dg-column>
+                         
+                                <clr-dg-row *clrDgItems="let result of locations; let i = index" [clrDgItem]="result">
+                                    <clr-dg-cell>{{ i+1}}</clr-dg-cell>
+                                    <clr-dg-cell>{{ result.section_name || '-' }}</clr-dg-cell>
+                                    <clr-dg-cell>{{ result.laneNO || '-' }}</clr-dg-cell>
+                                    <clr-dg-cell>{{ result.rack_no || '-'}}</clr-dg-cell>
+                                    <clr-dg-cell>{{ result.locationNo || '-'}}</clr-dg-cell>
+                                </clr-dg-row>
+                            </clr-datagrid>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" routerLink="/store/rack">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+    <div class="card recv-page" *ngIf="isNew">
+        <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">New Location</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/rack">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+        <div class="card-block">
+            <div class="card-text">
+         
+               <form #locationForm="ngForm" class="clr-row">
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Section : <span style="color:red;">*</span></strong></label>
+                        <select name="section_name" [(ngModel)]="section_name" required   (change)="getLaneBySection($event.target.value)">
+                            <option></option>
+                            <option *ngFor="let section of sections;" value="{{section.section_name}}">{{ section.section_name }}</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Lane : <span style="color:red;">*</span></strong></label>
+                        <select name="laneNO" [(ngModel)]="laneNO" required (change)="getPendingRacksForLocationCreationByLane($event.target.value)">
+                            <option></option>
+                            <option style="color: red;" value="ADD NEW">ADD NEW</option>
+                            <option *ngFor="let lane of lanes;" value="{{lane.laneNO}}">{{ lane.laneNO }}</option>
+                         </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>Select Rack : <span style="color:red;">*</span></strong></label>
+                        <select name="rack_no" ngModel required (change)="getCapacityOfRack($event.target.value)">
+                            <option></option>
+                            <option style="color: red;" value="ADD NEW">ADD NEW</option>
+                            <option *ngFor="let rack of racks;" value="{{rack.rack_no}}">{{ rack.rack_no }}</option>
+                         </select>
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label><strong>No.Of Loc. In Rack Locations Are Generated Automatically: <span style="color:red;">*</span></strong></label>
+                        <input type="number" name="capacity" [(ngModel)]="capacity" required>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="generateLocations(locationForm)">Generate Locations</button>
+        </div>
+    </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isNewRack" clrModalSize="m" (clrModalClosable)="false" >
+  <div class="modal-title">Add New Rack</div>
+  <div class="modal-body" >
+    <div class="card recv-page">
+      <div class="card-block">
+        <form #addNewRack="ngForm" class="clr-row">
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Select Section : <span style="color:red;">*</span></strong></label>
+                <select name="section_name" ngModel required   (change)="getLaneBySectionForPopoup($event.target.value)">
+                    <option></option>
+                    <option *ngFor="let section of sections;" value="{{section.section_name}}">{{ section.section_name }}</option>
+                </select>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Select Lane : <span style="color:red;">*</span></strong></label>
+                <select name="laneNO" ngModel required >
+                    <option></option>
+                    <option *ngFor="let lane of lanes;" value="{{lane.laneNO}}">{{ lane.laneNO }}</option>
+                </select>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>No.Of. Loc. In Rack : <span style="color:red;">*</span></strong></label>
+                <input type="number" name="capacity" ngModel required>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label style="color:green;"><strong>Rack No. Generate Automatically :</strong></label>
+            </div>
+             
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+       <button class="btn btn-succvess" (click)="saveRack(addNewRack)">Generate Rack</button>
+       <button class="btn btn-danger" (click)="isNewRack = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isNewLane" clrModalSize="m" (clrModalClosable)="false" >
+  <div class="modal-title">Add New Lane</div>
+  <div class="modal-body" >
+    <div class="card recv-page">
+      <div class="card-block">
+        <form #addNewLaneForm="ngForm" class="clr-row">
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Select Section : <span style="color:red;">*</span></strong></label>
+                <select name="section_name" ngModel required >
+                    <option></option>
+                    <option *ngFor="let section of sections;" value="{{section.section_name}}">{{ section.section_name }}</option>
+                </select>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Lane Code : <span style="color:red;">*</span></strong></label>
+                <input type="text" name="laneNO" [(ngModel)]="laneNO" required placeholder="Enter new Lane Code (letters only, e.g.  AB, AC)" (input)="laneNO = laneNO.toUpperCase()">
+            </div>
+             
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+       <button class="btn btn-succvess" (click)="onLaneChange(addNewLaneForm)">{{'common.save' | translate}}</button>
+       <button class="btn btn-danger" (click)="isNewLane = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+
+ 

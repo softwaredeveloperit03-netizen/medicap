@@ -1,0 +1,370 @@
+<div class="container-fluid"  >
+
+    <div class="card" *ngIf="!isView && !isTestView" >
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Microbiology Testing Log</div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/microbiology/testing/raw"> {{'common.close' | translate}} </button>
+            </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                    <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                        <label>Material Type :  </label>
+                        <select name="searchQuery" [(ngModel)]="material_type" (change)="getMicrobiologyTEstingLog()"  >
+                        <option></option>
+                        <option>Raw Material</option>
+                        <option>Packing Material</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-5">
+                        <label>Search </label>
+                        <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+                    </div>
+                    </div>
+
+                    <div class="datagrid-wrapper">
+                        <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                            <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                            <clr-dg-column>Testing No.</clr-dg-column>
+                            <clr-dg-column>Sampling No.</clr-dg-column>
+                            <clr-dg-column>Material Name</clr-dg-column>
+                            <clr-dg-column>Material Code</clr-dg-column>
+                            
+                            <clr-dg-column>Receiving no</clr-dg-column>
+                            <clr-dg-column>Sepc. No.</clr-dg-column>
+                            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                            <clr-dg-column>Allocated By/Dt.</clr-dg-column>
+                            <clr-dg-column>Checked By/Dt.</clr-dg-column>
+                            <clr-dg-column>Approved By/Dt.</clr-dg-column>
+                            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+                    
+                            <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                                
+                                <clr-dg-cell>{{ result.grn_no }} </clr-dg-cell>
+                                <clr-dg-cell>{{ result.specification_no }} </clr-dg-cell>
+                                <clr-dg-cell>
+                                    <strong *ngIf="result.micro_status == 'Approved'" style="color: green;">{{ result.micro_status | uppercase }}</strong> 
+                                    <strong *ngIf="result.micro_status == 'Rejected'" style="color: red;">{{ result.micro_status | uppercase }}</strong> 
+                                </clr-dg-cell>
+                                <clr-dg-cell>{{ result.allocationBy }} / {{ result.allocationOn | date:'dd-MM-yyyy' }}</clr-dg-cell>
+                                <clr-dg-cell>{{ result.check_by }} / {{ result.check_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+                                <clr-dg-cell>{{ result.approve_by }} / {{ result.approve_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+                                <clr-dg-cell >
+                                <button class="btn btn-sm btn-info" (click)="viewTesting(result)">{{'common.view' | translate}}</button>
+                                </clr-dg-cell>
+                            </clr-dg-row>
+                        </clr-datagrid>
+                    </div>
+
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="exportToExcel()">Export to Excel</button>
+            <button class="btn btn-danger" routerLink="/microbiology/testing/raw">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+ 
+    <div class="card" *ngIf="isView && !isTestView">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Microbiology Testing Details</div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isTestView = false; isView = false; "> {{'common.close' | translate}} </button>
+            </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Material Details : </h3>
+
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Testing No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['testing_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Sampling No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['sampling_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Material Name:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_name'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_code'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Medicap Lot No:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['batch_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Medicap Lot No:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['ar_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['grn_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Sepc. No.:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['specification_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Client Group :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['clientGrpCodeName'] || 'NA' }} {{ selectedTesting['clientGrpCode'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Client Sub-Group:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['clientSubGrpCodeName'] || 'NA'  }} {{ selectedTesting['clientSubGrpCode'] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+
+                <h3>Testing Tests : </h3>
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                      
+                        <div class="datagrid-wrapper">
+                            <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                                <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                                <clr-dg-column>Test Type</clr-dg-column>
+                                <clr-dg-column>Test</clr-dg-column>
+                                <clr-dg-column>Subtest</clr-dg-column>
+                                <clr-dg-column>Limits</clr-dg-column>
+                                <clr-dg-column>Perform By / Lab</clr-dg-column>
+                                <clr-dg-column>Alternate Chemist</clr-dg-column>
+                                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                                <clr-dg-column>Obervation</clr-dg-column>
+                                <clr-dg-column>Checked By/Dt</clr-dg-column>
+                                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+                        
+                                <clr-dg-row *clrDgItems="let test of tests; let i = index" [clrDgItem]="result"  
+                                [ngClass]="{'failTest': test.observation === 'Non-Complies','editedTest': test.observation === 'Complies' && test.parentTestId > 0 }">
+                                    <clr-dg-cell style="text-align: left;color:blue;"> {{i+1}}</clr-dg-cell>
+                                    <clr-dg-cell style="text-align: left;color:blue;"> {{test.test_type}}</clr-dg-cell>
+                                    <clr-dg-cell style="text-align: left;color:blue;">{{test.test}}</clr-dg-cell>
+                                    <clr-dg-cell style="text-align: left;color:blue;">{{test.subtest}}</clr-dg-cell>
+                                    <clr-dg-cell style="text-align: left;color:blue;">{{test.limits}}</clr-dg-cell>
+                                    <clr-dg-cell style="color:blue;">{{test.personName}} {{test.person }} {{test.lab_name }} </clr-dg-cell>
+                                    <clr-dg-cell style="color:blue;">{{test.person_altName}} {{test.person_alt || '-'}} </clr-dg-cell>
+                                    <clr-dg-cell><strong>{{ test.status | uppercase }}</strong> </clr-dg-cell>
+                                    <clr-dg-cell [ngClass]="{'blink-green': test.observation === 'Complies','blink-red': test.observation === 'Non-Complies' }"><strong>{{ test.observation | uppercase }}</strong> </clr-dg-cell>
+                                    <clr-dg-cell style="color:blue;">{{test.checkBy}} {{test.checkOn | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                                    <clr-dg-cell style="color:blue;">
+                                        <button [disabled]="test.status == 'Pending' " class="btn btn-sm btn-info" (click)="viewTest(test)">{{'common.view' | translate}}</button>
+                                    </clr-dg-cell>
+                                </clr-dg-row>
+                            </clr-datagrid>
+                        </div>
+                            
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-danger" (click)="isTestView = false; isView = false; ">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+
+
+    <div class="card" *ngIf="!isView && isTestView">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Test Details </div>
+            <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isTestView = false; isView = true; "> {{'common.close' | translate}} </button>
+            </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <h3>Material Details : </h3>
+
+                <div class="clr-row">
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                        <table class="table table-border">
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Testing No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['testing_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Sampling No. :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['sampling_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Material Name:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_name'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['material_code'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Medicap Lot No:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['batch_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Medicap Lot No:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['ar_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['grn_no'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Sepc. No.:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['specification_no'] }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left;width: 15%;"><b>Client Group :</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['clientGrpCodeName'] || 'NA' }} {{ selectedTesting['clientGrpCode'] }}</td>
+                                <td style="text-align: left;width: 15%;"><b>Client Sub-Group:</b></td>
+                                <td style="text-align: left;width: 35%;color:blue;"> {{ selectedTesting['clientSubGrpCodeName'] || 'NA'  }} {{ selectedTesting['clientSubGrpCode'] }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <table class="table table-border"  >
+                                <tr>
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test Type</th> 
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Test</th>
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Limits</th>
+                                    <th style="min-width: 200px; background-color: rgb(14, 67, 112); color: white;">Chemist </th>
+                                    <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.status' | translate}}</th>
+                                </tr>
+                                <tr >
+                                    <td style="text-align: left;color:blue;"> {{selectedTest['test_type']}}</td>
+                                    <td style="text-align: left;color:blue;">{{selectedTest['test']}}</td>
+                                    <td style="text-align: left;color:blue;">{{selectedTest['subtest']}}</td>
+                                    <td style="text-align: left;color:blue;">{{selectedTest['limits']}}</td>
+                                    <td style="color:blue;">{{selectedTest['performUSer']}} </td>
+                                    <td><strong>{{ selectedTest['status'] | uppercase }}</strong> </td>
+                                </tr>
+                            </table>
+                    </div>
+
+ 
+                </div>
+
+
+                <form #checkingForm="ngForm">
+                    <div  class="clr-row">
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+
+                            <div class="card" >
+                                <div class="card-header" style="text-align: center">
+                                    <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Result / Observation </div>
+                                    <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                                    </div>
+                                </div>
+                                <div class="card-block">
+                                    <div class="card-text">
+                                        <div class="clr-row">
+                                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                                <table class="table table-border">
+                                                    <tr>
+                                                        <td style="text-align: left;"><strong>Result</strong></td>
+                                                        <td style="text-align: left;"><strong>Observation</strong></td>
+                                                        <td style="text-align: left;"><strong>{{'common.table.remark' | translate}}</strong></td>
+                                                        <td style="text-align: left;" *ngIf="selectedTest['observation'] == 'Non-Complies'"><strong>Reason For Failure/Non-Compliance</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="text-align: left;color:blue;"><strong>{{selectedTest['result']}}</strong></td>
+                                                        <td style="text-align: left;" *ngIf="selectedTest['observation']" 
+                                                            [ngClass]="{'blink-green': selectedTest['observation'] === 'Complies','blink-red': selectedTest['observation'] === 'Non-Complies' }">
+                                                            <strong>
+                                                                {{selectedTest['observation']}}
+                                                                <span *ngIf="selectedTest['observation'] == 'Complies'" class="check">✔</span>
+                                                                <span *ngIf="selectedTest['observation'] == 'Non-Complies'" class="cross">✖</span>
+                                                            </strong>
+                                                        </td>
+                                                        <td style="text-align: left;color:blue;"><strong>{{selectedTest['remark']}}</strong></td>
+                                                        <td style="text-align: left;color:blue;" *ngIf="selectedTest['observation'] == 'Non-Complies'"><strong>{{selectedTest['reason']}}</strong></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" >
+                                <div class="card-header" style="text-align: center">
+                                    <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Time Stamp </div>
+                                    <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                                    </div>
+                                </div>
+                                <div class="card-block">
+                                    <div class="card-text">
+                                        <div class="clr-row">
+
+                                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                                <table class="table table-border">
+                                                    <tr>
+                                                        <td style="text-align: left;"><strong>Start Time</strong></td>
+                                                        <td style="text-align: left;"><strong>End Time</strong></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="margin: 0;padding: 0;"><input type="datetime-local" name="start_time" [(ngModel)]="selectedTest['start_time']" required readonly style="margin: 0;color:blue;"></td>
+                                                        <td style="margin: 0;padding: 0;"><input type="datetime-local" name="end_time" [(ngModel)]="selectedTest['end_time']" required readonly style="margin: 0;color:blue;"></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" >
+                                <div class="card-header" style="text-align: center">
+                                    <div class="clr-row" style="margin-bottom: -10px;">
+                                    <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Remark </div>
+                                    <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                                    </div>
+                                </div>
+                                <div class="card-block">
+                                    <div class="card-text">
+                                        <div class="clr-row">
+
+                                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                                <table class="table table-border">
+                                                    <tr>
+                                                        <td style="text-align: left;">
+                                                            <strong *ngIf="selectedTest['observation'] != 'Non-Complies' ">Checking Remark : <span style="color: red;">* </span></strong>
+                                                            <strong *ngIf="selectedTest['observation'] == 'Non-Complies' " class="blink-red">Rejection Remark : <span style="color: red;">* </span></strong>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="margin: 0;padding: 0;"><input type="text" name="checkingRemark" [(ngModel)]="checkingRemark" required placeholder="Enter Remark....." style="margin: 0;"></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+        <div class="card-footer">
+             <button class="btn btn-danger" (click)="isTestView = false; isView = true; ">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+
+
+</div>
+
+ 
+
+ 
+ 
+
+<div *ngIf="loading" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p>{{ loadingMessage }}</p>
+  </div>
+</div>

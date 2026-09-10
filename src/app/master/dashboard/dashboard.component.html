@@ -1,0 +1,150 @@
+<div class="dashboard-shell" [style.background]="selectedPalette.background">
+  <ng-container *ngIf="getFilteredCards() as cards">
+    <div class="compact-layout">
+      <aside class="compact-sidebar">
+        <div class="compact-sidebar__head">
+          <span class="compact-sidebar__title">Master Modules</span>
+          <span class="compact-sidebar__count">{{ cards.length }}</span>
+        </div>
+        <nav class="compact-sidebar__tabs" aria-label="Master modules">
+          <button
+            type="button"
+            class="compact-nav-item compact-nav-item--all compact-nav-item--menu"
+            [class.active]="selectedDepartmentId === 'all'"
+            (click)="showAllTabs()"
+          >
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span>All Tabs</span>
+            <em class="compact-nav-count">{{ countForDepartment('all') }}</em>
+          </button>
+
+          <button
+            type="button"
+            *ngFor="let dept of departments; trackBy: trackByDeptId"
+            [hidden]="false"
+            class="compact-nav-item compact-nav-item--menu"
+            [class.active]="dept.id === selectedDepartmentId"
+            (click)="selectDepartment(dept.id)"
+          >
+            <i class="fas" [ngClass]="dept.icon" aria-hidden="true"></i>
+            <span>{{ dept.name }}</span>
+            <em class="compact-nav-count">{{ countForDepartment(dept.id) }}</em>
+          </button>
+          <a class="compact-nav-item" routerLink="/master/fg-sampling-checklist" title="Sampling Checklist Master">
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <span>Sampling Checklist Master</span>
+          </a>
+        </nav>
+      </aside>
+
+      <div class="compact-main">
+        <div class="dash-header dash-header--single-line">
+          <div class="title-block">
+            <h2>Master Department</h2>
+          </div>
+          <div class="header-actions-row dept-hub-header-actions">
+            <div class="search-box dash-header__search">
+              <i class="fas fa-search"></i>
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                placeholder="Search by name or category"
+                aria-label="Search modules"
+              />
+            </div>
+            <a class="close-btn dept-hub-header-close" [routerLink]="closeLink" (click)="onLeaveMasterHub()" aria-label="Close">
+              <i class="fas fa-times"></i>
+              Close
+            </a>
+          </div>
+        </div>
+
+        <h3 class="section-label">{{ selectedDepartmentId === 'all' ? 'Master Section' : (currentDepartment?.name || 'Master Section') }}</h3>
+
+        <ng-container *ngIf="showCategorySections(); else flatTiles">
+          <section
+            *ngFor="let group of getGroupedCards(); trackBy: trackByCategoryGroup"
+            class="category-section"
+            [attr.data-category]="group.category"
+          >
+            <div class="category-separator" role="separator" [attr.aria-label]="group.displayName">
+              <span class="category-separator__badge">{{ group.displayName }}</span>
+              <span class="category-separator__line" aria-hidden="true"></span>
+              <span class="category-separator__count">{{ group.cards.length }}</span>
+            </div>
+
+            <div
+              class="tiles-grid"
+              [class.tiles-grid--qc]="group.category === 'QC'"
+            >
+              <a
+                *ngFor="let card of group.cards; trackBy: trackByCardId"
+                class="tile-card"
+                [attr.href]="card.route"
+                (click)="openMasterCard(card, $event)"
+                [ngStyle]="{ 'box-shadow': selectedPalette.cardShadow }"
+              >
+                <div class="icon-wrap">
+                  <i class="fas" [ngClass]="card.icon"></i>
+                </div>
+                <div class="tile-body">
+                  <div class="tile-title">{{ card.title }}</div>
+                  <p class="tile-description" *ngIf="card.description">{{ card.description }}</p>
+                </div>
+              </a>
+            </div>
+          </section>
+
+          <div class="empty-state" *ngIf="cards.length === 0">
+            <i class="fas fa-search"></i>
+            <p>No modules match your search. Try another keyword or category.</p>
+          </div>
+        </ng-container>
+
+        <ng-template #flatTiles>
+          <div class="tiles-grid" [class.tiles-grid--qc]="selectedDepartmentId === 'qc'">
+            <a
+              *ngFor="let card of cards; trackBy: trackByCardId"
+              class="tile-card"
+              [attr.href]="card.route"
+              (click)="openMasterCard(card, $event)"
+              [ngStyle]="{ 'box-shadow': selectedPalette.cardShadow }"
+            >
+              <div class="icon-wrap">
+                <i class="fas" [ngClass]="card.icon"></i>
+              </div>
+              <div class="tile-body">
+                <div class="tile-title">{{ card.title }}</div>
+                <p class="tile-description" *ngIf="card.description">{{ card.description }}</p>
+              </div>
+            </a>
+
+            <div class="empty-state" *ngIf="cards.length === 0">
+              <i class="fas fa-search"></i>
+              <p>No modules match your search. Try another keyword or category.</p>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </ng-container>
+
+  <button class="palette-fab" type="button" (click)="togglePalette()" title="Change theme" aria-label="Change theme">
+    <i class="fas fa-palette"></i>
+  </button>
+
+  <div class="palette-drawer" *ngIf="showPalette">
+    <button
+      *ngFor="let palette of paletteOptions"
+      type="button"
+      class="palette-chip"
+      [class.active]="palette === selectedPalette"
+      [style.background]="palette.swatch"
+      [title]="palette.name"
+      (click)="setPalette(palette)"
+      [attr.aria-label]="'Theme ' + palette.name"
+    >
+      <span class="sr-only">{{ palette.name }}</span>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,125 @@
+﻿<div class="card">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Chemical Master</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" routerLink="/master/chemical">Close</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <form #changeform="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Chemical Name<span style="color: red;">*</span></label>
+                        <input type="text" name="chemical_name" ngModel required #chemical_name="ngModel">
+                        <span style="color: red;" *ngIf="chemical_name.invalid && chemical_name.touched">Please enter chemical name</span>
+                    </div>
+
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Grade<span style="color: red">*</span></label>
+                        <select name="grade" [(ngModel)]="grade" required class="chem-new-field">
+                          <option value="" disabled>Select grade</option>
+                          <option *ngFor="let g of gradeOptions()" [value]="g">{{ g }}</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Molecular Weight (gm/mole)</label>
+                        <input type="number" name="molecular_wt" ngModel class="chem-new-field">
+                    </div>
+
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>CAS No</label>
+                        <input type="text" name="cas_name" ngModel class="chem-new-field">
+                    </div>
+
+                    <div class="clr-col-xl-4 clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                        <label>Unit</label>
+                        <select name="unit" [(ngModel)]="unit" class="chem-new-field">
+                          <option *ngFor="let u of unitOptions" [value]="u">{{ u }}</option>
+                        </select>
+                    </div>
+
+                    <div class="clr-col-lg-12">
+                        <label>Make<span style="color: red;">*</span></label>
+                        <table class="table table-border chem-new-table">
+                            <tr>
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Make</th>
+                                <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Action</th>
+                            </tr>
+                            <tr>
+                                <td>1.</td>
+                                <td class="chem-new-cell-input">
+                                    <input type="text" [(ngModel)]="makeInput" [ngModelOptions]="{standalone: true}" class="chem-new-field">
+                                </td>
+                                <td style="vertical-align: middle;">
+                                    <button type="button" class="btn btn-sm btn-info" (click)="addMake()">Add</button>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let me of productList; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td style="text-align: left;">{{ me.make }}</td>
+                                <td><clr-icon shape="trash" class="is-error" (click)="delData(i)"></clr-icon></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="clr-col-lg-12">
+                        <label>Manufacturer Name</label>
+                        <p class="chem-new-mfg-hint" *ngIf="!loadingManufacturers && equipmentsType.length">
+                            {{ equipmentsType.length }} vendor(s) from Purchase → Vendor Log
+                        </p>
+                        <p class="chem-new-mfg-loading" *ngIf="loadingManufacturers">Loading manufacturers…</p>
+                        <table class="table table-border chem-new-table">
+                            <tr>
+                                <th style="width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Manufacturer Name</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Code</th>
+                                <th style="width: 13%; background-color: rgb(14, 67, 112); color: white;">Action</th>
+                            </tr>
+                            <tr>
+                                <td>0</td>
+                                <td class="chem-new-mfg-cell">
+                                    <select
+                                        class="chem-new-mfg-select"
+                                        [(ngModel)]="selectedVendorNo"
+                                        [ngModelOptions]="{standalone: true}"
+                                        (ngModelChange)="onManufacturerChange($event)"
+                                        [disabled]="loadingManufacturers || equipmentsType.length === 0">
+                                        <option value="">Select manufacturer</option>
+                                        <option *ngFor="let equipment of equipmentsType" [value]="equipment.vendor_no">
+                                            {{ equipment.vendor_name }} ({{ equipment.vendor_no }})
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>{{ selectedEquipment['vendor_no'] || '-' }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" (click)="addEquipment()" [disabled]="loadingManufacturers">Add</button>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let user of eqData; let j = index">
+                                <td>{{ j + 1 }}.</td>
+                                <td>{{ user.vendor_name }}</td>
+                                <td>{{ user.vendor_no }}</td>
+                                <td>
+                                    <clr-icon shape="trash" class="is-error" (click)="removeManufacturer(j)"></clr-icon>
+                                </td>
+                            </tr>
+                            <tr *ngIf="!loadingManufacturers && equipmentsType.length === 0">
+                                <td colspan="4">No vendors found. Register vendors under Purchase → Vendor Log, then refresh.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" type="button" (click)="save(changeform)" [disabled]="saving">
+            {{ saving ? 'Saving…' : 'Save' }}
+        </button>
+    </div>
+</div>

@@ -1,0 +1,142 @@
+<div class="eb-page">
+  <div class="eb-header">
+    <h1>
+      <i [class]="icon"></i>
+      {{ title }}
+      <span class="eb-sub">{{ sub }}</span>
+    </h1>
+    <div class="eb-header-actions">
+      <button class="eb-btn eb-btn-ghost" (click)="close()"><i class="fas fa-arrow-left"></i> Back</button>
+    </div>
+  </div>
+
+  <div class="eb-access-note">
+    <i class="fas fa-circle-info"></i>
+    Use <b>Add Column</b> and <b>Add Row</b> to design the table layout. Column headers and default row values are saved in master and can be bound to BMR steps.
+  </div>
+
+  <div class="eb-toolbar">
+    <div class="eb-field">
+      <span class="eb-field-label">Dosage form</span>
+      <select class="eb-select" [(ngModel)]="dosageFilter" (ngModelChange)="load()">
+        <option value="">All</option>
+        <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+      </select>
+    </div>
+    <div class="eb-field">
+      <span class="eb-field-label">Search</span>
+      <input class="eb-input" [(ngModel)]="search" placeholder="Title, code, stage…" />
+    </div>
+    <div class="eb-spacer"></div>
+    <button class="eb-btn eb-btn-solid" (click)="newRow()"><i class="fas fa-plus"></i> New Table</button>
+  </div>
+
+  <div class="eb-table-wrap">
+    <table class="eb-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Title</th>
+          <th>Dosage form</th>
+          <th>Stage ref</th>
+          <th>Columns</th>
+          <th>Rows</th>
+          <th style="width:90px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="!filtered.length">
+          <td colspan="7" class="eb-empty">No table masters defined yet.</td>
+        </tr>
+        <tr *ngFor="let r of filtered">
+          <td><span class="eb-badge eb-badge-muted">{{ r.table_code }}</span></td>
+          <td>{{ r.title }}</td>
+          <td>{{ r.dosage_form || '—' }}</td>
+          <td>{{ r.stage_ref || '—' }}</td>
+          <td>{{ (r.columns || []).length }}</td>
+          <td>{{ (r.rows || []).length }}</td>
+          <td>
+            <div class="eb-row-actions">
+              <button class="eb-icon-btn" (click)="editRow(r)" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="eb-icon-btn danger" (click)="remove(r)" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="eb-modal-backdrop" *ngIf="modalOpen" (click)="modalOpen=false">
+  <div class="eb-modal eb-modal-wide" (click)="$event.stopPropagation()">
+    <div class="eb-modal-head">
+      <h3>{{ editing ? 'Edit' : 'New' }} {{ title }}</h3>
+      <button class="eb-icon-btn" (click)="modalOpen=false"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="eb-modal-body dtm-modal-body">
+      <div class="eb-grid">
+        <div class="eb-field eb-col-2"><span class="eb-field-label">Title *</span><input class="eb-input" [(ngModel)]="form.title" /></div>
+        <div class="eb-field">
+          <span class="eb-field-label">Dosage form</span>
+          <select class="eb-select" [(ngModel)]="form.dosage_form">
+            <option value="">—</option>
+            <option *ngFor="let d of dosageForms" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="eb-field"><span class="eb-field-label">Stage reference</span><input class="eb-input" [(ngModel)]="form.stage_ref" /></div>
+        <div class="eb-field eb-col-full"><span class="eb-field-label">Remarks</span><input class="eb-input" [(ngModel)]="form.remarks" /></div>
+      </div>
+
+      <div class="dtm-editor-toolbar">
+        <span class="eb-section-title" style="margin:0">Table layout</span>
+        <div class="dtm-toolbar-btns">
+          <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="addFormColumn()"><i class="fas fa-columns"></i> Add Column</button>
+          <button class="eb-btn eb-btn-sm eb-btn-outline" type="button" (click)="addFormRow()"><i class="fas fa-plus"></i> Add Row</button>
+        </div>
+      </div>
+
+      <div class="dtm-scroll">
+        <table class="eb-table eb-mini-table dtm-grid">
+          <thead>
+            <tr>
+              <th class="dtm-row-num">#</th>
+              <th *ngFor="let col of form.columns" class="dtm-col-head">
+                <div class="dtm-col-head-inner">
+                  <input class="eb-input dtm-col-label" [(ngModel)]="col.label" placeholder="Column label" />
+                  <select class="eb-select dtm-col-type" [(ngModel)]="col.col_type">
+                    <option *ngFor="let t of colTypes" [value]="t.value">{{ t.label }}</option>
+                  </select>
+                  <button class="eb-icon-btn danger" type="button" (click)="removeFormColumn(col.key)" title="Remove column"><i class="fas fa-times"></i></button>
+                </div>
+              </th>
+              <th class="dtm-row-act"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of form.rows; let ri = index">
+              <td class="dtm-row-num">{{ ri + 1 }}</td>
+              <td *ngFor="let col of form.columns">
+                <input
+                  class="eb-input"
+                  [(ngModel)]="row[col.key]"
+                  [type]="col.col_type === 'number' ? 'number' : 'text'"
+                  [placeholder]="col.label"
+                />
+              </td>
+              <td class="dtm-row-act">
+                <button class="eb-icon-btn danger" type="button" (click)="removeFormRow(ri)" title="Remove row"><i class="fas fa-trash"></i></button>
+              </td>
+            </tr>
+            <tr *ngIf="!form.rows.length">
+              <td [attr.colspan]="form.columns.length + 2" class="eb-empty">No rows — click Add Row</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="eb-modal-foot">
+      <button class="eb-btn eb-btn-ghost" (click)="modalOpen=false">Cancel</button>
+      <button class="eb-btn eb-btn-solid" (click)="save()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>

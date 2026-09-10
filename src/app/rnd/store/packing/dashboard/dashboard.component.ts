@@ -1,0 +1,30 @@
+import { QcDeptCard } from 'src/app/shared/qc-module-dashboard/qc-module-dashboard.models';
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  })
+export class DashboardComponent implements OnInit {
+  cards: QcDeptCard[] = [
+    { id: 'receiving', title: 'Receiving', route: 'receiving', icon: 'fa-truck', category: 'Modules', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'weighing', title: 'Weighing', route: 'weighing', icon: 'fa-balance-scale', category: 'Modules', gradient: 'linear-gradient(135deg, #4facfe 0%, #764ba2 100%)' },
+    { id: 'grn', title: 'GRN', route: 'grn', icon: 'fa-clipboard-check', category: 'Modules', gradient: 'linear-gradient(135deg, #43e97b 0%, #764ba2 100%)' },
+    { id: 'dispensing', title: 'Dispensing', route: 'dispensing', icon: 'fa-cubes', category: 'Modules', gradient: 'linear-gradient(135deg, #fa709a 0%, #764ba2 100%)' },
+    { id: 'retest', title: 'Retest', route: 'retest', icon: 'fa-redo-alt', category: 'Modules', gradient: 'linear-gradient(135deg, #30cfd0 0%, #764ba2 100%)' },
+    { id: 'spillage', title: 'Spillage/Destruction', route: 'spillage', icon: 'fa-trash-alt', category: 'Modules', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #764ba2 100%)' },
+    { id: 'stock', title: 'Stock Book', route: 'stock', icon: 'fa-book', category: 'Modules', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #764ba2 100%)' },
+    { id: 'dispensing', title: 'Work Ord/Pack Dt Sht', route: 'dispensing', icon: 'fa-file-alt', category: 'Modules', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #764ba2 100%)' },
+    { id: 'material', title: 'Material List', route: 'material', icon: 'fa-th-large', category: 'Modules', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #764ba2 100%)' },
+    { id: 'dedusting', title: 'Dedusting', route: 'dedusting', icon: 'fa-th-large', category: 'Modules', gradient: 'linear-gradient(135deg, #764ba2 0%, #764ba2 100%)' },
+    { id: 'store-packing-retest', title: 'Retest', route: 'store/packing/retest', icon: 'fa-th-large', category: 'Modules', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'dispensing', title: 'Work Order/ Packing Data Sheet', route: 'dispensing', icon: 'fa-th-large', category: 'Modules', gradient: 'linear-gradient(135deg, #4facfe 0%, #764ba2 100%)' },
+  ];
+
+
+  constructor() { }
+
+  ngOnInit(): void {
+  }
+
+}

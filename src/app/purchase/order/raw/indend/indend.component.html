@@ -1,0 +1,433 @@
+<div class="card po-indend-card" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h1 class="mef-panel-header__title">Pending Purchase Requisitions For Purchase Order</h1>
+    <button type="button" class="btn btn-sm mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Material Type:<span style="color: red">*</span></label>
+            <select name="material_type" [(ngModel)]="material_type" required (change)="getPendingIndends()">
+              <option>All</option>
+              <option>Raw Material</option>
+              <option>Packing Material</option>
+              <option>Engg Store Mech</option>
+              <option>Engg Store Elect</option>
+              <option>Stationary</option>
+              <option>Housekeeping</option>
+              <option>Canteen</option>
+              <option>Building Material</option>
+              <option>Machine Spares (Dedicated)</option>
+              <option>Machine Spares (Common)</option>
+              <option>QC Materials</option>
+              <option>IT Materials</option>
+              <option>RM/PM Material</option>
+              <option>Product Devlopment</option>
+              <option>Others</option>
+              <option>Service</option>
+              <option>Equipment</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-5">
+            <label>Search </label>
+            <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+          </div>
+        </div>
+        <div class="datagrid-wrapper">
+          <clr-datagrid class="po-indend__datagrid" [clrDgLoading]="loading">
+
+            <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Material Type.</clr-dg-column>
+            <clr-dg-column>Purchase Requisition No.</clr-dg-column>
+            <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+            <clr-dg-column>Materials</clr-dg-column>
+            <clr-dg-column>Entered By</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+    
+            <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+              <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.indend_no}}</clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+              <clr-dg-cell>
+                <ul>
+                  <li *ngFor="let item of result.indends; let i = index"> {{ item.material_name }},</li>
+                </ul>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ result.entry_by }}</clr-dg-cell>
+              <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+          </clr-datagrid>
+
+        </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div id="contentToConvert">
+    <div class="card-header mef-panel-header">
+      <h1 class="mef-panel-header__title">Purchase Order</h1>
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+ 
+
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;width: 13%;">Purchase Requisition By/No.:</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ selectedPO['entry_by'] }} / {{ selectedPO['indend_no'] }}</td>
+            <td style="text-align: center; font-size:15px; color:green;width: 48%;"><strong>{{ selectedPO['vendor_name'] }} - {{ selectedPO['vendor_no'] }}</strong></td>
+            <td style="text-align: left;width: 13%;">PO Type :</td>
+            <td style="text-align: left;color:blue;width: 13%;">{{ marketType }}</td>
+          </tr>
+        </table>
+        
+      
+        <form #poform="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left;padding: 0%;" colspan="3">
+                    <select style="margin:0px" name="billcompany_code" [(ngModel)]="billcompany_code" required
+                      (change)="getBillToShippToDetails($event.target.selectedIndex,'BILLTO')">
+                      <option></option>
+                      <option *ngFor="let com of companies" [value]="com.company_code">{{com.company_name}}</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedBill['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedBill['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedBill['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedBill['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Ship To
+                    <input type="checkbox" name="sameaddress" [(ngModel)]="sameaddress" (change)="onCheckboxChange()">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:
+                  </td>
+                  <td style="text-align: left;padding: 0%;" colspan="3">
+                    <select style="margin:0px" name="shipcompany_code" [(ngModel)]="shipcompany_code"
+                      (change)="getBillToShippToDetails($event.target.selectedIndex,'SHIPTO')">
+                      <option></option>
+                      <option *ngFor="let company of companies" [value]="company.company_code">{{company.company_name}}
+                      </option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedShip['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedShip['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State/Province:</td>
+                  <td style="text-align: left;">{{ selectedShip['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Postal Code:</td>
+                  <td style="text-align: left;">{{ selectedShip['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div><br>
+
+    
+          <div class="clr-row">
+
+            <div style="background-color:green;color: white;" class="clr-col-lg-2">
+              <label><strong>Purchase Order Date :</strong> <span style="color:red;"><strong>*</strong></span></label>
+              <input type="date" name="po_date" [(ngModel)]="po_date" [max]="maxDate" required>
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2">
+              <label>Discount In:</label>
+              <select name="discount_In" [(ngModel)]="discount_In" >
+                <option>Percentage</option>
+                <option>{{'common.amount' | translate}}</option>
+              </select>
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 remove-side-arrow-container"
+              *ngIf="discount_In == 'Percentage'">
+              <label>Discount %:</label>
+              <input type="number" name="po_discount_per" (keyup)="applyDiscpuntToAll()" ngModel [(ngModel)]="po_discount_per"
+                min="0" max="100">
+            </div>
+
+            <div style="background-color:burlywood"  class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 remove-side-arrow-container"
+              *ngIf="discount_In == 'Amount'">
+              <label>Discount Amount:</label>
+              <input type="number" name="po_discount_amt" (change)="applyDiscpuntToAll()" ngModel
+                [(ngModel)]="po_discount_amt">
+            </div>
+            
+            <div style="background-color:burlywood"  class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 remove-side-arrow-container" >
+              <label>Shipping/Handling/Trans. Charges :</label>
+               <select name="shipping_type" [(ngModel)]="shipping_type" required>
+                <option></option>
+                <option>Vendor Account</option>
+                <option>Company Account</option>
+              </select>
+            </div>
+ 
+
+          </div>
+          <h3>Materials:</h3>
+          <div class="unique-table-wrapper">
+            <table class="table table-border unique-table">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Code</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Material Name</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Discount %.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Quotation Amt.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Gross Total</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Discount Amt.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Taxable</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">TAX %</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Tax Total</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Net Total</th>
+              </tr>
+              <tr *ngFor="let user of selectedPO['indends']; let i = index">
+                <td class="block"><input type="checkbox" name="check{{i}}" (change)="getTaxSplitUp()"
+                    [(ngModel)]="user['check']" style="margin: 0px;">
+                </td>
+                <td class="block" style="text-align: left;">{{user.material_code}}</td>
+                <td class="block" style="text-align: left;">{{user.material_name}}</td>
+                <td style="margin: 0;padding: 0;">
+                  <input type="text" [(ngModel)]="user['disc_per']" [required]="user.check" name="disc_per{{i}}" (keyup)="applyDiscount(user)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 60%;margin: 0;padding: 0;" min="0" max="5">
+                </td>
+                <td class="block">{{user.order_qty}} {{user.unit}}</td>
+                <td class="block">{{user.quotation_amt}} / {{user.unit}}</td>
+                <td class="block">{{user.gross_total}} </td>
+                <td style="margin: 0;padding: 0;">
+                  <input type="text" [(ngModel)]="user['disc_amt']" [required]="user.check" (change)="applyDiscountOnAmt(user)" name="disc_amt{{i}}" style="width: 60%;margin: 0;padding: 0;" oninput="this.value = this.value.replace(/[^0-9]/g, '')" >
+                </td>
+                <td>{{user.taxable_amt}}</td>
+                <td>{{user.gst}} %</td>
+                <td class="block">{{user.tax_total}}</td>
+                <td class="block">{{user.net_total}}</td>
+              </tr>
+              <tr *ngIf="selectedPO['indends']?.length==0">
+                <td colspan="12">No Record Found!</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <table class="table table-border" *ngIf="shipping_type == 'Company Account'">
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >Shipping Amount</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >GST %</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >GST Amount</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;" >Shipping Total</th>
+                  </tr>
+                  <tr>
+                    <td style="padding:0;margin: 0;">
+                      <input type="text" name="shipping_handling" [(ngModel)]="shipping_handling" (keyup)="calulateShipping()" required style="padding:0;margin: 0;" onkeypress='return event.charCode >= 48 && event.charCode <= 57'>
+                    </td>
+                    <td style="padding:0;margin: 0;">
+                      <select style="padding:0;margin: 0;" name="shipping_gst" [(ngModel)]="shipping_gst" (change)="calulateShipping()" required>
+                        <option value="5">5 %</option>
+                        <option value="12">12 %</option>
+                        <option value="18">18 %</option>
+                        <option value="24">24 %</option>
+                        <option value="28">28 %</option>
+                      </select>
+                    </td>
+                    <td style="padding:0;margin: 0;">
+                      <input type="text" name="shipping_Gst_amt" [(ngModel)]="shipping_Gst_amt" required readonly style="padding:0;margin: 0;" >
+                      </td>
+                    <td style="padding:0;margin: 0;">
+                        <input type="text" name="shipping_total" [(ngModel)]="shipping_total" required readonly style="padding:0;margin: 0;" >
+                    </td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <h3>Delivery Schedule : </h3>
+                <table class="table table-border" >
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">{{'common.table.srNo' | translate}}</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder; text-align: left;">Material Name</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">Qty. <span style="color: red;"><strong>*</strong></span></th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">Schedule Dil. Dt.</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white; font-weight: bolder;">{{'common.table.action' | translate}}</th>
+                  </tr>
+                  <tr *ngFor="let item of schedule_data; let i = index">
+                    <td>{{i +1}}</td>
+                    <td style="text-align: left;">{{item.material_name}} - {{item.material_code}}</td>
+                    <td style="margin:0;padding:0;">
+                      <input type="text" name="qty{{i}}" [(ngModel)]="item.qty" required style="margin:0;padding:0;width: 80%;" > {{item.unit}}
+                    </td>
+                    <td style="margin:0;padding:0;">
+                      <input type="date" name="delivery_schedule_date{{i}}" [min]="today" [(ngModel)]="item.delivery_schedule_date" style="margin:0;padding:0;">
+                    </td>                
+                    <td>
+                      <button *ngIf="item.isAdded == 'NO'" class="btn btn-sm btn-success" [disabled]="item.qty >= item.splitQty" (click)="addSchedule(item,i)">{{'common.add' | translate}}</button>
+                      <button *ngIf="item.isAdded == 'YES'" class="btn btn-sm btn-danger" (click)="delSchedule(item,i)">DEL</button>
+                    </td>
+                  </tr>
+                </table>
+            </div>
+          </div>
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                 <h3>Terms & Conditions : &nbsp;&nbsp;&nbsp; 
+                    <button class="btn btn-sm btn-success" (click)="isTerm=true">{{'common.add' | translate}}</button>
+                    <button class="btn btn-sm btn-danger" (click)="isEdit=true">{{'common.delete' | translate}}</button>
+                 </h3><br>
+
+
+                <table class="table table-border">
+                  <tr>
+                    <th style="background-color: rgb(14, 67, 112); color: white;width: 50px;">Select</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Term Heading</th>
+                    <th style="background-color: rgb(14, 67, 112); color: white;text-align: left;">Terms & Conditions</th>
+                  </tr>
+                  <tr *ngFor="let term of terms; let i = index">
+                    <td style="margin: 0;padding: 0;">
+                      <input type="checkbox" name="selected{{ i }}" [(ngModel)]="term['selected']">
+                    </td>
+                    <td style="text-align: left;">{{ term.term_heading }}</td>
+                    <td style="text-align: left;">{{ term.term }}</td>
+                  </tr>
+                </table>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <h3>Payment Terms :  Total Payable : <span style="color: green;">{{poAmount + shipping_total}}</span></h3><br>
+                <table class="table table-border">
+                  <tr>
+                    <td style="background-color: rgb(14, 67, 112); color: white;"><strong>Payment %</strong></td>
+                    <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>Payment Conditions</strong></td>
+                    <td style="background-color: rgb(14, 67, 112); color: white;text-align: left;"><strong>{{'common.amount' | translate}}</strong> &nbsp;&nbsp; <button class="btn btn-success btn-sm" (click)="addRowToPaymentTerms()">Add Row</button></td>
+                  </tr>
+                  <tr *ngFor="let item of paymentTerms;let i=index">
+                    <td style="padding: 0;margin: 0;">
+                      <input type="text" name="pay_per{{i}}" [(ngModel)]="item.pay_per" (input)="calculatePerAmt(i)" required>
+                    </td>
+                    <td style="padding: 0;margin: 0;text-align: left;">
+                      <input type="text" name="term{{i}}" [(ngModel)]="item.term" required>
+                    </td>
+                    <td style="text-align: left;font-weight:bolder;">{{item.pay_amt || 0}} {{item.currency}}   &nbsp;&nbsp;&nbsp;&nbsp;
+                          <clr-icon class="is-error" shape="trash" (click)="paymentTerms.splice(i,1)"></clr-icon>
+                    </td>
+                  </tr>
+                </table>
+            </div>
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12">
+              <label><strong>Narration :- </strong></label>
+              <textarea name="narration" ngModel rows="3"></textarea>
+            </div>
+          </div>
+
+        </form>
+   
+      </div>
+    </div>
+  </div>
+  <div class="card-footer" id="remove-element">
+    <button type="button" class="btn btn-primary" (click)="sendPO(poform)"
+      [disabled]="poform.invalid || clicked">Submit PO</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    <!-- <button class="btn btn-success" (click)="generatePDF()">{{'common.download' | translate}}</button> -->
+  </div>
+</div>
+ 
+
+
+
+<clr-modal [(clrModalOpen)]="isTerm">
+  <h3 class="modal-title">Terms & Conditions:</h3>
+  <div class="modal-body">
+    <form #termForm="ngForm">
+      <table class="table">
+        <tr>
+          <th style="width: 50px; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Terms Heading</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Terms</th>
+        </tr>
+        <tr>
+          <td>0.</td>
+          <td style="padding: 0px;">
+            <input type="text" id="term_heading" name="term_heading" ngModel required
+              style="margin: 0px; height: 33px;">
+          </td>
+          <td style="padding: 0px;">
+            <input type="text" id="term" name="term" ngModel required style="margin: 0px; height: 33px;">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveTerm(termForm)">{{'common.save' | translate}}</button>
+    <button type="button" class="btn btn-danger" (click)="isTerm = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isEdit">
+  <h3 class="modal-title">Delete Terms:</h3>
+  <div class="modal-body">
+    <table class="table">
+      <tr>
+        <th style="text-align: left;">Terms Heading</th>
+        <th style="text-align: left;">Terms & Conditions</th>
+        <th style="text-align: left;">Delete</th>
+      </tr>
+      <tr *ngFor="let term of terms; let i = index">
+        <td style="text-align: left;">{{ term.term_heading }}</td>
+        <td style="text-align: left;">{{ term.term }}</td>
+        <td style="text-align: left;">
+          <clr-icon class="is-error" shape="trash" (click)="delTerm(term.id)"></clr-icon>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="isEdit = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

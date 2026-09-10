@@ -1,0 +1,174 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Work Orders For
+                Approval</div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/packing/planning">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                <label>From Date</label>
+                <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+            </div>
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                <label>To Date</label>
+                <input type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+                <button class="btn btn-danger" (click)="getPlans()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+            </div>
+        </div>
+        <div class="card-text">
+            <clr-datagrid [clrDgLoading]="loading">
+                <clr-dg-column>Sr..</clr-dg-column>
+                <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+                <clr-dg-column>Work Order No.</clr-dg-column>
+                <clr-dg-column>Product code</clr-dg-column>
+                <clr-dg-column>Product Name</clr-dg-column>
+                <clr-dg-column>BFR No</clr-dg-column>
+                <clr-dg-column>Prepared By</clr-dg-column>
+                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+                    <clr-dg-cell>{{i+1}}.</clr-dg-cell>
+                    <clr-dg-cell>{{ res.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.work_order_no }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_code }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_name }} {{ res.grade }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.bfr_no }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.entry_by}} </clr-dg-cell>
+                    <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button></clr-dg-cell>
+                </clr-dg-row>
+                <clr-dg-footer>
+                    <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+                        of {{pagination.totalItems}} users
+                    </clr-dg-pagination>
+                </clr-dg-footer>
+            </clr-datagrid>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Plan Details</div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <div class="card-text">
+                <h3>Product Details:</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Grade</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['grade']}}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; border:1px solid black;"><b>MFR No</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['mfr_no']}}</td>
+                        <td style="text-align: left; border:1px solid black;"><b>Effective Date</b></td>
+                        <td style="text-align: left; border:1px solid black;">{{selectedResult['entry_date'] | date: 'dd-MM-yyyy'}}</td>
+                            <td style="text-align: left; border:1px solid black;"><b>Work Order No</b></td>
+                            <td style="text-align: left; border:1px solid black;">{{selectedResult['work_order_no']}}</td>
+                    </tr>
+
+                </table>
+
+                <div class="card-text">
+                    <div style="clr-row">
+                      <h3 style="float: left;color: rgb(94, 19, 77); font-weight: bold;">Packing Materials:</h3>
+                    </div>
+                    <div *ngFor="let pack of pack_sizes; let i = index">
+              
+                      <!-- <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Country Name:
+                            {{pack.country_name}}</h6>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Type:
+                            {{pack.pack_type}}</h6>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                          <h6 style="float: right;color: rgb(94, 19, 77); font-weight: bold;">Pack Size:
+                            {{pack.pack_batch_size}}
+                            -
+                            {{pack.pack_size_unit}}</h6>
+                        </div>
+              
+              
+                      </div> -->
+                      <table class="table" style="margin-top:10px">
+                        <tr>
+                          <th style="background-color: #dcebf7; color:black;">Sr.</th>
+                          <th style="background-color: #dcebf7; color:black;">Material type</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Code</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Name</th>
+                          <th style="background-color: #dcebf7; color:black;">Material Grade</th>
+                          <th style="background-color: #dcebf7; color:black;">Unit Qty</th>
+                          <th style="background-color: #dcebf7; color:black;">Overages (%)</th>
+                          <th style="background-color: #dcebf7; color:black;">Unit Total Qty</th>
+                          <th style="background-color: #dcebf7; color:black;">Batch Qty(kg)</th>
+                          <!-- <th style="background-color: #dcebf7; color:black;">Batch Overages(%)</th> -->
+                          <!-- <th style="background-color: #dcebf7; color:black;">Actual  Qty</th> -->
+                          <th style="background-color: #dcebf7; color:black;">Available Stock</th>
+              
+                        </tr>
+                        <tr *ngFor="let comp of pack.packing_material; let i = index">
+                          <td>{{ i + 1 }}.</td>
+                          <td>{{ comp.material_subtype }}</td>
+                          <td>{{ comp.material_code }}</td>
+                          <td>{{ comp.material_name }}</td>
+                          <td>{{ comp.grade }}</td>
+                          <td>{{ comp.b_qty }} {{ comp.unit }}</td>
+                          <td>{{ comp.overages }}</td>
+                          <td>{{ comp.total_qty }}</td>
+                          <td>{{ comp.batch_qty }}</td>
+                          <!-- <td>{{ comp.batch_overages}}</td> -->
+                          <!-- <td>{{ comp.actual_qtyy }}</td> -->
+                          <td>{{ comp.avbl_stock }}</td>
+                        </tr>
+                        <tr *ngIf="raw_materials?.length == 0">
+                          <td colspan="8">{{'common.noRecords' | translate}}</td>
+                        </tr>
+                      </table>
+                     
+                    </div>
+              
+                  </div>
+
+                 
+
+                
+              
+           </div>
+        </div>
+    </div>
+    <div class="card-footer" *ngIf="plant_id=='67' || plant_id=='86'">
+        <button class="btn btn-primary" (click)="saveData_saipro('approved')">Approve.</button>
+        <button class="btn btn-primary" (click)="saveData('on hold')">Hold</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+    <div class="card-footer" >
+        <button class="btn btn-primary" (click)="saveData('approved')">{{'common.approve' | translate}}</button>
+        <button class="btn btn-primary" (click)="saveData('on hold')">Hold</button>
+        <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+</div>

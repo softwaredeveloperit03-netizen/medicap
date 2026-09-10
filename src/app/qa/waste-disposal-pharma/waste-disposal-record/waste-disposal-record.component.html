@@ -1,0 +1,255 @@
+<!-- NEW FORM -->
+<div class="card rcd-form" *ngIf="!isLog">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Waste Disposal Record ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" routerLink="/qa/waste-disposal-pharma/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/waste-disposal-pharma" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <form #wasteForm="ngForm">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">TITLE:</td>
+          <td colspan="3" class="rcd-form__title-cell">WASTE DISPOSAL - PHARMACEUTICAL SOLIDS, LIQUIDS AND SOLVENTS</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate | date: 'dd MMM yyyy' }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Record Date <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <input class="rcd-form__input" type="date" name="record_date" [(ngModel)]="recordDate" required />
+          </td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">Waste Disposal Record — Source of Waste <span class="rcd-form__required">*</span></div>
+      <div class="rcd-form__source-grid">
+        <clr-checkbox-wrapper *ngFor="let source of sourceOptions">
+          <input
+            type="checkbox"
+            clrCheckbox
+            [checked]="isSourceSelected(source)"
+            (change)="toggleSource(source, $event.target.checked)"
+          />
+          <label>{{ source }}</label>
+        </clr-checkbox-wrapper>
+      </div>
+
+      <div class="rcd-form__scroll-wrap">
+        <table class="rcd-form__sheet-table rcd-form__waste-table">
+          <tr>
+            <th style="width:24%">Name of Waste Material</th>
+            <th style="width:10%">Approximate Weight (Kg)</th>
+            <th style="width:14%">Solid/Liquid/Solvent</th>
+            <th style="width:12%">Initials</th>
+            <th style="width:12%">Date</th>
+            <th style="width:22%">Comments</th>
+            <th style="width:6%"></th>
+          </tr>
+          <tr *ngFor="let row of wasteRows; let i = index">
+            <td>
+              <select
+                class="rcd-form__select"
+                [name]="'material_key_' + i"
+                [(ngModel)]="row.selected_material_key"
+                (ngModelChange)="onMaterialChange(i)"
+                *ngIf="row.material_mode !== manualMaterial"
+              >
+                <option value="">-- Select from Master --</option>
+                <option *ngFor="let m of materialOptions" [value]="m.key">{{ m.label }}</option>
+                <option [value]="manualMaterial">+ Enter Manually</option>
+              </select>
+              <input
+                class="rcd-form__input"
+                type="text"
+                [name]="'material_name_' + i"
+                [(ngModel)]="row.waste_material_name"
+                placeholder="Waste material name"
+                *ngIf="row.material_mode === manualMaterial"
+                required
+              />
+              <button
+                type="button"
+                class="btn btn-sm btn-link"
+                *ngIf="row.material_mode === manualMaterial"
+                (click)="row.material_mode = 'master'; row.selected_material_key = ''"
+              >
+                Back to Master List
+              </button>
+            </td>
+            <td>
+              <input class="rcd-form__input" type="text" [name]="'weight_' + i" [(ngModel)]="row.approximate_weight_kg" />
+            </td>
+            <td>
+              <select class="rcd-form__select" [name]="'waste_type_' + i" [(ngModel)]="row.waste_type">
+                <option value="">-- Select --</option>
+                <option *ngFor="let t of wasteTypeOptions" [value]="t">{{ t }}</option>
+              </select>
+            </td>
+            <td>
+              <div class="rcd-form__readonly">{{ row.initials || '—' }}</div>
+              <button type="button" class="btn btn-sm btn-outline" (click)="stampInitials(i)">Stamp</button>
+            </td>
+            <td>
+              <input class="rcd-form__input" type="date" [name]="'row_date_' + i" [(ngModel)]="row.row_date" />
+            </td>
+            <td>
+              <input class="rcd-form__input" type="text" [name]="'comments_' + i" [(ngModel)]="row.comments" />
+            </td>
+            <td style="text-align: center">
+              <button type="button" class="btn btn-sm btn-danger" (click)="removeRow(i)" *ngIf="wasteRows.length > 1">X</button>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 0.75rem">
+        <button type="button" class="btn btn-sm btn-outline" (click)="addRow()">+ Add Row</button>
+      </div>
+
+      <p class="rcd-form__note">
+        Material name can be selected from Product/Raw Material master or entered manually. Weight, type, initials, date and comments are entered per row as per FQA-022-A.
+      </p>
+
+      <div style="text-align: center">
+        <button type="button" class="btn btn-primary" (click)="save(wasteForm)">Save Record</button>
+      </div>
+
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose</p>
+    </form>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="card rcd-form" *ngIf="isLog && !isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Waste Disposal Log ({{ formNo }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" routerLink="/qa/waste-disposal-pharma/new" style="margin-right: 0.35rem">New Record</button>
+        <button class="btn btn-sm" routerLink="/qa/waste-disposal-pharma" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row rcd-form__filters">
+      <div class="clr-col-lg-3">
+        <label>From</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3">
+        <label>To</label>
+        <input class="rcd-form__input" type="date" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3" style="padding-top: 1.2rem">
+        <button class="btn btn-sm btn-primary" (click)="getLog()">Search</button>
+      </div>
+    </div>
+
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>Record Date</th>
+          <th>Source of Waste</th>
+          <th>No. of Items</th>
+          <th>Entry By</th>
+          <th>Entry Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of results; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.record_date | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ r.source_summary }}</td>
+          <td>{{ r.row_count }}</td>
+          <td>{{ r.entry_by }}</td>
+          <td>{{ r.entry_date | date: 'dd-MM-yyyy' }}</td>
+          <td>
+            <button class="btn btn-sm btn-info" (click)="view(r)">View</button>
+            <button class="btn btn-sm btn-outline" (click)="downloadForm(r.id)">PDF</button>
+          </td>
+        </tr>
+        <tr *ngIf="!results?.length">
+          <td colspan="7" style="text-align: center">No records found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Waste Disposal Record — View (#{{ selectedRecord.id }})
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()" style="margin-right: 0.35rem">Back</button>
+        <button class="btn btn-sm btn-outline" (click)="downloadForm(selectedRecord.id)">PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Record Date</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.record_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Entry By</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.entry_by }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Source of Waste</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.source_of_waste?.join(', ') }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__scroll-wrap">
+      <table class="rcd-form__sheet-table rcd-form__waste-table">
+        <tr>
+          <th>Name of Waste Material</th>
+          <th>Weight (Kg)</th>
+          <th>Solid/Liquid/Solvent</th>
+          <th>Initials</th>
+          <th>Date</th>
+          <th>Comments</th>
+        </tr>
+        <tr *ngFor="let row of selectedRecord.waste_rows">
+          <td>{{ row.waste_material_name }}</td>
+          <td>{{ row.approximate_weight_kg }}</td>
+          <td>{{ row.waste_type }}</td>
+          <td>{{ row.initials }}</td>
+          <td>{{ row.row_date | date: 'dd-MM-yyyy' }}</td>
+          <td>{{ row.comments }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>

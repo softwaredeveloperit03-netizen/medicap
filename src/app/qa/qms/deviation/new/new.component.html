@@ -1,0 +1,185 @@
+<div class="deviation-form-card">
+  <div class="deviation-form-header">
+    <h1 class="deviation-form-title">PART-I : INITIATION OF DEVIATION</h1>
+    <button type="button" class="btn-close" routerLink="/qa/qms/deviation">
+      <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+    </button>
+  </div>
+
+  <div class="deviation-form-body">
+    <form #deviation="ngForm" class="deviation-form">
+      <section class="form-section">
+        <h2 class="section-title">Identification &amp; Dates</h2>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="identifiedBy">Identified By</label>
+            <input id="identifiedBy" type="text" class="form-control" name="identifiedBy" [(ngModel)]="identifiedBy" readonly aria-label="Identified By">
+          </div>
+          <div class="form-group" [class.field-invalid]="deviation.controls['devOccuredDateIso']?.invalid && deviation.controls['devOccuredDateIso']?.touched">
+            <label class="form-label required" for="devOccuredDateIso">Deviation Occurred Date</label>
+            <input id="devOccuredDateIso" type="date" class="form-control form-control-date" name="devOccuredDateIso"
+                   [(ngModel)]="devOccuredDateIso" [max]="maxOccuredDate" required
+                   #devOccuredDate="ngModel" aria-label="Deviation Occurred Date" title="Select date (no future dates)">
+            <span class="error-msg" *ngIf="devOccuredDate.invalid && devOccuredDate.touched">
+              <span *ngIf="devOccuredDate.errors?.['required']">Required.</span>
+              <span *ngIf="devOccuredDate.value && devOccuredDate.value > maxOccuredDate">Cannot select a future date.</span>
+            </span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="devOccuredDept">Deviation Occurred In Dept.</label>
+            <input id="devOccuredDept" type="text" class="form-control" name="devOccuredDept" [(ngModel)]="department_name" readonly aria-label="Deviation Occurred In Dept">
+          </div>
+          <div class="form-group" [class.field-invalid]="deviation.controls['devIdentifiedDateIso']?.invalid && deviation.controls['devIdentifiedDateIso']?.touched">
+            <label class="form-label required" for="devIdentifiedDateIso">Deviation Identified Date</label>
+            <input id="devIdentifiedDateIso" type="date" class="form-control" name="devIdentifiedDateIso"
+                   [(ngModel)]="devIdentifiedDateIso" [max]="maxIdentifiedDate" required
+                   #devIdentifiedDate="ngModel" aria-label="Deviation Identified Date (no future dates)"
+                   title="Select date (today or earlier)">
+            <span class="error-msg" *ngIf="devIdentifiedDate.invalid && devIdentifiedDate.touched">
+              <span *ngIf="devIdentifiedDate.errors?.['required']">Required.</span>
+              <span *ngIf="devIdentifiedDate.value && devIdentifiedDate.value > maxIdentifiedDate">Cannot select a future date.</span>
+            </span>
+          </div>
+          <div class="form-group form-group-full" [class.field-invalid]="deviation.controls['timeOfDev']?.invalid && deviation.controls['timeOfDev']?.touched">
+            <label class="form-label required" for="timeOfDev">Time Of Deviation</label>
+            <input id="timeOfDev" type="time" class="form-control form-control-sm" name="timeOfDev" ngModel required #timeOfDev="ngModel" aria-label="Time Of Deviation" title="Time Of Deviation">
+            <span class="error-msg" *ngIf="timeOfDev.invalid && timeOfDev.touched">Required.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="section-title">Description &amp; Source</h2>
+        <div class="form-grid form-grid-1">
+          <div class="form-group" [class.field-invalid]="deviation.controls['detailsOfDev']?.invalid && deviation.controls['detailsOfDev']?.touched">
+            <label class="form-label required" for="detailsOfDev">Description Of Deviation</label>
+            <textarea id="detailsOfDev" class="form-control textarea" name="detailsOfDev" [(ngModel)]="prefillData.detailsOfDev" required #detailsOfDev="ngModel" rows="4" aria-label="Description Of Deviation"></textarea>
+            <span class="error-msg" *ngIf="detailsOfDev.invalid && detailsOfDev.touched">Required.</span>
+          </div>
+          <div class="form-group" [class.field-invalid]="deviation.controls['sourceDocument']?.invalid && deviation.controls['sourceDocument']?.touched">
+            <label class="form-label required" for="sourceDocument">Source Document</label>
+            <input id="sourceDocument" type="text" class="form-control" name="sourceDocument" [(ngModel)]="prefillData.sourceDocument" required #sourceDocument="ngModel" placeholder="Enter source document" title="Source Document" aria-label="Source Document">
+            <span class="error-msg" *ngIf="sourceDocument.invalid && sourceDocument.touched">Required.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="section-title">Scope &amp; Reference</h2>
+        <div class="form-grid form-grid-1">
+          <div class="form-group" [class.field-invalid]="deviation.controls['devScope']?.invalid && deviation.controls['devScope']?.touched">
+            <label class="form-label required" for="devScope">Product / Material / Equipment Name</label>
+            <select id="devScope" class="form-control form-control-select" name="devScope" [(ngModel)]="devScope" required #devScopeRef="ngModel" aria-label="Product Material Equipment Name" title="Product / Material / Equipment Name">
+              <option value="" disabled selected>Select an option</option>
+              <option value="Material Name">Material Name</option>
+              <option value="Product Name">Product Name</option>
+              <option value="Equipment Name">Equipment Name</option>
+            </select>
+            <span class="error-msg" *ngIf="devScopeRef.invalid && devScopeRef.touched">Required.</span>
+          </div>
+          <ng-container *ngIf="devScope === 'Material Name'">
+            <div class="form-group" [class.field-invalid]="deviation.controls['scopeItem']?.invalid && deviation.controls['scopeItem']?.touched">
+              <label class="form-label required">Select Material</label>
+              <select class="form-control form-control-select" name="scopeItem" [(ngModel)]="prefillData.scopeItem" required #scopeItem="ngModel" aria-label="Select Material" title="Select Material">
+                <option value="" disabled selected>Select Material</option>
+                <option *ngFor="let mat of materials" [value]="mat.material_name + ' ( ' + mat.material_code + ' )'">
+                  {{ mat.material_name }} ( {{ mat.material_code }} )
+                </option>
+                <option *ngIf="materials && materials.length === 0" disabled>No materials available</option>
+              </select>
+              <span class="error-msg" *ngIf="scopeItem.invalid && scopeItem.touched">Required.</span>
+              <p *ngIf="materials && materials.length === 0" class="hint-msg">No materials found. Check plant_id and material_type in localStorage.</p>
+            </div>
+          </ng-container>
+          <ng-container *ngIf="devScope === 'Product Name'">
+            <div class="form-group" [class.field-invalid]="deviation.controls['scopeItem']?.invalid && deviation.controls['scopeItem']?.touched">
+              <label class="form-label required">Select Product</label>
+              <select class="form-control form-control-select" name="scopeItem" [(ngModel)]="prefillData.scopeItem" required #scopeItem="ngModel" aria-label="Select Product" title="Select Product">
+                <option value="" disabled selected>Select Product</option>
+                <option *ngFor="let prd of products" [value]="prd.product_name + ' ( ' + prd.product_code + ' )'">
+                  {{ prd.product_name }} ( {{ prd.product_code }} )
+                </option>
+              </select>
+              <span class="error-msg" *ngIf="scopeItem.invalid && scopeItem.touched">Required.</span>
+            </div>
+          </ng-container>
+          <ng-container *ngIf="devScope === 'Equipment Name'">
+            <div class="form-group" [class.field-invalid]="deviation.controls['scopeItem']?.invalid && deviation.controls['scopeItem']?.touched">
+              <label class="form-label required">Select Equipment</label>
+              <select class="form-control form-control-select" name="scopeItem" [(ngModel)]="prefillData.scopeItem" required #scopeItem="ngModel" aria-label="Select Equipment" title="Select Equipment">
+                <option value="" disabled selected>Select Equipment</option>
+                <option *ngFor="let eqp of equipments" [value]="eqp.equipment_name + ' ( ' + eqp.equipment_code + ' )'">
+                  {{ eqp.equipment_name }} ( {{ eqp.equipment_code }} )
+                </option>
+              </select>
+              <span class="error-msg" *ngIf="scopeItem.invalid && scopeItem.touched">Required.</span>
+            </div>
+          </ng-container>
+          <div class="form-group" [class.field-invalid]="deviation.controls['ScopeCode']?.invalid && deviation.controls['ScopeCode']?.touched">
+            <label class="form-label required" for="ScopeCode">Lot No. / Medicap Lot No / Equipment ID</label>
+            <input id="ScopeCode" type="text" class="form-control" name="ScopeCode" [(ngModel)]="prefillData.ScopeCode" required #ScopeCode="ngModel" aria-label="Lot Batch Equipment ID">
+            <span class="error-msg" *ngIf="ScopeCode.invalid && ScopeCode.touched">Required.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="section-title">Classification</h2>
+        <div class="form-grid form-grid-2">
+          <div class="form-group" [class.field-invalid]="deviation.controls['relatedTo']?.invalid && deviation.controls['relatedTo']?.touched">
+            <label class="form-label required" for="relatedTo">Related To</label>
+            <select id="relatedTo" class="form-control form-control-select" name="relatedTo" [(ngModel)]="RelatedTo" required #relatedTo="ngModel" aria-label="Related To" title="Related To">
+              <option value="" disabled selected>Select an option</option>
+              <option value="Process">Process</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Facility">Facility</option>
+              <option value="Analysis">Analysis</option>
+              <option value="Document">Document</option>
+              <option value="Material">Material</option>
+              <option value="Other">Other</option>
+            </select>
+            <span class="error-msg" *ngIf="relatedTo.invalid && relatedTo.touched">Required.</span>
+          </div>
+          <div class="form-group" *ngIf="RelatedTo === 'Other'" [class.field-invalid]="RelatedTo === 'Other' && !Other?.trim()">
+            <label class="form-label required" for="RelatedToOther">Specify Other</label>
+            <input id="RelatedToOther" type="text" class="form-control" name="RelatedToOther" placeholder="Specify other" [(ngModel)]="Other" aria-label="Specify other">
+            <span class="error-msg" *ngIf="RelatedTo === 'Other' && !Other?.trim()">Required when Related To is Other.</span>
+          </div>
+          <div class="form-group" [class.field-invalid]="deviation.controls['DeviationType']?.invalid && deviation.controls['DeviationType']?.touched">
+            <label class="form-label required" for="DeviationType">Deviation Type</label>
+            <select id="DeviationType" class="form-control form-control-select" name="DeviationType" ngModel required #DeviationType="ngModel" aria-label="Deviation Type" title="Deviation Type">
+              <option value="" disabled selected>Select an option</option>
+              <option value="Planned">Planned</option>
+              <option value="Unplanned">Unplanned</option>
+            </select>
+            <span class="error-msg" *ngIf="DeviationType.invalid && DeviationType.touched">Required.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="section-title">Reason &amp; Investigation</h2>
+        <div class="form-grid form-grid-1">
+          <div class="form-group" [class.field-invalid]="deviation.controls['reasonForDeviation']?.invalid && deviation.controls['reasonForDeviation']?.touched">
+            <label class="form-label required" for="reasonForDeviation">Reason For Deviation</label>
+            <textarea id="reasonForDeviation" class="form-control textarea" name="reasonForDeviation" [(ngModel)]="prefillData.reasonForDeviation" required #reasonForDeviation="ngModel" rows="4" aria-label="Reason For Deviation"></textarea>
+            <span class="error-msg" *ngIf="reasonForDeviation.invalid && reasonForDeviation.touched">Required.</span>
+          </div>
+          <div class="form-group" [class.field-invalid]="deviation.controls['briefInvestigation']?.invalid && deviation.controls['briefInvestigation']?.touched">
+            <label class="form-label required" for="briefInvestigation">Brief Investigation</label>
+            <textarea id="briefInvestigation" class="form-control textarea" name="briefInvestigation" [(ngModel)]="prefillData.briefInvestigation" required #briefInvestigation="ngModel" rows="4" aria-label="Brief Investigation"></textarea>
+            <span class="error-msg" *ngIf="briefInvestigation.invalid && briefInvestigation.touched">Required.</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="form-footer">
+        <p class="required-legend"><span class="required"></span> Mandatory field</p>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" routerLink="/qa/qms/deviation">Cancel</button>
+          <button type="button" class="btn-primary" (click)="saveDeviation(deviation)">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

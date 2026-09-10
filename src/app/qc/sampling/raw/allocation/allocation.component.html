@@ -1,0 +1,121 @@
+
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> {{material_type}} Sampling Allocation </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-primary" routerLink="/qc/sampling/raw/allocationLog"> Sampling Allocation Log </button>
+        <button class="btn btn-sm btn-danger" routerLink="/qc/sampling/raw"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (change)="getPendingAllocation()"  >
+                  <option></option>
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">            
+                <div class="datagrid-wrapper">
+                    <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                        <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                        <clr-dg-column>Select</clr-dg-column>
+                        <clr-dg-column>Material Type</clr-dg-column>
+                        <clr-dg-column>Material Name</clr-dg-column>
+                        <clr-dg-column>Material Code</clr-dg-column>
+                        <clr-dg-column>Grade</clr-dg-column>
+                        
+                        <clr-dg-column>Receiving no/ Dt.</clr-dg-column>
+                        <clr-dg-column>Packaging Slip</clr-dg-column>
+                        <clr-dg-column>Total Containers</clr-dg-column>
+                        <clr-dg-column>Receiving by</clr-dg-column>
+                        <clr-dg-column>Receive By/Dt.</clr-dg-column>
+                
+                        <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                            <clr-dg-cell><input type="checkbox" [(ngModel)]="result.check" [ngModelOptions]="{standalone: true}"></clr-dg-cell>
+                            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+                            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+                            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+                            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+                            <clr-dg-cell>{{ result.grn_no }} / {{ result.grn_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                            <clr-dg-cell>{{ result.ch_no }} </clr-dg-cell>
+                            <clr-dg-cell>{{ result.containers }} </clr-dg-cell>
+                            <clr-dg-cell>{{ result.grn_by }}</clr-dg-cell>
+                            <clr-dg-cell>{{ result.grnReceiveBy }} / {{ result.grnReceiveOn | date:'dd-MM-yyyy'}} </clr-dg-cell>
+
+                        </clr-dg-row>
+                    </clr-datagrid>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <form #samAllocationForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-12">
+                            <label><strong>Sampling Person (QC) : <span style="color: red;">*</span></strong></label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option  value="master">Master</option>
+                                <option *ngFor="let emp of qcEmployee" value="{{ emp.emp_id }}">{{ emp.firstname }} {{ emp.firstname }} - ( {{ emp.emp_id }} )/option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-4">
+                            <label><strong>Sampling Person (Alt. QC) :</strong></label>
+                            <select name="alternate_qc_person" ngModel  >
+                                <option></option>
+                                <option  value="master">Master</option>
+                                <option *ngFor="let emp of qcEmployee" value="{{ emp.emp_id }}">{{ emp.firstname }} {{ emp.firstname }} - ( {{ emp.emp_id }} )/option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+              </div>
+            </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-success" [disabled]="!samAllocationForm.valid" (click)="openDigiSign(samAllocationForm)">Allocate Person</button>
+    <button class="btn btn-danger"routerLink="/qc/sampling/raw">{{'common.close' | translate}}</button>
+  </div>
+</div> 
+  
+<clr-modal [(clrModalOpen)]="isDIGI" [clrModalClosable]="true">
+    <h3 class="modal-title">&#9989; Sign Digitally For User ID : <span style="color: blue;">{{emp_id}} </span></h3>
+    <div class="modal-body">
+      <div class="card">
+        <div class="card-block">
+          <div class="card-text">
+            <form #addMaterialForm="ngForm">
+              <div class="modal-body">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <label>Enter Passward Or 4 Digit Authorization PIN <span style="color: red">*</span></label>
+                  <input type="password" name="loginPassward" [(ngModel)]="loginPassward" required >
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-success" (click)="digiSign(addMaterialForm)">{{'common.submit' | translate}}</button>
+         </div>
+      </div>
+    </div>
+  </clr-modal>
+
+  

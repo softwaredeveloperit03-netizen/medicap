@@ -1,0 +1,114 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Balance Monthly Verification</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/qc/calibration">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Equipment Code</th>
+                    <th>Location</th>
+                    <th>Capacity</th>
+                    <th>{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td>{{ result.equipment_code }}</td>
+                    <td>{{ result.location }}</td>
+                    <td>{{ result.capacity }} {{ result.unit }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="5">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Balance Daily Verification</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table">
+                <tr>
+                    <th>Equipment Code</th>
+                    <th>Location</th>
+                    <th>Capacity</th>
+                </tr>
+                <tr>
+                    <td>{{ selectedResult['equipment_code'] }}</td>
+                    <td>{{ selectedResult['location'] }}</td>
+                    <td>{{ selectedResult['capacity'] }} {{ selectedResult['unit'] }}</td>
+                </tr>
+            </table>
+            <div class="clr-row">
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-12">
+                    <label>From Date:</label>
+                    <input type="date" name="from_date" [max]="to_date" [(ngModel)]="from_date" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-12">
+                    <label>To Date:</label>
+                    <input type="date" name="to_date" [max]="today" [min]="from_date" [(ngModel)]="to_date" required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-12">
+                    <button class="btn btn-danger" style="margin-top:31px" (click)="getDailyEquipments()">{{'common.search' | translate}}</button>
+                </div>
+            </div>
+            <table class="table table-border">
+                <thead>
+                    <tr>
+                        <th rowspan="3" style="vertical-align: middle;">{{'common.date' | translate}}</th>
+                        <th [attr.colspan]="selectedResult['weights']?.length">Standard Weight (kg)</th>
+                        <th rowspan="3" style="vertical-align: middle;">Status Ok / Not Ok</th>
+                        <th rowspan="3" style="vertical-align: middle;">{{'common.table.remark' | translate}}</th>
+                        <th rowspan="3" style="vertical-align: middle;">Done By</th>
+                        <th rowspan="3" style="vertical-align: middle;">Check By</th>
+                    </tr>
+                    <tr>
+                        <th *ngFor="let weight of selectedResult['weights']">{{ weight.standard_weight }}</th>
+                    </tr>
+                    <tr>
+                        <th *ngFor="let weight of selectedResult['weights']">{{ weight.limit_from }} - {{ weight.limit_to }}</th>
+                    </tr>
+                </thead>
+                <tbody *ngFor="let equipment of selectedResult['records']; let  j = index" style="max-height: unset;overflow-y: unset;">
+                    <tr *ngIf="equipment.status == 'PENDING'">
+                        <td>{{ equipment.entry_date | date :'dd-MM-yyyy' }}</td>
+                        <td *ngFor="let weight of selectedResult['weights']; let  i = index" style="padding: 0px">
+                            <input type="text" name="display_wt{{ j }}{{ i }}" [(ngModel)]="weight.display_weight" required style="margin: 0px;" (keyup)="check(j)">
+                        </td>
+                        <td>{{equipment.status1}}</td>
+                        <td style="padding:0px"><input type="text" name="remark{{ i }}" [(ngModel)]="equipment.remark" required style="margin: 0px;"></td>
+                        <td style="padding:0px;"><input type="text" name="done_by{{ i }}" [(ngModel)]="equipment.done_by" required style="margin: 0px;"></td>
+                        <td style="padding:0px;vertical-align: middle;"><button class="btn btn-sm btn-info" (click)="save(equipment)">{{'common.save' | translate}}</button></td>
+                    </tr>
+                    <tr *ngIf="equipment.status !== 'PENDING'">
+                        <td>{{ equipment.entry_date | date :'dd-MM-yyyy' }}</td>
+                        <td *ngFor="let weight of equipment['weights']; let  i = index">{{ weight.display_weight}}</td>
+                        <td>{{equipment.calibration_status}}</td>
+                        <td>{{equipment.remark}}</td>
+                        <td>{{equipment.done_by}}</td>
+                        <td >{{equipment.check_by}}</td><!-- <button  *ngIf="equipment.status  == 'DONE'" class="btn btn-info btn-sm" (click)="checkby(equipment)">Ckeck</button> <button  *ngIf="equipment.status  == 'DONE'" class="btn btn-danger-outline btn-sm" (click)="revert(equipment.id)">REVERT</button> -->
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer"><button class="btn btn-primary" (click)="downloadReport()">{{'common.download' | translate}}</button></div>
+</div>

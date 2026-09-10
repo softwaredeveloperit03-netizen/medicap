@@ -1,0 +1,102 @@
+<div class="card rcd-form" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        QA — CAPA Approval &amp; Number Assignment (SOP-QA-070)
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" routerLink="/qa/corrective-preventive-action" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="table table-compact">
+      <thead>
+        <tr>
+          <th>Sr.</th>
+          <th>Title</th>
+          <th>Classification</th>
+          <th>Dept Code</th>
+          <th>Dept Approval / Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of pendingList; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ r.capa_document_title }}</td>
+          <td>{{ r.classification }}</td>
+          <td>{{ r.dept_code }}</td>
+          <td>{{ r.dept_approval_by }} / {{ r.dept_approval_date | date: 'dd-MM-yyyy' }}</td>
+          <td><button class="btn btn-sm btn-primary" (click)="viewRecord(r)">Review</button></td>
+        </tr>
+        <tr *ngIf="!pendingList?.length">
+          <td colspan="6" style="text-align: center">No CAPAs pending QA approval</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedRecord">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Review CAPA — {{ selectedRecord.capa_document_title }}</div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Dept Code</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.dept_code }}</td>
+        <td class="rcd-form__label-cell">Classification</td>
+        <td class="rcd-form__value-cell">{{ selectedRecord.classification }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Description of Event</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.description_of_event }}</td>
+      </tr>
+      <tr *ngIf="selectedRecord.corrective_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Corrective Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          {{ selectedRecord.corrective_actions }} (Target: {{ selectedRecord.corrective_target_date | date: 'dd-MM-yyyy' }})
+        </td>
+      </tr>
+      <tr *ngIf="selectedRecord.preventative_action_flag === 'YES'">
+        <td class="rcd-form__label-cell">Preventative Action(s)</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          {{ selectedRecord.preventative_actions }} (Target: {{ selectedRecord.preventative_target_date | date: 'dd-MM-yyyy' }})
+        </td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Dept Approval / Date</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedRecord.dept_approval_by }} / {{ selectedRecord.dept_approval_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+
+    <p class="rcd-form__note">Approving will assign a permanent number in the format CAPA-XX-{{ selectedRecord.dept_code }}-YY and log the entry to the CAPA Tracking Log (FQA-070-A).</p>
+
+    <div class="rcd-form__section-title">Reject for Correction (Return to Initiator)</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Rejection Reason</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <textarea class="rcd-form__textarea" [(ngModel)]="rejectReason" rows="2" placeholder="If incomplete, reject with reason so initiator can edit and resubmit"></textarea>
+        </td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button class="btn btn-success" (click)="approve()">Approve &amp; Assign CAPA #</button>
+      <button class="btn btn-danger" (click)="reject()" style="margin-left: 0.35rem">Reject — Return to Initiator</button>
+    </div>
+  </div>
+</div>

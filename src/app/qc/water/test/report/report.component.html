@@ -1,0 +1,163 @@
+<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Water Testing AR Report</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/qc/water/test" style="background-color: red;color: white;">
+                  CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <div class="clr-row" style="margin-bottom: 12px;">
+                    <div class="clr-col-lg-3 clr-col-md-4 clr-col-12">
+                        <label>From Date</label>
+                        <input type="date" class="clr-input" [(ngModel)]="from_date" name="from_date" (change)="getTestingReport()">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-4 clr-col-12">
+                        <label>To Date</label>
+                        <input type="date" class="clr-input" [(ngModel)]="to_date" name="to_date" (change)="getTestingReport()">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-4 clr-col-12">
+                        <label>Water Type</label>
+                        <input type="text" class="clr-input" [(ngModel)]="water_type" name="water_type" (ngModelChange)="filterStock()" placeholder="Filter water type">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-4 clr-col-12" style="padding-top: 22px;">
+                        <button class="btn btn-sm btn-secondary" type="button" (click)="clear()">Clear</button>
+                        <button class="btn btn-sm btn-primary" type="button" (click)="getTestingReport()">Search</button>
+                    </div>
+                </div>
+
+                <table class="table table-border">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Point No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Water Type</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Point Name</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Testing Type</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Frequency</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling By</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling Qty</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Action</th>
+                    </tr>
+                    <tr *ngFor="let result of results; let i = index">
+                        <td style="text-align: left;">{{ i + 1 }}</td>
+                        <td style="text-align: left;">{{ result.ar_no }}</td>
+                        <td style="text-align: left;">{{ result.sampling_no }}</td>
+                        <td style="text-align: left;">{{ result.point_no }}</td>
+                        <td style="text-align: left;">{{ result.water_type }}</td>
+                        <td style="text-align: left;">{{ result.point_name }}</td>
+                        <td style="text-align: left;">{{ result.testing_type }}</td>
+                        <td style="text-align: left;">{{ result.frequency }}</td>
+                        <td style="text-align: left;">{{ result.sampling_by }}</td>
+                        <td style="text-align: left;">{{ result.sampling_qty }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" (click)="view(result)">View</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="!loading && results?.length == 0">
+                        <td colspan="11" style="text-align: left;">No Records Found!</td>
+                    </tr>
+                    <tr *ngIf="loading">
+                        <td colspan="11" style="text-align: left;">Loading...</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="download()">DOWNLOAD</button>
+            <button class="btn btn-danger" routerLink="/qc/water/test">CLOSE</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Water AR Report</div>
+              <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView=false">CLOSE</button>
+              </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 20%;border:1px solid black;">Medicap Lot No:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['ar_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;border:1px solid black;">Sampling No.:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['sampling_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 20%;border:1px solid black;">Water Type:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['water_type'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Point No.:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['point_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Point Name:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['point_name'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Sampling Location:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['location'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Testing Type:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['testing_type'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Frequency:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ selectedPlan['frequency'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;border: 1px solid black;width: 20%;">Sampling Qty:</td>
+                        <td style="text-align: left;border: 1px solid black;">{{ sample_qty }}{{ selectedPlan['sampling_unit'] ? (' ' + selectedPlan['sampling_unit']) : '' }}</td>
+                    </tr>
+                </table>
+
+                <h3>Tests:</h3>
+                <table class="table table-border">
+                    <tr>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Test Type</th>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Test</th>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Subtest</th>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Description</th>
+                        <th style="background-color: rgb(14, 67, 112); color: white;">Result</th>
+                    </tr>
+                    <tr *ngFor="let test of selectedPlan['tests']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ test.test_type }}</td>
+                        <td>{{ test.test }}</td>
+                        <td>{{ test.subtest }}</td>
+                        <td>{{ test.description }}</td>
+                        <td>{{ test.result }}</td>
+                    </tr>
+                    <tr *ngIf="!selectedPlan['tests']?.length">
+                        <td colspan="6" style="text-align: left;">No Tests Found!</td>
+                    </tr>
+                </table>
+                <div>
+                    <label>Remark</label>
+                    <input type="text" name="remark" [ngModel]="selectedPlan['remark']" readonly tabindex="-1">
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="downloadReport()">DOWNLOAD</button>
+            <button type="button" class="btn btn-danger" (click)="isView=false">CLOSE</button>
+        </div>
+    </div>
+</div>

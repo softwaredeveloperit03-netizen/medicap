@@ -1,0 +1,162 @@
+<div class="vapp vapp--page" *ngIf="!isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">PO Status From Stores</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+      <div class="vapp__toolbar vapp__toolbar--filters">
+        <div class="vapp__filter-group" style="flex:1; max-width:420px;">
+          <label>Search</label>
+          <input type="text" class="vapp__search" style="max-width:none;" placeholder="Search by PO No, Vendor, Material Code, Material Name, Packaging Slip.." [(ngModel)]="searchTerm" name="storestatusSearch" aria-label="Search records">
+        </div>
+        <div class="vapp__toolbar-actions">
+          <button type="button" class="vapp__btn vapp__btn--outline" (click)="clearFilter()">Clear Filter</button>
+          <button type="button" class="vapp__btn vapp__btn--primary" (click)="downloadExcel()" [disabled]="!(results?.length)">Download Excel</button>
+        </div>
+      </div>
+      <div class="vapp__table-wrap">
+        <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading">
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column clrDgField="po_no">Po No</clr-dg-column>
+            <clr-dg-column clrDgField="entry_date">P.O Date</clr-dg-column>
+            <clr-dg-column clrDgField="vendor_name">Vendor Name</clr-dg-column>
+            <clr-dg-column clrDgField="challan_no">Packaging Slip</clr-dg-column>
+            <clr-dg-column clrDgField="challan_date">Packaging Slip Date</clr-dg-column>
+            <clr-dg-column clrDgField="material_code">Material Code</clr-dg-column>
+            <clr-dg-column clrDgField="material_name">Material Name</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let user of filteredResults; let i = index" [clrDgItem]="user">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.po_no || '—' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.po_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.vendor_name || '—' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.ch_no || '—' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.challan_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.material_code || '—' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.material_name || '—' }}</clr-dg-cell>
+              <clr-dg-cell><button type="button" class="vapp__btn vapp__btn--view" (click)="view(i)">PROCEED</button></clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-placeholder *ngIf="!loading && !(filteredResults?.length)">
+              No records found. Ensure packaging slip / store receiving is completed for PO materials.
+            </clr-dg-placeholder>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="vapp vapp--page" *ngIf="isView && selectedReport">
+    <div class="vapp vapp--card">
+      <header class="vapp__header card-header mef-panel-header">
+        <h1 class="vapp__title mef-panel-header__title">Receiving details From Stores</h1>
+        <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+      </header>
+      <div class="vapp__body">
+        <table class="storestatus__table table">
+          <tr>
+            <td class="storestatus__label-cell">Material Name:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['material_name'] }}</td>
+            <td class="storestatus__label-cell">Material Code:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['material_code'] }}</td>
+          </tr>
+          <tr *ngIf="selectedReport['vendor_type'] === 'Manufacturer'">
+            <td class="storestatus__label-cell">Manufacturer Name:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['manufacturer_name'] }}</td>
+            <td class="storestatus__label-cell">Supplier Name:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['manufacturer_name'] }}</td>
+          </tr>
+          <tr *ngIf="selectedReport['vendor_type'] === 'Supplier'">
+            <td class="storestatus__label-cell">Manufacturer Name:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['manufacturer_name'] }}</td>
+            <td class="storestatus__label-cell">Supplier Name:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['vendor_name'] }}</td>
+          </tr>
+          <tr>
+            <td class="storestatus__label-cell">Packaging Slip No:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['challan_no'] }}</td>
+            <td class="storestatus__label-cell">Packaging Slip Date:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['challan_date'] | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td class="storestatus__label-cell">PO No.:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['po_no'] }}</td>
+            <td class="storestatus__label-cell">PO Date:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['po_date'] | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td class="storestatus__label-cell">Material Type:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['material_type'] }}</td>
+            <td class="storestatus__label-cell">Material Subtype:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['material_subtype'] }}</td>
+          </tr>
+          <tr>
+            <td class="storestatus__label-cell">Material Grade:</td>
+            <td class="storestatus__value-cell">{{ selectedReport['gradeName'] }}</td>
+            <td class="storestatus__label-cell">PO Qty:</td>
+            <td class="storestatus__value-cell" colspan="3">{{ selectedReport['qty'] }} {{ selectedReport['unit'] }}</td>
+          </tr>
+        </table>
+
+        <h3 class="storestatus__section-title">Received Quantity Details:</h3>
+        <table class="storestatus__table table">
+          <tr>
+            <td class="storestatus__label-cell">Challan Qty:</td>
+            <td class="storestatus__value-cell"><b>{{ selectedReport.challan_qty }} {{ selectedReport?.unit }}</b></td>
+            <td class="storestatus__label-cell">Received Qty:</td>
+            <td class="storestatus__value-cell"><b>{{ selectedReport.received_qty }} {{ selectedReport?.unit }}</b></td>
+            <td class="storestatus__label-cell">No. of Containers:</td>
+            <td class="storestatus__value-cell"><b>{{ selectedReport.containers }}</b></td>
+            <td class="storestatus__label-cell">Receiving no:</td>
+            <td class="storestatus__value-cell"><b>{{ selectedReport.grn_no }}</b></td>
+          </tr>
+        </table>
+
+        <h3 class="storestatus__section-title">Labeling Details:</h3>
+        <div class="storestatus__table-wrap">
+          <table class="storestatus__table storestatus__table--labeling table">
+            <colgroup>
+              <col class="storestatus__col-sr">
+              <col class="storestatus__col-batch">
+              <col class="storestatus__col-pack">
+              <col class="storestatus__col-qty">
+              <col class="storestatus__col-containers">
+              <col class="storestatus__col-mfg">
+              <col class="storestatus__col-exp">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>{{'common.table.srNo' | translate}}</th>
+                <th>Medicap Lot No</th>
+                <th>Pack Size</th>
+                <th>Qty</th>
+                <th>No Of Containers</th>
+                <th>Mfg Date</th>
+                <th>Exp Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let list of batches; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ list.batch_no }}</td>
+                <td>{{ list.pack_size }}</td>
+                <td>{{ list.qty_received }}</td>
+                <td>{{ list.total_containers }}</td>
+                <td>{{ list.mfg_date | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ list.exp_date | date: 'dd-MM-yyyy' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,707 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Completed Batches For Checking</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" routerLink="/fproduction">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                <tr>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Sr.</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Plan No.</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >BFR No.</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Dosage Form</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Product Name</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Medicap Lot No</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Batch Size</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Prepared By</th>
+                     <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >{{'common.status' | translate}}</th>
+                    <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >View</th>
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td style="font-weight: bolder;text-align: left;">{{ i + 1 }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.plan_no }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.bfr_no }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.dosage_form }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.product_name }} {{ result.grade }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.batch_number }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.batch_size }}</td>
+                    <td style="font-weight: bolder;text-align: left;">{{ result.palnned_by | date: 'dd-MM-yyyy' }}</td>
+                     <td style="font-weight: bolder;text-align: left;" *ngIf="result.tr_to_packing_dept_by==' '">{{'common.pending' | translate}}</td>
+                    <td style="font-weight: bolder;text-align: left;" *ngIf="result.tr_to_packing_dept_by!=' '">TR To Packing Dept</td>
+                    <td style="font-weight: bolder;text-align: left;">
+                        <button *ngIf="result.tr_to_packing_dept_by==' '" class="btn btn-sm btn-info"
+                            (click)="getBmrCheckList(result.product_code,i)">PROCEED</button>
+                        <button class="btn btn-sm btn-info" *ngIf="result.tr_to_packing_dept_by!=' '"
+                            (click)="getBmrCheckList(result.product_code,i)">{{'common.view' | translate}}</button>
+                    </td>
+                </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="10">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<div class="card" *ngIf="isView" style="border: 2px solid #004A70;">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-2" style="color: aliceblue;margin-top: -2px;text-align: center;">Medicap Lot No: {{
+                selectedResult['batch_number'] }}</div>
+            <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: center;">Batch Manufacturing
+                Record</div>
+            <div class="clr-col-lg-2" style="color: aliceblue;margin-top: -2px;text-align: center;">Batch Size: {{
+                selectedResult['batch_size'] }} {{ selectedResult['unit'] }}</div>
+            <div class="clr-col-lg-2" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border" style="margin: 0px;">
+                <tr>
+                    <td style="text-align: left;background: gainsboro;color: black">Product Name:</td>
+                    <td style="text-align: left;background: gainsboro;color: black" colspan="3">{{
+                        selectedResult['product_name'] }} {{ selectedResult['grade'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">BFR No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['bfr_no'] }}</td>
+                    <td style="text-align: left;">For Client:</td>
+                    <td style="text-align: left;">{{ selectedResult['client_name'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">PLAN No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+                    <td style="text-align: left;">Product Code:</td>
+                    <td style="text-align: left;">{{ selectedResult['product_code'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">No. of Lots:</td>
+                    <td style="text-align: left;">{{ selectedResult['no_of_lots'] }}</td>
+                
+                </tr>
+            </table>
+            <br>
+            <div class="clr-row" style="border: 2px solid darkorchid;margin-left: 2px;margin-right: 2px;">
+               
+                <div class="clr-col-lg-10 clr-col-md-10" style="padding: 0px;border-right: 2px solid black;">
+                    <!-- Page 1: BMR Approval Page -->
+                    <div class="card" style="margin:0px;" *ngIf="selectedPage == 0">
+                        <div class="card-block" style="padding-right: 0px;">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">BMR
+                                Approval Page:</div>
+                            <div class="card-text">
+                                <table class="table table-border">
+                                    <tr>
+                                        <td style="text-align: left;">PLAN No.:</td>
+                                        <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+                                        <td style="text-align: left;">BMR No.:</td>
+                                        <td style="text-align: left;">{{ selectedResult['bmr_no'] }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left;">Product Code:</td>
+                                        <td style="text-align: left;">{{ selectedResult['product_code'] }}</td>
+                                        <td style="text-align: left;">Product Name:</td>
+                                        <td style="text-align: left;">{{ selectedResult['product_name'] }} {{
+                                            selectedResult['grade'] }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: left;">Medicap Lot No:</td>
+                                        <td style="text-align: left;">{{ selectedResult['batch_no'] }}</td>
+                                        <td style="text-align: left;">Batch Size:</td>
+                                        <td style="text-align: left;">{{ selectedResult['batch_size'] }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+ 
+              
+
+                    <!-- ///Page 4 BMR Checklist///// -->
+                    <div class="card" *ngIf="selectedPage == 3">
+                        <div class="card-block" *ngFor="let lot of bmr_lots; let j = index">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">BMR
+                                Checklist for Lot No # {{lot.lot_no}}</div>
+                            <div class="card-text">
+                                <form #abbrForm="ngForm">
+                                    <div style="overflow-x: auto;">
+                                        <table class="table table-border">
+                                            <tr>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.table.srNo' | translate}}</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Process</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Stage</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Step</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">IPQC Test</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Process Data</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Yeild Entry</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Stage Status</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">IPQC Status</th>
+                                                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Result</th>
+                                            </tr>
+
+                                            <tr *ngFor="let instruction of lot['lots']; let i = index">
+                                                <td>{{ i + 1 }}.</td>
+                                                <td style="font-weight: bolder;text-align: left;">{{ instruction.process_type }}</td>
+                                                <td style="font-weight: bolder;text-align: left;">{{ instruction.stage_name }}</td>
+                                                <td style="font-weight: bolder;text-align: left;">{{ instruction.stage }}</td>
+                                                <td style="text-align: center;font-weight: bolder;" *ngIf="instruction.ipqc_testing =='No'">N/A
+                                                </td>
+                                                <td style="font-weight: bolder;text-align: left;" *ngIf="instruction.ipqc_testing =='Yes'">
+                                                    <button class="btn btn-sm btn"
+                                                        *ngIf="instruction.remarks_entry_by?.length==0"
+                                                        style="background-color:blue;color:white"
+                                                        (click)="showIqpcTest(i,j)">Sampling Inti.</button>
+                                                    <button class="btn btn-sm btn" style="background-color:green;color:white" disabled *ngIf="instruction.remarks_entry_by?.length > 0">Sent</button>
+                                                </td>
+                                                <td style="font-weight: bolder;text-align: left;">
+                                                    <button class="btn btn-sm btn"
+                                                        [disabled]="instruction.process_entry_by?.length>0"
+                                                        style="background-color:green;color:white"
+                                                        (click)="showProcessForm(i,j)">Enter Details</button>
+                                                </td>
+                                                <td style="text-align: center;font-weight: bolder;" *ngIf="instruction.yieldRequired =='No'">NA</td>
+                                                <td style="font-weight: bolder;text-align: left;" *ngIf="instruction.yieldRequired =='Yes'">
+                                                    <button class="btn btn-sm btn"
+                                                        [disabled]="instruction.yeild_entry_by?.length>0"
+                                                        style="background-color:maroon;color:white"
+                                                        (click)="showYeildForm(i,j)">Enter Yield</button>
+                                                </td>
+                                                <td  style="font-weight: bolder;text-align: left;">{{ instruction.stage_status || '-'}}</td>
+                                                <td  style="font-weight: bolder;text-align: left;">{{ instruction.ipqc_status || '-'}}</td>
+                                                <td  style="font-weight: bolder;text-align: left;">{{ instruction.test_result || '-'}}</td>
+
+                                            </tr>
+                                            <tr>
+                                                <td *ngIf="bmr_checllist?.length == 0">{{'common.noRecords' | translate}}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+
+                        <div class="card-block">
+                            <div class="card-title"
+                                style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">BMR
+                                Checklist (Common Lots):</div>
+                            <div class="card-text">
+                                <form #abbrForm="ngForm">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th style="background-color: #004a70; color: white;">Sr.</th>
+                                            <th style="background-color: #004a70; color: white;">Process</th>
+                                            <th style="background-color: #004a70; color: white;">Stage</th>
+                                            <th style="background-color: #004a70; color: white;">Step</th>
+                                            <th style="background-color: #004a70; color: white;">IPQC Test</th>
+                                            <th style="background-color: #004a70; color: white;">Process Data</th>
+                                            <th style="background-color: #004a70; color: white;">Yeild Entry</th>
+                                            <th style="background-color: #004a70; color: white;">Stage Status</th>
+                                            <th style="background-color: #004a70; color: white;">IPQC Status</th>
+                                        </tr>
+
+                                        <tr *ngFor="let instruction of bmr_common_lots; let i = index">
+                                            <td>{{ i + 1 }}.</td>
+                                            <td style="text-align: left;">{{ instruction.process_type }}</td>
+                                            <td style="text-align: left;">{{ instruction.stage_name }}</td>
+                                            <td style="text-align: left;">{{ instruction.stage }}</td>
+                                            <td style="text-align: left;" *ngIf="instruction.ipqc_testing =='No'">N/A
+                                            </td>
+                                            <td style="text-align: left;" *ngIf="instruction.ipqc_testing =='Yes'">
+                                                <button class="btn btn-sm btn"
+                                                    [disabled]="instruction.remarks_entry_by.length>0"
+                                                    style="background-color:blue;color:white"
+                                                    (click)="showIqpcTest(i)">Send TI</button>
+                                            </td>
+                                            <td style="text-align: left;">
+                                                <button class="btn btn-sm btn"
+                                                    [disabled]="instruction.process_entry_by.length>0"
+                                                    style="background-color:green;color:white"
+                                                    (click)="showProcessForm(i)">Enter Details</button>
+                                            </td>
+                                            <td style="text-align: left;">
+                                                <button class="btn btn-sm btn"
+                                                    [disabled]="instruction.yeild_entry_by.length>0"
+                                                    style="background-color:maroon;color:white"
+                                                    (click)="showYeildForm(i)">Enter Yield</button>
+                                            </td>
+                                            <td>{{ instruction.stage_status }}</td>
+                                            <td>{{ instruction.ipqc_status }}</td>
+
+                                        </tr>
+                                        <tr>
+                                            <td *ngIf="bmr_checllist?.length == 0">{{'common.noRecords' | translate}}</td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card" style="margin:0px;" *ngIf="selectedPage == 3">
+                            <div class="card-block">
+                                <form #bmrForm="ngForm">
+                                    <div class="clr-row">
+
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Batch Yield Min:</strong></label>
+                                            <input [(ngModel)]="batch_yeild_min" name="batch_yeild_min" type="number"
+                                                readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Batch Yield Max:</strong></label>
+                                            <input [(ngModel)]="batch_yeild_max" name="batch_yeild_max" type="number"
+                                                readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Actual YIELD QTY.:</strong></label>
+                                            <input [(ngModel)]="actual_yeild" name="actual_yeild" type="number" readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Yield Percent:</strong></label>
+                                            <input [(ngModel)]="yeild_percentage" name="yeild_percent" type="number"
+                                                readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Batch Commensment Date:</strong></label>
+                                            <input [(ngModel)]="batch_commence_date" name="bath_commencent_date" 
+                                            type="date" readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Batch Completed Date:</strong></label>
+                                            <input [(ngModel)]="batch_complete_date"  
+                                                name="bath_complete_date" type="date" readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Totoal Days:</strong></label>
+                                            <input [(ngModel)]="no_of_days" name="total_days" type="number" readonly>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Upload BMR : <span style="color: red;">*</span></strong></label>
+                                            <input type="file" name="documentPath" ngModel (change)="onFileChanged($event)" accept="application/pdf" required>
+                                        </div>
+                                        <div class="clr-col-md-3 clr-col-12">
+                                            <label><strong>Remark : <span style="color: red;">*</span></strong></label>
+                                            <input type="text" name="remark" [(ngModel)]="remark" required>
+                                        </div>
+
+                                    </div>
+                                </form>
+
+                                <br><br>
+
+                                <button class="btn btn-success"   (click)="transferStock(bmrForm)">Approve & Tranfer To Packing</button>
+                                <button class="btn btn-sm btn-danger" routerLink="/fproduction/webmr">{{'common.close' | translate}}</button>
+
+                             </div>
+                        </div>
+                    </div>
+
+               
+
+                    <div *ngFor="let stage of selectedResult['pending_stages']">
+                        <div class="card" style="margin:0px;" *ngIf="selectedPage == stage['page_no']">
+                            <div class="card-block" style="padding-right: 0px;">
+                                <div class="card-title"
+                                    style="border-bottom: 1px solid black;margin-bottom: 0px;padding-bottom: 3px;">{{
+                                    stage['stage'] }}:</div>
+                                <div class="card-text" style="height: 55vh; overflow-y: scroll;">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <td style="text-align: left;">Expected Start Date</td>
+                                            <td style="text-align: left;">: {{ stage['expected_start_date'] | date:
+                                                'dd-MM-yyyy' }}</td>
+                                            <td style="text-align: left;">Expected Complete Date</td>
+                                            <td style="text-align: left;">: {{ stage['expected_complete_date'] | date:
+                                                'dd-MM-yyyy' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="text-align: left;">Actual Start Date</td>
+                                            <td style="text-align: left;">: {{ stage['start_date'] | date: 'dd-MM-yyyy'
+                                                }}</td>
+                                            <td style="text-align: left;">Actual Complete Date</td>
+                                            <td style="text-align: left;">: {{ stage['complete_date'] | date:
+                                                'dd-MM-yyyy' }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="clr-col-lg-2 clr-col-md-2" style="padding: 0px;background: antiquewhite;">
+                    <table class="table table-border" style="margin: 0px;">
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isEquipmentUsage = true">Equipment Usages Log</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isTechnicalInfo = true">Inprocess Report</td>
+                        </tr>
+                        <tr>
+                            <td style="cursor: pointer;" class="clickable" (click)="isYieldStatement = true">Yield Statement</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer" style="background-color: #004A70; color: white;">
+         
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isYieldStatement" clrModalSize="xl">
+    <h3 class="modal-title">Yield Statement</h3>
+    <div class="modal-body">
+
+           
+    <div style="overflow-x: auto;">
+        <table class="table table-border">
+                    <tr>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Stage</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Step</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Ti No</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Input Qty.</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Output Qty.</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Expected Yield</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Actual Yield</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Yeild Diff.</th>
+                         <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Yeild Check By</th>
+                         <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Yeild Check On</th>
+                     </tr>
+                    <tr *ngFor="let technical of yieldsData;let i=index">
+                        <td style="font-weight: bolder;text-align: left;">{{technical.stage_name}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{technical.step}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.ti_no  }}</td>
+                         <td style="font-weight: bolder;text-align: left;">{{ technical.inputQty}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.outputQty }} </td>
+                         <td style="font-weight: bolder;text-align: left;">{{ technical.expected_yield }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.stage_yield }}</td>
+                        <td style="font-weight: bolder;text-align: left;"> 
+                            <span *ngIf="technical.yieldDiffrence < 0" style="color: red;"><b>{{ technical.yieldDiffrence }}</b></span>
+                            <span *ngIf="technical.yieldDiffrence >= 0" style="color: green;"><b>{{ technical.yieldDiffrence }}</b></span>
+                        </td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.yeild_entry_by }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.yeild_entry_date | date: 'dd-MM-yyyy'  }}</td>
+                    </tr>
+        </table>
+    </div>
+
+ 
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isYieldStatement = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+ 
+
+<clr-modal [(clrModalOpen)]="isTechnicalInfo" clrModalSize="xl">
+    <h3 class="modal-title">Inprocess Report</h3>
+    <div class="modal-body">
+   
+    <div style="overflow-x: auto;">
+        <table class="table table-border">
+                    <tr>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Stage</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Step</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Tis No</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.date' | translate}}</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Time</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Sample Qty</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Medicap lot no</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Date of Analysis</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Test</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Specification</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Result</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Observation</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Analysis By</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.status' | translate}}</th>
+                    </tr>
+                    <tr *ngFor="let technical of ti_sheet;let i=index">
+                        <td style="font-weight: bolder;text-align: left;">{{technical.stage_name}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{technical.step}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.ti_no  }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.remarks_entry_date | date: 'dd-MM-yyyy'  }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.remarks_entry_date | date: 'HH:mm'}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.sampleQty }} {{ technical.unit }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.ar_no || '-'}}</td>    
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.end_time  || '-' }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.test || '-'}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.limits || '-'}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.result|| '-' }}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.observation || '-'}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.perform_by || '-'}}</td>
+                        <td style="font-weight: bolder;text-align: left;">{{ technical.test_result_status || '-'}}</td>
+                    </tr>
+        </table>
+    </div>
+
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isTechnicalInfo = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+ 
+
+<clr-modal [(clrModalOpen)]="isEquipmentUsage" clrModalSize="xl">
+    <h3 class="modal-title">Equipment Usage Report</h3>
+    <div class="modal-body">
+        <table class="table table-border">
+            <tr>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">{{'common.table.srNo' | translate}}</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Stage</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Equipment Name</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Equipment Code</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Operator Name</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Operator Code</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Start Time</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">End time</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Rec Time</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Rec Date</th>
+                <th style="background-color: aquamarine;font-weight: bolder;text-align: left;">Usage By</th>
+            </tr>
+            <tr *ngFor="let res of eq_usage; let i = index">
+                <td style="font-weight: bolder;text-align: left;">{{i+1}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.stage_name}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.equipment_name}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.equipment_code}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.firstname}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.operator_code}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.start_time}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.end_time}}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.recording_date | date: 'dd-MM-yyyy' }}</td>
+                <td style="font-weight: bolder;text-align: left;" >{{res.recording_time }}</td>
+                <td style="font-weight: bolder;text-align: left;">{{res.process_entry_by}}</td>
+            </tr>
+            <tr>
+                <td *ngIf="eq_usage?.length == 0">Records Not Found !!!</td>
+            </tr>
+        </table>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isEquipmentUsage = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+  
+<div class="modal" *ngIf="show_Iqpc_Test && selected_ipqc!=null">
+    <div class="modal-dialog" role="dialog" aria-hidden="true">
+        <div class="modal-content"  style="background-color: rgb(201, 201, 201)">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" type="button">
+                    <clr-icon aria-hidden="true" shape="close"></clr-icon>
+                </button>
+                <h3 class="modal-title">IQPC Test Details: {{ selected_ipqc['stage_name'] }}</h3>
+            </div>
+            <div class="modal-body">
+                <form #marketForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-4">
+                            <label><strong>Test Name :</strong></label>
+                            <input type="text" name="test_name" [(ngModel)]="selected_ipqc['test']" readonly>
+                        </div>
+                        <div class="clr-col-lg-4" *ngIf="selected_ipqc['limit_type']?.length>0">
+                            <label><strong>Limit Type :</strong></label>
+                            <input type="text" name="limit_type" [(ngModel)]="selected_ipqc['limit_type']" readonly>
+                        </div>
+                        <div class="clr-col-lg-4" *ngIf="selected_ipqc['description']?.length>0">
+                            <label><strong>Description:</strong></label>
+                            <input type="text" name="description" [(ngModel)]="selected_ipqc['description']" readonly>
+                        </div>
+                        <div class="clr-col-lg-3" *ngIf="selected_ipqc['lower_limit']?.length>0">
+                            <label><strong>Lower Limit :</strong></label>
+                            <input type="text" name="lower_limit" [(ngModel)]="selected_ipqc['lower_limit']" readonly>
+                        </div>
+                        <div class="clr-col-lg-3" *ngIf="selected_ipqc['upper_limit']?.length>0">
+                            <label><strong>Upper Limit :</strong></label>
+                            <input type="text" name="upper_limit" [(ngModel)]="selected_ipqc['upper_limit']" readonly>
+                        </div>
+                        <div class="clr-col-lg-4">
+                            <label><strong>Range : </strong></label>
+                            <input type="text" name="range" [(ngModel)]="selected_ipqc['limits']" readonly>
+                        </div>
+                        <div class="clr-col-lg-3" *ngIf="samplingType == 'Sampling By Production'">
+                            <label>Sample Qty : </label>
+                            <input type="text" name="sample_qty" ngModel required>
+                        </div>
+                        <div class="clr-col-lg-3"  *ngIf="samplingType == 'Sampling By Production'">
+                            <label>Unit : </label>
+                            <select name="unit" ngModel required>
+                                <option>gm</option>
+                                <option>ml</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-12">
+                            <label><strong>Remarks :</strong></label>
+                            <textarea name="remarks" ngModel rows="2" required></textarea>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button *ngIf="samplingType != 'Sampling By Production'" type="button" class="btn btn-primary" (click)=" saveIqpcTestData(marketForm)">{{'common.save' | translate}}</button>
+                <button *ngIf="samplingType == 'Sampling By Production'" type="button" class="btn btn-success" (click)=" saveIqpcTestData1(marketForm)">{{'common.save' | translate}}</button>
+                <button type="button" class="btn btn-danger" (click)="show_Iqpc_Test = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal" *ngIf="isNewshowProcessForm && selected_ipqc!=null">
+    <div class="modal-dialog" role="dialog" aria-hidden="true">
+        <div class="modal-content" style="background-color: rgb(149, 223, 149);">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" type="button">
+                    <clr-icon aria-hidden="true" shape="close"></clr-icon>
+                </button>
+                <h3 class="modal-title">Proccess Data For Process Type : {{ selected_ipqc['process_type'] }}</h3>
+            </div>
+            <div class="modal-body">
+                <form #procForm="ngForm">
+                    <div class="clr-row">
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Equipment Used:</strong></label>
+                            <select name="equipment_code" [(ngModel)]="equipment_code"
+                                (change)="setEquipment(equipment_code)" required>
+                                <option></option>
+                                <option *ngFor="let equipment of equip" [value]="equipment.equipment_code">
+                                    {{equipment.equipment_name }} </option>
+                            </select>
+
+                        </div>
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Equipment ID:</strong></label>
+                            <input [(ngModel)]="equipment_id" name="equipment_id" type="text" readonly>
+                        </div>
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Operator Name</strong></label>
+                            <select name="operator_code" [(ngModel)]="operator_code" required>
+                                <option></option>
+                                <option *ngFor="let operator of operators" [value]="operator.emp_id">
+                                    {{operator.firstname }} {{operator.middlename }} {{operator.lastname }} </option>
+                            </select>
+                        </div>
+                        </div>
+                        <div class="clr-row">
+                            <div class="clr-col-md-4 clr-col-12">
+                                <br>
+                                 <button class="btn btn-primary" (click)="getCurrentTime('from_time', 'area_clean')">Start Time</button>
+                  
+                             </div>
+                             <div class="clr-col-md-4 clr-col-12" >
+                                <label><strong>Start Time:</strong></label>
+                                <input type="time" style="margin: 0px;height: 33px;width: auto;" name="start_time"
+                                [(ngModel)]="start_time">
+                            </div>
+                             
+
+                        </div>
+                        <div class="clr-row">
+                            <div class="clr-col-md-4 clr-col-12">
+                                <br>
+                                <button class="btn btn-danger" (click)="getCurrentTime('to_time', 'area_clean')">End time</button>
+                  
+                             </div>
+                             <div class="clr-col-md-4 clr-col-12">
+                                <label><strong>End Time:</strong></label>
+                                <input type="time" style="margin: 0px;height: 33px;width: auto;" name="end_time"
+                                [(ngModel)]="end_time">
+                             </div>
+
+
+                        </div>
+                        <div class="clr-row">
+                            <div class="clr-col-md-4 clr-col-12">
+                                <label><strong>Recording Date</strong></label>
+                                <input type="date" style="margin: 0px;height: 33px;width: auto;" name="recording_date" [(ngModel)]="recording_date"
+                              >
+                             </div>
+                             <div class="clr-col-md-4 clr-col-12">
+                                <label><strong>Recording Time:</strong></label>
+                                <input type="time" style="margin: 0px;height: 33px;width: auto;" name="recording_time" [(ngModel)]="recording_time"
+                               >
+                             </div>
+
+
+                        </div>
+                       
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" (click)=" saveshowProcess(procForm)">{{'common.save' | translate}}</button>
+                <button type="button" class="btn btn-danger" (click)="isNewshowProcessForm = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" *ngIf="isShowYeild && selected_ipqc!=null">
+    <div class="modal-dialog" role="dialog" aria-hidden="true">
+        <div class="modal-content" style="background-color: rgb(226, 178, 216);">
+            <div class="modal-header">
+                <button aria-label="Close" class="close" type="button">
+                    <clr-icon aria-hidden="true" shape="close"></clr-icon>
+                </button>
+                <h3 class="modal-title">Proccess Data For Process Type : {{ selected_ipqc['process_type'] }}</h3>
+            </div>
+            <div class="modal-body" >
+                <form #yeildForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Expected Yeild :</strong></label>
+                            <input  name="expected_yield" type="text" [(ngModel)]="selected_ipqc['exp_yeild_percent']"  readonly>
+                        </div>
+ 
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Input Qty. : <span style="color: red;">*</span></strong></label>
+                            <input  name="inputQty" type="text" oninput="this.value = this.value.replace(/[^0-9]/g, '');" [(ngModel)]="inputQty" (ngModelChange)="yieldPercent()" required>
+                        </div>
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Output Qty. : <span style="color: red;">*</span></strong></label>
+                            <input  name="outputQty" type="text" oninput="this.value = this.value.replace(/[^0-9]/g, '');" [(ngModel)]="outputQty" (ngModelChange)="yieldPercent()" required>
+                        </div>
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Actual  Yield :</strong></label>
+                            <input  name="stage_yield" type="number" [(ngModel)]="stage_yield" readonly>
+                        </div>
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong>Unit :</strong></label>
+                            <input  name="stage_yield_unit" type="text" [(ngModel)]="selected_ipqc['yeild_unit']" readonly>
+                        </div>
+
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong> Yield Diffrence :</strong></label>
+                            <input *ngIf="yieldDiffrence >= 0"  style="color: green" type="text" name="yieldDiffrence" readonly [(ngModel)]="yieldDiffrence" />
+                            <input *ngIf="yieldDiffrence < 0"  style="color: red;" type="text" name="yieldDiffrence" readonly [(ngModel)]="yieldDiffrence" />
+                        </div>
+                        <div class="clr-col-md-4 clr-col-12">
+                            <label><strong> Yield %</strong></label>
+                            <input type="text" name="stage_yield_percent" readonly [(ngModel)]="stage_yield" />
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" (click)="saveYeildData(yeildForm)">{{'common.save' | translate}}</button>
+                <button type="button" class="btn btn-danger" (click)="isShowYeild = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+</div>

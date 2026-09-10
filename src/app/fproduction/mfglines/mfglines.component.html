@@ -1,0 +1,2961 @@
+<div class="card">
+  <div class="card-header">
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <h3>Manufacturing Lines</h3>
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;">
+        <button class="btn btn-sm btn-primary" 
+                (click)="openBookingView()" 
+                *ngIf="!selectedLine"
+                style="margin-right: 10px;">
+          <i class="fas fa-calendar-alt"></i> Line Booking
+        </button>
+        <button class="btn btn-sm btn-danger" (click)="closeLineDetails()" *ngIf="selectedLine; else closeButton">
+          <i class="fas fa-times"></i> CLOSE
+        </button>
+        
+        <ng-template #closeButton>
+          <button class="btn btn-sm btn-danger" routerLink="/fproduction">
+            <i class="fas fa-times"></i> CLOSE
+          </button>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div *ngIf="loading" style="text-align: center; padding: 20px;">
+      <span class="spinner spinner-inline"></span>
+      <span>Loading lines...</span>
+    </div>
+
+    <!-- Booking View (from Home Screen) -->
+    <div *ngIf="!loading && !selectedLine && showBookingView" class="booking-view-container">
+      <div style="margin-bottom: 20px;">
+        <button class="btn btn-sm btn-secondary" (click)="closeBookingView()">
+          <i class="fas fa-arrow-left"></i> Back to Lines
+        </button>
+        <h3 style="display: inline-block; margin-left: 15px;">Line Booking Management</h3>
+      </div>
+
+      <!-- Compact Detailed Booking View -->
+      <div style="margin-top: 15px;">
+        <!-- Available Work Orders - Compact Table -->
+        <div class="card" style="margin-bottom: 15px;">
+          <div class="card-header" style="padding: 8px 15px;">
+            <h5 style="margin: 0;">📋 Available Work Orders</h5>
+          </div>
+          <div class="card-block" style="padding: 10px;">
+            <div *ngIf="bookingLoading" class="text-center" style="padding: 20px;">
+              <span class="spinner spinner-inline"></span> Loading...
+            </div>
+            <div class="table-responsive" *ngIf="!bookingLoading">
+              <table class="table table-sm table-bordered table-hover" style="margin: 0; font-size: 13px;">
+                <thead style="background-color: #f8f9fa;">
+                  <tr>
+                    <th style="padding: 8px;">WO No</th>
+                    <th style="padding: 8px;">Product Code</th>
+                    <th style="padding: 8px;">Product Name</th>
+                    <th style="padding: 8px;">Batch Size</th>
+                    <th style="padding: 8px;">Status</th>
+                    <th style="padding: 8px;">Booked To</th>
+                    <th style="padding: 8px; width: 100px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let wo of availableWorkOrders" style="cursor: pointer;" (click)="openBookingModal(wo)">
+                    <td style="padding: 8px;"><strong>{{ wo.workorder_no }}</strong></td>
+                    <td style="padding: 8px;">{{ wo.product_code }}</td>
+                    <td style="padding: 8px;">{{ wo.product_name }}</td>
+                    <td style="padding: 8px;">{{ wo.batch_size }}</td>
+                    <td style="padding: 8px;">
+                      <span [class]="'badge ' + getStatusClass(wo.status)">{{ wo.status }}</span>
+                    </td>
+                    <td style="padding: 8px;">
+                      <span *ngIf="wo.bookedLines && wo.bookedLines.length > 0">
+                        <span *ngFor="let line of wo.bookedLines; let last = last">
+                          {{ line.line_no }}<span *ngIf="!last">, </span>
+                        </span>
+                      </span>
+                      <span *ngIf="!wo.bookedLines || wo.bookedLines.length === 0" class="text-muted">-</span>
+                    </td>
+                    <td style="padding: 8px;" (click)="$event.stopPropagation()">
+                      <button class="btn btn-xs btn-primary" 
+                              (click)="openBookingModal(wo)"
+                              [disabled]="hasActiveBooking(wo)"
+                              [title]="hasActiveBooking(wo) ? 'Work order already booked' : 'Book this work order'">
+                        <i class="fas fa-calendar-plus"></i> Book
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="availableWorkOrders.length === 0">
+                    <td colspan="7" class="text-center text-muted" style="padding: 20px;">No work orders available</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Bookings - Compact Detailed Table -->
+        <div class="card">
+          <div class="card-header" style="padding: 8px 15px;">
+            <h5 style="margin: 0;">📅 All Line Bookings</h5>
+          </div>
+          <div class="card-block" style="padding: 10px;">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered table-hover" style="margin: 0; font-size: 13px;">
+                <thead style="background-color: #f8f9fa;">
+                  <tr>
+                    <th style="padding: 8px;">Line</th>
+                    <th style="padding: 8px;">WO No</th>
+                    <th style="padding: 8px;">Product</th>
+                    <th style="padding: 8px;">Tentative Start</th>
+                    <th style="padding: 8px;">Tentative End</th>
+                    <th style="padding: 8px;">Actual Start</th>
+                    <th style="padding: 8px;">Actual End</th>
+                    <th style="padding: 8px;">Status</th>
+                    <th style="padding: 8px; width: 80px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let booking of allLineBookings">
+                    <td style="padding: 8px;"><strong>{{ booking.line_no }}</strong></td>
+                    <td style="padding: 8px;"><strong>{{ booking.workorder_no }}</strong></td>
+                    <td style="padding: 8px;">{{ booking.product_name }}</td>
+                    <td style="padding: 8px;">
+                      {{ booking.booking_start_date }}<br>
+                      <small class="text-muted">{{ booking.booking_start_time }}</small>
+                    </td>
+                    <td style="padding: 8px;">
+                      {{ booking.booking_end_date }}<br>
+                      <small class="text-muted">{{ booking.booking_end_time }}</small>
+                    </td>
+                    <td style="padding: 8px;">
+                      <span *ngIf="booking.actual_start_date">
+                        {{ booking.actual_start_date }}<br>
+                        <small class="text-muted">{{ booking.actual_start_time || '' }}</small>
+                      </span>
+                      <span *ngIf="!booking.actual_start_date" class="text-muted">-</span>
+                    </td>
+                    <td style="padding: 8px;">
+                      <span *ngIf="booking.actual_end_date">
+                        {{ booking.actual_end_date }}<br>
+                        <small class="text-muted">{{ booking.actual_end_time || '' }}</small>
+                      </span>
+                      <span *ngIf="!booking.actual_end_date" class="text-muted">-</span>
+                    </td>
+                    <td style="padding: 8px;">
+                      <span [class]="'badge ' + getBookingStatusClass(booking.status)">
+                        {{ booking.status }}
+                      </span>
+                    </td>
+                    <td style="padding: 8px;">
+                      <button class="btn btn-xs btn-info" (click)="selectLineForBooking(booking)" title="View line">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="allLineBookings.length === 0">
+                    <td colspan="9" class="text-center text-muted" style="padding: 20px;">No bookings found</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lines Card View -->
+    <div *ngIf="!loading && !selectedLine && !showBookingView" class="lines-container">
+      <div class="lines-grid">
+        <div 
+          *ngFor="let line of lines" 
+          class="line-card"
+          (click)="selectLine(line)">
+          <div class="line-card-header">
+            <h4>{{ line.line_name || line.line_no }}</h4>
+            <span class="line-badge">{{ line.line_no }}</span>
+          </div>
+          <div class="line-card-body">
+            <div class="line-info-item">
+              <i class="fas fa-industry"></i>
+              <span><strong>Room Name:</strong> {{ line.Section || '-' }}</span>
+            </div>
+            <div class="line-info-item">
+              <i class="fas fa-tag"></i>
+              <span><strong>Type:</strong> {{ line.lineType || '-' }}</span>
+            </div>
+             
+            <div class="line-info-item" *ngIf="line.equipmentList && line.equipmentList.length > 0">
+              <i class="fas fa-cogs"></i>
+              <span><strong>Equipment:</strong> {{ line.equipmentList.length }} items</span>
+            </div>
+            <div class="line-info-item">
+              <i class="fas fa-chart-line"></i>
+              <span><strong>Capacity:</strong> {{ line.MfgLineMinCapacity || '-' }} - {{ line.MfgLineMaxCapacity || '-' }}</span>
+            </div>
+            <div class="line-info-item" *ngIf="line.currentBooking">
+              <i class="fas fa-calendar-alt"></i>
+              <span><strong>Booked Period:</strong><br>
+                <div style="font-size: 0.9em; margin-top: 3px;">
+                  <div *ngIf="line.currentBooking.booking_start_date || line.currentBooking.actual_start_date">
+                    <strong>Tentative Start:</strong> 
+                    <span *ngIf="line.currentBooking.booking_start_date">
+                      {{ line.currentBooking.booking_start_date }} {{ line.currentBooking.booking_start_time || '' }}
+                    </span>
+                    <span *ngIf="!line.currentBooking.booking_start_date" class="text-muted">Not set</span>
+                    <br>
+                    <strong>Actual Start:</strong> 
+                    <span *ngIf="line.currentBooking.actual_start_date">
+                      {{ line.currentBooking.actual_start_date }} {{ line.currentBooking.actual_start_time || '' }}
+                    </span>
+                    <span *ngIf="!line.currentBooking.actual_start_date" class="text-muted">Not started</span>
+                  </div>
+                  <div *ngIf="line.currentBooking.booking_end_date || line.currentBooking.actual_end_date" style="margin-top: 5px;">
+                    <strong>Tentative End:</strong> 
+                    <span *ngIf="line.currentBooking.booking_end_date">
+                      {{ line.currentBooking.booking_end_date }} {{ line.currentBooking.booking_end_time || '' }}
+                    </span>
+                    <span *ngIf="!line.currentBooking.booking_end_date" class="text-muted">Not set</span>
+                    <br>
+                    <strong>Actual End:</strong> 
+                    <span *ngIf="line.currentBooking.actual_end_date">
+                      {{ line.currentBooking.actual_end_date }} {{ line.currentBooking.actual_end_time || '' }}
+                    </span>
+                    <span *ngIf="!line.currentBooking.actual_end_date" class="text-muted">Not completed</span>
+                  </div>
+                  <div *ngIf="line.currentBooking.booking_start_date && line.currentBooking.booking_end_date" style="margin-top: 5px; padding-top: 5px; border-top: 1px solid #ddd;">
+                    <strong style="color: #007bff;">Booked for:</strong> 
+                    <span style="color: #007bff; font-weight: bold;">{{ calculateBookedHours(line.currentBooking) }} hrs</span>
+                  </div>
+                </div>
+              </span>
+            </div>
+            <div class="line-info-item" *ngIf="!line.currentBooking">
+              <i class="fas fa-check-circle" style="color: green;"></i>
+              <span style="color: green;"><strong>Status:</strong> Available</span>
+            </div>
+          </div>
+          <div class="line-card-footer">
+            <span class="click-hint">Click to view details</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="lines.length === 0" class="no-lines-message">
+        <i class="fas fa-inbox"></i>
+        <p>No lines found. Create lines from Line Master.</p>
+      </div>
+    </div>
+
+    <!-- Line Details View with Dynamic Tabs -->
+    <div *ngIf="selectedLine" class="line-details-container">
+      <div class="line-details-header">
+        <button class="btn btn-sm btn-secondary" (click)="closeLineDetails()">
+          <i class="fas fa-arrow-left"></i> Back to Lines
+        </button>
+        <h3>{{ selectedLine.line_name || selectedLine.line_no }} - Details</h3>
+      </div>
+
+      <!-- Booking Tab Section - Simplified -->
+      <div class="booking-tab-section" style="margin-bottom: 20px;">
+        <clr-tabs>
+          <clr-tab>
+            <button clrTabLink>📅 Line Booking</button>
+            <clr-tab-content *clrIfActive>
+              <div style="padding: 20px;">
+                <!-- Current Status - Compact Detailed Card -->
+                <div class="card" style="margin-bottom: 15px; border-left: 4px solid #007bff;">
+                  <div class="card-header" style="padding: 8px 15px; background-color: #f8f9fa;">
+                    <h5 style="margin: 0;">{{ selectedLine.line_name || selectedLine.line_no }} - Current Status</h5>
+                  </div>
+                  <div class="card-block" style="padding: 12px;">
+                    <div *ngIf="currentLineBooking">
+                      <div class="row">
+                        <div class="col-md-3">
+                          <strong>Work Order:</strong><br>
+                          <span style="font-size: 16px; color: #007bff;">{{ currentLineBooking.workorder_no }}</span>
+                        </div>
+                        <div class="col-md-3">
+                          <strong>Product:</strong><br>
+                          {{ currentLineBooking.product_name }}
+                        </div>
+                        <div class="col-md-2">
+                          <strong>Status:</strong><br>
+                          <span [class]="'badge ' + getBookingStatusClass(currentLineBooking.status)">
+                            {{ currentLineBooking.status }}
+                          </span>
+                        </div>
+                        <div class="col-md-4 text-right">
+                          <button class="btn btn-success btn-sm" 
+                                  (click)="startProduction(currentLineBooking)"
+                                  *ngIf="currentLineBooking.status === 'Booked' && !currentLineBooking.actual_start_date"
+                                  style="margin: 2px;">
+                            <i class="fas fa-play"></i> Start
+                          </button>
+                          <button class="btn btn-danger btn-sm" 
+                                  (click)="endProduction(currentLineBooking)"
+                                  *ngIf="(currentLineBooking.status === 'In Progress' || currentLineBooking.actual_start_date) && !currentLineBooking.actual_end_date"
+                                  style="margin: 2px;">
+                            <i class="fas fa-stop"></i> End
+                          </button>
+                          <button class="btn btn-primary btn-sm" 
+                                  (click)="openUpdateDatesModal(currentLineBooking)"
+                                  *ngIf="currentLineBooking.status !== 'Completed' && currentLineBooking.status !== 'Cancelled'"
+                                  style="margin: 2px;">
+                            <i class="fas fa-edit"></i> Edit
+                          </button>
+                        </div>
+                      </div>
+                      <hr style="margin: 10px 0;">
+                      <div class="row" style="font-size: 12px;">
+                        <div class="col-md-3">
+                          <strong>Tentative Start:</strong><br>
+                          {{ currentLineBooking.booking_start_date }}<br>
+                          <small class="text-muted">{{ currentLineBooking.booking_start_time }}</small>
+                        </div>
+                        <div class="col-md-3">
+                          <strong>Tentative End:</strong><br>
+                          {{ currentLineBooking.booking_end_date }}<br>
+                          <small class="text-muted">{{ currentLineBooking.booking_end_time }}</small>
+                        </div>
+                        <div class="col-md-3">
+                          <strong>Actual Start:</strong><br>
+                          <span *ngIf="currentLineBooking.actual_start_date">
+                            {{ currentLineBooking.actual_start_date }}<br>
+                            <small class="text-muted">{{ currentLineBooking.actual_start_time || '' }}</small>
+                          </span>
+                          <span *ngIf="!currentLineBooking.actual_start_date" class="text-muted">Not started</span>
+                        </div>
+                        <div class="col-md-3">
+                          <strong>Actual End:</strong><br>
+                          <span *ngIf="currentLineBooking.actual_end_date">
+                            {{ currentLineBooking.actual_end_date }}<br>
+                            <small class="text-muted">{{ currentLineBooking.actual_end_time || '' }}</small>
+                          </span>
+                          <span *ngIf="!currentLineBooking.actual_end_date" class="text-muted">Not completed</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div *ngIf="!currentLineBooking" class="text-center" style="padding: 15px;">
+                      <span class="badge badge-success" style="font-size: 14px; padding: 8px 15px;">
+                        <i class="fas fa-check-circle"></i> Line Available for Booking
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Available Work Orders & Bookings - Compact Tables Side by Side -->
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card" style="margin-bottom: 15px;">
+                      <div class="card-header" style="padding: 8px 15px;">
+                        <h5 style="margin: 0;">📋 Available Work Orders</h5>
+                      </div>
+                      <div class="card-block" style="padding: 10px;">
+                        <div *ngIf="bookingLoading" class="text-center" style="padding: 15px;">
+                          <span class="spinner spinner-inline"></span> Loading...
+                        </div>
+                        <div class="table-responsive" *ngIf="!bookingLoading" style="max-height: 350px; overflow-y: auto;">
+                          <table class="table table-sm table-bordered table-hover" style="margin: 0; font-size: 12px;">
+                            <thead style="background-color: #f8f9fa; position: sticky; top: 0;">
+                              <tr>
+                                <th style="padding: 6px;">WO</th>
+                                <th style="padding: 6px;">Product</th>
+                                <th style="padding: 6px; width: 80px;">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let wo of availableWorkOrders" style="cursor: pointer;" (click)="openBookingModal(wo)">
+                                <td style="padding: 6px;"><strong>{{ wo.workorder_no }}</strong></td>
+                                <td style="padding: 6px;">{{ wo.product_name }}</td>
+                                <td style="padding: 6px;" (click)="$event.stopPropagation()">
+                                  <button class="btn btn-xs btn-primary" 
+                                          (click)="openBookingModal(wo)" 
+                                          [disabled]="!isLineAvailable() || hasActiveBooking(wo)"
+                                          [title]="hasActiveBooking(wo) ? 'Work order already booked' : (!isLineAvailable() ? 'Line not available' : 'Book this work order')">
+                                    <i class="fas fa-calendar-plus"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                              <tr *ngIf="availableWorkOrders.length === 0">
+                                <td colspan="3" class="text-center text-muted" style="padding: 15px;">No work orders</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header" style="padding: 8px 15px;">
+                        <h5 style="margin: 0;">📅 All Bookings</h5>
+                      </div>
+                      <div class="card-block" style="padding: 10px;">
+                        <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                          <table class="table table-sm table-bordered table-hover" style="margin: 0; font-size: 12px;">
+                            <thead style="background-color: #f8f9fa; position: sticky; top: 0;">
+                              <tr>
+                                <th style="padding: 6px;">WO</th>
+                                <th style="padding: 6px;">Product</th>
+                                <th style="padding: 6px;">Tentative</th>
+                                <th style="padding: 6px;">Actual</th>
+                                <th style="padding: 6px;">Status</th>
+                                <th style="padding: 6px; width: 100px;">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let booking of lineBookings">
+                                <td style="padding: 6px;"><strong>{{ booking.workorder_no }}</strong></td>
+                                <td style="padding: 6px;">{{ booking.product_name }}</td>
+                                <td style="padding: 6px;">
+                                  <small>
+                                    {{ booking.booking_start_date }}<br>
+                                    {{ booking.booking_end_date }}
+                                  </small>
+                                </td>
+                                <td style="padding: 6px;">
+                                  <small>
+                                    <span *ngIf="booking.actual_start_date">{{ booking.actual_start_date }}</span>
+                                    <span *ngIf="!booking.actual_start_date" class="text-muted">-</span><br>
+                                    <span *ngIf="booking.actual_end_date">{{ booking.actual_end_date }}</span>
+                                    <span *ngIf="!booking.actual_end_date" class="text-muted">-</span>
+                                  </small>
+                                </td>
+                                <td style="padding: 6px;">
+                                  <span [class]="'badge ' + getBookingStatusClass(booking.status)">
+                                    {{ booking.status }}
+                                  </span>
+                                </td>
+                                <td style="padding: 6px;">
+                                  <button class="btn btn-xs btn-success" 
+                                          (click)="startProduction(booking)"
+                                          *ngIf="booking.status === 'Booked' && !booking.actual_start_date"
+                                          title="Start">
+                                    <i class="fas fa-play"></i>
+                                  </button>
+                                  <button class="btn btn-xs btn-danger" 
+                                          (click)="endProduction(booking)"
+                                          *ngIf="(booking.status === 'In Progress' || booking.actual_start_date) && !booking.actual_end_date"
+                                          title="End">
+                                    <i class="fas fa-stop"></i>
+                                  </button>
+                                  <button class="btn btn-xs btn-info" 
+                                          (click)="openUpdateDatesModal(booking)"
+                                          *ngIf="booking.status !== 'Completed' && booking.status !== 'Cancelled'"
+                                          title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                              <tr *ngIf="lineBookings.length === 0">
+                                <td colspan="6" class="text-center text-muted" style="padding: 15px;">No bookings</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </clr-tab-content>
+          </clr-tab>
+        </clr-tabs>
+      </div>
+
+      <!-- Work Orders Card Grid -->
+      <div class="work-orders-dashboard">
+        <h4 style="margin-bottom: 20px; color: #667eea; font-weight: 700;">Select Work Order</h4>
+        <div class="wo-cards-grid" *ngIf="workOrders.length > 0">
+          <div 
+            *ngFor="let wo of workOrders; let i = index"
+            class="wo-card"
+            [class.active]="activeTabIndex === i"
+            (click)="onWorkOrderTabClick(i, wo.workorder_no, $event)">
+            <div class="wo-card-icon">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="wo-card-content">
+              <h5>{{ wo.workorder_no }}</h5>
+              <span [class]="'badge ' + getStatusClass(wo.status)">{{ wo.status }}</span>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="workOrders.length === 0" class="no-wo-message">
+          <i class="fas fa-info-circle"></i>
+          <p>No work orders booked for this line yet.</p>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="main-content-area" style="position: relative; z-index: 1;">
+        <div 
+          *ngFor="let wo of workOrders; let i = index"
+          class="content-pane"
+          [class.active]="activeTabIndex === i"
+          [attr.id]="'tab-' + i">
+          
+          <!-- Main Tabs Cards for Work Order -->
+          <div class="main-tabs-dashboard" *ngIf="activeTabIndex === i">
+            <h5 style="margin-bottom: 20px; color: #667eea; font-weight: 700;">Work Order: {{ wo.workorder_no }}</h5>
+            <div class="main-tabs-grid">
+              <!-- Tab 1: QA Approved Batches -->
+              <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 0"
+                (click)="setActiveMainTab(wo.workorder_no, 0, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>QA Approved Batches</h6>
+                </div>
+              </div>
+
+              <!-- Tab 2: Dispensing Activity -->
+              <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 1"
+                (click)="setActiveMainTab(wo.workorder_no, 1, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-flask"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>Dispensing Activity</h6>
+                </div>
+              </div>
+
+              <!-- Tab 3: Manufacturing Allocation -->
+              <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 2"
+                (click)="setActiveMainTab(wo.workorder_no, 2, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>Manufacturing Allocation</h6>
+                </div>
+              </div>
+
+              <!-- Tab 4: Start Production -->
+              <!-- <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 3"
+                (click)="setActiveMainTab(wo.workorder_no, 3, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-play-circle"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>Start Production</h6>
+                </div>
+              </div> -->
+
+              <!-- Tab 5: EMBR -->
+              <!-- <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 4"
+                (click)="setActiveMainTab(wo.workorder_no, 4, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>EMBR</h6>
+                </div>
+              </div> -->
+
+              <!-- Tab 6: Status Log -->
+              <div 
+                class="main-tab-card"
+                [class.active]="getActiveMainTab(wo.workorder_no) === 5"
+                (click)="setActiveMainTab(wo.workorder_no, 5, $event)">
+                <div class="main-tab-icon">
+                  <i class="fas fa-history"></i>
+                </div>
+                <div class="main-tab-content">
+                  <h6>Status Log</h6>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content Area for Main Tabs - Hidden (content now in modals) -->
+            <div class="main-tab-content-area" style="display: none;">
+              <!-- Tab 1 Content: QA Approved Batches -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 0"
+                class="main-tab-pane active">
+                <div class="qa-approved-batches-container">
+                  <div class="clr-row form-container" style="margin-bottom: 20px;">
+
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                      <label class="label-3d">Product Name.:</label>
+                      <input class="input-3d" type="text" name="product_name" [(ngModel)]="product_name" placeholder="Product Name">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                      <label class="label-3d">From Date</label>
+                      <input class="input-3d" type="date" name="from_date" [max]="to_date || today" [(ngModel)]="from_date">
+                    </div>
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+                      <label class="label-3d">To Date</label>
+                      <input class="input-3d" type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date">
+                    </div>
+                    <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+                      <button class="btn btn-danger btn-3d" (click)="searchQaApprovedBatches(wo.workorder_no)" style="margin-top: 33px;">Search</button>
+                    </div>
+                  </div>
+                  
+                  <div *ngIf="qaLoading[wo.workorder_no]" style="text-align: center; padding: 40px;">
+                    <span class="spinner spinner-inline"></span>
+                    <span>Loading QA Approved Batches...</span>
+                  </div>
+                  
+                  <div *ngIf="!qaLoading[wo.workorder_no]">
+                    <clr-datagrid class="datagrid-3d" [clrDgLoading]="qaLoading[wo.workorder_no]">
+                      <clr-dg-column>Sr.</clr-dg-column>
+                      <clr-dg-column>Plan No.</clr-dg-column>
+                      
+                      <clr-dg-column>Dosage Form</clr-dg-column>
+                      <clr-dg-column>Product Code</clr-dg-column>
+                      <clr-dg-column>Product Name</clr-dg-column>
+                      <clr-dg-column>Grade</clr-dg-column>
+                      <clr-dg-column>Batch Size</clr-dg-column>
+                      <clr-dg-column>Action</clr-dg-column>
+
+                      <clr-dg-row *clrDgItems="let result of qaApprovedBatches[wo.workorder_no] || []; let i = index" [clrDgItem]="result" class="row-3d">
+                        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.plan_no || result.work_order_no }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.batch_number }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.product_type }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.product_code }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.product_name }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.batch_size }}</clr-dg-cell>
+
+                        <clr-dg-cell *ngIf="result.dispensing_status=='Request Sent'">Request Sent</clr-dg-cell>
+                        <clr-dg-cell class="cell-3d" *ngIf="result.dispensing_status!='Request Sent'">
+                          <button class="btn btn-sm btn-info btn-3d" (click)="sendDispenseRequest(wo.workorder_no, i)">Send Dispensing Request</button> 
+                        </clr-dg-cell>
+                      </clr-dg-row>
+                      
+                      <clr-dg-footer *ngIf="!qaApprovedBatches[wo.workorder_no] || qaApprovedBatches[wo.workorder_no].length === 0">
+                        <div style="text-align: center; padding: 20px; color: #999;">
+                          No QA Approved Batches found for this work order.
+                        </div>
+                      </clr-dg-footer>
+                    </clr-datagrid>
+                    
+                    <div class="card-footer" style="margin-top: 20px; text-align: right;" *ngIf="qaApprovedBatches[wo.workorder_no] && qaApprovedBatches[wo.workorder_no].length > 0">
+                      <button class="btn btn-primary btn-3d" (click)="downloadQaApprovedBatches(wo.workorder_no)">Download</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 2 Content: Dispensing Activity -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 1"
+                class="main-tab-pane active">
+                <!-- Sub-tabs Cards for Dispensing Activity -->
+                <div class="sub-tabs-dashboard">
+                  <h6 style="margin-bottom: 15px; color: #764ba2; font-weight: 600;">Dispensing Activity</h6>
+                  <div class="sub-tabs-grid">
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 0"
+                      (click)="setActiveSubTab(wo.workorder_no, 0, $event); getDispensingCheckingData()">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-search"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Dispensing Checking</span>
+                      </div>
+                    </div>
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 1"
+                      (click)="setActiveSubTab(wo.workorder_no, 1, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-inbox"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Received Dispensing</span>
+                      </div>
+                    </div>
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 2"
+                      (click)="setActiveSubTab(wo.workorder_no, 2, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-list-alt"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Dispensing Log</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-tab Content Area -->
+                <div class="sub-tab-content-area">
+                  <!-- Dispensing Checking Content -->
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 0"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>Dispensing Checking - All Work Orders</h5>
+                      
+                      <div *ngIf="dispensingCheckingLoading" style="text-align: center; padding: 40px;">
+                        <span class="spinner spinner-inline"></span>
+                        <span>Loading Dispensing Checking Data...</span>
+                      </div>
+                      
+                      <div *ngIf="!dispensingCheckingLoading">
+                        <div *ngIf="dispensingCheckingData.length === 0" style="text-align: center; padding: 40px; color: #999;">
+                          <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                          <p>No dispensing checking data found for work orders on this line.</p>
+                        </div>
+                        
+                        <div *ngIf="dispensingCheckingData.length > 0" style="overflow-x: auto;">
+                          <table class="table table-bordered table-striped" style="font-size: 13px;">
+                            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                              <tr>
+                                <th>Sr.</th>
+                                <th style="text-align: left;">Work Order No.</th>
+                                <th style="text-align: left;">Order No.</th>
+                                <th style="text-align: left;">Product Code</th>
+                                <th style="text-align: left;">Product Name</th>
+                                <th style="text-align: left;">Batch/Lot No.</th>
+                                <th style="text-align: left;">Plan No</th>
+                                <th style="text-align: left;">Lot No.</th>
+                                <th style="text-align: left;">Lot Type</th>
+                                <th style="text-align: left;">Material Subtype</th>
+                                <th style="text-align: left;">Material Code</th>
+                                <th style="text-align: left;">Material Name</th>
+                                <th style="text-align: left;">Grade</th>
+                                <th style="text-align: left;">Batch Qty</th>
+                                <th style="text-align: left;">Status</th>
+                                <th>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr *ngFor="let material of dispensingCheckingData; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td style="text-align: left;">
+                                  <strong style="color: #667eea;">{{ material.workorder_no }}</strong>
+                                </td>
+                                <td style="text-align: left;">{{ material.order_no }}</td>
+                                <td style="text-align: left;">{{ material.product_code }}</td>
+                                <td style="text-align: left;">{{ material.product_name }}</td>
+                                <td style="text-align: left;">{{ material.batch_number }}</td>
+                                <td style="text-align: left;">{{ material.plan_no }}</td>
+                                <td style="text-align: left;">{{ material.lot_no || '-' }}</td>
+                                <td style="text-align: left;">{{ material.lot_type || '-' }}</td>
+                                <td style="text-align: left;">{{ material.material_subtype || '-' }}</td>
+                                <td style="text-align: left;">
+                                  <strong>{{ material.material_code }}</strong>
+                                </td>
+                                <td style="text-align: left;">{{ material.material_name || '-' }}</td>
+                                <td style="text-align: left;">{{ material.grade || '-' }}</td>
+                                <td style="text-align: left;">{{ material.batch_qty || '0.00' }}</td>
+                                <td style="text-align: left;">
+                                  <span [class]="'badge ' + (material.lc_status === 'Approved' ? 'badge-success' : material.lc_status === 'Pending' ? 'badge-warning' : 'badge-secondary')">
+                                    {{ material.lc_status || 'Pending' }}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button 
+                                    class="btn btn-sm btn-info" 
+                                    [disabled]="material.prod_approved_by && material.prod_approved_by !== '0'"
+                                    [title]="material.prod_approved_by && material.prod_approved_by !== '0' ? 'Already approved' : 'View details'">
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          
+                          <div style="margin-top: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                            <strong>Total Materials:</strong> {{ dispensingCheckingData.length }} | 
+                            <strong>Unique Work Orders:</strong> {{ getUniqueWorkOrders().length }} |
+                            <strong>Unique Products:</strong> {{ getUniqueProducts().length }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Received Dispensing Content -->
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 1"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>Received Dispensing</h5>
+                      <p class="text-muted">Content for Received Dispensing will be added here.</p>
+                    </div>
+                  </div>
+                  
+                  <!-- Dispensing Log Content -->
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 2"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>Dispensing Log</h5>
+                      <p class="text-muted">Content for Dispensing Log will be added here.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3 Content: Manufacturing Allocation -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 2"
+                class="main-tab-pane active">
+                <!-- Sub-tabs Cards for Manufacturing Allocation -->
+                <div class="sub-tabs-dashboard">
+                  <h6 style="margin-bottom: 15px; color: #764ba2; font-weight: 600;">Manufacturing Allocation</h6>
+                  <div class="sub-tabs-grid">
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 3"
+                      (click)="setActiveSubTab(wo.workorder_no, 3, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-user-plus"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Allocate Manpower</span>
+                      </div>
+                    </div>
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 4"
+                      (click)="setActiveSubTab(wo.workorder_no, 4, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-file-alt"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Allocation Log</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-tab Content Area -->
+                <div class="sub-tab-content-area">
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 3"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>Allocate Manpower</h5>
+                      <p class="text-muted">Content for Allocate Manpower will be added here.</p>
+                    </div>
+                  </div>
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 4"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>Allocation Log</h5>
+                      <p class="text-muted">Content for Allocation Log will be added here.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 4 Content: Start Production -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 3"
+                class="main-tab-pane active">
+                <div class="p-3">
+                  <h4>Start Production</h4>
+                  <p class="text-muted">Content for Start Production will be added here.</p>
+                </div>
+              </div>
+
+              <!-- Tab 5 Content: EMBR -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 4"
+                class="main-tab-pane active">
+                <!-- Sub-tabs Cards for EMBR -->
+                <div class="sub-tabs-dashboard">
+                  <h6 style="margin-bottom: 15px; color: #764ba2; font-weight: 600;">EMBR</h6>
+                  <div class="sub-tabs-grid">
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 5"
+                      (click)="setActiveSubTab(wo.workorder_no, 5, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-clock"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Awaiting</span>
+                      </div>
+                    </div>
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 6"
+                      (click)="setActiveSubTab(wo.workorder_no, 6, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-list"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Log</span>
+                      </div>
+                    </div>
+                    <div 
+                      class="sub-tab-card"
+                      [class.active]="getActiveSubTab(wo.workorder_no) === 7"
+                      (click)="setActiveSubTab(wo.workorder_no, 7, $event)">
+                      <div class="sub-tab-icon">
+                        <i class="fas fa-check-double"></i>
+                      </div>
+                      <div class="sub-tab-content">
+                        <span>Completed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-tab Content Area -->
+                <div class="sub-tab-content-area">
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 5"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>EMBR Awaiting</h5>
+                      <p class="text-muted">Content for EMBR Awaiting will be added here.</p>
+                    </div>
+                  </div>
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 6"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>EMBR Log</h5>
+                      <p class="text-muted">Content for EMBR Log will be added here.</p>
+                    </div>
+                  </div>
+                  <div 
+                    *ngIf="getActiveSubTab(wo.workorder_no) === 7"
+                    class="sub-tab-pane active">
+                    <div class="p-3">
+                      <h5>EMBR Completed</h5>
+                      <p class="text-muted">Content for EMBR Completed will be added here.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 6 Content: Status Log -->
+              <div 
+                *ngIf="getActiveMainTab(wo.workorder_no) === 5"
+                class="main-tab-pane active">
+                <div class="work-order-details">
+                  <div class="wo-header-info">
+                    <div class="clr-row">
+                      <div class="clr-col-md-4">
+                        <strong>Work Order:</strong> {{ wo.workorder_no }}
+                      </div>
+                      <div class="clr-col-md-4">
+                        <strong>Product:</strong> {{ wo.product_name }} ({{ wo.product_code }})
+                      </div>
+                      <div class="clr-col-md-4">
+                        <strong>Status:</strong> 
+                        <span [class]="'badge ' + getStatusClass(wo.status)">{{ wo.status }}</span>
+                      </div>
+                    </div>
+                    <div class="clr-row" style="margin-top: 10px;">
+                      <div class="clr-col-md-4">
+                        <strong>Booking Start:</strong> {{ wo.booking_start_date }} {{ wo.booking_start_time }}
+                      </div>
+                      <div class="clr-col-md-4">
+                        <strong>Booking End:</strong> {{ wo.booking_end_date }} {{ wo.booking_end_time }}
+                      </div>
+                      <div class="clr-col-md-4">
+                        <strong>Responsible Person:</strong> {{ wo.responsible_person || '-' }}
+                      </div>
+                    </div>
+                  </div>
+
+                    <div class="equipment-section" *ngIf="wo.selected_equipments && wo.selected_equipments.length > 0">
+                      <h5>Selected Equipment</h5>
+                      <table class="table table-bordered table-sm">
+                        <thead>
+                          <tr>
+                            <th>Sr. No.</th>
+                            <th>Equipment Name</th>
+                            <th>Code</th>
+                            <th>Capacity</th>
+                            <th>Min Range</th>
+                            <th>Max Range</th>
+                            <th>Unit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let eq of wo.selected_equipments; let j = index">
+                            <td>{{ j + 1 }}</td>
+                            <td>{{ eq.equipment_name }}</td>
+                            <td>{{ eq.equipment_code }}</td>
+                            <td>{{ eq.capacity }}</td>
+                            <td>{{ eq.from_range }}</td>
+                            <td>{{ eq.to_range }}</td>
+                            <td>{{ eq.unit }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Booked Period Information -->
+                    <div class="booked-period-section" *ngIf="wo.booking_start_date || wo.booking_end_date" style="margin-top: 20px;">
+                      <h5>Booked Period</h5>
+                      <div class="card" style="border-left: 4px solid #007bff;">
+                        <div class="card-block" style="padding: 15px;">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <div style="margin-bottom: 10px;">
+                                <strong>Tentative Start:</strong><br>
+                                <span *ngIf="wo.booking_start_date">
+                                  {{ wo.booking_start_date }}<br>
+                                  <small class="text-muted">{{ wo.booking_start_time || '00:00:00' }}</small>
+                                </span>
+                                <span *ngIf="!wo.booking_start_date" class="text-muted">Not set</span>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div style="margin-bottom: 10px;">
+                                <strong>Tentative End:</strong><br>
+                                <span *ngIf="wo.booking_end_date">
+                                  {{ wo.booking_end_date }}<br>
+                                  <small class="text-muted">{{ wo.booking_end_time || '00:00:00' }}</small>
+                                </span>
+                                <span *ngIf="!wo.booking_end_date" class="text-muted">Not set</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="stages-section" *ngIf="lineStages && lineStages.length > 0" style="margin-top: 20px;">
+                      <h5>Production Stages</h5>
+                      <table class="table table-bordered table-sm" style="height: auto;">
+                        <thead>
+                          <tr>
+                            <th>Sr. No.</th>
+                            <th>Dosage Form</th>
+                            <th>Stage</th>
+                            <th>Tentative Start Date</th>
+                            <th>Actual Start Date</th>
+                            <th>Tentative Completion Date</th>
+                            <th>Actual Completion Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let stage of lineStages; let k = index">
+                            <td>{{ k + 1 }}</td>
+                            <td>{{ stage.dosage_form || '-' }}</td>
+                            <td>{{ stage.stage || '-' }}</td>
+                            <td>
+                              <input 
+                                type="date" 
+                                class="form-control form-control-sm"
+                                [attr.data-wo]="wo.workorder_no"
+                                [attr.data-stage-start]="stage.stage"
+                                [value]="stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_date || ''"
+                                (change)="updateTentativeStartDate(wo.workorder_no, stage.dosage_form, stage.stage, $any($event.target).value)"
+                                [title]="'Start dates are not currently saved to database'"
+                                style="min-width: 150px; opacity: 0.6;"
+                                disabled>
+                              <small class="text-muted" style="font-size: 10px; display: block;">Not saved</small>
+                            </td>
+                            <td>
+                              <input 
+                                type="date" 
+                                class="form-control form-control-sm"
+                                [value]="stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date || ''"
+                                (change)="updateActualStartDate(wo.workorder_no, stage.dosage_form, stage.stage, $any($event.target).value)"
+                                [title]="'Start dates are not currently saved to database'"
+                                style="min-width: 150px; opacity: 0.6;"
+                                disabled>
+                              <small class="text-muted" style="font-size: 10px; display: block;">Not saved</small>
+                            </td>
+                            <td>
+                              <input 
+                                type="date" 
+                                class="form-control form-control-sm"
+                                [attr.data-wo]="wo.workorder_no"
+                                [attr.data-stage]="stage.stage"
+                                [value]="stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_date || ''"
+                                [disabled]="!canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).allowed"
+                                [title]="canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).reason || 'Set tentative completion date'"
+                                (change)="updateTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage, $any($event.target).value)"
+                                style="min-width: 150px;">
+                            </td>
+                            <td>
+                              <input 
+                                type="date" 
+                                class="form-control form-control-sm"
+                                [value]="stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date || ''"
+                                (change)="updateActualDate(wo.workorder_no, stage.dosage_form, stage.stage, $any($event.target).value)"
+                                style="min-width: 150px;">
+                            </td>
+                          </tr>
+                          <tr *ngIf="lineStages.length === 0">
+                            <td colspan="7" style="text-align: center; padding: 15px; color: #999;">
+                              No stages configured for this line
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- QA Approved Batches Modal (Full-page) -->
+<clr-modal [(clrModalOpen)]="showQaApprovedBatchesModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">QA Approved Batches - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body" style="overflow-y: auto;">
+    <div class="qa-approved-batches-container">
+      <div class="clr-row form-container" style="margin-bottom: 20px;">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-6">
+                <h3>QA Approved Batches</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">Product Name:</label>
+          <input class="input-3d" type="text" name="product_name" [(ngModel)]="product_name" placeholder="Product Name">
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">From Date</label>
+          <input class="input-3d" type="date" name="from_date" [max]="to_date || today" [(ngModel)]="from_date">
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-3 clr-col-xs-3">
+          <label class="label-3d">To Date</label>
+          <input class="input-3d" type="date" name="to_date" [min]="from_date" [max]="today" [(ngModel)]="to_date">
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-4 clr-col-sm-4 clr-col-xs-6">
+          <button class="btn btn-danger btn-3d" (click)="searchQaApprovedBatches(currentWorkOrderNo)" style="margin-top: 33px;">Search</button>
+        </div>
+      </div>
+      
+      <div *ngIf="qaLoading[currentWorkOrderNo]" style="text-align: center; padding: 40px;">
+        <span class="spinner spinner-inline"></span>
+        <span>Loading QA Approved Batches...</span>
+      </div>
+      
+      <div *ngIf="!qaLoading[currentWorkOrderNo]">
+        <clr-datagrid class="datagrid-3d" [clrDgLoading]="qaLoading[currentWorkOrderNo]">
+          <clr-dg-column>Sr.</clr-dg-column>
+          <clr-dg-column>Plan No.</clr-dg-column>
+          <clr-dg-column>Medicap Lot No</clr-dg-column>
+          <clr-dg-column>Dosage Form</clr-dg-column>
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>Batch Size</clr-dg-column>
+          <clr-dg-column>Action</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of qaApprovedBatches[currentWorkOrderNo] || []; let i = index" [clrDgItem]="result" class="row-3d">
+            <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.plan_no || result.work_order_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.batch_number }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.product_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.batch_size }}</clr-dg-cell>
+
+            <clr-dg-cell *ngIf="result.dispensing_status=='Request Sent'">Request Sent</clr-dg-cell>
+            <clr-dg-cell class="cell-3d" *ngIf="result.dispensing_status!='Request Sent'">
+              <button class="btn btn-sm btn-info btn-3d" (click)="sendDispenseRequest(currentWorkOrderNo, i)">Send Dispensing Request</button> 
+            </clr-dg-cell>
+          </clr-dg-row>
+          
+          <clr-dg-footer *ngIf="!qaApprovedBatches[currentWorkOrderNo] || qaApprovedBatches[currentWorkOrderNo].length === 0">
+            <div style="text-align: center; padding: 20px; color: #999;">
+              No QA Approved Batches found for this work order.
+            </div>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary btn-3d" *ngIf="qaApprovedBatches[currentWorkOrderNo] && qaApprovedBatches[currentWorkOrderNo].length > 0" (click)="downloadQaApprovedBatches(currentWorkOrderNo)">Download</button>
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Start Production Modal (Full-page) -->
+<clr-modal [(clrModalOpen)]="showStartProductionModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">Start Production - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body" style="overflow-y: auto;">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <div class="card-header">
+        <div class="clr-row">
+          <div class="clr-col-lg-6">
+            <h3>Start Production</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="p-3">
+      <h4>Start Production</h4>
+      <p class="text-muted">Content for Start Production will be added here.</p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Status Log Modal (Full-page) -->
+<clr-modal [(clrModalOpen)]="showStatusLogModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">Status Log - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body" style="overflow-y: auto;">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <div class="card-header">
+        <div class="clr-row">
+          <div class="clr-col-lg-6">
+            <h3>Status Log</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="work-order-details" *ngFor="let wo of workOrders">
+      <div *ngIf="wo.workorder_no === currentWorkOrderNo">
+        <div class="wo-header-info">
+          <div class="clr-row">
+            <div class="clr-col-md-4">
+              <strong>Work Order:</strong> {{ wo.workorder_no }}
+            </div>
+            <div class="clr-col-md-4">
+              <strong>Product:</strong> {{ wo.product_name }} ({{ wo.product_code }})
+            </div>
+            <div class="clr-col-md-4">
+              <strong>Status:</strong> 
+              <span [class]="'badge ' + getStatusClass(wo.status)">{{ wo.status }}</span>
+            </div>
+          </div>
+          <div class="clr-row" style="margin-top: 10px;">
+            <div class="clr-col-md-4">
+              <strong>Booking Start:</strong> {{ wo.booking_start_date }} {{ wo.booking_start_time }}
+            </div>
+            <div class="clr-col-md-4">
+              <strong>Booking End:</strong> {{ wo.booking_end_date }} {{ wo.booking_end_time }}
+            </div>
+            <div class="clr-col-md-4">
+              <strong>Responsible Person:</strong> {{ wo.responsible_person || '-' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="equipment-section" *ngIf="wo.selected_equipments && wo.selected_equipments.length > 0" style="margin-top: 20px;">
+          <h5>Selected Equipment</h5>
+          <table class="table table-bordered table-sm">
+            <thead>
+              <tr>
+                <th>Sr. No.</th>
+                <th>Equipment Name</th>
+                <th>Code</th>
+                <th>Capacity</th>
+                <th>Min Range</th>
+                <th>Max Range</th>
+                <th>Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let eq of wo.selected_equipments; let j = index">
+                <td>{{ j + 1 }}</td>
+                <td>{{ eq.equipment_name }}</td>
+                <td>{{ eq.equipment_code }}</td>
+                <td>{{ eq.capacity }}</td>
+                <td>{{ eq.from_range }}</td>
+                <td>{{ eq.to_range }}</td>
+                <td>{{ eq.unit }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Booked Period Information -->
+        <div class="booked-period-section" *ngIf="wo.booking_start_date || wo.booking_end_date" style="margin-top: 20px;">
+          <h5>Booked Period</h5>
+          <div class="card" style="border-left: 4px solid #007bff;">
+            <div class="card-block" style="padding: 15px;">
+              <div class="row">
+                <div class="col-md-6">
+                  <div style="margin-bottom: 10px;">
+                    <strong>Tentative Start:</strong><br>
+                    <span *ngIf="wo.booking_start_date">
+                      {{ wo.booking_start_date }}<br>
+                      <small class="text-muted">{{ wo.booking_start_time || '00:00:00' }}</small>
+                    </span>
+                    <span *ngIf="!wo.booking_start_date" class="text-muted">Not set</span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div style="margin-bottom: 10px;">
+                    <strong>Tentative End:</strong><br>
+                    <span *ngIf="wo.booking_end_date">
+                      {{ wo.booking_end_date }}<br>
+                      <small class="text-muted">{{ wo.booking_end_time || '00:00:00' }}</small>
+                    </span>
+                    <span *ngIf="!wo.booking_end_date" class="text-muted">Not set</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stages-section" *ngIf="lineStages && lineStages.length > 0" style="margin-top: 20px;">
+          <h5>Production Stages</h5>
+          <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-bordered table-sm table-hover" style="font-size: 12px;">
+              <thead style="position: sticky; top: 0; background: white; z-index: 10;">
+                <tr>
+                  <th style="min-width: 50px;">Sr.</th>
+                  <th style="min-width: 100px;">Dosage Form</th>
+                  <th style="min-width: 120px;">Stage</th>
+                  <th style="min-width: 80px;">Status</th>
+                  <th colspan="2" style="text-align: center; background: #e3f2fd;">Tentative Start</th>
+                  <th colspan="2" style="text-align: center; background: #fff3e0;">Actual Start</th>
+                  <th colspan="2" style="text-align: center; background: #e8f5e9;">Tentative Completion</th>
+                  <th colspan="2" style="text-align: center; background: #fce4ec;">Actual Completion</th>
+                  <th style="min-width: 80px;">Duration</th>
+                  <th style="min-width: 120px;">Actions</th>
+                </tr>
+                <tr style="background: #f5f5f5;">
+                  <th></th><th></th><th></th><th></th>
+                  <th colspan="2" style="min-width: 100px;">Tentative Start</th>
+                  <th colspan="2" style="min-width: 100px;">Actual Start</th>
+                  <th colspan="2" style="min-width: 100px;">Tentative Completion</th>
+                  <th colspan="2" style="min-width: 100px;">Actual Completion</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let stage of lineStages; let k = index">
+                  <td>{{ k + 1 }}</td>
+                  <td>{{ stage.dosage_form || '-' }}</td>
+                  <td><strong>{{ stage.stage || '-' }}</strong></td>
+                  <td>
+                    <span class="badge stages-status-badge" 
+                          [ngClass]="getStageStatusClass(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.stage_status || 'Not Started')">
+                      {{ stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.stage_status || 'Not Started' }}
+                    </span>
+                  </td>
+                  <!-- Tentative Start -->
+                  <td>
+                    <button 
+                      class="btn btn-sm" 
+                      [ngClass]="{
+                        'btn-outline-primary': !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_date,
+                        'btn-primary': stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_date
+                      }"
+                      style="padding: 4px 10px; font-size: 11px; height: 28px; min-width: 100px; text-align: left;"
+                      (click)="openStageDateModal(wo.workorder_no, stage.dosage_form, stage.stage, 'tentative_start', 'Tentative Start Date & Time')"
+                      [disabled]="!canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).allowed || isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [title]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage) ? 'Stage completed - cannot edit' : (canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).reason || 'Set tentative start date/time')">
+                      <clr-icon shape="calendar" style="width: 14px; height: 14px; margin-right: 5px;"></clr-icon>
+                      {{ stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_date ? 
+                         (formatDateForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_date) + ' ' + formatTimeForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_start_time)) : 
+                         'Set Date' }}
+                    </button>
+                  </td>
+                  <td></td>
+                  <!-- Actual Start -->
+                  <td>
+                    <button 
+                      class="btn btn-sm" 
+                      [ngClass]="{
+                        'btn-outline-success': !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date,
+                        'btn-success': stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date
+                      }"
+                      style="padding: 4px 10px; font-size: 11px; height: 28px; min-width: 100px; text-align: left;"
+                      (click)="openStageDateModal(wo.workorder_no, stage.dosage_form, stage.stage, 'actual_start', 'Actual Start Date & Time')"
+                      [disabled]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [title]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage) ? 'Stage completed - cannot edit' : 'Set actual start date/time'">
+                      <clr-icon shape="calendar" style="width: 14px; height: 14px; margin-right: 5px;"></clr-icon>
+                      {{ stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date ? 
+                         (formatDateForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date) + ' ' + formatTimeForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_time)) : 
+                         'Set Date' }}
+                    </button>
+                  </td>
+                  <td></td>
+                  <!-- Tentative Completion -->
+                  <td>
+                    <button 
+                      class="btn btn-sm" 
+                      [ngClass]="{
+                        'btn-outline-info': !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_date,
+                        'btn-info': stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_date
+                      }"
+                      style="padding: 4px 10px; font-size: 11px; height: 28px; min-width: 100px; text-align: left;"
+                      (click)="openStageDateModal(wo.workorder_no, stage.dosage_form, stage.stage, 'tentative_completion', 'Tentative Completion Date & Time')"
+                      [disabled]="!canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).allowed || isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [title]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage) ? 'Stage completed - cannot edit' : (canSetTentativeDate(wo.workorder_no, stage.dosage_form, stage.stage).reason || 'Set tentative completion date/time')">
+                      <clr-icon shape="calendar" style="width: 14px; height: 14px; margin-right: 5px;"></clr-icon>
+                      {{ stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_date ? 
+                         (formatDateForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_date) + ' ' + formatTimeForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.tentative_time)) : 
+                         'Set Date' }}
+                    </button>
+                  </td>
+                  <td></td>
+                  <!-- Actual Completion -->
+                  <td>
+                    <button 
+                      class="btn btn-sm" 
+                      [ngClass]="{
+                        'btn-outline-warning': !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date,
+                        'btn-warning': stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date
+                      }"
+                      style="padding: 4px 10px; font-size: 11px; height: 28px; min-width: 100px; text-align: left;"
+                      (click)="openStageDateModal(wo.workorder_no, stage.dosage_form, stage.stage, 'actual_completion', 'Actual Completion Date & Time')"
+                      [disabled]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [title]="isStageCompleted(wo.workorder_no, stage.dosage_form, stage.stage) ? 'Stage completed - cannot edit' : 'Set actual completion date/time'">
+                      <clr-icon shape="calendar" style="width: 14px; height: 14px; margin-right: 5px;"></clr-icon>
+                      {{ stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date ? 
+                         (formatDateForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date) + ' ' + formatTimeForDisplay(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_time)) : 
+                         'Set Date' }}
+                    </button>
+                  </td>
+                  <td></td>
+                  <!-- Duration -->
+                  <td style="text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                      <input 
+                        type="text" 
+                        class="form-control form-control-sm"
+                        [value]="formatDuration(stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.duration_hours)"
+                        readonly
+                        style="width: 60px; font-size: 10px; text-align: center; background: #f0f0f0; border: 1px solid #ddd; height: 28px; padding: 2px 4px;">
+                      <input 
+                        type="checkbox" 
+                        checked 
+                        disabled 
+                        style="cursor: not-allowed; width: 18px; height: 18px;">
+                    </div>
+                  </td>
+                  <!-- Quick Actions -->
+                  <td>
+                    <button 
+                      class="btn btn-sm btn-success" 
+                      style="font-size: 10px; padding: 4px 10px; margin-right: 3px; min-width: 65px; height: 28px; display: none;"
+                      (click)="startStage(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [disabled]="!!stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date"
+                      [title]="stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date ? 'Already started' : 'Set actual start date/time to now'">
+                      START
+                    </button>
+                    <button 
+                      class="btn btn-sm" 
+                      [ngClass]="{'btn-primary': stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date, 'btn-secondary': !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date}"
+                      style="font-size: 10px; padding: 4px 10px; min-width: 75px; height: 28px;"
+                      (click)="completeStage(wo.workorder_no, stage.dosage_form, stage.stage)"
+                      [disabled]="!!stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date || !stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date"
+                      [title]="!stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_start_date ? 'Start stage first' : (stageDates[getStageKey(wo.workorder_no, stage.dosage_form, stage.stage)]?.actual_date ? 'Already completed' : 'Set actual completion date/time to now')">
+                      COMPLETE
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="lineStages.length === 0">
+                  <td colspan="14" style="text-align: center; padding: 15px; color: #999;">
+                    No stages configured for this line
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Dispensing Activity Sub-tabs Selection Modal -->
+<clr-modal [(clrModalOpen)]="showDispensingActivitySubTabsModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">Dispensing Activity - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body">
+    <div class="sub-tabs-dashboard">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card-header">
+          <div class="clr-row">
+            <div class="clr-col-lg-6">
+              <h3>QA Approved Batches</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-tabs-grid">
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('dispensing', 0, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-search"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Dispensing Checking</span>
+          </div>
+        </div>
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('dispensing', 1, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-inbox"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Received Dispensing</span>
+          </div>
+        </div>
+        <!-- <div 
+          class="sub-tab-card"
+          (click)="openContentModal('dispensing', 2, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-list-alt"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Dispensing Log</span>
+          </div>
+        </div> -->
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeSubTabsModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Manufacturing Allocation Sub-tabs Selection Modal -->
+<clr-modal [(clrModalOpen)]="showManufacturingAllocationSubTabsModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">Manufacturing Allocation - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body">
+    <div class="sub-tabs-dashboard">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card-header">
+          <div class="clr-row">
+            <div class="clr-col-lg-6">
+              <h3>Manufacturing Allocation</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-tabs-grid">
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('manufacturing', 3, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Allocate Manpower</span>
+          </div>
+        </div>
+        <!-- <div 
+          class="sub-tab-card"
+          (click)="openContentModal('manufacturing', 4, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Allocation Log</span>
+          </div>
+        </div> -->
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeSubTabsModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- EMBR Sub-tabs Selection Modal -->
+<clr-modal [(clrModalOpen)]="showEmbrSubTabsModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">EMBR - {{ currentWorkOrderNo }}</h3>
+  <div class="modal-body">
+    <div class="sub-tabs-dashboard">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card-header">
+          <div class="clr-row">
+            <div class="clr-col-lg-6">
+              <h3>EMBR</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-tabs-grid">
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('embr', 5, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Awaiting</span>
+          </div>
+        </div>
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('embr', 6, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-list"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Log</span>
+          </div>
+        </div>
+        <div 
+          class="sub-tab-card"
+          (click)="openContentModal('embr', 7, currentWorkOrderNo)">
+          <div class="sub-tab-icon">
+            <i class="fas fa-check-double"></i>
+          </div>
+          <div class="sub-tab-content">
+            <span>Completed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeSubTabsModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Content Modal for Sub-tabs -->
+<clr-modal [(clrModalOpen)]="showContentModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">
+    <span *ngIf="activeContentModalType === 'dispensing'">Dispensing Activity - </span>
+    <span *ngIf="activeContentModalType === 'manufacturing'">Manufacturing Allocation - </span>
+    <span *ngIf="activeContentModalType === 'embr'">EMBR - </span>
+    <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 0">Dispensing Checking</span>
+    <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 1">Received Dispensing</span>
+    <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 2">Dispensing Log</span>
+    <span *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 3">Allocate Manpower</span>
+    <span *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 4">Allocation Log</span>
+    <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 5">Awaiting</span>
+    <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 6">Log</span>
+    <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 7">Completed</span>
+    - {{ currentWorkOrderNo }}
+  </h3>
+  <div class="modal-body" style="overflow-y: auto;">
+    <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+      <div class="card-header">
+        <div class="clr-row">
+          <div class="clr-col-lg-6">
+            <h3>
+              <span *ngIf="activeContentModalType === 'dispensing'">Dispensing Activity - </span>
+              <span *ngIf="activeContentModalType === 'manufacturing'">Manufacturing Allocation - </span>
+              <span *ngIf="activeContentModalType === 'embr'">EMBR - </span>
+              <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 0">Dispensing Checking</span>
+              <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 1">Received Dispensing</span>
+              <span *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 2">Dispensing Log</span>
+              <span *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 3">Allocate Manpower</span>
+              <span *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 4">Allocation Log</span>
+              <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 5">Awaiting</span>
+              <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 6">Log</span>
+              <span *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 7">Completed</span>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Dispensing Checking Content -->
+    <div *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 0">
+      <div class="p-3">
+        <h5>Dispensing Checking - {{ currentWorkOrderNo }}</h5>
+        
+        <div *ngIf="dispensingCheckingLoading" style="text-align: center; padding: 40px;">
+          <span class="spinner spinner-inline"></span>
+          <span>Loading Dispensing Checking Data...</span>
+        </div>
+        
+        <div *ngIf="!dispensingCheckingLoading">
+          <div *ngIf="getFilteredDispensingCheckingData().length === 0" style="text-align: center; padding: 40px; color: #999;">
+            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+            <p>No dispensing checking data found for work order {{ currentWorkOrderNo }}.</p>
+          </div>
+          
+          <div *ngIf="getFilteredDispensingCheckingData().length > 0" style="overflow-x: auto;">
+            <table class="table table-bordered table-striped" style="font-size: 13px;">
+              <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;">Work Order No.</th>
+                  <th style="text-align: left;">Order No.</th>
+                  <th style="text-align: left;">Product Code</th>
+                  <th style="text-align: left;">Product Name</th>
+                  <th style="text-align: left;">Batch/Lot No.</th>
+                  <th style="text-align: left;">Plan No</th>
+                  <th style="text-align: left;">Lot No.</th>
+                  <th style="text-align: left;">Lot Type</th>
+                  <th style="text-align: left;">Material Subtype</th>
+                  <th style="text-align: left;">Material Code</th>
+                  <th style="text-align: left;">Material Name</th>
+                  <th style="text-align: left;">Grade</th>
+                  <th style="text-align: left;">Batch Qty</th>
+                  <th style="text-align: left;">Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let material of getFilteredDispensingCheckingData(); let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td style="text-align: left;">
+                    <strong style="color: #667eea;">{{ material.workorder_no }}</strong>
+                  </td>
+                  <td style="text-align: left;">{{ material.order_no }}</td>
+                  <td style="text-align: left;">{{ material.product_code }}</td>
+                  <td style="text-align: left;">{{ material.product_name }}</td>
+                  <td style="text-align: left;">{{ material.batch_number }}</td>
+                  <td style="text-align: left;">{{ material.plan_no }}</td>
+                  <td style="text-align: left;">{{ material.lot_no || '-' }}</td>
+                  <td style="text-align: left;">{{ material.lot_type || '-' }}</td>
+                  <td style="text-align: left;">{{ material.material_subtype || '-' }}</td>
+                  <td style="text-align: left;">
+                    <strong>{{ material.material_code }}</strong>
+                  </td>
+                  <td style="text-align: left;">{{ material.material_name || '-' }}</td>
+                  <td style="text-align: left;">{{ material.grade || '-' }}</td>
+                  <td style="text-align: left;">{{ material.batch_qty || '0.00' }}</td>
+                  <td style="text-align: left;">
+                    <span [class]="'badge ' + (material.lc_status === 'Approved' ? 'badge-success' : material.lc_status === 'Pending' ? 'badge-warning' : 'badge-secondary')">
+                      {{ material.lc_status || 'Pending' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-sm btn-info" 
+                      (click)="viewMaterialDetails(material, i)"
+                      [disabled]="material.prod_approved_by && material.prod_approved_by !== '0'"
+                      [title]="material.prod_approved_by && material.prod_approved_by !== '0' ? 'Already approved' : 'View details'">
+                      View
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div style="margin-top: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; font-size: 12px;">
+              <strong>Total Materials:</strong> {{ getFilteredDispensingCheckingData().length }} | 
+              <strong>Work Order:</strong> {{ currentWorkOrderNo }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Received Dispensing Content -->
+    <div *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 1">
+      <!-- List View -->
+      <div *ngIf="!isReceivedView && !isReceivedStart && !isReceivedViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-6">
+                <h3>Receiving Dispensing Requests - {{ currentWorkOrderNo }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="receivedDispensingLoading" style="text-align: center; padding: 40px;">
+          <span class="spinner spinner-inline"></span>
+          <span>Loading Received Dispensing Data...</span>
+        </div>
+        
+        <div *ngIf="!receivedDispensingLoading">
+          <table class="table table-bordered table-striped" style="margin-top: 20px;">
+            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <tr>
+                <th>Sr.</th>
+                <th>Date</th>
+                <th>Plan No</th>
+                <th>Product Code</th>
+                <th>Product Name</th>
+                <th>Batch/Lot No.</th>
+                <th>Batch Size</th>
+               
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of receivedDispensingData; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ result.dispense_request_sent_on | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ result.plan_no }}</td>
+                <td>{{ result.product_code }}</td>
+                <td>{{ result.product_name }}</td>
+                <td>{{ result.batch_number }}</td>
+                <td>{{ result.batch_size }}</td>
+                
+                <td>
+                  <button class="btn btn-sm btn-info" (click)="viewReceivedDispensing(i)">PROCEED</button>
+                </td>
+              </tr>
+              <tr *ngIf="receivedDispensingData?.length == 0">
+                <td colspan="9" style="text-align: center; padding: 40px; color: #999;">
+                  <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                  <p>No received dispensing requests found for work order {{ currentWorkOrderNo }}.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Detail View -->
+      <div *ngIf="isReceivedView && !isReceivedViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-9">
+                <h3>Dispensing Receiving Details</h3>
+              </div>
+              <div class="clr-col-lg-3" style="text-align: right;">
+                <button class="btn btn-sm btn-danger" (click)="closeReceivedDispensingView()">
+                  <i class="fas fa-times"></i> CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedReceivedResult" class="p-3">
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Product Details:</h4>
+          <table class="table table-bordered">
+            <tr>
+              <td style="text-align: left; border:1px solid black; width: 20%;"><b>Product Name:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['product_name'] }}</td>
+              <td style="text-align: left; border:1px solid black; width: 20%;"><b>Batch/LOT No.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['batch_number'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['grade'] }}</td>
+              <td style="text-align: left; border:1px solid black;"><b>Batch Size/LOT Size:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['batch_size'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; border:1px solid black;"><b>BFR No.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['bfr_no'] }}</td>
+              <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedReceivedResult['mfr_no'] }}</td>
+            </tr>
+          </table>
+          
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Bill of Material:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <tr>
+                <th>Sr.</th>
+                <th>Lot No.</th>
+                <th>Lot Type</th>
+                <th>Material Subtype</th>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>Grade</th>
+                <th>Batch Qty</th>
+                <th>QA Status</th>
+                <th>Prod. Status</th>
+                <!-- <th>Action</th> -->
+                <th>Check</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let comp of selectedReceivedResult['materials']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ comp.lot_no }}</td>
+                <td>{{ comp.lot_type }}</td>
+                <td>{{ comp.material_subtype }}</td>
+                <td>{{ comp.material_code }}</td>
+                <td>{{ comp.material_name }}</td>
+                <td>{{ comp.grade }}</td>
+                <td>{{ comp.batch_qty }}</td>
+                <td>{{ comp.qa_status }}</td>
+                <td>{{ comp.prod_status }}</td>
+                <!-- <td>
+                  <button class="btn btn-sm btn-info" (click)="viewReceivedDispensingActivity(i)">view</button>
+                </td> -->
+                <td>
+                  <button [disabled]="comp.checked_by !='0'" class="btn btn-sm btn-success" 
+                          (click)="updateReceivedReceivingStatusForProduct(comp.id,'Accept')">Accept</button>
+                  <button [disabled]="comp.checked_by !='0'" class="btn btn-sm btn-danger" 
+                          (click)="updateReceivedReceivingStatusForProduct(comp.id,'Reject')">Reject</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="clr-row" style="margin-top: 20px;">
+            <div class="clr-col-lg-4">
+              <label>Remarks</label>
+              <input type="text" name="remarks" [(ngModel)]="receivedRemarks" class="form-control">
+            </div>
+          </div>
+          
+          <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <button class="btn btn-success" (click)="updateReceivedReceivingStatus('material_received')" 
+                    [disabled]="receivedDispensingCompleted != 'No'" *ngIf="!isReceivedDispensingCompleted">
+              Receive Material Activity
+            </button>
+            <button class="btn btn-success" (click)="updateReceivedReceivingStatus('discpensing_completed')" 
+                    [disabled]="receivedDispensingCompleted == 'No'" *ngIf="isReceivedDispensingCompleted">
+              Complete Dispensing Activity
+            </button>
+            <button class="btn btn-danger" (click)="closeReceivedDispensingView()" style="margin-left: 10px;">Close</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Dispensing Activity View -->
+      <div *ngIf="isReceivedViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-9">
+                <h3>Dispensing Activity</h3>
+              </div>
+              <div class="clr-col-lg-3" style="text-align: right;">
+                <button class="btn btn-sm btn-danger" (click)="isReceivedViewDispensing = false; isReceivedView = true">
+                  <i class="fas fa-times"></i> CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedReceivedResult && selectedMaterial" class="p-3">
+          <table class="table table-bordered" style="margin-top: 20px;">
+            <tr>
+              <td><b>Product Name:</b></td>
+              <td>{{ selectedReceivedResult['product_name'] }}</td>
+              <td><b>Batch/LOT No.:</b></td>
+              <td>{{ selectedReceivedResult['batch_number'] }}</td>
+            </tr>
+            <tr>
+              <td><b>Grade:</b></td>
+              <td>{{ selectedReceivedResult['grade'] }}</td>
+              <td><b>Batch Size/LOT Size:</b></td>
+              <td>{{ selectedReceivedResult['batch_size'] }}</td>
+            </tr>
+            <tr>
+              <td><b>BFR No.:</b></td>
+              <td>{{ selectedReceivedResult['bfr_no'] }}</td>
+              <td><b>MFR NO.:</b></td>
+              <td>{{ selectedReceivedResult['mfr_no'] }}</td>
+            </tr>
+            <tr>
+              <td><b>Dispensing No:</b></td>
+              <td><strong>{{ selectedReceivedResult['work_order_no'] }}</strong></td>
+              <td><b>Material Name:</b></td>
+              <td><strong>{{ selectedMaterial['material_name'] }}</strong></td>
+            </tr>
+            <tr>
+              <td><b>Material Code:</b></td>
+              <td><strong>{{ selectedMaterial['material_code'] }}</strong></td>
+              <td><b>Grade:</b></td>
+              <td><strong>{{ selectedMaterial['grade'] }}</strong></td>
+            </tr>
+            <tr>
+              <td><b>LOD Criteria:</b></td>
+              <td><strong>{{ selectedReceivedResult['lod_status'] }}</strong></td>
+              <td><b>Assay Criteria:</b></td>
+              <td><strong>{{ selectedReceivedResult['assay_status'] }}</strong></td>
+            </tr>
+          </table>
+          
+          <!-- Available AR Data Table -->
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Available AR Data:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background-color: #004a70; color: white;">
+              <tr>
+                
+                <th>QTY Avbl.</th>
+                <th>Pack Size</th>
+                <th>Lod %.</th>
+                <th>Dry Qty</th>
+                <th>Assay %.</th>
+                <th>Pure Qty</th>
+                <th>Equivalency Factor</th>
+                <th>Qty To Dispense</th>
+                <th>Next Medicap lot no Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let list of available_ars_data; let i=index">
+                <td style="text-align: center;">{{i+1}}</td>
+                <td>{{ list.batch_no }}</td>
+                <td>{{list.balance_qty}}</td>
+                <td>{{list.pack_size}}</td>
+                <td *ngIf="list.dry_qty>0">{{list.lod_per}}</td>
+                <td *ngIf="list.dry_qty==0">N/A</td>
+                <td *ngIf="list.dry_qty>0">{{list.dry_qty}}</td>
+                <td *ngIf="list.dry_qty==0">N/A</td>
+                <td *ngIf="list.pure_qty>0">{{list.assay}}</td>
+                <td *ngIf="list.pure_qty==0">N/A</td>
+                <td *ngIf="list.pure_qty>0">{{list.pure_qty}}</td>
+                <td *ngIf="list.pure_qty==0">N/A</td>
+                <td>{{list.e_factor}}</td>
+                <td>{{list.qty_to_dispense}}</td>
+                <td>{{list.next_ar_qty}}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Containers Table -->
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Containers:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background-color: #004a70; color: white;">
+              <tr>
+                <th>Medicap lot no</th>
+                <th>Container No</th>
+                <th>Container Type</th>
+                <th>Gross Wt</th>
+                <th>Tare Wt</th>
+                <th>Net Wt</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let list of available_ars; let i=index">
+                <td>{{list.ar_no}}</td>
+                <td>{{list.container_no}}</td>
+                <td>{{list.container_type}}</td>
+                <td>{{list.gross_wt}}</td>
+                <td>{{list.tare_wt}}</td>
+                <td>{{list.net_weight}}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="text-align: right;"><strong>Total:</strong></td>
+                <td></td>
+                <td><strong>{{ selectedResult?.gross_total | number : '1.2-2' }}</strong></td>
+                <td><strong>{{ selectedResult?.tare_total | number : '1.2-2' }}</strong></td>
+                <td><strong>{{ selectedResult?.net_total | number : '1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dispensing Log Content -->
+    <div *ngIf="activeContentModalType === 'dispensing' && activeSubTabForModal === 2">
+      <!-- List View -->
+      <div *ngIf="!isLogView && !isLogStart && !isLogViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-6">
+                <h3>Dispensing Log - {{ currentWorkOrderNo }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="dispensingLogLoading" style="text-align: center; padding: 40px;">
+          <span class="spinner spinner-inline"></span>
+          <span>Loading Dispensing Log Data...</span>
+        </div>
+        
+        <div *ngIf="!dispensingLogLoading">
+          <table class="table table-bordered table-striped" style="margin-top: 20px;">
+            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <tr>
+                <th>Sr.</th>
+                <th>Date</th>
+                <th>Plan No</th>
+                <th>Product Code</th>
+                <th>Product Name</th>
+                <th>Batch/Lot No.</th>
+                <th>Batch Size</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of dispensingLogData; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ result.dispense_request_sent_on | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ result.plan_no }}</td>
+                <td>{{ result.product_code }}</td>
+                <td>{{ result.product_name }}</td>
+                <td>{{ result.batch_number }}</td>
+                <td>{{ result.batch_size }}</td>
+                <td>{{ result.lc_status }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info" (click)="viewDispensingLog(i)">PROCEED</button>
+                </td>
+              </tr>
+              <tr *ngIf="dispensingLogData?.length == 0">
+                <td colspan="9" style="text-align: center; padding: 40px; color: #999;">
+                  <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                  <p>No dispensing log records found for work order {{ currentWorkOrderNo }}.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Detail View -->
+      <div *ngIf="isLogView && !isLogViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-9">
+                <h3>Dispensing Details</h3>
+              </div>
+              <div class="clr-col-lg-3" style="text-align: right;">
+                <button class="btn btn-sm btn-danger" (click)="closeDispensingLogView()">
+                  <i class="fas fa-times"></i> CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedLogResult" class="p-3">
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Product Details:</h4>
+          <table class="table table-bordered">
+            <tr>
+              <td style="text-align: left; border:1px solid black; width: 20%;"><b>Product Name:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['product_name'] }}</td>
+              <td style="text-align: left; border:1px solid black; width: 20%;"><b>Batch/LOT No.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['batch_number'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['grade'] }}</td>
+              <td style="text-align: left; border:1px solid black;"><b>Batch Size/LOT Size:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['batch_size'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; border:1px solid black;"><b>BFR No.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['bfr_no'] }}</td>
+              <td style="text-align: left; border:1px solid black;"><b>MFR NO.:</b></td>
+              <td style="text-align: left; border:1px solid black;">{{ selectedLogResult['mfr_no'] }}</td>
+            </tr>
+          </table>
+          
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Bill Of Material:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <tr>
+                <th>Sr.</th>
+                <th>Lot No.</th>
+                <th>Lot Type</th>
+                <th>Material Subtype</th>
+                <th>Material Code</th>
+                <th>Material Name</th>
+                <th>Grade</th>
+                <th>Batch Qty</th>
+                <th>QA Status</th>
+                <th>Prod. Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let comp of selectedLogResult['materials']; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ comp.serialNumber }}</td>
+                <td>{{ comp.lot_type }}</td>
+                <td>{{ comp.material_subtype }}</td>
+                <td>{{ comp.material_code }}</td>
+                <td>{{ comp.material_name }}</td>
+                <td>{{ comp.gradeName || comp.grade }}</td>
+                <td>{{ comp.batch_qty }}</td>
+                <td>{{ comp.qa_status }}</td>
+                <td>{{ comp.prod_status }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info" (click)="viewDispensingLogActivity(i)" *ngIf="comp.dispence_id>0">View</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <button class="btn btn-danger" (click)="closeDispensingLogView()">Close</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Dispensing Activity View -->
+      <div *ngIf="isLogViewDispensing">
+        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+          <div class="card-header">
+            <div class="clr-row">
+              <div class="clr-col-lg-9">
+                <h3>Dispensing Activity</h3>
+              </div>
+              <div class="clr-col-lg-3" style="text-align: right;">
+                <button class="btn btn-sm btn-danger" (click)="isLogViewDispensing = false; isLogView = true">
+                  <i class="fas fa-times"></i> CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedLogResult && selectedMaterial" class="p-3">
+          <table class="table table-bordered" style="margin-top: 20px;">
+            <tr>
+              <td><b>Product Name:</b></td>
+              <td>{{ selectedLogResult['product_name'] }}</td>
+              <td><b>Batch/LOT No.:</b></td>
+              <td>{{ selectedLogResult['batch_number'] }}</td>
+            </tr>
+            <tr>
+              <td><b>Grade:</b></td>
+              <td>{{ selectedLogResult['grade'] }}</td>
+              <td><b>Batch Size/LOT Size:</b></td>
+              <td>{{ selectedLogResult['batch_size'] }}</td>
+            </tr>
+            <tr>
+              <td><b>BFR No.:</b></td>
+              <td>{{ selectedLogResult['bfr_no'] }}</td>
+              <td><b>MFR NO.:</b></td>
+              <td>{{ selectedLogResult['mfr_no'] }}</td>
+            </tr>
+            <tr>
+              <td><b>Work Order No:</b></td>
+              <td><strong>{{ selectedLogResult['work_order_no'] }}</strong></td>
+              <td><b>Material Name:</b></td>
+              <td><strong>{{ selectedMaterial['material_name'] }}</strong></td>
+            </tr>
+            <tr>
+              <td><b>Material Code:</b></td>
+              <td><strong>{{ selectedMaterial['material_code'] }}</strong></td>
+              <td><b>Grade:</b></td>
+              <td><strong>{{ selectedMaterial['grade'] }}</strong></td>
+            </tr>
+          </table>
+          
+          <!-- Available AR Data Table -->
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Available AR Data:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background-color: #004a70; color: white;">
+              <tr>
+                
+                <th>QTY Avbl.</th>
+                <th>Pack Size</th>
+                <th>Lod %.</th>
+                <th>Dry Qty</th>
+                <th>Assay %.</th>
+                <th>Pure Qty</th>
+                <th>Equivalency Factor</th>
+                <th>Qty To Dispense</th>
+                <th>Next Medicap lot no Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let list of available_ars_data; let i=index">
+                <td style="text-align: center;">{{i+1}}</td>
+                <td>{{ list.batch_no }}</td>
+                <td>{{list.balance_qty}}</td>
+                <td>{{list.pack_size}}</td>
+                <td *ngIf="list.dry_qty>0">{{list.lod_per}}</td>
+                <td *ngIf="list.dry_qty==0">N/A</td>
+                <td *ngIf="list.dry_qty>0">{{list.dry_qty}}</td>
+                <td *ngIf="list.dry_qty==0">N/A</td>
+                <td *ngIf="list.pure_qty>0">{{list.assay}}</td>
+                <td *ngIf="list.pure_qty==0">N/A</td>
+                <td *ngIf="list.pure_qty>0">{{list.pure_qty}}</td>
+                <td *ngIf="list.pure_qty==0">N/A</td>
+                <td>{{list.e_factor}}</td>
+                <td>{{list.qty_to_dispense}}</td>
+                <td>{{list.next_ar_qty}}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Containers Table -->
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Containers:</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background-color: #004a70; color: white;">
+              <tr>
+                <th>Medicap lot no</th>
+                <th>Container No</th>
+                <th>Container Type</th>
+                <th>Gross Wt</th>
+                <th>Tare Wt</th>
+                <th>Net Wt</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let list of available_ars; let i=index">
+                <td>{{list.ar_no}}</td>
+                <td>{{list.container_no}}</td>
+                <td>{{list.container_type}}</td>
+                <td>{{list.gross_wt}}</td>
+                <td>{{list.tare_wt}}</td>
+                <td>{{list.net_weight}}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="text-align: right;"><strong>Total:</strong></td>
+                <td></td>
+                <td><strong>{{ selectedResult?.gross_total | number : '1.2-2' }}</strong></td>
+                <td><strong>{{ selectedResult?.tare_total | number : '1.2-2' }}</strong></td>
+                <td><strong>{{ selectedResult?.net_total | number : '1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Allocate Manpower Content -->
+    <div *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 3">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card-header">
+          <div class="clr-row">
+            <div class="clr-col-lg-6">
+              <h3>Allocate Manpower - {{ currentWorkOrderNo }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add Manpower Allocation Form -->
+      <div class="p-3" style="background-color: #f8f9fa; border-radius: 4px; margin: 20px;">
+        <h4 style="margin-bottom: 20px; color: #667eea;">Add New Allocation</h4>
+        <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Select Employee:</label>
+            <select class="form-control" [(ngModel)]="selectedEmployeeId" (change)="onEmployeeSelect(selectedEmployeeId)" required>
+              <option value="">-- Select Employee --</option>
+              <option *ngFor="let emp of availableEmployees" [value]="emp.emp_id">
+                {{ emp.firstname }} {{ emp.lastname }} ({{ emp.emp_id }})
+              </option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Role:</label>
+            <select class="form-control" [(ngModel)]="employeeRole" required>
+              <option value="">-- Select Role --</option>
+              <option value="Supervisor">Supervisor</option>
+              <option value="Operator">Operator</option>
+              <option value="Helper">Helper</option>
+              <option value="QA Person">QA Person</option>
+              <option value="QC Person">QC Person</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Remarks (Optional):</label>
+            <input type="text" class="form-control" [(ngModel)]="allocationRemarks" placeholder="Enter remarks">
+          </div>
+        </div>
+        <div class="clr-row" style="margin-top: 20px;">
+          <div class="clr-col-lg-12">
+            <button class="btn btn-primary" (click)="addManpowerAllocation()">
+              <i class="fas fa-plus"></i> Add Allocation
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Manpower Allocation Table -->
+      <div class="p-3">
+        <div *ngIf="manpowerAllocationLoading" style="text-align: center; padding: 40px;">
+          <span class="spinner spinner-inline"></span>
+          <span>Loading Manpower Allocation Data...</span>
+        </div>
+        
+        <div *ngIf="!manpowerAllocationLoading">
+          <h4 style="margin-top: 20px; margin-bottom: 15px;">Allocated Manpower</h4>
+          <table class="table table-bordered table-striped">
+            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+              <tr>
+                <th>Sr. No.</th>
+                <th>Employee ID</th>
+                <th>Employee Name</th>
+                <th>Role</th>
+                <th>Allocated Date</th>
+                <th>Allocated By</th>
+                <th>Remarks</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let allocation of manpowerAllocationData; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ allocation.emp_id }}</td>
+                <td>{{ allocation.emp_name || (allocation.firstname + ' ' + allocation.lastname) }}</td>
+                <td>
+                  <span class="badge" [ngClass]="{
+                    'badge-success': allocation.role === 'Supervisor',
+                    'badge-info': allocation.role === 'Operator',
+                    'badge-warning': allocation.role === 'Helper',
+                    'badge-primary': allocation.role === 'QA Person' || allocation.role === 'QC Person',
+                    'badge-secondary': allocation.role === 'Other'
+                  }">
+                    {{ allocation.role }}
+                  </span>
+                </td>
+                <td>{{ allocation.allocated_date | date: 'dd-MM-yyyy HH:mm' }}</td>
+                <td>{{ allocation.allocated_by_name || allocation.allocated_by }}</td>
+                <td>{{ allocation.remarks || '-' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-danger" (click)="removeManpowerAllocation(allocation.id)" title="Remove">
+                    <i class="fas fa-trash"></i> Remove
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="manpowerAllocationData?.length == 0">
+                <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                  <i class="fas fa-users" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                  <p>No manpower allocated for work order {{ currentWorkOrderNo }}.</p>
+                  <p>Use the form above to add allocations.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Allocation Log Content -->
+    <div *ngIf="activeContentModalType === 'manufacturing' && activeSubTabForModal === 4">
+      <div class="p-3">
+        <h5>Allocation Log</h5>
+        <p class="text-muted">Content for Allocation Log will be added here.</p>
+      </div>
+    </div>
+    
+    <!-- EMBR Awaiting Content -->
+    <div *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 5">
+      <div class="p-3">
+        <h5>EMBR Awaiting</h5>
+        <p class="text-muted">Content for EMBR Awaiting will be added here.</p>
+      </div>
+    </div>
+    
+    <!-- EMBR Log Content -->
+    <div *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 6">
+      <div class="p-3">
+        <h5>EMBR Log</h5>
+        <p class="text-muted">Content for EMBR Log will be added here.</p>
+      </div>
+    </div>
+    
+    <!-- EMBR Completed Content -->
+    <div *ngIf="activeContentModalType === 'embr' && activeSubTabForModal === 7">
+      <div class="p-3">
+        <h5>EMBR Completed</h5>
+        <p class="text-muted">Content for EMBR Completed will be added here.</p>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Material Details Modal -->
+<clr-modal [(clrModalOpen)]="showMaterialDetailsModal" [clrModalSize]="'xl'" [clrModalClosable]="true" [clrModalStaticBackdrop]="false" class="modal-fullscreen">
+  <h3 class="modal-title" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; margin: 0; display: block;">
+    Material Details - {{ selectedMaterial?.material_name || 'N/A' }}
+  </h3>
+  <div class="modal-body" style="overflow-y: auto;">
+    <div *ngIf="selectedMaterial" class="p-3">
+      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+        <div class="card-header">
+          <div class="clr-row">
+            <div class="clr-col-lg-6">
+              <h3>Material Information</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <h4 style="margin-top: 20px; margin-bottom: 15px;">Product Details:</h4>
+      <table class="table table-bordered">
+        <tr>
+          <td style="text-align: left; border:1px solid black; width: 20%;"><b>Work Order No.:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.workorder_no }}</td>
+          <td style="text-align: left; border:1px solid black; width: 20%;"><b>Order No.:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.order_no || '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Product Name:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.product_name || '-' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Product Code:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.product_code || '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Batch/LOT No.:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.batch_number || '-' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Plan No:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.plan_no || '-' }}</td>
+        </tr>
+      </table>
+      
+      <h4 style="margin-top: 20px; margin-bottom: 15px;">Material Details:</h4>
+      <table class="table table-bordered">
+        <tr>
+          <td style="text-align: left; border:1px solid black; width: 20%;"><b>Material Code:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.material_code || '-' }}</td>
+          <td style="text-align: left; border:1px solid black; width: 20%;"><b>Material Name:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.material_name || '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Lot No.:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.lot_no || '-' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Lot Type:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.lot_type || '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Material Subtype:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.material_subtype || '-' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Grade:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.grade || '-' }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Batch Qty:</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedMaterial.batch_qty || '0.00' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Status:</b></td>
+          <td style="text-align: left; border:1px solid black;">
+            <span [class]="'badge ' + (selectedMaterial.lc_status === 'Approved' ? 'badge-success' : selectedMaterial.lc_status === 'Pending' ? 'badge-warning' : 'badge-secondary')">
+              {{ selectedMaterial.lc_status || 'Pending' }}
+            </span>
+          </td>
+        </tr>
+      </table>
+      
+      <div *ngIf="selectedMaterial.prod_approved_by && selectedMaterial.prod_approved_by !== '0'" 
+           style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+        <strong>Note:</strong> This material has already been approved by Production.
+      </div>
+      
+      <!-- Dispensing Activity Section -->
+      <div class="card" style="margin-top: 30px;" *ngIf="selectedMaterial && (!selectedMaterial.prod_approved_by || selectedMaterial.prod_approved_by === '0')">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+              Dispensing Activity
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6">
+                <label>Required Qty:</label>
+                <input type="text" name="qty" [ngModel]="selectedMaterial['batch_qty']" readonly tabindex="-1">
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6">
+                <label>Balance Qty:</label>
+                <input type="text" name="balance_qty" [(ngModel)]="balance_qty" readonly tabindex="-1">
+              </div>
+            </div>
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6">
+                <h4>Available A R Data:</h4>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6">
+                <h3>FIFO Type: {{fifo_method}}</h3>
+              </div>
+            </div>
+            <form #contanerForm="ngForm">
+              <table class="table">
+                <tr>
+                  
+                  <th style="background-color: #004a70; color :white">QTY Avbl.</th>
+                  <th style="background-color: #004a70; color :white">Pack Size</th>
+                  <th style="background-color: #004a70; color :white">Lod %.</th>
+                  <th style="background-color: #004a70; color :white">Dry Qty</th>
+                  <th style="background-color: #004a70; color :white">Assay %.</th>
+                  <th style="background-color: #004a70; color :white">Pure Qty</th>
+                  <th style="background-color: #004a70; color :white">Equvalancy Factor</th>
+                  <th style="background-color: #004a70; color :white">Qty To Dispense</th>
+                  <th style="background-color: #004a70; color :white">Next Medicap lot no Qty</th>
+                </tr>
+                <tr *ngFor="let list of available_ars_data;let i=index;">
+                  <td style="text-align: center;">{{i+1}}</td>
+                  <td style="text-align: left;">{{ list.batch_no }}</td>
+                  <td style="text-align: left;">{{list.balance_qty}}</td>
+                  <td style="text-align: left;">{{list.pack_size}}</td>
+                  <td *ngIf="list.dry_qty>0" style="text-align: left;">{{list.lod_per}}</td>
+                  <td *ngIf="list.dry_qty==0" style="text-align: left;">N/A</td>
+                  <td *ngIf="list.dry_qty>0" style="text-align: left;">{{list.dry_qty}}</td>
+                  <td *ngIf="list.dry_qty==0" style="text-align: left;">N/A</td>
+                  <td *ngIf="list.pure_qty>0" style="text-align: left;">{{list.assay}}</td>
+                  <td *ngIf="list.pure_qty==0" style="text-align: left;">N/A</td>
+                  <td *ngIf="list.pure_qty>0" style="text-align: left;">{{list.pure_qty}}</td>
+                  <td *ngIf="list.pure_qty==0" style="text-align: left;">N/A</td>
+                  <td style="text-align: left;">{{list.e_factor}}</td>
+                  <td style="text-align: left;">{{list.qty_to_dispense}}</td>
+                  <td style="text-align: left;">{{list.next_ar_qty}}</td>
+                </tr>
+              </table>
+            </form>
+            <form #contanerForm2="ngForm">
+              <table class="table">
+                <tr>
+                  <th style="background-color: #004a70; color :white">Medicap lot no</th>
+                  <th style="background-color: #004a70; color :white">Container No</th>
+                  <th style="background-color: #004a70; color :white">Container Type</th>
+                  <th style="background-color: #004a70; color :white">Gross Wt</th>
+                  <th style="background-color: #004a70; color :white">Tare Wt</th>
+                  <th style="background-color: #004a70; color :white">Net Wt</th>
+                </tr>
+                <tr *ngFor="let list of available_ars;let i=index;">
+                  <td style="text-align: left;">{{list.ar_no}}</td>
+                  <td style="text-align: left;">{{list.container_no}}</td>
+                  <td style="text-align: left;">{{list.container_type}}</td>
+                  <td style="text-align: left;">{{list.gross_wt}}</td>
+                  <td style="text-align: left;">{{list.tare_wt}}</td>
+                  <td style="text-align: left;">{{list.net_weight}}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="text-align: right;">Total:</td>
+                  <td style="text-align: left;">{{selectedResult?.gross_total | number : '1.2-2'}}</td>
+                  <td style="text-align: left;">{{selectedResult?.tare_total | number : '1.2-2'}}</td>
+                  <td style="text-align: left;">{{selectedResult?.net_total | number : '1.2-2'}}</td>
+                </tr>
+              </table>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div *ngIf="!selectedMaterial" style="text-align: center; padding: 40px;">
+      <p>No material selected.</p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button *ngIf="selectedMaterial && (!selectedMaterial.prod_approved_by || selectedMaterial.prod_approved_by === '0')" 
+            type="button" class="btn btn-primary btn-3d" (click)="updateDispensingStatus('Approve')">Approve</button>
+    <button *ngIf="selectedMaterial && (!selectedMaterial.prod_approved_by || selectedMaterial.prod_approved_by === '0')" 
+            type="button" class="btn btn-danger btn-3d" (click)="updateDispensingStatus('Reject')">Reject</button>
+    <button type="button" class="btn btn-danger btn-3d" (click)="closeMaterialDetailsModal()" style="background-color: red; color: white; border: none; margin-left: auto;">
+      <i class="fas fa-times"></i> CLOSE
+    </button>
+  </div>
+</clr-modal>
+
+<!-- Booking Modal -->
+<clr-modal [(clrModalOpen)]="showBookingModal" clrModalSize="lg">
+  <h3 class="modal-title">Book Line for Work Order: {{ selectedWOForBooking?.workorder_no }}</h3>
+  <div class="modal-body">
+    <form #bookingForm="ngForm">
+      <div class="clr-form-control">
+        <label>Work Order:</label>
+        <input type="text" [value]="selectedWOForBooking?.workorder_no || ''" name="wo_no" disabled>
+      </div>
+      <div class="clr-form-control">
+        <label>Product:</label>
+        <input type="text" [value]="selectedWOForBooking?.product_name || ''" name="product" disabled>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <div class="clr-form-control">
+            <label>Booking Start Date: <span class="text-danger">*</span></label>
+            <input type="date" [(ngModel)]="bookingFormData.booking_start_date" 
+                   name="booking_start_date" required
+                   (change)="validateBookingHours()">
+          </div>
+        </div>
+        <div class="clr-col-lg-6">
+          <div class="clr-form-control">
+            <label>Booking Start Time:</label>
+            <input type="time" [(ngModel)]="bookingFormData.booking_start_time" 
+                   name="booking_start_time"
+                   (change)="validateBookingHours()">
+          </div>
+        </div>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <div class="clr-form-control">
+            <label>Booking End Date: <span class="text-danger">*</span></label>
+            <input type="date" [(ngModel)]="bookingFormData.booking_end_date" 
+                   name="booking_end_date" required
+                   (change)="validateBookingHours()">
+          </div>
+        </div>
+        <div class="clr-col-lg-6">
+          <div class="clr-form-control">
+            <label>Booking End Time:</label>
+            <input type="time" [(ngModel)]="bookingFormData.booking_end_time" 
+                   name="booking_end_time"
+                   (change)="validateBookingHours()">
+          </div>
+        </div>
+      </div>
+      
+      <!-- MaxWorkingHours Validation Message -->
+      <div *ngIf="bookingFormData.linemaster_id && bookingFormData.booking_start_date && bookingFormData.booking_end_date" 
+           class="clr-form-control" style="margin-top: 10px;">
+        <div [ngClass]="{'alert': true, 'alert-warning': bookingHoursExceedMax, 'alert-info': !bookingHoursExceedMax && maxWorkingHours > 0}"
+             style="padding: 10px; margin: 0;">
+          <div *ngIf="maxWorkingHours > 0">
+            <strong>Booking Duration:</strong> {{ calculateBookingFormHours() }} hrs | 
+            <strong>Max Working Hours:</strong> {{ maxWorkingHours }} hrs
+            <span *ngIf="bookingHoursExceedMax" style="color: #d9534f; font-weight: bold; margin-left: 10px;">
+              ⚠️ Exceeds maximum!
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="clr-form-control">
+        <label>Responsible Person:</label>
+        <input type="text" [(ngModel)]="bookingFormData.responsible_person" 
+               name="responsible_person">
+      </div>
+      <div class="clr-form-control">
+        <label>Remarks:</label>
+        <textarea [(ngModel)]="bookingFormData.remarks" name="remarks" rows="3"></textarea>
+      </div>
+      
+      <!-- Availability Check Result -->
+      <div *ngIf="availabilityCheckResult" 
+           [class]="'alert ' + (availabilityCheckResult.isAvailable ? 'alert-success' : 'alert-warning')"
+           style="margin-top: 15px;">
+        <div *ngIf="!availabilityCheckResult.isAvailable">
+          <strong>⚠️ Line is not available for the selected dates.</strong>
+          <div *ngIf="availabilityCheckResult.conflicts && availabilityCheckResult.conflicts.length > 0" style="margin-top: 15px;">
+            <strong>Conflicting Bookings:</strong>
+            <div style="border-top: 1px solid #ddd; margin: 10px 0; padding-top: 10px;"></div>
+            <div *ngFor="let conflict of availabilityCheckResult.conflicts; let i = index" style="margin-bottom: 15px; padding: 10px; background-color: #fff3cd; border-left: 3px solid #ffc107; border-radius: 3px;">
+              <div style="font-weight: bold; margin-bottom: 5px;">{{ i + 1 }}. Work Order: {{ conflict.workorder_no || 'N/A' }}</div>
+              <div style="margin-left: 20px; font-size: 13px;">
+                <div><strong>Status:</strong> {{ conflict.status || 'N/A' }}</div>
+                <div><strong>Booked From:</strong> {{ conflict.start || 'N/A' }}</div>
+                <div><strong>Booked Until:</strong> {{ conflict.end || 'N/A' }}</div>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #ddd; margin: 10px 0; padding-top: 10px;"></div>
+            <div style="margin-top: 10px; font-size: 13px;">
+              Please select different dates or wait for the current booking to complete.
+            </div>
+          </div>
+        </div>
+        <div *ngIf="availabilityCheckResult.isAvailable" style="padding: 10px;">
+          <strong>✅ Line is available for the selected dates!</strong>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" 
+            (click)="checkAvailability()"
+            [disabled]="!bookingForm.valid">
+      Check Availability
+    </button>
+    <button class="btn btn-success" 
+            (click)="confirmBooking()"
+            [disabled]="!bookingForm.valid || !availabilityCheckResult?.isAvailable || bookingHoursExceedMax">
+      Confirm Booking
+    </button>
+    <button class="btn btn-secondary" (click)="closeBookingModal()">Cancel</button>
+  </div>
+</clr-modal>
+
+<!-- Update Actual Dates Modal -->
+<clr-modal [(clrModalOpen)]="showUpdateDatesModal" clrModalSize="lg">
+  <h3 class="modal-title">Update Actual Dates - {{ selectedBookingForUpdate?.workorder_no }}</h3>
+  <div class="modal-body">
+    <form #updateDatesForm="ngForm">
+      
+      <!-- Current Booking Info -->
+      <div class="alert alert-info">
+        <strong>Current Booking:</strong><br>
+        Tentative: {{ selectedBookingForUpdate?.booking_start_date }} to {{ selectedBookingForUpdate?.booking_end_date }}
+      </div>
+      
+      <!-- Actual Start Date -->
+      <div class="clr-form-control">
+        <label>Actual Start Date: <span class="text-danger">*</span></label>
+        <input type="date" 
+               [(ngModel)]="actualDatesForm.actual_start_date" 
+               name="actual_start_date"
+               required>
+        <small class="text-muted">When production actually started</small>
+      </div>
+      
+      <div class="clr-form-control">
+        <label>Actual Start Time:</label>
+        <input type="time" 
+               [(ngModel)]="actualDatesForm.actual_start_time" 
+               name="actual_start_time">
+      </div>
+      
+      <!-- Actual End Date -->
+      <div class="clr-form-control">
+        <label>Actual End Date:</label>
+        <input type="date" 
+               [(ngModel)]="actualDatesForm.actual_end_date" 
+               name="actual_end_date">
+        <small class="text-warning">
+          <strong>⚠️ Note:</strong> Setting actual end date will automatically mark this booking as "Completed" and release the line for new bookings.
+        </small>
+      </div>
+      
+      <div class="clr-form-control">
+        <label>Actual End Time:</label>
+        <input type="time" 
+               [(ngModel)]="actualDatesForm.actual_end_time" 
+               name="actual_end_time">
+      </div>
+      
+      <!-- Status Preview -->
+      <div class="alert alert-warning" *ngIf="actualDatesForm.actual_end_date && selectedBookingForUpdate?.status !== 'Completed'">
+        <strong>⚠️ Status Change:</strong> This booking will be marked as "Completed" when you save.
+      </div>
+      
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" 
+            (click)="saveActualDates()"
+            [disabled]="!updateDatesForm.valid || !actualDatesForm.actual_start_date">
+      Save Actual Dates
+    </button>
+    <button class="btn btn-secondary" (click)="closeUpdateDatesModal()">Cancel</button>
+  </div>
+</clr-modal>
+
+<!-- Line Selection Modal (for booking from home screen) -->
+<clr-modal [(clrModalOpen)]="showLineSelectionModal" clrModalSize="lg">
+  <h3 class="modal-title">Select Line for Work Order: {{ selectedWOForBooking?.workorder_no }}</h3>
+  <div class="modal-body">
+    <div class="alert alert-info">
+      <strong>Product:</strong> {{ selectedWOForBooking?.product_name }}<br>
+      <strong>Batch Size:</strong> {{ selectedWOForBooking?.batch_size }}
+    </div>
+    
+    <div *ngIf="availableLinesForBooking.length === 0" class="text-center" style="padding: 20px;">
+      <span class="spinner spinner-inline"></span> Loading available lines...
+    </div>
+    
+    <table class="table table-bordered" *ngIf="availableLinesForBooking.length > 0">
+      <thead>
+        <tr>
+          <th>Line No</th>
+          <th>Line Name</th>
+          <th>Room Name</th>
+          <th>Type</th>
+          <th>Capacity</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let line of availableLinesForBooking">
+          <td>{{ line.line_no }}</td>
+          <td>{{ line.line_name }}</td>
+          <td>{{ line.Section }}</td>
+          <td>{{ line.lineType }}</td>
+          <td>{{ line.MfgLineMinCapacity }} - {{ line.MfgLineMaxCapacity }}</td>
+          <td>
+            <span *ngIf="line.isAvailable" class="badge badge-success">Available</span>
+            <span *ngIf="!line.isAvailable" class="badge badge-warning">Not Available</span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-primary" 
+                    (click)="selectLineForBookingModal(line)"
+                    [disabled]="!line.isAvailable">
+              Select & Book
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="showLineSelectionModal = false">Cancel</button>
+  </div>
+</clr-modal>
+
+<!-- Stage Date/Time Entry Modal -->
+<clr-modal [(clrModalOpen)]="showStageDateModal" clrModalSize="md">
+  <h3 class="modal-title">{{ currentStageDateEdit?.field_label }}</h3>
+  <div class="modal-body">
+    <form #stageDateEntryForm="ngForm">
+      <div class="alert alert-info" *ngIf="currentStageDateEdit">
+        <strong>Work Order:</strong> {{ currentStageDateEdit.workorder_no }}<br>
+        <strong>Stage:</strong> {{ currentStageDateEdit.stage }}<br>
+        <strong>Dosage Form:</strong> {{ currentStageDateEdit.dosage_form }}
+      </div>
+      
+      <div class="alert alert-danger" *ngIf="currentStageDateEdit && isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage)">
+        <strong>⚠️ Stage Completed:</strong> This stage is already completed and cannot be edited.
+      </div>
+      
+      <div class="clr-form-control">
+        <label>Date: <span class="text-danger">*</span></label>
+        <input type="date" 
+               [(ngModel)]="stageDateForm.date" 
+               name="stage_date"
+               required
+               [disabled]="currentStageDateEdit && isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage)"
+               style="width: 100%;">
+      </div>
+      
+      <div class="clr-form-control">
+        <label>Time:</label>
+        <input type="time" 
+               [(ngModel)]="stageDateForm.time" 
+               name="stage_time"
+               [disabled]="currentStageDateEdit && isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage)"
+               style="width: 100%;">
+        <small class="text-muted">Optional - leave blank if not needed</small>
+      </div>
+      
+      <div class="alert alert-warning" *ngIf="currentStageDateEdit?.date_type === 'actual_completion' && !isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage)">
+        <strong>⚠️ Note:</strong> Setting actual completion date will automatically mark this stage as "Completed" and prevent further editing.
+      </div>
+      
+      <div class="alert alert-info" *ngIf="currentStageDateEdit?.date_type === 'actual_start' && !isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage)">
+        <strong>ℹ️ Note:</strong> Setting actual start date will automatically mark this stage as "In Progress".
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" 
+            (click)="saveStageDateFromModal()"
+            [disabled]="!stageDateForm.date || (currentStageDateEdit && isStageCompleted(currentStageDateEdit.workorder_no, currentStageDateEdit.dosage_form, currentStageDateEdit.stage))">
+      {{ stageDateForm.date ? 'Update' : 'Set' }} Date
+    </button>
+    <button class="btn btn-secondary" (click)="closeStageDateModal()">Cancel</button>
+  </div>
+</clr-modal>

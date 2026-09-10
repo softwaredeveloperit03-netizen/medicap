@@ -1,0 +1,96 @@
+<div class="mmap mmap--card">
+  <header class="mmap__header card-header mef-panel-header">
+    <h1 class="mmap__title mef-panel-header__title">Map Material</h1>
+    <div class="mmap__actions mef-panel-header__actions" *ngIf="is_corporate != 1">
+      <a class="mmap__btn mmap__btn--new" *ngIf="isuser === 'Yes'" routerLink="/purchase/vendor/material/new">New</a>
+      <a class="mmap__btn mmap__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Vendor Registration' }">{{'common.close' | translate}}</a>
+    </div>
+  </header>
+  <div class="mmap__body">
+    <div class="mmap__toolbar">
+      <label class="mmap__search-label">Search</label>
+      <input type="text" class="mmap__search" placeholder="Search vendor, code, name, type…" [(ngModel)]="searchQuery" aria-label="Search map material">
+    </div>
+
+    <div class="mmap__table-wrap">
+      <clr-datagrid class="mmap__datagrid" [clrDgLoading]="loading">
+        <clr-dg-column class="mmap__col-sr">Sr. No.</clr-dg-column>
+        <clr-dg-column class="mmap__col-date">Entry Date</clr-dg-column>
+        <clr-dg-column class="mmap__col-by">Entry By</clr-dg-column>
+        <clr-dg-column>Vendor Code</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>No of Product</clr-dg-column>
+        <clr-dg-column class="mmap__col-action">{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let record of filteredMaterials; let i = index" [clrDgItem]="record">
+          <clr-dg-cell class="mmap__cell-sr">{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell class="mmap__cell-date">{{ record.entry_date | date:'dd/MM/yyyy' }}</clr-dg-cell>
+          <clr-dg-cell class="mmap__cell-by">{{ record.entry_by || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_name || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.no_of_products != null ? record.no_of_products : 'NA' }}</clr-dg-cell>
+          <clr-dg-cell class="mmap__cell-action">
+            <button type="button" class="mmap__btn mmap__btn--view" (click)="viewMaterial(record, $event)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50]">Vendors per page</clr-dg-page-size>
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} vendors
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+
+    <footer class="mmap__footer">
+      <button type="button" class="mmap__btn mmap__btn--download" (click)="download()">{{'common.download' | translate}}</button>
+      <button type="button" class="mmap__btn mmap__btn--excel" (click)="exportToExcel()">Export to Excel</button>
+    </footer>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl" clrModalClosable="true" class="mmap-modal">
+  <h3 class="modal-title mmap-modal__title">Vendor Details</h3>
+  <div class="modal-body mmap-modal__body">
+    <section class="mmap-panel">
+      <h4 class="mmap-panel__heading">Vendor Information</h4>
+      <div class="mmap-panel__grid">
+        <div class="mmap-panel__field"><span class="mmap-panel__label">Vendor Type</span><span class="mmap-panel__value">{{ selectedMaterial['vendor_type'] || 'NA' }}</span></div>
+        <div class="mmap-panel__field"><span class="mmap-panel__label">Vendor Name</span><span class="mmap-panel__value">{{ selectedMaterial['vendor_name'] || 'NA' }}</span></div>
+        <div class="mmap-panel__field"><span class="mmap-panel__label">Vendor Code</span><span class="mmap-panel__value">{{ selectedMaterial['vendor_no'] || 'NA' }}</span></div>
+      </div>
+    </section>
+    <section class="mmap-panel">
+      <h4 class="mmap-panel__heading">Mapped Materials</h4>
+      <div class="mmap-panel__table-wrap">
+        <table class="mmap-panel__table">
+          <thead>
+            <tr>
+              <th>{{'common.table.srNo' | translate}}</th>
+              <th>Material / Item Code</th>
+              <th>Material / Item Type</th>
+              <th>Sub / Item Type</th>
+              <th>Material / Item Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let record of (materials || []); let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ record.material_code || 'NA' }}</td>
+              <td>{{ record.material_type || 'NA' }}</td>
+              <td>{{ record.material_subtype || 'NA' }}</td>
+              <td>{{ record.material_name || 'NA' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="mmap-panel__empty" *ngIf="!(materials || []).length">No records found.</p>
+      </div>
+    </section>
+  </div>
+  <div class="modal-footer mmap-modal__footer">
+    <button type="button" class="mmap__btn mmap__btn--close" (click)="closeView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,235 @@
+﻿<div class="card">
+    <div class="card-header">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-4" style="color: aliceblue;margin-top: -2px;text-align: left;">MEDIA PREPARATION DETAILS </div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm btn-success" *ngIf="isuser == 'Yes'" (click)="isNew=true" >
+                Media Preparation For GPT
+              </button>
+              <button class="btn btn-sm btn-primary" *ngIf="isuser == 'Yes'" (click)="isNew1=true" >
+                Media Preparation
+              </button>
+              <button class="btn btn-sm" routerLink="/microbiology/media" style="background-color: red;color: white;">
+                <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+              </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+          <div class="card-text">
+            <div class="clr-row">
+                <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>From Date:</label>
+                    <input type="date" name="from_date" [(ngModel)]="from_date">
+                </div>
+                <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                    <label>To Date:</label>
+                    <input type="date" name="to_date" [(ngModel)]="to_date" [max]="today">
+                </div>
+                <div class="clr-clo-lg-4 clr-col-md-4 clr-col-sm-4">
+                   <button class="btn btn-danger"(click)="getMedia()" style="margin-top: 27px;">{{'common.search' | translate}}</button>
+                </div>
+            </div>
+            <form #formData="ngForm">
+                <table class="table table-border">
+                    <tr>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Entry Date</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Media Code</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Media Name</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Lot No</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Media Qty Used </th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Volume Prepared </th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >No of Containers Prepared </th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >pH of Prepared Media</th>
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Prepared By </th> 
+                        <th style="background-color: aquamarine;font-weight: bolder;text-align: left;" >Prepared Record </th>     
+                    </tr>    
+                    <tr *ngFor="let result of results;let i=index">
+                        <td style="font-weight: bolder;text-align: left;" >{{result.entry_date | date:'dd-MM-yyyy'}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{ result.media_code }}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.material_name }}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.lot_no}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.qty_taken}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.volume_prepared}}{{result.volume_unit}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.containers}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.ph_value}}</td>
+                        <td style="font-weight: bolder;text-align: left;" >{{result.entry_by}}</td>
+                        <td style="font-weight: bolder;text-align: left;" ><button class="btn btn-primary"  (click)="downloadRpt(result.id)">{{'common.download' | translate}}</button></td>
+                    </tr>
+                    <tr *ngIf="results?.length==0">
+                        <td colspan="15"><strong>No Record Found!</strong></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        </div>
+     </div>
+     <div class="card-footer">
+        <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+     </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isNew" [clrModalSize]="'xl'">
+    <h3 class="modal-title">Preparation For GPT</h3>
+    <div class="modal-body">
+        <form #media="ngForm">
+            <div class="clr-row">
+            
+                <div class="clr-col-lg-3">
+                    <label>Media Name<sup style="color: red">*</sup>:</label>
+                    <select name="media_code" ngModel required (change)="getBatch($event.target.selectedIndex)">
+                        <option ></option>
+                        <option *ngFor="let media of medias" [value]="media.material_code">{{media.material_name}}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Medicap Lot No<sup style="color: red">*</sup>:</label>
+                    <select name="batch_no" ngModel required (change)="getDetails($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let batch of batches;" [value]="batch.batch_no">{{batch.batch_no}}</option>
+                    </select>
+                </div>
+                 <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>In House Lot No<sup style="color: red">*</sup>:</label>
+                    <input type="text" name="lot_no" ngModel required  >
+                 </div>
+
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Water Volume for Preparation<sup style="color: red">*</sup>:</label>
+                    <input type="number" name="volume_prepared"  [(ngModel)]="volume_prepared" required style="width: 60%;" (input)="onValueChange4($event.target.value)">
+                    <small *ngIf="flag4" class="text-danger" style="color:red">only Digits are allowed</small>
+
+                    <select name="volume_unit" [(ngModel)]="volume_unit" style="width: 40%;padding: 1px;">
+                    <option></option>
+                    <option>Ml</option>
+                    <option>Liter</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Quantity To Be Taken in gm<sup style="color: red">*</sup></label>
+                    <input type="number" name="qty_taken" [(ngModel)]="qty_taken" required   >
+                    <small *ngIf="flag3" class="text-danger" style="color:red">only Digits are allowed</small>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>pH Before Sterilization<sup style="color: red">*</sup></label>
+                    <input type="text" name="ph" [(ngModel)]="ph" required  >
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>No of Containers<sup style="color: red">*</sup>:</label >
+                    <input type="number" name="containers" [(ngModel)]="containers" required (keyup)="compare($event.target.value)" (ngModelChange)="onValueChange5($event)">
+                    <small *ngIf="flag5" class="text-danger" style="color:red">only Digits are allowed</small>
+
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Qty Per Container ({{volume_unit}})<sup style="color: red">*</sup></label>
+                    <input type="number" name="qty_per_containers" [(ngModel)]="qty_per_containers" required   (ngModelChange)="onValueChange6($event)">
+                    <small *ngIf="flag6" class="text-danger" style="color:red">only Digits are allowed</small>
+                </div>
+                <div class="clr-col-lg-6">
+                    <label>Dehydrated/Specified Weight ( Recommended Mfg. ) (gm) </label>
+                    <input type="text" name="specif_weight" [(ngModel)]="selectedBatch['specif_weight']" readonly  >
+                </div>
+                <div class="clr-col-lg-3">
+                    <label>Specified Vol. :</label>
+                    <input type="text" name="specifVol" [(ngModel)]="selectedBatch['specifVol']" readonly>
+                </div>
+                <div class="clr-col-lg-3">
+                    <label>Media Nature : <sup style="color: red">*</sup></label>
+                    <select name="natureOfMedia" ngModel required>
+                        <option></option>
+                        <option>Solid</option>
+                        <option>Liquid</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" [disabled]="!media.form.valid" (click)="save(media)">{{'common.save' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+      </div>
+</clr-modal>
+
+
+<clr-modal [(clrModalOpen)]="isNew1" [clrModalSize]="'xl'">
+    <h3 class="modal-title">Prepare For Others</h3>
+    <div class="modal-body">
+        <form #media1="ngForm">
+            <div class="clr-row">
+              
+                <div class="clr-col-lg-3">
+                    <label>Media Name<sup style="color: red">*</sup>:</label>
+                    <select name="media_code" ngModel required (change)="getBatch1($event.target.selectedIndex)">
+                        <option ></option>
+                        <option *ngFor="let media of Approvedmedias" [value]="media.material_code">{{media.material_name}}</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Medicap Lot No<sup style="color: red">*</sup>:</label>
+                    <select name="batch_no" ngModel required (change)="getDetails($event.target.selectedIndex)">
+                        <option></option>
+                        <option *ngFor="let batch of batches;" [value]="batch.batch_no">{{batch.batch_no}}</option>
+                    </select>
+                </div>
+                 <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>In House Lot No<sup style="color: red">*</sup>:</label>
+                    <input type="text" name="lot_no" ngModel required  >
+                 </div>
+
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Water Volume for Preparation<sup style="color: red">*</sup>:</label>
+                    <input type="number" name="volume_prepared"  [(ngModel)]="volume_prepared" required style="width: 60%;" (input)="onValueChange4($event.target.value)">
+                    <small *ngIf="flag4" class="text-danger" style="color:red">only Digits are allowed</small>
+
+                    <select name="volume_unit" [(ngModel)]="volume_unit" style="width: 40%;padding: 1px;">
+                        <option></option>
+                        <option>Ml</option>
+                        <option>Liter</option>
+                    </select>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Quantity To Be Taken in gm<sup style="color: red">*</sup></label>
+                    <input type="number" name="qty_taken" [(ngModel)]="qty_taken" required   >
+                    <small *ngIf="flag3" class="text-danger" style="color:red">only Digits are allowed</small>
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>pH Before Sterilization<sup style="color: red">*</sup></label>
+                    <input type="text" name="ph" [(ngModel)]="ph" required  >
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>No of Containers<sup style="color: red">*</sup>:</label >
+                    <input type="number" name="containers" [(ngModel)]="containers" required (keyup)="compare($event.target.value)" (ngModelChange)="onValueChange5($event)">
+                    <small *ngIf="flag5" class="text-danger" style="color:red">only Digits are allowed</small>
+
+                </div>
+                <div class="clr-col-lg-3 remove-side-arrow-container">
+                    <label>Qty Per Container ({{volume_unit}})<sup style="color: red">*</sup></label>
+                    <input type="number" name="qty_per_containers" [(ngModel)]="qty_per_containers" required   (ngModelChange)="onValueChange6($event)">
+                    <small *ngIf="flag6" class="text-danger" style="color:red">only Digits are allowed</small>
+                </div>
+                <div class="clr-col-lg-6">
+                    <label>Dehydrated/Specified Weight ( Recommended Mfg. ) (gm) </label>
+                    <input type="text" name="specif_weight" [(ngModel)]="selectedBatch['specif_weight']" readonly  >
+                </div>
+                <div class="clr-col-lg-3">
+                    <label>Specified Vol. :</label>
+                    <input type="text" name="specifVol" [(ngModel)]="selectedBatch['specifVol']" readonly>
+                </div>
+                <div class="clr-col-lg-3">
+                    <label>Media Nature : <sup style="color: red">*</sup></label>
+                    <select name="natureOfMedia" ngModel required>
+                        <option></option>
+                        <option>Solid</option>
+                        <option>Liquid</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary"   (click)="save1(media1)">{{'common.save' | translate}}</button>
+        <button type="button" class="btn btn-danger" (click)="isNew = false">{{'common.close' | translate}}</button>
+      </div>
+</clr-modal>

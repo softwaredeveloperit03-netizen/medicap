@@ -1,0 +1,205 @@
+<!-- ENTRY LOG -->
+<div class="container-fluid" *ngIf="!isForm">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Control Sample Entry Log</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/qc/controlsample" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 12px;">
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label><strong>Type of Material:</strong></label>
+            <select name="logFilter" [(ngModel)]="logFilter" (change)="applyLogFilter()">
+              <option value="All">All</option>
+              <option value="Raw Material">Raw</option>
+              <option value="Packing Material">Packing</option>
+              <option value="Finished Product">Finished</option>
+            </select>
+          </div>
+        </div>
+        <table class="table table-border">
+          <tr>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Code</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Name</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling Date</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Status</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Action</th>
+          </tr>
+          <tr *ngFor="let entry of filteredEntries; let i = index">
+            <td style="text-align: left;">{{ i + 1 }}</td>
+            <td style="text-align: left;">{{ entry.material_type || '-' }}</td>
+            <td style="text-align: left;">{{ entry.material_code || '-' }}</td>
+            <td style="text-align: left;">{{ entry.material_name || entry.product_name || '-' }}</td>
+            <td style="text-align: left;">{{ entry.batch_no || '-' }}</td>
+            <td style="text-align: left;">{{ entry.sampling_date | date:'dd-MM-yyyy' }}</td>
+            <td style="text-align: left;">{{ entry.status || 'Pending Entry' }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" type="button" (click)="proceed(entry)">PROCEED</button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredEntries?.length == 0">
+            <td colspan="8" style="text-align: left;">No Records Found!</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-danger" type="button" (click)="close()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- FULL FORM — sampling details prefilled (readonly), remaining fields editable -->
+<div class="container-fluid" *ngIf="isForm">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> Control Sample Entry  </div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" type="button" (click)="closeForm()" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+          <form #newForm="ngForm">
+            <div class="clr-row">
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Type of Material:<span style="color: red">*</span></strong></label>
+                <select name="material_type" [(ngModel)]="material_type" required disabled>
+                  <option disabled> </option>
+                  <option>Raw Material</option>
+                  <option>Finished Product</option>
+                  <option>Packing Material</option>
+                </select>
+                <input type="hidden" name="material_type" [(ngModel)]="material_type">
+              </div>
+  
+              <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type == 'Raw Material' || material_type == 'Packing Material'">
+                <label><strong>Material Name:<span style="color: red">*</span></strong></label>
+                <select name="material_code" [ngModel]="selectedEntry?.material_code" required disabled>
+                  <option disabled></option>
+                  <option *ngFor="let product of products; let i = index" [value]="product.material_code">{{ product.display_name || product.material_name }} - {{ product.grade }}</option>
+                </select>
+                <input type="hidden" name="material_code" [ngModel]="selectedEntry?.material_code">
+              </div>
+
+              <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type == 'Finished Product'">
+                <label><strong>Product Name:<span style="color: red">*</span> </strong></label>
+                <select name="product_code" [ngModel]="selectedEntry?.material_code" required disabled>
+                  <option disabled></option>
+                  <option *ngFor="let product of products; let i = index" [value]="product.product_code || product.material_code">{{ product.display_name || product.product_name }} - {{ product.grade }}</option>
+                </select>
+                <input type="hidden" name="product_code" [ngModel]="selectedEntry?.material_code">
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Medicap Lot No:<span style="color: red">*</span></strong></label>
+                <input type="text" name="batch_no" [ngModel]="selectedEntry?.batch_no" required readonly tabindex="-1">
+              </div>
+              <input type="hidden" name="ar_no" [ngModel]="selectedEntry?.ar_no">
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="material_type == 'Finished Product'">
+                <label><strong>Batch Size:<span style="color: red">*</span></strong></label>
+                <input type="text" name="batch_size" [ngModel]="selectedEntry?.batch_size" required>
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Analysis Date :</strong></label>
+                <input type="date" name="analysis_date" [(ngModel)]="selectedEntry.analysis_date" required>
+              </div>
+
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Release Date:</strong></label>
+                <input type="date" name="release_date" [(ngModel)]="selectedEntry.release_date" required>
+              </div>
+
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Sampling Done By:<span style="color: red">*</span></strong></label>
+                <select name="sample_by" [ngModel]="selectedEntry?.sample_by" required disabled>
+                  <option value="" disabled></option>
+                  <option *ngFor="let item of employee" [value]="item.emp_id">{{ item.firstname }} {{ item.lastname }}</option>
+                </select>
+                <input type="hidden" name="sample_by" [ngModel]="selectedEntry?.sample_by">
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Sampling Date:</strong></label>
+                <input type="date" name="sampling_date" [ngModel]="selectedEntry?.sampling_date" required readonly tabindex="-1">
+              </div>
+
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Manufacturing Date:</strong></label>
+                <input type="month" name="mfg_date" [ngModel]="selectedEntry?.mfg_date" required readonly tabindex="-1">
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Expiry Date:</strong></label>
+                <input type="month" name="exp_date" [ngModel]="selectedEntry?.exp_date" required readonly tabindex="-1">
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>QTY of control sample from specification:</strong></label>
+                <input type="text" name="sample_quantity" [(ngModel)]="selectedEntry.sample_quantity" required>
+              </div>
+
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Actual Control Sample:<span style="color: red">*</span></strong></label>
+                <input type="text" name="actual_control_sample" [(ngModel)]="selectedEntry.actual_control_sample" required>
+              </div>
+
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Units:</strong></label>
+                <select name="unit" [(ngModel)]="selectedEntry.unit">
+                  <option value=""></option>
+                  <option *ngFor="let unit of units" [ngValue]="unit.unit">{{ unit.unit }}</option>
+                </select>
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>No of Packs:</strong></label>
+                <input type="text" name="pack_no" [(ngModel)]="selectedEntry.pack_no" required>
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Kept in Rack No:</strong></label>
+                <select name="rack_no" [(ngModel)]="selectedEntry.rack_no" required>
+                  <option value=""></option>
+                  <option *ngFor="let rack of racks" [ngValue]="rack.rack_no">
+                    {{ rack.rack_no }}{{ rack.rack_type ? ' (' + rack.rack_type + ')' : '' }}
+                  </option>
+                </select>
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Room Temperature( ℃):</strong></label>
+                <input type="text" name="room_temp" [(ngModel)]="selectedEntry.room_temp" required>
+              </div>
+  
+              <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                <label><strong>Humidity (% RH):</strong></label>
+                <input type="text" name="humidity" [(ngModel)]="selectedEntry.humidity" required>
+              </div>
+  
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" type="button" (click)="saveForm(newForm)">{{'common.submit' | translate}}</button>
+        <button class="btn btn-danger" type="button" (click)="closeForm()">CLOSE</button>
+      </div>
+    </div>
+  </div>

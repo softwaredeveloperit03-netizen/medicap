@@ -1,0 +1,384 @@
+<div class="container-fluid">
+  <div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Order For Amendment</div>
+        <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-primary" routerLink="/purchase/order/raw/amendLog" >
+            Revised PO Log
+          </button>
+          <button class="btn btn-sm" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase' }" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row">
+        
+            <div class="clr-col-lg-4" style="text-align: left;">
+              <input type="text" [(ngModel)]="searchQuery" placeholder="Search ....">
+            </div>
+        </div>
+        <div class="datagrid-wrapper">
+
+          <clr-datagrid [clrDgLoading]="loading">
+            <clr-dg-column>Sr. No.</clr-dg-column>
+            <clr-dg-column>Po Type</clr-dg-column>
+            <clr-dg-column>Approval Date</clr-dg-column>
+            <clr-dg-column>P.O Date</clr-dg-column>
+            <clr-dg-column>Last Updated Date</clr-dg-column>
+            <clr-dg-column>Po No</clr-dg-column>
+            <clr-dg-column>Purchase Requisition No</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column class="clr-header-center">View</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let user of filteredMaterials; let i = index" [clrDgItem]="user">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.po_type ? user.po_type : '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.approve_date ? (user.approve_date | date:'dd-MM-yyyy') : '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.lastUpdatedOn || user.cancel_hold_date || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.po_no ? user.po_no : '-' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.indent_no || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ user.vendor_name ? user.vendor_name : '' }}</clr-dg-cell>
+              <clr-dg-cell style="color:rgb(25, 0, 255)">{{ user.status }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button type="button" class="btn btn-sm btn-info" (click)="viewOrder(i)">{{'common.view' | translate}}</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-placeholder>No purchase orders pending for amendment.</clr-dg-placeholder>
+          </clr-datagrid>
+        </div>
+
+      </div>
+      <div>
+        <!-- <button class="btn btn-primary" (click)="exportToExcel()">Export to Excel</button> -->
+      </div>
+    </div>
+  </div>
+
+
+
+  <clr-modal [(clrModalOpen)]="isQuatation">
+    <h3 class="modal-title">View Highest/Lowest:</h3>
+    <div class="modal-body">
+        <H4>Highes Purchase Rate</H4>
+        <table class="table table-border">
+            <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Highest Purchase Rate</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Vendor Code</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Consignment No.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Consignment Date</th>
+
+            </tr>
+            <tr>
+                <td>{{ tests['rate']}}</td>
+                <td>{{ tests['vendor_name']}}</td>
+                <td>{{ tests['vendor_no']}}</td>
+                <td>{{ tests['challan_no']}}</td>
+                <td>{{ tests['challan_date']}}</td>
+            </tr>
+        </table>
+
+        <H4>Lowest Purchase Rate</H4>
+        <table class="table table-border">
+            <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Lowest Purchase Rate</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Vendor Code</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Consignment No.</th>
+                <th style="background-color: rgb(14, 67, 112); color: white;">Consignment Date</th>
+            </tr>
+            <tr>
+                <td>{{ tests1['rate']}}</td>
+                <td>{{ tests1['vendor_name']}}</td>
+                <td>{{ tests1['vendor_no']}}</td>
+                <td>{{ tests1['challan_no']}}</td>
+                <td>{{ tests1['challan_date']}}</td>
+            </tr>
+        </table>
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="isQuatation = false">{{'common.close' | translate}}</button>
+    </div>
+</clr-modal>
+
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Purchase Requisition For Approval
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" (click)="viewf()" style="background-color: red;color: white;">
+                    <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                 
+                <tr>
+                    <td colspan="2" style="text-align: left;width: 20%;font-weight: bolder;">Amendment Remark : => {{ selectedPo['amendment_remark'] || selectedPo['updateRemark'] || 'NA' }}</td>
+                 </tr>
+                <tr>
+                    <td style="text-align: left;width: 20%;">Request No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['request_no'] }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;width: 20%;">Purchase Requisition By:</td>
+                    <td style="text-align: left;">{{ selectedResult['entry_by'] }}</td>
+                </tr>
+            </table>
+            <h3>Materials:</h3><br>
+            <form #approve="ngForm">
+                <div class="clr-row">
+ 
+               
+
+                  
+                    <div *ngIf="purchase_type=='Imported'" class="clr-col-lg-3">
+                        <label>Tax:</label>
+                        <select  type="text" name="tax" [(ngModel)]="tax" (change)="calculateTax(1)">
+                            <option></option>
+                             <option>Country Tax</option>
+                            <option>Not Applicable</option>
+                        </select>
+                    </div>
+
+                    <div *ngIf="tax=='Country Tax' && purchase_type=='Imported'" class="clr-col-lg-3">
+                        <label>Tax Percent:</label>
+                        <input type="number" name="tax_percent" [(ngModel)]="tax_percent" (keyup)="calculateTax()"
+                            min="0" max="100"><span style="color: red;" *ngIf="tax_percent>100">Tax Percent should below
+                            100!</span>
+                    </div>
+                </div>
+                <div class="card-block" style="padding-right: 0px; overflow-x: scroll;">
+                <div class="clr-row" >
+                    <div class="clr-col-lg-12 clr-col-md-10" >
+
+
+               
+                        <div class="table-container" style="overflow-x: auto; width: 200vh;">
+                        <table class="table table-border" >
+                            <tr>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Material/Item Code</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Material/item Name</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;" >Grade </th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;" >{{'common.department' | translate}}</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;" >Preferred Vendor</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Purchase Requisition Qty</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.unit' | translate}}</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Order Qty</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Quatation</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">View Highest/Lowest</th>
+                                <th *ngIf="purchase_type!='Imported' || tax=='GST' " style="background-color: rgb(14, 67, 112); color: white;">TAX %</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">TAX Amt</th>
+                                <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+
+                            </tr>
+                            <tr *ngFor="let material of materials;let i =index">
+                                <td><input type="checkbox" name="check{{i}}" [(ngModel)]="material.check" required></td>
+                                <td>{{ material.material_code }}</td>
+                                <td>{{ material.material_name }}  </td>
+                                <td >{{ material.grade }}</td>
+                                <td >{{ material.department }}</td>
+                                <td >{{ material.vendor_name || "NA"}}</td>
+                                <td>{{ material.req_qty }}</td>
+                                <td >{{ material.unit }}</td>
+                                <td>
+                                    <input type="text" name="order_qty{{i}}" [(ngModel)]="material['order_qty']"
+                                        (keyup)="calculation($event.target.value,i)" required style="margin: 0px;"
+                                        #qty="ngModel" min="0" max="999999">
+                                    <span style="color: red;" *ngIf="qty.invalid && qty.touched">Please Enter Positive Number(6
+                                        Digits)!</span>
+                                </td>
+                                <td>
+                                    <select *ngIf="material['vendors'].length>0" name="vend" name="vendor_no{{i}}" ngModel
+                                        required style="margin: 0px;"
+                                        (change)="selectQuotation($event.target.selectedIndex, i,material['gst'],vendor_selected,material)">
+                                        <option></option>
+                                        <option *ngFor="let vendor of material['vendors']; let i = index">{{ vendor.vendor_name
+                                            }}
+                                            ({{ vendor.quotation_amt }} / {{ vendor.quotation_per }})</option>
+
+                                    </select>
+                                    <button *ngIf="material['vendors'].length==0" class="btn btn-sm btn-success"
+                                        (click)="addNewQuataion(material)">Add Quotation</button>
+
+                                </td>
+
+ 
+
+                                <td><button class="btn btn-sm btn-success" (click)="viewQuataion(i)">{{'common.view' | translate}}</button></td>
+                                <td *ngIf="purchase_type!='Imported'  || tax=='GST'">
+                               
+                                    {{ material.gst_per }}
+                                </td>
+                                <td>
+                                    {{material['gross_total'] | number:'0.0-2'}}
+                                </td>
+                                <td>
+                                    {{material['gst_total'] | number:'0.0-2'}}
+                                </td>
+                                <td>
+                                    {{material['net_total'] | number:'0.0-2'}}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+         <button class="btn btn-primary" (click)="approveIndend('approve')">{{'common.approve' | translate}}</button>
+         <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isAddQuotation" clrModalSize="xl" [clrModalClosable]="true">
+    <h3 class="modal-title">Add New Quotation:</h3>
+    <div class="modal-body">
+        <div class="card">            
+            <div class="card-block">
+
+                <div *ngIf="vendors_map_data?.length == 0" class="card-text">
+                    <div class="clr-row">
+                        <div  class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label style="font-weight: bolder; color: red;">Please Map Vendor!!!</label>
+                         </div>
+                    </div>
+                </div>
+
+                <div *ngIf="vendors_map_data?.length > 0" class="card-text">
+                    <form #quatationForm="ngForm">
+                        <div class="clr-row">
+                            <div  class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>Name of Vendor:</label>
+                                <select name="vendor_no" ngModel (change)="getmaterialbyvendor($event.target.value,$event.target.selectedIndex)" required>
+                                    <option></option>
+                                    <option *ngFor="let unit of vendors_map_data" value="{{unit.vendor_no}}">{{ unit.vendor_name }}</option>
+                                </select>
+                             </div>
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>Quotation No:<span style="color: red">*</span></label>
+                                <input type="text" name="vendor_quotation_no" [(ngModel)]="vendor_quotation_no" required>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="card-title">Add Materials:</div>
+                        <div class="card-text">
+                            <table class="table table-border">
+                                <tr>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>select</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Material Type</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Material Code</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Material Name</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Manufacturer</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Quatation Amt.</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Quatation Per</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Tax %</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>Pack Size</b></td>
+                                    <td style="text-align: center; background-color: rgb(117, 162, 247); color: white;" ><b>{{'common.unit' | translate}}</b></td>
+                                 </tr>
+                                <tr *ngFor="let item of materials_data; let i = index">
+                                    <td style="margin: 0;padding: 0;">
+                                        <input type="checkbox" name="selected{{ i }}" [(ngModel)]="item.selected" >
+                                    </td>
+                                    <td>{{item.material_type}}</td>
+                                    <td>{{item.material_code}}</td>
+                                    <td>{{item.material_name}}</td>
+                                    <td style="margin: 0;padding: 0;">
+
+                                        <select *ngIf="item?.manufacturer_data?.length > 0" name="Manufacturer" [(ngModel)]="item.Manufacturer" required>
+                                            <option></option>
+                                            <option *ngFor="let unit of item?.manufacturer_data">{{ unit.vendor_name }}</option>
+                                        </select>
+                                        <input *ngIf="item?.manufacturer_data?.length == 0"  type="text" name="Manufacturer" [(ngModel)]="item.Manufacturer" required placeholder="If Not Enter NA">
+
+
+                                    </td>
+                                    <td style="margin: 0;padding: 0;">
+                                        <input type="text" name="quotation_amt" [(ngModel)]="item.quotation_amt" required>
+                                    </td>
+                                    <td style="margin: 0;padding: 0;">
+                                        <select name="quotation_per" [(ngModel)]="item.quotation_per" required>
+                                            <option></option>
+                                            <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                                        </select>
+                                    </td>
+                                    <td style="margin: 0;padding: 0;">
+                                        <select name="tax" [(ngModel)]="item.tax" required>
+                                            <option></option>
+                                            <option *ngFor="let unit of gsts">{{ unit.gst }}</option>
+                                        </select>
+                                    </td>
+                                    <td style="margin: 0;padding: 0;">
+                                        <input type="text" name="pack_size" [(ngModel)]="item.pack_size">
+                                    </td>
+                                    <td style="margin: 0;padding: 0;">
+                                        <select name="pack_size_unit" [(ngModel)]="item.pack_size_unit" required>
+                                            <option></option>
+                                            <option *ngFor="let unit of units">{{ unit.unit }}</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+            
+                        <div class="clr-row">
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>Upload Document For Selected Material (if any):</label>
+                                <input type="file" name="document" ngModel (change)="onFileChanged($event)" accept="application/pdf">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button  *ngIf="vendors_map_data?.length == 0" class="btn btn-sm btn-success">
+                    <a  href="#/purchase/vendor/material/new"  target="_blank" style="color:white;">Map Material</a></button>
+                <button *ngIf="vendors_map_data?.length > 0"  class="btn btn-success" (click)="saveQuataion(addMaterialForm)">{{'common.save' | translate}}</button>
+            </div>
+        </div>
+    </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isDIGI" [clrModalClosable]="true">
+    <h3 class="modal-title">&#9989; Sign Digitally For User ID : <span style="color: blue;">{{emp_id}} </span></h3>
+    <div class="modal-body">
+      <div class="card">
+        <div class="card-block">
+          <div class="card-text">
+            <form #addMaterialForm="ngForm">
+              <div class="modal-body">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <label>Enter Passward Or 4 Digit Authorization PIN <span style="color: red">*</span></label>
+                  <input type="password" name="loginPassward" [(ngModel)]="loginPassward" required >
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-success" (click)="digiSign(addMaterialForm)">{{'common.submit' | translate}}</button>
+         </div>
+      </div>
+    </div>
+  </clr-modal>
+  
+  

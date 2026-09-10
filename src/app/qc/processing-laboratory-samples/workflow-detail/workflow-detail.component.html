@@ -1,0 +1,183 @@
+<div class="pls-page-wrap">
+  <div class="card" *ngIf="loading"><div class="card-block">Loading...</div></div>
+
+  <div class="card pls-form-card" *ngIf="!loading && sample">
+    <div class="card-header">
+      <div class="clr-row header-row">
+        <div class="clr-col-8">
+          {{ formId }} — Processing Laboratory Sample
+          <span class="status-badge">{{ statusLabel(sample.status) }}</span>
+        </div>
+        <div class="clr-col-4 text-right">
+          <button class="btn btn-sm btn-info" (click)="downloadPdf()">Download PDF</button>
+          <button class="btn btn-sm btn-danger" [routerLink]="backRoute()">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <app-pls-form-display [sample]="sample"></app-pls-form-display>
+
+      <div class="action-panel" *ngIf="step === 'section-a' && sample.status === 'pending_section_a'">
+        <h4 class="section-heading">Section A — Sampling Instructions (Entry)</h4>
+        <table class="table pls-table">
+          <thead>
+            <tr><th>Sample Quantity</th><th>Full Testing (g)</th><th>Reduced Testing (g)</th><th>Comments</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of sectionARows">
+              <td>{{ r.label }}</td>
+              <td><input type="text" [(ngModel)]="sectionA[r.key].full_testing_g" /></td>
+              <td><input type="text" [(ngModel)]="sectionA[r.key].reduced_testing_g" /></td>
+              <td><input type="text" [(ngModel)]="sectionA[r.key].comments" /></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="submitSectionA()" [disabled]="processing">Submit Section A</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'section-b' && sample.status === 'pending_section_b'">
+        <h4 class="section-heading">Section B — Sampling and Material Inspection (Entry)</h4>
+        <table class="table pls-table">
+          <thead><tr><th>Inspection</th><th>Yes / No / N/A</th><th>Comment</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of inspectionRows">
+              <td>{{ r.label }}</td>
+              <td>
+                <select [(ngModel)]="sectionB.inspections[r.key].answer">
+                  <option value="">—</option><option value="Yes">Yes</option><option value="No">No</option><option value="N/A">N/A</option>
+                </select>
+              </td>
+              <td><input type="text" [(ngModel)]="sectionB.inspections[r.key].comment" /></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>Sampled &amp; Inspected By</label><input type="text" [(ngModel)]="sectionB.sampled_by" /></div>
+          <div class="clr-col-lg-4"><label>Date</label><input type="date" [(ngModel)]="sectionB.sampled_date" /></div>
+          <div class="clr-col-lg-4"><label>Retain Stored By</label><input type="text" [(ngModel)]="sectionB.retain_stored_by" /></div>
+        </div>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>Retain Stored Date</label><input type="date" [(ngModel)]="sectionB.retain_stored_date" /></div>
+          <div class="clr-col-lg-8">
+            <label>Storage After Sampling</label>
+            <label class="chk-inline"><input type="checkbox" [(ngModel)]="sectionB.storage_crt" /> Controlled Room Temperature</label>
+            <label class="chk-inline"><input type="checkbox" [(ngModel)]="sectionB.storage_other" /> Other</label>
+            <input *ngIf="sectionB.storage_other" type="text" [(ngModel)]="sectionB.storage_other_text" placeholder="Specify" />
+          </div>
+        </div>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="submitSectionB()" [disabled]="processing">Submit Section B to Lab</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'lab-receive' && sample.status === 'pending_lab_receive'">
+        <h4 class="section-heading">Lab Sample Receiving Logbook</h4>
+        <p class="hint">Assign lab number per SOP (QC-YY-####.##, QC-CON-YY-####.##, or LAB-YY-####.##; append CS for controlled substances).</p>
+        <div class="clr-row">
+          <div class="clr-col-lg-3">
+            <label>Lab Number Scheme</label>
+            <select [(ngModel)]="labNumberScheme" (ngModelChange)="getNextLabNumber()">
+              <option *ngFor="let s of labSchemes" [value]="s.value">{{ s.label }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3">
+            <label>Controlled Substance</label>
+            <select [(ngModel)]="controlledSubstance" (ngModelChange)="getNextLabNumber()"><option>No</option><option>Yes</option></select>
+          </div>
+          <div class="clr-col-lg-4">
+            <label>Lab Number *</label>
+            <input type="text" [(ngModel)]="labNumber" />
+          </div>
+          <div class="clr-col-lg-2" style="padding-top:1.4rem">
+            <button class="btn btn-sm btn-secondary" type="button" (click)="getNextLabNumber()">Auto-generate</button>
+          </div>
+        </div>
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="labReceive()" [disabled]="processing">Receive &amp; Log Sample</button>
+      </div>
+
+      <div class="action-panel" *ngIf="step === 'section-c' && sample.status === 'pending_section_c'">
+        <h4 class="section-heading">Section C — QC Review (Entry)</h4>
+        <div class="clr-row review-boxes">
+          <div class="clr-col-lg-4 review-box">
+            <label>Test Review — Conforms</label>
+            <select [(ngModel)]="sectionC.test_review"><option value="">—</option><option value="Y">Y</option><option value="N">N</option></select>
+          </div>
+          <div class="clr-col-lg-4 review-box">
+            <label>Certificate of Analysis — Conforms</label>
+            <select [(ngModel)]="sectionC.coa_conforms"><option value="">—</option><option value="Y">Y</option><option value="N">N</option></select>
+          </div>
+          <div class="clr-col-lg-4 review-box">
+            <label>Contract Lab Results — Attached</label>
+            <select [(ngModel)]="sectionC.contract_lab_attached"><option value="">—</option><option value="Y">Y</option><option value="N">N</option></select>
+          </div>
+        </div>
+        <div class="clr-row">
+          <div class="clr-col-lg-4"><label>QC Released By</label><input type="text" [(ngModel)]="sectionC.qc_released_by" /></div>
+          <div class="clr-col-lg-4"><label>QC Released Date</label><input type="date" [(ngModel)]="sectionC.qc_released_date" /></div>
+          <div class="clr-col-lg-4"><label>Assigned Retest / Expiry Date</label><input type="date" [(ngModel)]="sectionC.assigned_retest_expiry_date" /></div>
+        </div>
+        <div class="clr-row">
+          <div class="clr-col-lg-4">
+            <label>FOR RETEST ONLY?</label>
+            <select [(ngModel)]="isRetest"><option>No</option><option>Yes</option></select>
+          </div>
+        </div>
+
+        <div *ngIf="isRetest === 'Yes'" class="retest-entry-block">
+          <h5>Section D — Retest Data</h5>
+          <button class="btn btn-sm btn-secondary" type="button" (click)="addRetestColumn()" [disabled]="sectionD.length >= 6">Add Column</button>
+          <div class="retest-scroll">
+            <table class="table pls-table retest-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th *ngFor="let col of sectionD; let ci = index">
+                    Col {{ ci + 1 }}
+                    <button *ngIf="sectionD.length > 1" class="btn btn-sm btn-link" type="button" (click)="removeRetestColumn(ci)">×</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>FMM-004-01-B Attached</td><td *ngFor="let col of sectionD"><select [(ngModel)]="col.fmm_attached"><option value="">—</option><option value="Y">Y</option><option value="N">N</option></select></td></tr>
+                <tr><td>Retest Date</td><td *ngFor="let col of sectionD"><input type="date" [(ngModel)]="col.retest_date" /></td></tr>
+                <tr><td># Remaining Drums</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.remaining_drums" /></td></tr>
+                <tr><td>Medicap Composite (g)</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.medicap_composite_g" /></td></tr>
+                <tr><td>ID Test (g)</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.id_test_g" /></td></tr>
+                <tr><td>Contract Lab Chemical (g)</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.contract_chemical_g" /></td></tr>
+                <tr><td>Contract Lab Micro (g)</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.contract_micro_g" /></td></tr>
+                <tr><td>Retain (g)</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.retain_g" /></td></tr>
+                <tr><td>Sampled By</td><td *ngFor="let col of sectionD"><input type="text" [(ngModel)]="col.sampled_by" /></td></tr>
+                <tr><td>Sampled Date</td><td *ngFor="let col of sectionD"><input type="date" [(ngModel)]="col.sampled_date" /></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="clr-row"><div class="clr-col-lg-8"><label>Remark</label><input type="text" [(ngModel)]="remark" /></div></div>
+        <button class="btn btn-success" (click)="submitSectionC()" [disabled]="processing">Complete QC Review &amp; Close</button>
+      </div>
+
+      <div class="workflow-log" *ngIf="workflowLog.length">
+        <h4 class="section-heading">Workflow History</h4>
+        <table class="workflow-table">
+          <thead><tr><th>Date / Time</th><th>Action</th><th>Status Change</th><th>By</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let w of workflowLog">
+              <td>{{ w.action_date | date:'dd-MM-yyyy HH:mm' }}</td>
+              <td>{{ w.action }}</td>
+              <td>{{ w.from_status }} → {{ w.to_status }}</td>
+              <td>{{ w.action_by_name || w.action_by }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn btn-info" (click)="downloadPdf()">Download PDF</button>
+      <button class="btn btn-danger" [routerLink]="backRoute()">CLOSE</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,39 @@
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { NewComponent } from './new/new.component';
+import { LogComponent } from './log/log.component';
+import { ApproveComponent } from './approve/approve.component';
+import { FormsModule } from '@angular/forms';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { ClarityModule } from '@clr/angular';
+import { RouterModule, Routes } from '@angular/router';
+import { EditComponent } from './edit/edit.component';
+import { MrpApprovalComponent } from './mrp-approval/mrp-approval.component';
+import { MrpHistoryComponent } from './mrp-history/mrp-history.component';
+import { ProfileComponent } from './profile/profile.component';
+import { TranslateModule } from '@ngx-translate/core';
+
+
+const routes: Routes = [
+  { path: '', component: DashboardComponent},
+  { path: 'new', component: NewComponent},
+  { path: 'approve', component: ApproveComponent},
+  { path: 'log', component: LogComponent},
+  { path: 'edit/:id', component: EditComponent},
+  {path:'mrpapproval',component:MrpApprovalComponent},
+  {path:'mrphistory',component:MrpHistoryComponent},
+  { path: 'profile', component: ProfileComponent}
+];
+
+@NgModule({
+  declarations: [DashboardComponent, NewComponent, LogComponent, ApproveComponent, EditComponent, MrpApprovalComponent, MrpHistoryComponent, ProfileComponent],
+  imports: [
+    SharedModule, TranslateModule,
+    CommonModule,
+    FormsModule,
+    ClarityModule,
+    RouterModule.forChild(routes)
+  ]
+})
+export class ProductModule { }

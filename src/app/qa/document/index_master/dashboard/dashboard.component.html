@@ -1,0 +1,168 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Document Master Index</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="new" class="btn btn-sm btn-success">{{'common.new' | translate}}</button>
+          <button class="btn btn-sm" routerLink="/qa/document" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row" style="margin-bottom: 10px;">
+          <div class="clr-col-lg-12">
+            <button class="btn btn-sm"
+              [ngClass]="activeTab === 'indexLog' ? 'btn-primary' : 'btn-outline'"
+              (click)="activeTab = 'indexLog'">
+              <i class="fas fa-file-alt"></i> Document Index Log
+            </button>
+            <button class="btn btn-sm"
+              [ngClass]="activeTab === 'revisionHistory' ? 'btn-primary' : 'btn-outline'"
+              (click)="activeTab = 'revisionHistory'">
+              <i class="fas fa-history"></i> Revision History & Log
+            </button>
+          </div>
+        </div>
+
+        <div class="clr-row" *ngIf="activeTab === 'indexLog'">
+          <div class="clr-col-lg-5">
+            <label>Search </label>
+            <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+           </div>
+        </div>
+
+        <clr-datagrid *ngIf="activeTab === 'indexLog'" [clrDgFilter]="searchQuery">
+        
+           <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+           <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+           <clr-dg-column>Document Type</clr-dg-column>
+           <clr-dg-column>Name of Document</clr-dg-column>
+           <clr-dg-column>Document No.</clr-dg-column>
+           <clr-dg-column>Document Version</clr-dg-column>
+           <clr-dg-column>Effective Date</clr-dg-column>
+           <clr-dg-column>Next Review Date</clr-dg-column>
+           <clr-dg-column>View Uploaded Doc</clr-dg-column>
+           <clr-dg-column>Revision Count</clr-dg-column>
+           <clr-dg-column>Document Revision</clr-dg-column>
+           <clr-dg-column>Change Control</clr-dg-column>
+
+          <clr-dg-row *ngFor="let item of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{i+1}}</clr-dg-cell>
+            <clr-dg-cell>{{item.department_name}}</clr-dg-cell>
+            <clr-dg-cell>{{item.document_type}}</clr-dg-cell>
+            <clr-dg-cell>{{item.document_name}}</clr-dg-cell>
+            <clr-dg-cell>{{item.document_no}}</clr-dg-cell>
+            <clr-dg-cell>{{item.document_version}}</clr-dg-cell>
+            <clr-dg-cell>{{item.effective_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+            <clr-dg-cell>{{item.next_review_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-info" (click)="viewDoc(item.upload)">{{'common.view' | translate}}</button>
+            </clr-dg-cell>
+            <clr-dg-cell>{{item.revision_count || 0}}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-warning" (click)="openRevisionForm(item)">Revision</button>
+            </clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-sm btn-primary" (click)="openChangeControl(item)">Change Control</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+
+        <div class="card" *ngIf="activeTab === 'indexLog' && isRevisionFormVisible" style="margin-top: 12px;">
+          <div class="card-header" style="text-align: left;">
+            Upload Revised Document - {{selectedDocument?.document_name}}
+          </div>
+          <div class="card-block">
+            <form #revisionForm="ngForm">
+              <div class="clr-row">
+                <div class="clr-col-lg-3">
+                  <label>Revised Version:</label>
+                  <input type="text" name="revised_version" [(ngModel)]="revisionFormModel.revised_version" required>
+                </div>
+                <div class="clr-col-lg-3">
+                  <label>Change Control No:</label>
+                  <input type="text" name="change_control_no" [(ngModel)]="revisionFormModel.change_control_no" required>
+                </div>
+                <div class="clr-col-lg-3">
+                  <label>Effective Date:</label>
+                  <input type="date" name="effective_date" [(ngModel)]="revisionFormModel.effective_date" required>
+                </div>
+                <div class="clr-col-lg-3">
+                  <label>Next Review Date:</label>
+                  <input type="date" name="next_review_date" [(ngModel)]="revisionFormModel.next_review_date" required>
+                </div>
+                <div class="clr-col-lg-6">
+                  <label>Remarks:</label>
+                  <input type="text" name="remarks" [(ngModel)]="revisionFormModel.remarks">
+                </div>
+                <div class="clr-col-lg-6">
+                  <label>Upload Revised Document:</label>
+                  <input type="file" name="document" (change)="onRevisionFileChanged($event)" accept="application/pdf" required>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary btn-sm" (click)="saveDocumentRevision(revisionForm)">Save Revision</button>
+            <button class="btn btn-danger btn-sm" (click)="closeRevisionForm()">Cancel</button>
+          </div>
+        </div>
+
+        <div *ngIf="activeTab === 'revisionHistory'">
+          <div class="clr-row">
+            <div class="clr-col-lg-5">
+              <label>Search Revision Log</label>
+              <input type="text" placeholder="Search..." [(ngModel)]="revisionSearchQuery">
+            </div>
+          </div>
+          <clr-datagrid >
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+            <clr-dg-column>Document Name</clr-dg-column>
+            <clr-dg-column>Document No.</clr-dg-column>
+            <clr-dg-column>Previous Version</clr-dg-column>
+            <clr-dg-column>Revised Version</clr-dg-column>
+            <clr-dg-column>Change Control No.</clr-dg-column>
+            <clr-dg-column>Remarks</clr-dg-column>
+            <clr-dg-column>Effective Date</clr-dg-column>
+            <clr-dg-column>Next Review Date</clr-dg-column>
+            <clr-dg-column>Revised Document</clr-dg-column>
+            <clr-dg-column>Revision Date</clr-dg-column>
+
+            <clr-dg-row *ngFor="let item of filteredRevisionHistory; let i = index">
+              <clr-dg-cell>{{i + 1}}</clr-dg-cell>
+              <clr-dg-cell>{{item.department_name}}</clr-dg-cell>
+              <clr-dg-cell>{{item.document_name}}</clr-dg-cell>
+              <clr-dg-cell>{{item.document_no}}</clr-dg-cell>
+              <clr-dg-cell>{{item.previous_version}}</clr-dg-cell>
+              <clr-dg-cell>{{item.revised_version}}</clr-dg-cell>
+              <clr-dg-cell>{{item.change_control_no}}</clr-dg-cell>
+              <clr-dg-cell>{{item.remarks}}</clr-dg-cell>
+              <clr-dg-cell>{{item.effective_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+              <clr-dg-cell>{{item.next_review_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="viewDoc(item.upload)">View</button>
+              </clr-dg-cell>
+              <clr-dg-cell>{{item.entry_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+            </clr-dg-row>
+          </clr-datagrid>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-footer">
+    <button class="btn btn-danger" routerLink="/qa/document" >{{'common.close' | translate}}</button>
+  </div>
+  </div>
+
+</div>
+
+ 
+
+
+
+
+
+

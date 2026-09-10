@@ -1,0 +1,157 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+
+interface EhsDashboardItem {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  route: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit, OnDestroy {
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  filteredItems: EhsDashboardItem[] = [];
+  categories: string[] = ['All'];
+
+  paletteOptions = [
+    { name: 'Safety Teal', swatch: '#ecfdf5', background: 'linear-gradient(135deg, #ecfdf5 0%, #f0f9ff 100%)', cardShadow: '0 6px 16px rgba(15,118,110,0.12)' },
+    { name: 'Ocean Mint', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #ccfbf1 0%, #f8fafc 100%)', cardShadow: '0 6px 16px rgba(20,184,166,0.12)' },
+    { name: 'Soft Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%)', cardShadow: '0 6px 16px rgba(51,65,85,0.1)' },
+    { name: 'Sky Blue', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 6px 16px rgba(2,132,199,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 6px 16px rgba(109,40,217,0.12)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  private readonly dashboardItems: EhsDashboardItem[] = [
+    { id: 'entry-permit', name: 'Entry Permit', icon: 'fas fa-id-card', category: 'EHS', route: 'entry-permit', gradient: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' },
+    { id: 'hot-work', name: 'Hot Work', icon: 'fas fa-fire', category: 'EHS', route: 'hot-work', gradient: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)' },
+    { id: 'excavation-work', name: 'Excavation Work', icon: 'fas fa-hard-hat', category: 'EHS', route: 'excavation-work', gradient: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)' },
+    { id: 'work-height', name: 'Work at Height', icon: 'fas fa-mountain', category: 'EHS', route: 'work-height', gradient: 'linear-gradient(135deg, #ea580c 0%, #fb923c 100%)' },
+    { id: 'inprocess', name: 'Inprocess', icon: 'fas fa-flask', category: 'EHS', route: 'inprocess', gradient: 'linear-gradient(135deg, #059669 0%, #34d399 100%)' },
+    { id: 'qms', name: 'QMS', icon: 'fas fa-clipboard-check', category: 'QMS', route: 'qms', gradient: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' },
+    { id: 'training', name: 'Training', icon: 'fas fa-graduation-cap', category: 'EHS', route: 'training', gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)' },
+  ];
+
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
+
+  loggedInDept: string | null = null;
+  dept_head = 'No';
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.categories = ['All', ...Array.from(new Set(this.dashboardItems.map((i) => i.category)))];
+    this.updateFilteredItems();
+
+    this.searchSubject.pipe(debounceTime(250), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => {
+      this.updateFilteredItems();
+    });
+
+    const saved = localStorage.getItem('ehs_dashboard_palette');
+    if (saved) {
+      const found = this.paletteOptions.find((p) => p.name === saved);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+
+    this.get_rights();
+    this.cdr.markForCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  onSearchChange(value: string): void {
+    this.searchQuery = (value || '').trim().slice(0, 100);
+    this.searchSubject.next(this.searchQuery);
+    this.cdr.markForCheck();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredItems();
+  }
+
+  getCategoryIconClass(category: string): string {
+    if (category === 'EHS') {
+      return 'fa-shield-alt';
+    }
+    if (category === 'QMS') {
+      return 'fa-clipboard-check';
+    }
+    return 'fa-th-large';
+  }
+
+  trackByItemId(_index: number, item: EhsDashboardItem): string {
+    return item.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: (typeof this.paletteOptions)[0]): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('ehs_dashboard_palette', palette.name);
+    } catch {
+      /* ignore */
+    }
+    this.cdr.markForCheck();
+  }
+
+  getPendingCount(_itemId: string): number {
+    return 0;
+  }
+
+  private updateFilteredItems(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredItems = this.dashboardItems.filter((item) => {
+      const matchCategory = this.selectedCategory === 'All' || item.category === this.selectedCategory;
+      const matchSearch =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  get_rights(): void {
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          localStorage.getItem('emp_id') +
+          '&dep_name=' +
+          encodeURIComponent(this.loggedInDept || '')
+      )
+      .subscribe((response: any) => {
+        const r = Array.isArray(response) && response[0] ? response[0] : {};
+        this.dept_head = r.dept_head || 'No';
+        this.cdr.markForCheck();
+      });
+  }
+}

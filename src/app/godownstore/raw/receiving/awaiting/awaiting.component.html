@@ -1,0 +1,1698 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: right;">Awaiting Raw Materials</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <span style="background-color: aquamarine;font-weight: bolder;color: aquamarine;">...</span>
+        <span style="font-weight: bolder;color: white;"> Open PO</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/godownStore/raw/receiving"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+   
+  <clr-datagrid [clrDgLoading]="loading">
+        
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column >Inward Date</clr-dg-column>
+        <clr-dg-column >Packaging Slip</clr-dg-column>
+        <clr-dg-column >Packaging Slip Date</clr-dg-column>
+        <clr-dg-column >Material Type</clr-dg-column>
+        <clr-dg-column >Material Name</clr-dg-column>
+        <clr-dg-column >Po No</clr-dg-column>       
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+     
+      <clr-dg-row *clrDgItems="let user of results; let i = index" [clrDgItem]="user"  [ngClass]="getClass(user)">
+        <clr-dg-cell>{{  i+1}}</clr-dg-cell>
+        <clr-dg-cell>{{user.inward_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+        <clr-dg-cell>{{user.ch_no}}</clr-dg-cell>
+        <clr-dg-cell>{{user.challan_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{user.material_subtype}}</clr-dg-cell>
+        <clr-dg-cell>{{user.material_name}}</clr-dg-cell>
+        <clr-dg-cell>{{user.po_no}}</clr-dg-cell>
+        <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewResult( i)">Receive</button>
+        </clr-dg-cell>  
+      </clr-dg-row>
+ 
+  </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Awaiting Raw Materials</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" (click)="viewf()" style="background-color: red;color: white;"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border" style="border: 1px solid black;">
+        <tr>
+          <td style="text-align: left;"><b>Material Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_name'] }}</td>
+          <td style="text-align: left;"><b>Material Code:</b></td>
+          <td style="text-align: left;border-right: 1px solid black;">{{ selectedPO['material_code'] }}</td>
+        </tr>
+        <tr *ngIf="selectedPO['vendor_type']=='Manufacturer'">
+          <td style="text-align: left;"><b>Manufacturer Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['manufacturer_name'] }}</td>
+          <td style="text-align: left;"><b>Supplier Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['manufacturer_name'] }}</td>
+        </tr>
+        <tr *ngIf="selectedPO['vendor_type']=='Supplier'">
+          <td style="text-align: left;"><b>Manufacturer Name:</b></td>
+          <td style="text-align: left;">{{ selectedPO['manufacturer_name'] }}</td>
+          <td style="text-align: left;"><b>Supplier Name:</b></td>
+          <td style="text-align: left;">Vendor</td>
+        </tr>
+     
+        <tr>
+          <td style="text-align: left;"><b>Packaging Slip:</b></td>
+          <td style="text-align: left;">{{ selectedPO['ch_no'] }}</td>
+          <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+          <td style="text-align: left;">{{ selectedPO['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>PO No.:</b></td>
+          <td *ngIf="selectedPO['po_no'].length>0" style="text-align: left;">{{ selectedPO['po_no'] }}</td>
+          <td *ngIf="selectedPO['po_no'].length==0" style="text-align: left;">N/A</td>
+          <td style="text-align: left;"><b>Material Type:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_type'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material Subtype:</b></td>
+          <td style="text-align: left;">{{ selectedPO['material_subtype'] }}</td>
+          <td style="text-align: left;"><b>Qty:</b></td>
+          <td *ngIf="selectedPO['qty']>0" style="text-align: left;border-right: 1px solid black;">{{ selectedPO['qty']}} {{selectedPO['unit'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><b>Material For:</b></td>
+          <td style="text-align: left;">{{ selectedPO['materialForName'] }}</td>
+        </tr>
+       
+
+      </table>
+      <br>
+      <form #basicForm="ngForm">
+        <div class="clr-row">
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+            <label>Container type:</label>
+            <select [disabled]="container_type =='Tanker'" ngModel name="container_type" [(ngModel)]="container_type" required
+              (change)="addContainer()">
+              <option>Drum</option>
+              <option>Bag</option>
+              <option>Boxes</option>
+              <!-- <option>Tanker</option> -->
+              <option>Canister</option>
+
+              <!-- <option style="color:red">Add New</option> -->
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="container_type == 'Drum'">
+            <label>Drum:</label>
+            <select name="container_subtype" ngModel required>
+              <option>GI Drum</option>
+              <option>MS Drum</option>
+              <option>HDPE Drum</option>
+              <option>Fiber Board Drum</option>
+              <option>Aluminium Container</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="container_type == 'Bag'">
+            <label>Bag:</label>
+            <select name="container_subtype" ngModel required>
+              <option>Polyethylene Bag</option>
+              <option>Pollinated Bag</option>
+              <option>Gunny Bag</option>
+              <option>Paper Bag</option>
+              <option>HDPE Bag</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="container_type == 'Boxes'">
+            <label>Boxes:</label>
+            <select name="container_subtype" ngModel required>
+              <option>Corrugated Boxes</option>
+              <option>Cartons</option>
+              <option>PVC Box</option>
+              
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="container_type == 'Canister'">
+            <label>Canister:</label>
+            <select name="container_subtype" ngModel required>
+              <option>Aluminium Canister</option>
+              
+            </select>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2  clr-col-sm-12 clr-col-xs-12">
+            <label>Qty. As Per Challan: {{ selectedPO['unit'] }}</label>
+            <input type="text" OnlyNumdigit="true" name="challan_qty" (keypress)="number($event.target.value)"
+              [(ngModel)]="challan_qty" required>
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12"
+            *ngIf="material_subtype=='Liquid' && 'Solvents' && 'Solvent'">
+            <label>Conversion (Kg To Litre)</label>
+            <select name="conversion" ngModel required>
+              <option></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3  clr-col-sm-12 clr-col-xs-12">
+            <br>
+            <span class="blink" *ngIf="selectedPO['isOPenPO'] == 'YES'" style="color: white;"><b>Open PO</b></span>
+
+          </div>
+ 
+          </div>
+      
+      </form>
+      <h3>Labeling Details:</h3>
+      <form #labelform="ngForm">
+        <table class="table"  *ngIf="plant_id != '158'">
+          <tr>
+            <th>Medicap Lot No</th>
+            <th>Batch Qty</th>
+            <th>Pack Size</th>
+            <th>{{'common.unit' | translate}}</th>
+            <th *ngIf="container_type !== 'Tanker'">No Of Containers</th>
+            <th>Mfg Date</th>
+             <th>Exp Date</th>
+            <th *ngIf="vendor_type== 'Supplier'">MFG By.</th>
+            <th>COA Received:</th>
+            <th>Upload COA:</th>
+            <th>{{'common.table.action' | translate}}</th>
+          
+          </tr>
+          <tr> 
+             <td style="padding:0px;width: 10%;"> <input type="text" name="batch_no" [(ngModel)]="batch_no" required style="margin:0px;"></td>
+            <td style="padding:0px;width: 10%;"> <input type="text" (input)="checkValue($event.target.value)" name="qty_received"
+                [(ngModel)]="qty_received" style="margin:0px;" (keyup)="getContainerNo($event.target.value)"> </td>
+                <td style="padding:0px;width: 10%;" *ngIf="container_type !== 'Tanker'"> <input type="text" name="pack_size"
+                [(ngModel)]="pack_size" min="0" max="999999" style="margin:0px;" (keyup)="getContainerNo($event.target.value)"></td>
+                <td style="padding:0px;" *ngIf="container_type == 'Tanker'"> <input type="text" name="pack_size"
+                [(ngModel)]="pack_size" min="0" max="999999" readonly style="margin:0px;" (keyup)="getContainerNo($event.target.value)">
+            </td>
+           
+            <td >{{selectedPO_unit}}</td>
+            <td style="padding: 0px;" *ngIf="container_type != 'Tanker'"><input type="number" OnlyNumber="true"
+                name="total_containers" [(ngModel)]="total_containers" required style="margin: 0px;" readonly></td>
+            <td style="padding:0px;"><input type="date" name="mfg_date" [(ngModel)]="mfg_date" [max]="maxDate" 
+                style="margin:0px;"></td>
+            <td style="padding:0px;"><input type="date" name="exp_date" [(ngModel)]="exp_date" [min]="minDate" 
+                style="margin:0px;"></td>
+            <td style="padding:0px;">
+              <select name="coa_received" style="margin:0px;" [(ngModel)]="coa_received" required>
+                <option ></option>
+                <option>Yes</option>
+                <option >No</option>
+                <option>Hold</option>
+              </select>
+            </td>
+            <td style="padding:0px;">
+              <input style="margin:0px;"  *ngIf="coa_received=='Yes'" type="file" name="coa_file" [(ngModel)]="coa_file" (change)="onFileChanged3($event)">
+            </td>
+            <td><button class="btn btn-sm btn-info" (click)="addlabel(labelform)" style="margin:0px;">{{'common.add' | translate}}</button></td>
+          </tr>
+        </table>
+
+        <table class="table" *ngIf="plant_id == '158'">
+          <tr>
+            <th>Medicap Lot No</th>
+            <th>Batch Qty</th>
+            <th>No Of Containers</th>
+            <th>Pack Size</th>
+            <th>{{'common.unit' | translate}}</th>
+            <th>Mfg Date</th>
+             <th>Exp Date</th>
+            <th *ngIf="vendor_type== 'Supplier'">MFG By.</th>
+            <th>COA Received:</th>
+            <th>Upload COA:</th>
+            <th>{{'common.table.action' | translate}}</th>
+          
+          </tr>
+          <tr> 
+             <td style="padding:0px;width: 10%;"> <input type="text" name="batch_no" [(ngModel)]="batch_no" required style="margin:0px;"></td>
+            <td style="padding:0px;width: 10%;"> <input type="text" (input)="checkValue($event.target.value)" name="qty_received"
+                [(ngModel)]="qty_received" style="margin:0px;" (keyup)="getContainerNoMeha($event.target.value)"> </td>
+
+            <td style="padding: 0px;" *ngIf="container_type != 'Tanker'"><input type="number" OnlyNumber="true"
+                name="total_containers" [(ngModel)]="total_containers" required style="margin: 0px;" required (keyup)="getContainerNoMeha($event.target.value)">
+            </td>
+            <td style="padding:0px;width: 10%;" *ngIf="container_type !== 'Tanker'"> <input type="text" name="pack_size"
+                [(ngModel)]="pack_size" min="0" max="999999" style="margin:0px;"  >
+            </td>
+            <td >{{selectedPO_unit}}</td>
+      
+            <td style="padding:0px;"><input type="date" name="mfg_date" [(ngModel)]="mfg_date" [max]="maxDate" 
+                style="margin:0px;"></td>
+            <td style="padding:0px;"><input type="date" name="exp_date" [(ngModel)]="exp_date" [min]="minDate" 
+                style="margin:0px;"></td>
+            <td style="padding:0px;">
+              <select name="coa_received" style="margin:0px;" [(ngModel)]="coa_received" required>
+                <option ></option>
+                <option>Yes</option>
+                <option >No</option>
+                <option>Hold</option>
+              </select>
+            </td>
+            <td style="padding:0px;">
+              <input style="margin:0px;"  *ngIf="coa_received=='Yes'" type="file" name="coa_file" [(ngModel)]="coa_file" (change)="onFileChanged3($event)">
+            </td>
+            <td><button class="btn btn-sm btn-info" (click)="addlabel(labelform)" style="margin:0px;">{{'common.add' | translate}}</button></td>
+          </tr>
+        </table>
+
+          
+          <table class="table">
+            <tr>
+              <th style="font-weight: bolder;">Medicap Lot No</th>
+              <th style="font-weight: bolder;">Batch Qty</th>
+              <th style="font-weight: bolder;">Pack Size</th>
+              <th style="font-weight: bolder;">{{'common.unit' | translate}}</th>
+              <th style="font-weight: bolder;" *ngIf="container_type !== 'Tanker'">No Of Containers</th>
+              <th style="font-weight: bolder;">Mfg Date</th>
+              <th style="font-weight: bolder;">Exp Date/Retest Date</th>
+              <th style="font-weight: bolder;">COA  </th>
+              <th style="font-weight: bolder;">{{'common.table.action' | translate}}</th>
+              <!-- <th>COA</th> -->
+              <!-- <th>Vendor</th> -->
+            </tr>
+          <tr *ngFor="let list of labelList;let i=index">
+            <td style="font-weight: bolder;color: green;">{{list.batch_no}}</td>
+            <td style="font-weight: bolder;color: green;">{{list.qty_received}}</td>
+            <td style="font-weight: bolder;color: green;">{{list.pack_size}}</td>
+            <td style="font-weight: bolder;color: green;">{{list.unit}}</td>
+            <td style="font-weight: bolder;color: green;" *ngIf="container_type != 'Tanker'">{{ list.total_containers }}</td>
+            <td style="font-weight: bolder;color: green;">{{list.mfg_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: green;">{{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: green;" *ngIf="list.coa_files===''">Not Uploaded</td>
+            <td style="font-weight: bolder;color: green;" *ngIf="list.coa_files!=''">  Uploaded</td>
+            <td style="font-weight: bolder;color: green;">
+              <button class="btn btn-sm btn-info" (click)="deleteLabel(list.batch_no)">{{'common.delete' | translate}}</button>
+            </td> 
+
+          </tr>
+          <tr *ngIf="labelList?.length == 0">
+            <td colspan="11">No Record Found!</td>
+          </tr>
+        </table>
+        <input *ngIf="container_type == 'Tanker'" type="hidden" name="total_containers" ngModel="1" tabindex="-1">
+      </form>
+
+
+      <form #receivingForm="ngForm" style="margin-top:20px;">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Actual Received Qty: {{ selectedPO['unit'] }}</label>
+            <input type="text" OnlyNumdigit="true" name="received_qty" [(ngModel)]="qtyReceived" required readonly
+              tabindex="-1">
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="container_type!=='Tanker'">
+            <label>No. Of Containers:</label>
+            <input type="text" name="containerTotal" [(ngModel)]="containerTotal" required readonly tabindex="-1">
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Short / Extra Quantity</label>
+            <input type="text" OnlyNumdigit="true" name="qty_status" [(ngModel)]="result" required readonly
+              tabindex="-1">
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>PO Status</label>
+            <select name="po_status" [(ngModel)]="po_status" required>
+              <option></option> 
+              <option *ngIf="po_stat == 'Extra'">Accept</option>  <!--//xtra -->
+              <option *ngIf="po_stat == 'Short'">Keep Open( Short Qty)</option>
+              <option>Reject / Return</option>
+              <option>{{'common.rejected' | translate}}</option>
+              <option *ngIf="po_stat == 'Extra'">Return Material(Extra Qty)</option> <!--//xtra -->
+              <option *ngIf="po_stat == 'Extra'">Raise Additional PO(Extra Qty)</option> <!--//xtra -->
+            </select>
+          </div>
+     
+        </div>
+        <h3 *ngIf="container_type=='Tanker'">Tanker Details:</h3>
+        <h3 *ngIf="container_type!=='Tanker'">Container Details:</h3>
+        <div class="clr-row">
+          
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="software_type!=='Pharma ERP'">
+            <label *ngIf="container_type!=='Tanker'">Damage Container Observed:</label>
+            <label *ngIf="container_type=='Tanker'">Any Leakage Or Damage Observed:</label>
+            <select name="isdamagecontainer" [(ngModel)]="isdamagecontainer"
+              (change)="checkdamage($event.target.value)" [disabled]="po_status=='Reject / Retuen' || po_status=='Rejected'">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-xs-12" 
+          *ngIf="container_type!=='Tanker' && isdamagecontainer=='Yes'">
+            <label>Medicap Lot No:</label>
+            <select name="batch_no" (change)="selectBat($event.target.selectedIndex)" [(ngModel)]="batch_no" required>
+              <option></option>
+              <option *ngFor="let item of labelList;">{{item.batch_no}}</option>
+            </select>
+          </div>
+    
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+            *ngIf="container_type!=='Tanker' && isdamagecontainer=='Yes'" >
+            <label>Total Damage Containers:</label>
+            <input type="text" OnlyNumber="true" name="outer_damage" [(ngModel)]="outer_damage"
+              (input)="calculate_qty($event.target.value)" [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12"
+            *ngIf="container_type!=='Tanker' && isdamagecontainer=='Yes'">
+            <label>Hold Quantity:</label>
+            <input type="text"  name="hold_qty" [(ngModel)]="hold_qty" readonly>
+          </div>
+ 
+        </div>
+        
+        <h3>Receiving Checklist:</h3>
+        <form #checkList="ngForm">
+          <div class="clr-row">
+            <table class="table chkPoint" cellspacing="2">
+              <tr >
+                <th style="background-color:#144196;color:white;font-size:15px">{{'common.table.srNo' | translate}}</th>
+                <th style="background-color:#144196;color:white;font-size:15px;text-align:left;">Parameters</th>
+                <th style="background-color:#144196;color:white;font-size:15px">{{'common.remarks' | translate}}</th>
+              </tr>
+              <tr *ngFor="let hr of checkPointData;let i = index" style="margin: 0px;">
+                <td style="padding: 0px !important; margin: 0px;">{{i+1.}}</td>
+                <td style="text-align:left;padding: 0px !important;margin: 0px;">{{hr.check_point}}</td>
+                <td style="padding: 0px !important;margin: 0px;" *ngIf="po_status!='Reject / Retuen'  || po_status=='Rejected'">
+
+                  <div *ngIf="hr.evl_pr=='1'">
+                    <input  type="text" min="0" name="check" [(ngModel)]="hr.check"
+                     required
+                      style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                  </div>
+                  <div *ngIf="hr.evl_pr=='2'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Yes</option>
+                    <option>No</option>
+                    <option>NA</option>
+                  </select>
+                  </div>
+                  <div *ngIf="hr.evl_pr=='3'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>OK</option>
+                    <option>Not Ok</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='4'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Satisfactory</option>
+                    <option>Not Satisfactory</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='5'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Applicable</option>
+                    <option>Not Applicable</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='6'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Cleaned</option>
+                    <option>Not Cleaned</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='7'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Sealed </option>
+                    <option>Unsealed</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='8'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Verified</option>
+                    <option>Not Verfied</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='9'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Covered</option>
+                    <option>Uncovered</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+ 
+                </td>
+              </tr>
+ 
+            </table>
+          </div><br>
+       
+          <br>
+        </form>
+        
+        <div *ngIf="isdamagecontainer=='Yes'">
+        <h3>Damage Container</h3>
+        <form #checkList1="ngForm" >
+          <div class="clr-row">
+            <table class="table chkPoint" cellspacing="2">
+              <tr >
+                <th style="background-color:#144196;color:white;font-size:15px">Sr.</th>
+                <th style="background-color:#144196;color:white;font-size:15px;text-align:left;">Parameters</th>
+                <th style="background-color:#144196;color:white;font-size:15px">{{'common.remarks' | translate}}</th>
+              </tr>
+              <tr *ngFor="let hr of checkPointData1;let i = index" style="margin: 0px;">
+                <td style="padding: 0px !important; margin: 0px;">{{i+1.}}</td>
+                <td style="text-align:left;padding: 0px !important;margin: 0px;">{{hr.check_point}}</td>
+                <td style="padding: 0px !important;margin: 0px;">
+
+                  <div *ngIf="hr.evl_pr=='1'">
+                    <input  type="text" min="0" name="check" [(ngModel)]="hr.check"
+                     required
+                      style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                  </div>
+                  <div *ngIf="hr.evl_pr=='2'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Yes</option>
+                    <option>No</option>
+                    <option>NA</option>
+                  </select>
+                  </div>
+                  <div *ngIf="hr.evl_pr=='3'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>OK</option>
+                    <option>Not Ok</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='4'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Satisfactory</option>
+                    <option>Not Satisfactory</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='5'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Applicable</option>
+                    <option>Not Applicable</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='6'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Cleaned</option>
+                    <option>Not Cleaned</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='7'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Sealed </option>
+                    <option>Unsealed</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='8'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Verified</option>
+                    <option>Not Verfied</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+                  <div *ngIf="hr.evl_pr=='9'">
+                  <select  name="check" [(ngModel)]="hr.check" required
+                    style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                    <option>Covered</option>
+                    <option>Uncovered</option>
+                    <option>NA</option>
+                  </select>
+                </div>
+             
+                </td>
+              </tr>
+            </table>
+          </div><br>
+          <!-- <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark(if any):</label>
+            <textarea class="form-control" ngModel name="remark" rows="3"></textarea>
+          </div> -->
+          <br>
+        </form>
+      </div>
+
+
+        <table class="table" *ngIf="container_type=='Tanker' && plant_id == '59'">
+          <tr>
+            <td style="text-align: left;"><button class="btn btn-sm btn-primary" (click)="isTanker='true'" >Tanker Permit Record</button></td>
+            <td><button class="btn btn-sm btn-danger" (click)="isViewtankerCheck=true">View </button></td>
+            
+          </tr>
+        </table>
+        <table class="table" *ngIf="container_type=='Tanker'">
+          <tr>
+            <td style="text-align: left;"><button class="btn btn-sm btn-primary" (click)="isChecklist='true'" [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">Fill
+                Tanker Inspection Checklists</button></td>
+            <td><button class="btn btn-sm btn-danger" (click)="isViewCheck=true" [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">View Checklists</button></td>
+          </tr>
+        </table>
+
+        <h3>Others Details:</h3>
+        <div class="clr-row">
+         
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-md-12"
+            *ngIf="receivingForm.value.vehicle_cleanliness == 'Not Satisfactory'">
+            <label>If Not, Remark:</label>
+            <input type="text" name="vehicle_cleanliness_remark" ngModel required style="border: 1px solid red;" [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">
+          </div>
+
+         
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="coa_received == 'Hold'">
+            <label>Remark For Hold:</label>
+            <input type="text" name="hold_remarks" [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">
+          </div>
+
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="software_type!=='Pharma ERP'">
+            <label>Dedusting Applicable:</label>
+            <select name="dedusting_applicable" ngModel="No" required [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'">
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+ 
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-6" *ngIf="software_type!=='Pharma ERP'">
+             <label>Receiving Start Time:</label>
+            <input type="time" name="entry_time_start" [(ngModel)]="entry_time_start" [min]="min_time"
+              [max]="max_time"  [disabled]="po_status=='Reject / Retuen'  || po_status=='Rejected'"/>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-6" *ngIf="software_type!=='Pharma ERP'">
+             <label>Receiving End Time:</label>
+            <input type="time" name="entry_time_end" [(ngModel)]="entry_time_end" [min]="min_time" [max]="max_time"  [disabled]="po_status=='Reject / Retuen' || po_status=='Rejected'"/>
+          </div>
+
+
+
+        </div>
+        
+      </form>
+
+                       
+
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-success" (click)="receiveMaterial(receivingForm, basicForm)" *ngIf="lev != 'NotTriggred'">Send For Plant Head Approval</button>
+    <button class="btn btn-primary" (click)="receiveMaterial(receivingForm, basicForm)" *ngIf="po_status!='Reject / Retuen'  &&  po_status!='Rejected' && lev == 'NotTriggred'">{{'common.submit' | translate}}</button>
+    <button  class="btn btn-primary" (click)="reject_receiveMaterial(receivingForm, basicForm)" *ngIf="po_status=='Reject / Retuen'  || po_status=='Rejected'">{{'common.reject' | translate}}</button>
+    <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+<clr-modal [(clrModalOpen)]="isDeviation" clrModalSize="xl" >
+  <div class="modal-body">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Deviation Details:(For Non Receipt Of Material COA)</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+         </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <form #deviationForm="ngForm">
+        <div class="clr-row">
+            <div class="clr-col-12">
+                <table class="table table-border">
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Identified By</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text"  name="identifiedBy" [(ngModel)]="identifiedBy"  readonly  >
+                        </td>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Occurred Date</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="date" name="devOccuredDate" ngModel required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Occurred In Dept.</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="devOccuredDept" [(ngModel)]="department_name" readonly>
+
+                        </td>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Identified Date</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="date" name="devIdentifiedDate" ngModel required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Time Of Deviation</td>
+                        <td colspan="3" style="text-align: left;margin: 0;padding: 0;">
+                            <input type="time" name="timeOfDev" ngModel required>
+                        </td>
+                    </tr>
+                </table>
+                <div></div>
+                <table class="table table-border">
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Type Of Dev.</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="typeOfDev" [(ngModel)]="typeOfDev"  readonly>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;font-weight: bolder;">Deviation Scope</td>
+                        <td style="text-align: left;margin: 0;padding: 0;">
+                          <input type="text" name="devScope" [(ngModel)]="devScope"  readonly>
+                        </td>
+                    </tr>
+                    <tr >
+                        <td  colspan="2"  style="text-align: left;margin: 0;padding: 0;">
+                            <input type="text" name="scopeItem" [(ngModel)]="scopeItem"  readonly  > 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="width: 70%; text-align: left;margin: 0;padding: 0;"> <b> Details Of The Deviation</b> <br>
+                            <textarea name="detailsOfDev" [(ngModel)]="detailsOfDev"   required ></textarea>
+                        </td> 
+                        <td  style="width: 30%; text-align: left;margin: 0;padding: 0;"> 
+                            <input type="file" name="devDetDoc" (change)="onFileChanged0($event)"   ngModel>
+                        </td> 
+                    </tr>
+                    <tr>
+                        <td  style="width: 70%; text-align: left;margin: 0;padding: 0;"> <b> Standard Procedure / System</b><br>
+                            <textarea name="standProcedureSystem" [(ngModel)]="standProcedureSystem"   required ></textarea>
+                        </td> 
+                        <td  style="width: 30%; text-align: left;margin: 0;padding: 0;"> 
+                            <input type="file"   name="standProceSysDoc" (change)="onFileChanged00($event)"   ngModel>
+                        </td> 
+                    </tr>
+                </table>
+            </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" (click)="saveDeviation(deviationForm)">{{'common.save' | translate}}</button>
+    </div>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<clr-modal [(clrModalOpen)]="isContainer">
+  <h3 class="modal-title">Add New Container Type:</h3>
+  <div class="modal-body">
+    <form #containerForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-12">
+          <label>Container Type:</label>
+          <input type="text" name="container_type" ngModel>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="saveContainer(containerForm)">{{'common.save' | translate}}</button>
+    ReceivingForm<button type="button" class="btn btn-danger" (click)="isContainer = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+
+ 
+<clr-modal [(clrModalOpen)]="isTanker" clrModalSize="xl"*ngIf="plant_id=='59'">
+  <div class="modal-body">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Tanker Details</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+         </div>
+      </div>
+    </div>
+    <form #tankerForm="ngForm">
+    <div class="card-block">
+      <div class="clr-row">
+        
+         
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Material Name:</label>
+          <input type="text" name="material_name" [(ngModel)]="selectedPO['material_name']" readonly>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Capacity Of The Storage Tank:</strong></label>
+          <input type="text" name="storage_tank7" [(ngModel)]="storage_tank7" required>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Stock As Per Stock Book:</strong></label>
+          <input type="text" name="stock_book" [(ngModel)]="stockBook" required>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Quantity To Be Unloaded:</strong></label>
+          <input type="text" name="unloaded_qyt" [(ngModel)]="unloadedQuantity" required>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>B + C Must Be Less Than A:</strong></label>
+          <input type="text" name="lessthan_value" [(ngModel)]="lessthanValue" required>
+        </div>
+        <!-- <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name of the Supplier:</label>
+          <input type="text" name="supplier_name" [(ngModel)]="selectedPO['']" readonly>
+        </div> -->
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name Of The Supplier:</label>
+          <select name="supplier_name" ngModel>
+            <option></option>
+            <option *ngFor="let res of suplier">{{res.vendor_name}} </option>
+          </select>
+        </div>
+
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name Of Transporter:</label>
+          <input type="text" name="transpot_name" [(ngModel)]="transpot_name" required>
+        </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Tanker No:</label>
+          <input type="text" name="tanker_no" [(ngModel)]="tanker_no" required>
+        </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label> Arrival Time:</label>
+          <input type="time"  name="entry_time"
+              [(ngModel)]="entry_time" />
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Arrival Date:</label>
+        <input type="text" name="material_na" [(ngModel)]="selectedPO['inward_date']" required>
+       </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Safety Valve Of The Tanker:</label>
+        <input type="text" name="safecty_tanker"  [(ngModel)]="safecty_tanker" required>
+      </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Sample Drawn By:</label>
+        <input type="text" name="sample_drawn"  [(ngModel)]="sample_drawn" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Analysis Status</label>
+        <select name="analysis_status" [(ngModel)]="analysis_status" required>
+          <option></option>
+          <option>Complies</option>
+          <option>Not Complies</option>
+        </select>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing Done By:</label>
+        <select name="approver" ngModel>
+          <option></option>
+          <option *ngFor="let res of employees">{{res.firstname}} {{res.lastname}}</option>
+        </select>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing Checked By:</label>
+        <select name="connection_earth" ngModel>
+          <option></option>
+          <option *ngFor="let res of employees">{{res.firstname}} {{res.lastname}}</option>
+        </select>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Nitrogen Regulator Checked By:</label>
+        <select name="nitro_check" ngModel>
+          <option></option>
+          <option *ngFor="let res of employees">{{res.firstname}}{{res.lastname}}</option>
+        </select>
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                            Pressure Before Unloading Started</div>
+                        <div class="clr-col-lg-3"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+                    <div class="row container-fluid">
+                        <div class="clr-row">
+                          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <label>Storage Tank.:<span style="color:red">*</span></label>
+                                <input type="text" name="storage_tank1" ngModel required>
+                            </div>
+                           
+                            
+                              
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <label>Unit:<span style="color:red">*</span></label>
+                                <select name="unit" ngModel>
+                                  <option>Kg</option>
+                                  <option>Cm²</option>
+                                 </select>
+                             </div>
+                           
+                             <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Tanker:<span style="color:red">*</span></label>
+                                <input type="text" name="tanker" ngModel required>
+                            </div>
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Unit:<span style="color:red">*</span></label>
+                              <select name="unit1" ngModel>
+                                <option>Kg</option>
+                                <option>Cm²</option>
+                               </select>
+                           </div>
+                            
+                            
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="clr-col-lg-6">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                            Temperature Before Unloading </div>
+                        <div class="clr-col-lg-5"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+
+
+                    <div class="clr-row">
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <label>Storage Tank:<span style="color:red">*</span></label>
+                            <input type="text" name="store_tank" [(ngModel)]="store_tank" required>
+                        </div>
+                       
+                        <!-- <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <label>Unit:<span style="color:red">*</span></label>
+                            <input type="text" name="temp" [(ngModel)]="temp"
+                                 required>
+                        </div> -->
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Unit:<span style="color:red">*</span></label>
+                          <select name="unit3" ngModel>
+                            <option>°C</option>
+                           </select>
+                       </div>
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Tanker:<span style="color:red">*</span></label>
+                          <input type="text" name="tanker1" [(ngModel)]="tanker1"
+                                required>
+                      </div>
+                      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Unit:<span style="color:red">*</span></label>
+                        <select name="unit4" ngModel>
+                          <option>°C</option>
+                         </select>
+                     </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="clr-col-lg-12">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                          Unloading  Activity</div>
+                        <div class="clr-col-lg-5"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+
+
+                    <div class="clr-row">
+                      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Started At.:<span style="color:red">*</span></label>
+                            <input type="time" name="start_at" ngModel required>
+                        </div>
+                         <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Completed At:<span style="color:red">*</span></label>
+                            <input type="time" name="complete_at" ngModel required>
+                        </div>
+                        
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+ 
+  
+  
+ 
+      
+      
+       
+   
+      <!-- <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Security Officer Before Unloading:</label>
+        <input type="text"  name="security_officer" [(ngModel)]="security_officer" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Safety Officer Before Unloading:</label>
+        <input type="text"  name="safecty_officer" [(ngModel)]="safecty_officer" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Production  Manager :</label>
+        <input type="text"  name="production_manager" [(ngModel)]="production_manager" required>
+      </div> -->
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Unloading Permitted By :</label>
+        <input type="text"  name="unloading_by" [(ngModel)]="unloading_by" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Started At Unloading Activity :</label>
+        <input type="text"  name="sarted_activity" [(ngModel)]="sarted_activity" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Complete At Unloading Activity :</label>
+        <input type="text"  name="complete_activity" [(ngModel)]="complete_activity" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>N2 Cylinder Consumed:</label>
+        <input type="text"  name="cylinder_conumed" [(ngModel)]="cylinder_conumed" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Quantity  Received As Per Weight Slip:</label>
+        <input type="text"  name="recieved_qyt" [(ngModel)]="recieved_qyt" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Name Of Security Guard:</label>
+        <input type="text"  name="security_guard" [(ngModel)]="security_guard" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>  Availability Of  Raw Water:</label>
+        <input type="text"  name="raw_water" [(ngModel)]="raw_water" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Fire Extinguisher:</label>
+        <input type="text"  name="fire_extingusher" [(ngModel)]="fire_extingusher" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Fire Hydrant:</label>
+        <input type="text"  name="fire_hydrant" [(ngModel)]="fire_hydrant" required>
+      </div>
+
+      </div>
+    </div>
+    <h3>Level, Temperature &  Pressure After Every 15 Minutes:</h3>
+    <form #formlevle="ngForm">
+    <table class="table">
+      <tr>
+        <th style="background-color:#144196;color:white;font-size:15px">Level</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Temperature</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Pressure</th>
+        <th style="background-color:#144196;color:white;font-size:15px">{{'common.table.action' | translate}}</th>
+
+      </tr>
+      <tr>
+        <td style="padding:0px;"> <input type="text" name="lavel" ngModel required style="margin:0px;"></td>
+        <td style="padding:0px;"> <input type="text" name="temp" ngModel required style="margin:0px;"></td>
+        <td style="padding:0px;"> <input type="text" name="Pressure" ngModel required style="margin:0px;"></td>
+
+
+        <td><button class="btn btn-sm btn-info" (click)="addlabel1(formlevle)" style="margin:0px;">{{'common.add' | translate}}</button></td>
+
+      </tr>
+      <tr *ngFor="let list of fromlevel1;let i=index">
+        <td>{{list.lavel}}</td>
+       <td>{{list.temp}}</td>
+       <td>{{list.Pressure}}</td>
+        
+       <td>
+         <button class="btn btn-sm btn-info" (click)="admin/labour/labour-contractor(i)">{{'common.delete' | translate}}</button>
+       </td>
+     </tr>
+     <tr *ngIf="fromlevel1?.length == 0">
+       <td colspan="3">No Record Found!</td>
+     </tr>
+    
+
+    </table>
+  </form>
+  </form>
+   
+   
+  
+  <div class="modal-footer">
+      <button class="btn btn-primary" (click)="saveTank(tankerForm)">{{'common.save' | translate}}</button>
+      
+  </div>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isChecklist" clrModalSize="xl">
+  <h3 class="modal-title">Fill Checklist</h3>
+  <div class="modal-body">
+    <!-- <table class="table">
+      <tr>
+        <th>Sr</th>
+        <th>Particular</th>
+        <th>{{'common.table.action' | translate}}</th>
+      </tr>
+      <tr *ngFor="let tanker of tankers;let i=index">
+        <td>{{i+1}}</td>
+        <td>{{tanker.particular}}</td>
+        <td style="padding: 0px;"><select name="test{{i}}" [(ngModel)]="tanker.test" style="margin: 0px;">
+            <option>Ok</option>
+            <option>Not Ok</option>
+            <option>{{'common.table.remark' | translate}}</option>
+          </select></td>
+        <td style="padding: 0px;"><input type="text" name="remark{{i}}" [(ngModel)]="tanker.remark" style="margin: 0px;"
+            *ngIf="tanker.test=='Remark'"></td>
+      </tr>
+    </table> -->
+    <form #tankerCheckList="ngForm">
+    <table class="table chkPoint" cellspacing="2">
+      <tr >
+        <th style="background-color:#144196;color:white;font-size:15px">Sr.</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Parameters</th>
+        <th style="background-color:#144196;color:white;font-size:15px">{{'common.remarks' | translate}}</th>
+      </tr>
+      <tr *ngFor="let hr of tankers;let i = index" style="margin: 0px;">
+        <td style="padding: 0px !important; margin: 0px;">{{i+1.}}</td>
+        <td style="text-align:left;padding: 0px !important;margin: 0px;">{{hr.check_point}}</td>
+        <td style="padding: 0px !important;margin: 0px;">
+
+          <div *ngIf="hr.evl_pr=='1'">
+            <input  type="text" min="0" name="check" [(ngModel)]="hr.check"
+             required
+              style="width:35%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            </div>
+
+
+          <div *ngIf="hr.evl_pr=='2'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Yes</option>
+            <option>No</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='3'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>OK</option>
+            <option>Not Ok</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='4'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Satisfactory</option>
+            <option>Not Satisfactory</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='5'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Applicable</option>
+            <option>Not Applicable</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='6'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Cleaned</option>
+            <option>Not Cleaned</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='7'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Sealed </option>
+            <option>Unsealed</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='8'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Verified</option>
+            <option>Not Verified</option>
+            <option>NA</option>
+          </select>
+        </div>
+          <div *ngIf="hr.evl_pr=='9'">
+          <select  name="check" [(ngModel)]="hr.check" required
+            style="width:100%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+            <option>Covered</option>
+            <option>Uncovered</option>
+            <option>NA</option>
+          </select>
+        </div>
+
+
+
+        </td>
+      </tr>
+      <!-- <button class="btn btn-primary" (click)="save(checkList)">{{'common.save' | translate}}</button> -->
+
+    </table>
+    
+    </form>
+  </div>
+  <div class="modal-footer">
+  	<button type="button" class="btn btn-primary-outline" [disabled]="clicked" (click)="saveChecklist(tankerCheckList); clicked = true;">{{'common.save' | translate}}</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+ 
+<clr-modal [(clrModalOpen)]="isViewCheck" clrModalSize="xl">
+  <h3 class="modal-title">View Checklist</h3>
+  <div class="modal-body">
+    <table class="table">
+      <tr>
+        <th>Sr</th>
+        <th>Particular</th>
+        <!-- <th>{{'common.table.action' | translate}}</th> -->
+        <th>{{'common.table.remark' | translate}}</th>
+      </tr>
+      <tr *ngFor="let tanker of tankerchecklist;let i=index">
+        <td>{{i+1}}</td>
+        <td>{{tanker.check_point}}</td>
+        <!-- <td>{{tanker.test}}</td> -->
+        <td>{{tanker.chk_value}}</td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+
+  </div>
+</clr-modal>
+
+<!-- <clr-modal [(clrModalOpen)]="isViewtankerCheck" clrModalSize="xl">
+  <div class="modal-body">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Tanker details</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+         </div>
+      </div>
+    </div>
+    <form #tankerForm="ngForm">
+    <div class="card-block">
+      <div class="clr-row">
+        
+         
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Material Name:</label>
+          <input type="text" name="material_name" [(ngModel)]="tank_form['material_name']" readonly>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Capacity of the storage tank:</strong></label>
+           <input type="text" name="storage_tank" [(ngModel)]="tank_form['storage_tank']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Stock as per stock book:</strong></label>
+           <input type="text" name="stock_book" [(ngModel)]="tank_form['stock_book']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Quantity to be unloaded:</strong></label>
+           <input type="text" name="unloaded_qyt" [(ngModel)]="tank_form['unloaded_qyt']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>B + C must be less than A:</strong></label>
+          <input type="text" name="lessthan_value" [(ngModel)]="tank_form['lessthan_value']" readonly>
+
+         </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name of the Supplier:</label>
+           <input type="text" name="supplier_name" [(ngModel)]="tank_form['supplier_name']" readonly>
+
+        </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name of Transporter:</label>
+           <input type="text" name="transpot_name" [(ngModel)]="tank_form['transpot_name']" readonly>
+
+        </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label> Arrival Time:</label>
+               <input type="text" name="entry_time" [(ngModel)]="tank_form['entry_time']" readonly>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Arrival Date:</label>
+        <input type="text" name="material_na" [(ngModel)]="tank_form['material_na']" readonly>
+       </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Safety valve of the Tanker:</label>
+         <input type="text" name="safecty_tanker" [(ngModel)]="tank_form['safecty_tanker']" readonly>
+
+      </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Sample drawn by:</label>
+         <input type="text" name="sample_drawn" [(ngModel)]="tank_form['sample_drawn']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Analysis Status</label>
+        <input type="text" name="analysis_status" [(ngModel)]="tank_form['analysis_status']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing done By:</label>
+        <input type="text" name="approver" [(ngModel)]="tank_form['approver']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing checked By:</label>
+        <input type="text" name="connection_earth" [(ngModel)]="tank_form['connection_earth']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Nitrogen regulator checked By:</label>
+        <input type="text" name="nitro_check" [(ngModel)]="tank_form['nitro_check']" readonly>
+
+      </div>
+      </div>
+    </div>
+  </form>
+  
+   
+  </div>
+</clr-modal> -->
+<clr-modal [(clrModalOpen)]="isViewtankerCheck" clrModalSize="xl" *ngIf="plant_id=='59'">
+  <div class="modal-body">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">Tanker Details</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+         </div>
+      </div>
+    </div>
+    <form #tankerForm="ngForm">
+    <div class="card-block">
+      <div class="clr-row">
+        
+         
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Material Name:</label>
+          <input type="text" name="material_name" [(ngModel)]="tank_form['material_name']" readonly>
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Capacity Of The Storage Tank:</strong></label>
+           <input type="text" name="storage_tank" [(ngModel)]="tank_form['storage_tank']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Stock As Per Stock Book:</strong></label>
+           <input type="text" name="stock_book" [(ngModel)]="tank_form['stock_book']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>Quantity To Be Unloaded:</strong></label>
+           <input type="text" name="unloaded_qyt" [(ngModel)]="tank_form['unloaded_qyt']" readonly>
+
+        </div>
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label><strong>B + C Must Be Less Than A:</strong></label>
+           <input type="text" name="lessthan_value" [(ngModel)]="tank_form['lessthan_value']" readonly>
+
+        </div>
+        <!-- <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name of the Supplier:</label>
+          <input type="text" name="supplier_name" [(ngModel)]="tank_form['']" readonly>
+        </div> -->
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name Of The Supplier:</label>
+          
+          <input type="text" name="supplier_name" [(ngModel)]="tank_form['supplier_name']" readonly>
+
+        </div>
+
+
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label>Name Of Transporter:</label>
+           <input type="text" name="transpot_name" [(ngModel)]="tank_form['transpot_name']" readonly>
+
+        </div>
+        <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+          <label> Arrival Time:</label>
+          <input type="text" name="entry_time" [(ngModel)]="tank_form['entry_time']" readonly>
+
+           
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Arrival Date:</label>
+        <input type="text" name="material_na" [(ngModel)]="tank_form['inward_date']" required>
+       </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Safety Valve Of The Tanker:</label>
+         <input type="text" name="safecty_tanker" [(ngModel)]="tank_form['safecty_tanker']" readonly>
+
+      </div>
+       <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Sample Drawn By:</label>
+         <input type="text" name="sample_drawn" [(ngModel)]="tank_form['sample_drawn']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Analysis Status</label>
+        
+        <input type="text" name="analysis_status" [(ngModel)]="tank_form['analysis_status']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing Done By:</label>
+        
+    <input type="text" name="approver" [(ngModel)]="tank_form['approver']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Connection & Earthing Checked By:</label>
+        <input type="text" name="connection_earth" [(ngModel)]="tank_form['connection_earth']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Nitrogen Regulator Checked By:</label>
+        
+        <input type="text" name="nitro_check" [(ngModel)]="tank_form['nitro_check']" readonly>
+
+      </div>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                            Pressure Before Unloading Started</div>
+                        <div class="clr-col-lg-3"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+                    <div class="row container-fluid">
+                        <div class="clr-row">
+                          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <label>Storage Tank.:<span style="color:red">*</span></label>
+                                 <input type="text" name="storage_tank1" [(ngModel)]="tank_form['storage_tank1']" readonly>
+
+                            </div>
+                           
+                            
+                              
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <label>Unit:<span style="color:red">*</span></label>
+                                
+                                 <input type="text" name="unit" [(ngModel)]="tank_form['unit']" readonly>
+
+
+                             </div>
+                           
+                             <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Tanker:<span style="color:red">*</span></label>
+                                 <input type="text" name="tanker" [(ngModel)]="tank_form['tanker']" readonly>
+
+                            </div>
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                              <label>Unit:<span style="color:red">*</span></label>
+                              <input type="text" name="unit1" [(ngModel)]="tank_form['unit1']" readonly>
+
+                               
+                           </div>
+                            
+                            
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="clr-col-lg-6">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                            Temperature Before Unloading </div>
+                        <div class="clr-col-lg-5"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+
+
+                    <div class="clr-row">
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                            <label>Storage Tank:<span style="color:red">*</span></label>
+                             <input type="text" name="store_tank" [(ngModel)]="tank_form['store_tank']" readonly>
+
+                        </div>
+                       
+                      
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Unit:<span style="color:red">*</span></label>
+                          <input type="text" name="unit3" [(ngModel)]="tank_form['unit3']" readonly>
+ 
+                       </div>
+                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Tanker:<span style="color:red">*</span></label>
+                          <input type="text" name="tanker1" [(ngModel)]="tank_form['tanker1']" readonly>
+
+                         
+                      </div>
+                      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Unit:<span style="color:red">*</span></label>
+                        <input type="text" name="unit4" [(ngModel)]="tank_form['unit4']" readonly>
+
+                        
+                     </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="clr-col-lg-12">
+            <div class="card">
+                <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                        <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                          Unloading  Activity</div>
+                        <div class="clr-col-lg-5"
+                            style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                            <button class="btn btn-sm btn-info btn-icon">
+                                <clr-icon shape="eye" class="is-warning"></clr-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-block">
+
+
+                    <div class="clr-row">
+                      <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                        <label>Started At.:<span style="color:red">*</span></label>
+                             <input type="text" name="start_at" [(ngModel)]="tank_form['start_at']" readonly>
+
+                        </div>
+                         <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                          <label>Completed At:<span style="color:red">*</span></label>
+                             <input type="text" name="complete_at" [(ngModel)]="tank_form['complete_at']" readonly>
+
+                        </div>
+                        
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+ 
+  
+  
+ 
+      
+      
+       
+   
+      <!-- <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Security Officer Before Unloading:</label>
+        <input type="text"  name="security_officer" [(ngModel)]="security_officer" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Safety Officer Before Unloading:</label>
+        <input type="text"  name="safecty_officer" [(ngModel)]="safecty_officer" required>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Production  Manager :</label>
+        <input type="text"  name="production_manager" [(ngModel)]="production_manager" required>
+      </div> -->
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Unloading Permitted By :</label>
+         <input type="text" name="unloading_by" [(ngModel)]="tank_form['unloading_by']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Started At Unloading Activity :</label>
+         <input type="text" name="sarted_activity" [(ngModel)]="tank_form['sarted_activity']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>Complete At Unloading Activity :</label>
+        <input type="text" name="complete_activity" [(ngModel)]="tank_form['complete_activity']" readonly>
+
+       </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>N2 Cylinder Consumed:</label>
+        <input type="text" name="complete_activity" [(ngModel)]="tank_form['complete_activity']" readonly>
+
+       </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Quantity  Received As Per Weight Slip:</label>
+         <input type="text" name="recieved_qyt" [(ngModel)]="tank_form['recieved_qyt']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Name Of Security Guard:</label>
+        <input type="text" name="security_guard" [(ngModel)]="tank_form['security_guard']" readonly>
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label>  Availability Of  Raw water:</label>
+        <input type="text" name="raw_water" [(ngModel)]="tank_form['raw_water']" readonly>
+
+       </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Fire Extinguisher:</label>
+         <input type="text" name="fire_extingusher" [(ngModel)]="tank_form['fire_extingusher']" readonly>
+
+      </div>
+      <div class="clr-col-lg-4 clr-md-4 clr-col-xs-12">
+        <label> Fire Hydrant:</label>
+         <input type="text" name="fire_hydrant" [(ngModel)]="tank_form['fire_hydrant']" readonly>
+
+      </div>
+
+      </div>
+    </div>
+    <h3>Level, Temperature &  Pressure After Every 15 Minutes:</h3>
+    <form #formlevle="ngForm">
+    <table class="table">
+      <tr>
+        <th style="background-color:#144196;color:white;font-size:15px">Level</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Temperature</th>
+        <th style="background-color:#144196;color:white;font-size:15px">Pressure</th>
+        <th style="background-color:#144196;color:white;font-size:15px">{{'common.table.action' | translate}}</th>
+
+      </tr>
+      <tr  *ngFor="let list of fromlevel1;let i=index">
+        <td style="padding:0px;"> <input type="text" name="lavel" ngModel required style="margin:0px;">{{list.lavel}}</td>
+        <td style="padding:0px;"> <input type="text" name="temp" ngModel required style="margin:0px;">{{list.temp}}</td>
+        <td style="padding:0px;"> <input type="text" name="Pressure" ngModel required style="margin:0px;">{{list.Pressure}}</td>
+
+     <tr *ngIf="fromlevel1?.length == 0">
+       <td colspan="3">No Record Found!</td>
+     </tr>
+    
+
+    </table>
+  </form>
+  </form>
+   
+   
+  
+  <div class="modal-footer">
+      <button class="btn btn-primary" (click)="saveTank(tankerForm)">{{'common.save' | translate}}</button>
+      
+  </div>
+  </div>
+</clr-modal>
+

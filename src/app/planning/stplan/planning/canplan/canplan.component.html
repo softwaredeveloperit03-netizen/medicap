@@ -1,0 +1,338 @@
+<div class="card canplan-page">
+  <div class="card-header canplan-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: left;">
+        Process Plan
+      </div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-warning" *ngIf="shortageCount > 0" (click)="showShortageModal = true">
+          View Shortages ({{ shortageCount }})
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <clr-tabs>
+      <clr-tab>
+        <button clrTabLink>Work Orders</button>
+        <clr-tab-content *clrIfActive>
+          <div class="search-container">
+            <label for="tableSearchInput">Search PO/FO:</label>
+            <input type="text" id="tableSearchInput"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="searchText"
+              (ngModelChange)="onSearchChange()">
+          </div>
+          <div class="canplan-info-banner">
+            All work orders in planning appear here with live status.
+            <strong>Can Plan</strong> = stock available — use Send for Verification.
+            <strong>Not To Be Plan</strong> = awaiting PO receipt / GRN (indent sent to Purchase) or live stock shortage.
+          </div>
+          <div class="card-text">
+            <div class="clr-row canplan-summary-row" *ngIf="!loading">
+              <div class="clr-col-12">
+                Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} -
+                {{ calculateStartSrNo() + (pendingpo?.length || 0) }} of {{ totalRecords }} work order(s)
+                · <span class="canplan-count-ready">{{ canPlanReadyCount }} Can Plan</span>
+                · <span class="canplan-count-wait">{{ notToBePlanCount }} Not To Be Plan</span>
+                <span class="canplan-shortage-hint" *ngIf="shortageCount > 0">
+                  · {{ shortageCount }} with material shortage detail (View Shortages)
+                </span>
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper canplan-grid-wrap">
+              <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="canplan-queue-grid">
+                <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+                <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+                <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="100">Forecast No</clr-dg-column>
+                <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="110">Work Order No</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="88">WO Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+                <clr-dg-column [clrDgField]="'packing_type'" [style.min-width.px]="80">Packing</clr-dg-column>
+                <clr-dg-column [clrDgField]="'batch_size'" class="cell-num" [style.min-width.px]="72">Plan Qty</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="52">Unit</clr-dg-column>
+                <clr-dg-column [clrDgField]="'display_plan_status'" [style.min-width.px]="120">Planning Status</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="130">Source</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="180">Purchase / Stock</clr-dg-column>
+                <clr-dg-column [clrDgField]="'total_shortage'" class="cell-num" [style.min-width.px]="68">Shortage</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="280">Action</clr-dg-column>
+
+                <clr-dg-row *ngFor="let wo of pendingpo; let i = index; trackBy: trackByWo"
+                  [style.backgroundColor]="wo.bg_color">
+                  <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    {{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd/MM/yyyy') : '—' }}
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-material" [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.packing_type || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ wo.batch_size ?? '0' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    <span class="badge badge-sm" [ngClass]="planningStatusBadgeClass(wo)">
+                      {{ formatPlanningStatus(wo) }}
+                    </span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{ formatProcessSource(wo) }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-material" [title]="formatPurchasePipeline(wo)">
+                    {{ formatPurchasePipeline(wo) }}
+                  </clr-dg-cell>
+                  <clr-dg-cell class="cell-num"
+                    [class.canplan-shortage--yes]="(wo.total_shortage || 0) > 0"
+                    [class.canplan-shortage--no]="(wo.total_shortage || 0) <= 0">
+                    {{ wo.total_shortage || 0 }}
+                  </clr-dg-cell>
+                  <clr-dg-cell>
+                    <div class="canplan-action-btns">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="View(wo)">View</button>
+                      <button type="button" class="btn btn-warning btn-sm" (click)="sendForVerification(wo)"
+                        [disabled]="!canSendForVerification(wo)"
+                        [title]="canSendForVerification(wo) ? 'Send for verification' : 'Available when status is Can Plan (stock in hand)'">
+                        Send for Verification
+                      </button>
+                      <button type="button" class="btn btn-danger btn-sm" (click)="rejectWorkOrder(wo)">
+                        Reject
+                      </button>
+                    </div>
+                  </clr-dg-cell>
+                </clr-dg-row>
+
+                <clr-dg-placeholder>
+                  No work orders on Process Plan yet.
+                  Approve <strong>To Be Plan</strong> on Generate WO, or complete
+                  <strong>Confirm Indent → Send</strong> for shortage work orders — they will appear here as
+                  <strong>Not To Be Plan</strong> until stock is received (GRN).
+                </clr-dg-placeholder>
+
+                <clr-dg-footer *ngIf="totalRecords > 0">
+                  <clr-dg-pagination
+                    #paginationQueue
+                    [clrDgPage]="currentPage"
+                    [clrDgPageSize]="pageSize"
+                    [clrDgTotalItems]="totalRecords"
+                    (clrDgPageChange)="onPageChange($event)"
+                    (clrDgPageSizeChange)="onPageSizeChange($event)">
+                    <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Work orders per page</clr-dg-page-size>
+                    {{ paginationQueue.firstItem + 1 }} - {{ paginationQueue.lastItem + 1 }} of {{ paginationQueue.totalItems }} work orders
+                  </clr-dg-pagination>
+                </clr-dg-footer>
+              </clr-datagrid>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+      <clr-tab>
+        <button clrTabLink (click)="getLogData()">Log</button>
+        <clr-tab-content *clrIfActive (clrTabContentActivated)="getLogData()">
+          <div class="search-container">
+            <label for="logSearchInput">Search PO/FO:</label>
+            <input type="text" id="logSearchInput"
+              placeholder="Forecast no, work order, product..."
+              [(ngModel)]="logSearchText"
+              (ngModelChange)="onLogSearchChange()">
+          </div>
+          <div class="card-text">
+            <div class="clr-row" style="margin-bottom: 8px; align-items: center;">
+              <div class="clr-col-lg-8">
+                Showing {{ logTotalRecords ? calculateLogStartSrNo() + 1 : 0 }} -
+                {{ calculateLogStartSrNo() + (logData?.length || 0) }} of {{ logTotalRecords }} sent for verification
+              </div>
+              <div class="clr-col-lg-4" style="text-align: right;">
+                <button class="btn btn-primary btn-sm" (click)="printLog()">Print</button>
+              </div>
+            </div>
+
+            <div id="logTable" class="datagrid-wrapper canplan-grid-wrap">
+              <clr-datagrid [clrDgLoading]="logLoading" [clrDgStickyHeader]="true" class="canplan-log-grid">
+                <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
+                <clr-dg-column [clrDgField]="'mainGroupName'" [style.min-width.px]="90">Group</clr-dg-column>
+                <clr-dg-column [clrDgField]="'order_no'" [style.min-width.px]="100">Forecast No</clr-dg-column>
+                <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="110">Work Order No</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="88">WO Date</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_code'" [style.min-width.px]="100">Product Code</clr-dg-column>
+                <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="160">Product Name</clr-dg-column>
+                <clr-dg-column [clrDgField]="'packing_type'" [style.min-width.px]="80">Packing</clr-dg-column>
+                <clr-dg-column [clrDgField]="'batch_size'" class="cell-num" [style.min-width.px]="72">Plan Qty</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="52">Unit</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="130">Sent On</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="140">Current Status</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="80">Action</clr-dg-column>
+
+                <clr-dg-row *ngFor="let wo of logData; let i = index; trackBy: trackByWo"
+                  [style.backgroundColor]="wo.bg_color">
+                  <clr-dg-cell>{{ calculateLogStartSrNo() + i + 1 }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    {{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd/MM/yyyy') : '—' }}
+                  </clr-dg-cell>
+                  <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-material" [title]="wo.product_name">{{ wo.product_name || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.packing_type || '—' }}</clr-dg-cell>
+                  <clr-dg-cell class="cell-num">{{ wo.batch_size ?? '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+                  <clr-dg-cell>{{ formatDateTime(wo.send_for_verification_on) }}</clr-dg-cell>
+                  <clr-dg-cell>
+                    <span class="badge badge-sm" [ngClass]="logStatusBadgeClass(wo)">
+                      {{ formatLogWoStatus(wo) }}
+                    </span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>
+                    <button type="button" class="btn btn-info btn-sm" (click)="View(wo)">View</button>
+                  </clr-dg-cell>
+                </clr-dg-row>
+
+                <clr-dg-placeholder>No work orders sent for verification</clr-dg-placeholder>
+
+                <clr-dg-footer *ngIf="logTotalRecords > 0">
+                  <clr-dg-pagination
+                    #paginationLog
+                    [clrDgPage]="logCurrentPage"
+                    [clrDgPageSize]="logPageSize"
+                    [clrDgTotalItems]="logTotalRecords"
+                    (clrDgPageChange)="onLogPageChange($event)"
+                    (clrDgPageSizeChange)="onLogPageSizeChange($event)">
+                    <clr-dg-page-size [clrPageSizeOptions]="[25, 50, 100]">Rows per page</clr-dg-page-size>
+                    {{ paginationLog.firstItem + 1 }} - {{ paginationLog.lastItem + 1 }} of {{ paginationLog.totalItems }} rows
+                  </clr-dg-pagination>
+                </clr-dg-footer>
+              </clr-datagrid>
+            </div>
+          </div>
+        </clr-tab-content>
+      </clr-tab>
+    </clr-tabs>
+  </div>
+</div>
+
+<!-- Work Order Details Modal -->
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl" class="canplan-view-modal">
+  <h3 class="modal-title">Work Order — {{ selectedWo?.workorder_no || '—' }}</h3>
+  <div class="modal-body canplan-modal-body" *ngIf="selectedWo">
+    <div class="canplan-wo-summary">
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Plan Month</span>
+        <span class="canplan-summary-value">{{ formatPlanMonth(selectedWo.planMonth) }}</span>
+      </div>
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Forecast No</span>
+        <span class="canplan-summary-value">{{ selectedWo.order_no || '—' }}</span>
+      </div>
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Product</span>
+        <span class="canplan-summary-value">{{ selectedWo.product_code }} — {{ selectedWo.product_name || '—' }}</span>
+      </div>
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Plan Qty</span>
+        <span class="canplan-summary-value">{{ selectedWo.batch_size ?? 0 }} {{ selectedWo.planUnit || '' }}</span>
+      </div>
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Planning Status</span>
+        <span class="canplan-summary-value">{{ formatPlanningStatus(selectedWo) }}</span>
+      </div>
+      <div class="canplan-summary-item" *ngIf="selectedWo.process_plan_source === 'indent_sent_to_purchase'">
+        <span class="canplan-summary-label">Purchase / Stock</span>
+        <span class="canplan-summary-value">{{ formatPurchasePipeline(selectedWo) }}</span>
+      </div>
+      <div class="canplan-summary-item">
+        <span class="canplan-summary-label">Total Shortage</span>
+        <span class="canplan-summary-value"
+          [class.canplan-shortage--yes]="(selectedWo.total_shortage || 0) > 0">
+          {{ selectedWo.total_shortage || 0 }}
+        </span>
+      </div>
+    </div>
+
+    <div class="canplan-modal-table-wrap datagrid-wrapper">
+      <clr-datagrid [clrDgStickyHeader]="true" class="canplan-detail-grid">
+        <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_code'" [style.min-width.px]="100">Material Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_name'" [style.min-width.px]="160">Material Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'mat_type'" [style.min-width.px]="72">Type</clr-dg-column>
+        <clr-dg-column [clrDgField]="'requiredQty'" class="cell-num" [style.min-width.px]="80">Required</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_gross_available'" class="cell-num canplan-col-rm" [style.min-width.px]="80">Stock</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_booked_qty'" class="cell-num canplan-col-rm" [style.min-width.px]="80">Booked</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_net_available'" class="cell-num canplan-col-rm" [style.min-width.px]="80">Net</clr-dg-column>
+        <clr-dg-column [clrDgField]="'deducted_from_RM'" class="cell-num" [style.min-width.px]="88">Deduct</clr-dg-column>
+        <clr-dg-column [clrDgField]="'shortage'" class="cell-num" [style.min-width.px]="72">Shortage</clr-dg-column>
+        <clr-dg-column [clrDgField]="'status'" [style.min-width.px]="100">Status</clr-dg-column>
+
+        <clr-dg-row *ngFor="let mat of (selectedWo.Deductions || []); let j = index; trackBy: trackByIndex"
+          [class.canplan-row-shortage]="(mat.shortage || 0) > 0">
+          <clr-dg-cell class="cell-sr">{{ j + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-material" [title]="mat.material_name">{{ mat.material_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.mat_type || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.requiredQty ?? mat.plan_qty ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num canplan-col-rm">{{ mat.rm_gross_available ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num canplan-col-rm">{{ mat.rm_booked_qty ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num canplan-col-rm">{{ mat.rm_net_available ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.deducted_from_RM || 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num" [class.canplan-shortage--yes]="(mat.shortage || 0) > 0">
+            {{ mat.shortage || 0 }}
+          </clr-dg-cell>
+          <clr-dg-cell>{{ mat.status || '—' }}</clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No material deductions for this work order</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="modal-footer canplan-modal-footer">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="isView = false">Close</button>
+  </div>
+</clr-modal>
+
+<!-- Material Shortages Modal -->
+<clr-modal [(clrModalOpen)]="showShortageModal" clrModalSize="xl" class="canplan-shortage-modal">
+  <h3 class="modal-title">Not To Be Plan — Material Shortages</h3>
+  <div class="modal-body canplan-modal-body">
+    <p class="canplan-shortage-intro">
+      These work orders are visible on Process Plan as <strong>Not To Be Plan</strong> because live own-code stock is still short.
+      After GRN / stock receipt the status will change to <strong>Can Plan</strong> on refresh.
+      Use <strong>Code-to-Code transfer</strong> if an alternate material code has stock.
+    </p>
+    <div class="datagrid-wrapper canplan-shortage-grid-wrap">
+      <clr-datagrid [clrDgStickyHeader]="true" class="canplan-shortage-grid">
+        <clr-dg-column [clrDgField]="'workorder_no'" [style.min-width.px]="100">Work Order</clr-dg-column>
+        <clr-dg-column [clrDgField]="'product_name'" [style.min-width.px]="140">Product</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_code'" [style.min-width.px]="100">Material Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_name'" [style.min-width.px]="160">Material Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'required_qty'" class="cell-num" [style.min-width.px]="80">Required</clr-dg-column>
+        <clr-dg-column [clrDgField]="'available_RM'" class="cell-num" [style.min-width.px]="80">Stock</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_booked_qty'" class="cell-num" [style.min-width.px]="80">Booked</clr-dg-column>
+        <clr-dg-column [clrDgField]="'rm_net_available'" class="cell-num" [style.min-width.px]="80">Net</clr-dg-column>
+        <clr-dg-column [clrDgField]="'deducted_from_RM'" class="cell-num" [style.min-width.px]="88">Deduct</clr-dg-column>
+        <clr-dg-column [clrDgField]="'shortage'" class="cell-num" [style.min-width.px]="72">Shortage</clr-dg-column>
+
+        <clr-dg-row *ngFor="let row of flattenedShortageRows; trackBy: trackByIndex"
+          class="canplan-row-shortage">
+          <clr-dg-cell>{{ row.workorder_no || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.product_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-material">{{ row.material_name || row.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ row.required_qty ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ row.available_RM ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ row.rm_booked_qty ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ row.rm_net_available ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ row.deducted_from_RM ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num canplan-shortage--yes">{{ row.shortage ?? 0 }}</clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No shortage data</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="showShortageModal = false">Close</button>
+  </div>
+</clr-modal>

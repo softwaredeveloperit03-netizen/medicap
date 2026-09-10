@@ -1,0 +1,259 @@
+<div class="vapp vapp--page" *ngIf="!isView && !isEditView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Quotation Log</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }">{{'common.close' | translate}}</button>
+    </header>
+
+    <div class="vapp__body">
+      <div class="vapp__toolbar">
+        <label class="vapp__search-label" for="qlog-search">Search</label>
+        <input id="qlog-search" type="text" class="vapp__search" placeholder="Search by vendor, quotation no, date, status…" [(ngModel)]="searchQuery" aria-label="Search quotations">
+      </div>
+
+      <div class="vapp__table-wrap">
+        <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+          <clr-dg-column [clrDgSortable]="false" class="vapp__col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Quotation Date</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Quotation No</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Vendor Name</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Materials</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.status' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Entry By</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Entry Date</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false" class="qlog__col-actions">{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of (filteredMaterials || []); let i = index" [clrDgItem]="result">
+            <clr-dg-cell class="qlog__cell-center">{{ i + 1 }}</clr-dg-cell>
+            <clr-dg-cell class="qlog__cell-center">{{ result.vendor_quotation_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell class="qlog__cell-center">{{ result.vendor_quotation_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result?.vendor_name }}</clr-dg-cell>
+            <clr-dg-cell>
+              <div class="qlog__mats">
+                <span class="qlog__mat" *ngFor="let item of result.materials">{{ item.material_name }}</span>
+              </div>
+            </clr-dg-cell>
+            <clr-dg-cell class="qlog__cell-center">
+              <span class="qlog__status qlog__status--approved" *ngIf="result.status == 'approve'">{{'common.approved' | translate}}</span>
+              <span class="qlog__status qlog__status--pending" *ngIf="result.status == 'Pending'">{{'common.pending' | translate}}</span>
+            </clr-dg-cell>
+            <clr-dg-cell class="qlog__cell-center">{{ result.entry_by }}</clr-dg-cell>
+            <clr-dg-cell class="qlog__cell-center">{{ result.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell class="vapp__cell-action">
+              <div class="qlog__row-actions">
+                <button type="button" class="vapp__btn vapp__btn--view" (click)="view(result)">{{'common.view' | translate}}</button>
+                <button type="button" class="vapp__btn vapp__btn--primary" (click)="update(result)">{{'common.update' | translate}}</button>
+                <button type="button" class="vapp__btn vapp__btn--outline" (click)="history(result)">History</button>
+              </div>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer class="qlog__footer-row">
+            <clr-dg-pagination #pagination [clrDgPageSize]="10">
+              <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50]">Quotations per page</clr-dg-page-size>
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} quotations
+            </clr-dg-pagination>
+            <div class="qlog__footer-download">
+              <button type="button" class="vapp__btn vapp__btn--primary" (click)="exportToExcel()">
+                <clr-icon shape="download"></clr-icon> Download Excel
+              </button>
+            </div>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail view -->
+<div class="vapp vapp--page" *ngIf="isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Quotation Log</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="viewf()">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+        <h3 class="qlog__subtitle">Vendor Details</h3>
+        <table class="qlog__table table table-border">
+          <tr>
+            <td class="qlog__table-label">Vendor Name:</td>
+            <td class="qlog__table-value">{{ selectedResult['vendor_name'] }}</td>
+            <td class="qlog__table-label">Vendor Quotation No:</td>
+            <td class="qlog__table-value">{{ selectedResult['vendor_quotation_no'] }}</td>
+          </tr>
+        </table>
+        <table class="qlog__table table table-border">
+          <tr>
+            <td class="qlog__table-label">Quotation No:</td>
+            <td class="qlog__table-value">{{ selectedResult['quotation_no'] }}</td>
+          </tr>
+          <tr>
+            <td class="qlog__table-label">View Quotation</td>
+            <td class="qlog__table-value">
+              <button type="button" class="qlog__btn qlog__btn--view-doc btn btn-sm" [disabled]="selectedResult['doc_url'] == 'NA'" (click)="uploadQuatation(selectedResult['doc_url'])">View Uploaded Quotation</button>
+            </td>
+          </tr>
+        </table>
+        <div class="qlog__table-wrap">
+          <table class="qlog__table qlog__table--data table table-border">
+            <thead>
+              <tr>
+                <th class="qlog__th">Material Code</th>
+                <th class="qlog__th">Material Name</th>
+                <th class="qlog__th">TAX</th>
+                <th class="qlog__th">Quotation Rate</th>
+                <th class="qlog__th">Pack Size</th>
+                <th class="qlog__th" *ngIf="selectedResult['material_type'] != 'General Material'">Valid Till</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of selectedResult['materials']; let i = index">
+                <td>{{ result.material_code }}</td>
+                <td>{{ result.material_name }}</td>
+                <td>{{ result.gst_per }}</td>
+                <td>{{ result.quotation_amt }}</td>
+                <td>{{ result.pack_size }} {{ result.pack_unit }}</td>
+                <td *ngIf="selectedResult['material_type'] != 'General Material'">{{ result.validTill | date: 'dd-MM-yyyy' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <table class="qlog__table qlog__table--sign table table-border">
+          <tr class="qlog__sign-header">
+            <td colspan="4" class="qlog__sign-title">Digitally Signed By</td>
+          </tr>
+          <tr>
+            <td class="qlog__table-label">Prepared By <span class="qlog__check">&#10003;</span></td>
+            <td>{{ selectedResult['entry_by'] }}-{{ selectedResult['entry_by_name'] }}</td>
+            <td class="qlog__table-label">Prepared on</td>
+            <td>{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td class="qlog__table-label">Approved By <span class="qlog__check" *ngIf="selectedResult['approve_by'] != '0'">&#10003;</span></td>
+            <td>{{ selectedResult['approve_by'] }}-{{ selectedResult['approve_by_name'] }}</td>
+            <td class="qlog__table-label">Approved on</td>
+            <td>{{ selectedResult['approve_date'] | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+        </table>
+    </div>
+    <footer class="qlog__footer card-footer">
+      <button type="button" class="qlog__btn qlog__btn--close btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Update Quotation -->
+<div class="vapp vapp--page" *ngIf="isEditView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Update Quotation</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="closeEdit()">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+      <div class="qlog__detail-section card-text">
+        <form #saveNoForm="ngForm">
+          <h3 class="qlog__subtitle">Vendor Details</h3>
+          <table class="qlog__table table table-border">
+            <tr>
+              <td class="qlog__table-label">Vendor Name:</td>
+              <td class="qlog__table-value">{{ selectedResultUpdate['vendor_name'] }}</td>
+              <td class="qlog__table-label">Vendor Quotation No:</td>
+              <td class="qlog__table-value">{{ selectedResultUpdate['vendor_quotation_no'] }}</td>
+              <td class="qlog__table-label">Quotation No:</td>
+              <td class="qlog__table-value">{{ selectedResultUpdate['quotation_no'] }}</td>
+            </tr>
+          </table>
+          <div class="qlog__table-wrap">
+            <table class="qlog__table qlog__table--data table table-border">
+              <thead>
+                <tr>
+                  <th class="qlog__th">Check</th>
+                  <th class="qlog__th">Material Code</th>
+                  <th class="qlog__th">Material Name</th>
+                  <th class="qlog__th">TAX</th>
+                  <th class="qlog__th">Quotation Rate</th>
+                  <th class="qlog__th">New Quot. Rate</th>
+                  <th class="qlog__th">Pack Size</th>
+                  <th class="qlog__th" *ngIf="selectedResultUpdate['material_type'] != 'General Material'">Valid Till</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let result of selectedResultUpdate['materials']; let i = index">
+                  <td><input type="checkbox" name="check{{ i }}" [(ngModel)]="result.check" class="qlog__checkbox" [attr.aria-label]="'Select material ' + (i + 1)" title="Select"></td>
+                  <td>{{ result.material_code }}</td>
+                  <td>{{ result.material_name }}</td>
+                  <td>{{ result.gst_per }}</td>
+                  <td>{{ result.quotation_amt }}</td>
+                  <td><input type="number" name="newQuotation_amt{{ i }}" [(ngModel)]="result.newQuotation_amt" class="qlog__input-inline"></td>
+                  <td>{{ result.pack_size }} {{ result.pack_unit }}</td>
+                  <td *ngIf="selectedResultUpdate['material_type'] != 'General Material'"><input type="date" name="validTill{{ i }}" [(ngModel)]="result.newValidTill" class="qlog__input-inline" aria-label="Valid till row {{ i + 1 }}" title="Valid Till"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </form>
+      </div>
+    </div>
+    <footer class="vapp__footer">
+      <button type="button" class="vapp__btn vapp__btn--primary" (click)="save()">{{'common.update' | translate}}</button>
+      <button type="button" class="vapp__btn vapp__btn--close" (click)="closeEdit()">{{'common.close' | translate}}</button>
+    </footer>
+  </div>
+</div>
+
+<!-- History modal -->
+<clr-modal [(clrModalOpen)]="quatationHistory" clrModalSize="xl" [clrModalClosable]="true" class="qlog-modal qlog-modal--history">
+  <h3 class="modal-title">Quotation History</h3>
+  <div class="modal-body qlog-modal__body">
+    <div class="card qlog-modal__card">
+      <div class="card-block">
+        <div class="card-text">
+          <form #saveNoForm="ngForm">
+            <h3 class="qlog__subtitle">Vendor Details</h3>
+            <table class="qlog__table qlog__table--info table table-border">
+              <tr>
+                <td class="qlog__table-label">Vendor Name:</td>
+                <td class="qlog__table-value">{{ selectedResultHis['vendor_name'] }}</td>
+                <td class="qlog__table-label">Vendor Quotation No:</td>
+                <td class="qlog__table-value">{{ selectedResultHis['vendor_quotation_no'] }}</td>
+                <td class="qlog__table-label">Quotation No:</td>
+                <td class="qlog__table-value">{{ selectedResultHis['quotation_no'] }}</td>
+              </tr>
+            </table>
+            <div class="qlog-modal__table-wrap">
+              <table class="qlog__table qlog__table--data qlog__table--history table table-border">
+                <thead>
+                  <tr>
+                    <th class="qlog__th">Material Code</th>
+                    <th class="qlog__th">Material Name</th>
+                    <th class="qlog__th">TAX</th>
+                    <th class="qlog__th">Quotation Rate</th>
+                    <th class="qlog__th">Pack Size</th>
+                    <th class="qlog__th" *ngIf="selectedResultHis['material_type'] != 'General Material'">Valid Till</th>
+                    <th class="qlog__th">Entry By</th>
+                    <th class="qlog__th">Entry On</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let result of selectedResultHis['history']; let i = index">
+                    <td>{{ result.material_code }}</td>
+                    <td>{{ result.material_name }}</td>
+                    <td>{{ result.gst_per }}</td>
+                    <td>{{ result.quotation_amt }}</td>
+                    <td>{{ result.pack_size }} {{ result.pack_unit }}</td>
+                    <td *ngIf="selectedResultHis['material_type'] != 'General Material'">{{ result.validTill | date: 'dd-MM-yyyy' }}</td>
+                    <td>{{ result.entryBy }}</td>
+                    <td>{{ result.entryOn | date: 'dd-MM-yyyy' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer qlog-modal__footer">
+        <button type="button" class="qlog__btn qlog__btn--close btn btn-danger" (click)="quatationHistory = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</clr-modal>

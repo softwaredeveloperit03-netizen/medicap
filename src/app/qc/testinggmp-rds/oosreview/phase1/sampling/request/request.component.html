@@ -1,0 +1,195 @@
+<div class="card" *ngIf="!isView">
+    <div class="card-header">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Allocation of Sampling</div>
+            <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+              <button class="btn btn-sm btn-danger" routerLink="/qc/testing-rds/oosreview/phase1/sampling">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                <tr>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Select</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Receiving no</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Date</th>
+                     <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Material Type</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="vertical-align: middle; background-color: rgb(14, 67, 112); color: white;">No. of Containers</th>
+                    
+                </tr>
+                <tr *ngFor="let result of results; let i = index">
+                    <td style="text-align: left;">{{i+1}}</td>
+                    <td><input type="checkbox" name="check{{i}}" [(ngModel)]="result.check"></td>
+                    <td style="text-align: left;">{{ result.grn_no  || 'NA'}}</td>
+                    <td style="text-align: left;">{{ result.ar_no ? result.ar_no : 'NA'}}</td>
+                    <td style="text-align: left;">{{ result.grn_date | date: 'dd-MM-yyyy'}}</td>
+                     <td style="text-align: left;">{{ result.material_type || 'NA' }}</td>
+                    <td style="text-align: left;">{{ result.material_name || 'NA'}}</td>
+                    <td style="text-align: left;">{{ result.material_code || 'NA'}}</td>
+                    <td style="text-align: left;">{{ result.containers || 'NA'}}</td>
+                 </tr>
+                <tr *ngIf="results?.length == 0">
+                    <td colspan="9">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+            <br>
+
+            <form #samplingForm="ngForm">
+                <div class="clr-row">
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+                        <label>Sampling Person (QC):</label>
+                        <select name="sampling_person" ngModel required>
+                            <option></option>
+                            <option  [value]="masterId">Master</option>
+                            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                        <label>Sampling Person (Micro):</label>
+                        <select name="micro_person" ngModel required>
+                            <option></option>
+                            <option  [value]="masterId">Master</option>
+                            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                        <label>Sampling Person (Alternate QC):</label>
+                        <select name="alternate_qc_person" ngModel required>
+                            <option></option>
+                            <option  [value]="masterId">Master</option>
+                            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+                        <label>Sampling Person (Alternate Micro):</label>
+                        <select name="alternate_micro_person" ngModel required>
+                            <option></option>
+                            <option  [value]="masterId">Master</option>
+                            <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button   [disabled]="!isbutton" class="btn btn-primary" (click)="openDigiSign(samplingForm)">ALLOCATE</button>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">GRN Details:</div>
+        <div class="card-block">
+            <div class="card-text">
+                <table class="table" style="margin-top: 0px;">
+                    <tr>
+                        <th style="text-align: left;">Sampling No.</th>
+                        <th style="text-align: left;">Material Name</th>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">{{ selectedSampling['sampling_no'] }}</td>
+                        <td style="text-align: left;">{{ selectedSampling['material_name'] }}</td>
+                    </tr>
+                </table>
+                <h3>Material Details</h3>
+                <table class="table">
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Material Code:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['material_code'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Grade:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['grade'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['grn_no'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['grn_date'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;width: 15%;"><b>Mfg. Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['mfg_date'] }}</td>
+                        <td style="text-align: left;width: 15%;"><b>Exp. Date:</b></td>
+                        <td style="text-align: left;">{{ selectedSampling['exp_date'] }}</td>
+                    </tr>
+                </table>
+                <br>
+                <!-- <p style="text-align: center;color: red;" *ngIf="selectedSampling['specification_no'] == ''">Note: Specification Not Available. You can allocate sampling person, But, sampling will not start withuot specification.</p>
+                <form #samplingForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+                            <label>Sampling Person (QC):</label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                            <label>Sampling Person (Micro):</label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                            <label>Sampling Person (Alternate):</label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-4">
+                            <label>Sampling Person (Alternate QC):</label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-4 clr-col-xs-12">
+                            <label>Sampling Person (Alternate Micro):</label>
+                            <select name="sampling_person" ngModel required>
+                                <option></option>
+                                <option *ngFor="let employee of employees" [value]="employee.emp_id">{{ employee.firstname }} -{{ employee.emp_id }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </form> -->
+            </div>
+        </div>
+        <div class="card-footer">
+            <!-- <button class="btn btn-primary" (click)="allocatePerson(samplingForm)">ALLOCATE</button> -->
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isDIGI" [clrModalClosable]="true">
+    <h3 class="modal-title">&#9989; Sign Digitally For User ID : <span style="color: blue;">{{emp_id}} </span></h3>
+    <div class="modal-body">
+      <div class="card">
+        <div class="card-block">
+          <div class="card-text">
+            <form #addMaterialForm="ngForm">
+              <div class="modal-body">
+                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <label>Enter Passward Or 4 Digit Authorization PIN <span style="color: red">*</span></label>
+                  <input type="password" name="loginPassward" [(ngModel)]="loginPassward" required >
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-success" (click)="digiSign(addMaterialForm)">{{'common.submit' | translate}}</button>
+         </div>
+      </div>
+    </div>
+  </clr-modal>
+
+  

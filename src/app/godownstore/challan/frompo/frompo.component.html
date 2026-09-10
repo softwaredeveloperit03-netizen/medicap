@@ -1,0 +1,290 @@
+﻿<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-6" style="color: aliceblue;margin-top: -2px;text-align: right;">Received Challan From PO
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <span style="background-color: aquamarine;font-weight: bolder;color: aquamarine;">...</span>
+            <span style="font-weight: bolder;color: white;"> Open PO</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/godownStore/challan/approval">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+      <clr-datagrid [clrDgLoading]="loading">
+
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column clrDgField="entry_date">{{'common.date' | translate}}</clr-dg-column>
+        <clr-dg-column clrDgField="material_type">Material Type</clr-dg-column>
+        <clr-dg-column clrDgField="vendor_name">Vendor Name</clr-dg-column>
+        <clr-dg-column clrDgField="challan_no">Packaging Slip</clr-dg-column>
+        <clr-dg-column clrDgField="challan_date">Packaging Slip Date</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let result of results; let i = index" [clrDgItem]="result"  [ngClass]="getClass(result)">
+          <clr-dg-cell>{{i+1}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.entry_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.ch_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.challan_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="view(i)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="isView">
+  <div class="card-header">
+    <div class="clr-row"  >
+      <div class="clr-col-lg-6" style="text-align: right;"><b>Challan Details</b></div>
+      <div class="clr-col-lg-6" style="text-align: right;"> 
+        <span class="blink" *ngIf="selectedResult['isOpenPo'] == 'OPEN'" style="color: white;"><b>Open PO</b></span>
+      </div>
+   </div>
+   </div>
+  <div class="card-block">
+    <div class="card-text">
+      <h3>Vendor Details:</h3>
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor No.:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Vendor Name:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+          <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">PO No./Date:</td>
+          <td style="text-align: left;"> {{ selectedResult['po_no'] }} / {{ selectedResult['po_date'] | date: 'dd-MM-yyyy'}}</td>
+          <td style="text-align: left; width: 20%;">Material For :</td>
+          <td style="text-align: left; margin: 0;padding: 0;">
+            <select name="materialFor" [(ngModel)]="materialFor" required  
+            (change)="getMaterialForName($event.target.value)">
+              <option></option>
+              <option>Own</option>
+              <option *ngFor="let cli of clients" value="{{cli.client_code}}">{{cli.LglNm}}</option>
+            </select> 
+          </td>
+        </tr>
+
+      </table>
+
+      <div *ngIf="selectedLocation?.length != 0">
+        <h3>Location Details:</h3>
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;width: 15%;">GST Type:</td>
+            <td style="text-align: left;width: 35%;">{{ selectedLocation['gst_type'] }}</td>
+            <td style="text-align: left; width: 15%;">GST No.:</td>
+            <td style="text-align: left;">{{ selectedLocation['gst_no'] || 'NA' }}</td>
+
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 15%;">Address:</td>
+            <td style="text-align: left;" colspan="3">{{ selectedLocation['address'] }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <h3>Materials:</h3>
+      <table class="table table-border">
+        <tr>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Select</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Code</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Invoice</th>
+          <th style="background-color: rgb(14, 67, 112); color: white; width: 100px;">Invoice Rate</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+          <td style="padding: 0px;margin: 0;">
+            <input type="checkbox" name="selected{{ i }}" [(ngModel)]="comp.selected">
+          </td>
+          <td style="text-align: left;">{{ comp.material_type }} - {{ comp.material_subtype }}</td>
+          <td style="text-align: left;">{{ comp.material_code ||'NA' }}</td>
+          <td style="text-align: left;">{{ comp.material_name ||'NA' }}</td>
+          <td>{{ comp.grade ||'NA' }}</td>
+          <td>
+            
+            <span>{{ comp.qty }} {{ comp.unit }}</span>
+            <span *ngIf="comp.openQty !='NO'"  style="color: green;font-weight: bold;"><br>{{ comp.openQty }} {{ comp.unit }}</span>
+            
+
+
+          </td>
+          <td>{{ comp.rate ||'NA'}}</td>
+          <td style="padding: 0px;margin: 0;">
+            <!-- <select style="margin: 0px;"  name="tax_invoice" [(ngModel)]="comp.tax_invoice" required  (change)="take($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let item of selectedResult['invoice_data']">{{item.tax_invoice}}</option>
+            </select> -->
+
+
+
+            <select name="tax_invoice{{i}}" ngModel (ngModelChange)="handleSelectionChange($event, i)" required
+              multiple>
+              <option *ngFor="let item of selectedResult['invoice_data']" [value]="item.tax_invoice">
+                {{item.tax_invoice}}
+              </option>
+            </select>
+
+
+
+
+
+          </td>
+          <td style="padding: 0px;margin: 0;">
+            <input type="number" name="recevied_rate" [(ngModel)]="comp['received_rate']" required
+              (keyup)="calculation(i)" style="background-color: rgb(243, 228, 24); margin: 0px;height: 33px;">
+          </td>
+          <td>{{ comp.gst }}</td>
+          <td>{{ comp.gross_total }}</td>
+          <td>{{ comp.gst_total }}</td>
+          <td>{{ comp.net_total }}</td>
+          <td>{{ comp.diff || '0'}}</td>
+        </tr>
+        <tr *ngIf="selectedResult['materials'].length == 0">
+          <td colspan="13">{{'common.noRecords' | translate}}</td>
+        </tr>
+
+      </table>
+      <h3  *ngIf="selectedResult['isOpenPo'] == 'NA'">Invoice Entry:</h3>
+
+      <table class="table table-border"  *ngIf="selectedResult['isOpenPo'] == 'NA'">
+        <tr>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Tax Invoice</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Invoice Date</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Net Amt</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Tax Amt</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Invoice Amt</th>
+        </tr>
+
+        <tr *ngFor="let item of invoice_data; let i = index;">
+          <td style="padding: 0px; margin: 0;">
+            <input type="text" name="invoice_no" [(ngModel)]="item.tax_invoice" readonly>
+          </td>
+          <td style="padding: 0px; margin: 0;">
+            <input type="date" name="invoice_date" [(ngModel)]="item.tax_invoice_date" readonly>
+          </td>
+          <td style="padding: 0px; margin: 0;">
+            <input type="text" name="invoice_amt" [(ngModel)]="item.invoice_amt" (input)="calculateNetAmount(i)">
+          </td>
+          <td style="padding: 0px; margin: 0;">
+            <input type="text" name="tax_amt" [(ngModel)]="item.tax_amt" (input)="calculateNetAmount(i)">
+          </td>
+          <td style="padding: 0px; margin: 0;">
+            <input type="text" name="net_amt" [(ngModel)]="item.net_amt" readonly>
+          </td>
+        </tr>
+
+
+
+
+      </table>
+
+      <br>
+      <h3  *ngIf="selectedResult['isOpenPo'] == 'NA'">Upload Challan:</h3>
+      <form #userForm="ngForm"  *ngIf="selectedResult['isOpenPo'] == 'NA'">
+        <table class="table table-border">
+          <thead>
+            <tr>
+              <th style=" background-color: rgb(14, 67, 112); color: white">TAX INVOICE</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">UPLOAD FILE</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <!-- Tax Invoice Dropdown -->
+              <td style="padding: 0px; margin: 0;">
+                <select [(ngModel)]="selectedTaxInvoice" name="tax_invoice" required>
+                  <option *ngFor="let invoice of invoice_data1" [value]="invoice.tax_invoice">
+                    {{ invoice.tax_invoice }}
+                  </option>
+                </select>
+              </td>
+
+              <!-- File Upload Input -->
+              <td style="padding: 0px; margin: 0;">
+                <input type="file" name="challanFIle" (change)="onFileChangedpsb($event)" accept=".pdf,.jpg,.png"  required>
+              </td>
+
+              <!-- Action Buttons -->
+              <td style="padding: 0px; margin: 0;">
+                <button class="btn btn-success" (click)="uploadFile(userForm)">
+                  Upload
+                </button>
+              </td>
+            </tr>
+            <tr *ngFor="let fileName of uploadedFileNames">
+              <td >{{ fileName.tax_invoice }}</td>
+              <td >                                          
+                <button class="btn btn-primary btn-sm" (click)="viewFile(fileName.file)">View Challan</button>
+              </td>
+              <td>#</td>
+            </tr>
+            
+            
+          </tbody>
+        </table>
+     
+      </form>
+      <br>
+
+
+      <br>
+      <form #test="ngForm">
+        <div class="clr-row">
+       
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Eway Bill:<span style="color: red;">*</span></label>
+            <select name="e_way" [(ngModel)]="e_way" required>
+              <option></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+
+          <div *ngIf="e_way == 'Yes'" class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Eway Bill No.:</label>
+            <input type="text" name="eway_bill_no" [(ngModel)]="eway_bill_no" />
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark:</label>
+            <input type="text" name="remark" [(ngModel)]="remark" />
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button style="background-color: green" class="btn btn-primary"
+      (click)="updateChallan(test,'waiting_for_checking')">VERIFY</button>
+    <button class="btn btn-primary" (click)="updateChallan(test,'hold')">Keep On Hold</button>
+    <button class="btn btn-danger" (click)="updateChallan(test,'reject')">{{'common.reject' | translate}}</button>
+    <button class="btn btn-danger" (click)="close()">{{'common.close' | translate}}</button>
+  </div>
+</div>

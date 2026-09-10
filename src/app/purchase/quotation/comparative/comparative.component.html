@@ -1,0 +1,255 @@
+<div class="vapp vapp--page" *ngIf="!isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Quotation Comparative Chart</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }">{{'common.close' | translate}}</button>
+    </header>
+    <div class="vapp__body">
+      <div class="vapp__toolbar vapp__toolbar--filters qquot__toolbar">
+        <div class="qquot__mode-toggle">
+          <select
+            class="qquot__category-select qquot__category-select--inline vapp__control"
+            [ngModel]="quotationCategory"
+            (ngModelChange)="setQuotationCategory($event)"
+            aria-label="Quotation type"
+          >
+            <option value="Quotation">Quotation (RM/PM)</option>
+            <option value="General">General Quotation</option>
+          </select>
+          <button
+            type="button"
+            class="vapp__btn"
+            [class.vapp__btn--primary]="isPendingMode"
+            [class.vapp__btn--outline]="!isPendingMode"
+            (click)="setViewMode('pending')"
+          >
+            For Approval
+          </button>
+          <button
+            type="button"
+            class="vapp__btn"
+            [class.vapp__btn--primary]="!isPendingMode"
+            [class.vapp__btn--outline]="isPendingMode"
+            (click)="setViewMode('approved')"
+          >
+            Approved
+          </button>
+        </div>
+      </div>
+      <p class="vapp__hint" *ngIf="isPendingMode">
+        {{ quotationCategoryLabel }} — new and pending quotations appear here until approved.
+        <span *ngIf="canApprove"> Open a material to compare vendors and approve or reject.</span>
+      </p>
+      <p class="vapp__hint" *ngIf="!isPendingMode">
+        {{ quotationCategoryLabel }} — approved quotations listed below. Use the dropdown to switch between Quotation (RM/PM) and General Quotation.
+      </p>
+      <div class="vapp__table-wrap">
+        <clr-datagrid class="vapp__datagrid" [clrDgLoading]="loading">
+          <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Material Subtype</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+          <clr-dg-column>No Of Quotation</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of item; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_subtype }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+            <clr-dg-cell>{{ (result.quotationDetails || []).length }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button type="button" class="vapp__btn vapp__btn--view" (click)="view(result)">
+                {{ isPendingMode && canApprove ? 'Compare & Approve' : ('common.view' | translate) }}
+              </button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+              {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vapp vapp--page qquot--detail" *ngIf="isView">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">
+        {{ isPendingMode ? 'Compare Quotations for Approval' : 'Quotation Comparative Chart' }}
+      </h1>
+      <div class="vapp__header-actions mef-panel-header__actions">
+        <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" (click)="viewf()">{{'common.close' | translate}}</button>
+      </div>
+    </header>
+    <div class="vapp__body">
+        <div class="qquot-summary">
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Material Type</span>
+            <span class="qquot-summary__value">{{ selectedResult['material_type'] || '—' }}</span>
+          </div>
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Material Subtype</span>
+            <span class="qquot-summary__value">{{ selectedResult['material_subtype'] || '—' }}</span>
+          </div>
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Material Code</span>
+            <span class="qquot-summary__value">{{ selectedResult['material_code'] || '—' }}</span>
+          </div>
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Material Name</span>
+            <span class="qquot-summary__value">{{ selectedResult['material_name'] || '—' }}</span>
+          </div>
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Grade</span>
+            <span class="qquot-summary__value">{{ selectedResult['grade'] || '—' }}</span>
+          </div>
+          <div class="qquot-summary__item">
+            <span class="qquot-summary__label">Quotations</span>
+            <span class="qquot-summary__value">{{ (selectedResult['quotationDetails'] || []).length }}</span>
+          </div>
+        </div>
+
+        <h3 class="qquot-subtitle">Quotations</h3>
+        <div class="qquot-table-wrap">
+          <table class="qquot-table table table-border">
+            <thead>
+              <tr>
+                <th>{{'common.table.srNo' | translate}}</th>
+                <th>Vendor Name</th>
+                <th>Quotation No.</th>
+                <th>Quotation Rate</th>
+                <th>Tax Type</th>
+                <th>GST %</th>
+                <th>Quotation Date</th>
+                <th>Status</th>
+                <th>View Quotation</th>
+                <th>Uploaded Quotation</th>
+                <th *ngIf="isPendingMode && canApprove">{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let quotation of selectedResult['quotationDetails']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td class="qquot-td-left">{{ quotation.vendor_name }}</td>
+                <td>{{ quotationNoDisplay(quotation) }}</td>
+                <td>{{ quotation.quotation_amt }}</td>
+                <td>{{ quotation.tax_type || 'Local' }}</td>
+                <td>{{ quotation.gst_per }}</td>
+                <td>{{ quotation.entry_date | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ quotation.status | titlecase }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info" (click)="viewQuotation(quotation)">View</button>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-info"
+                    (click)="viewUploadedQuotation(quotation)"
+                    *ngIf="hasUploadedDoc(quotation)"
+                  >
+                    View File
+                  </button>
+                  <span *ngIf="!hasUploadedDoc(quotation)">N/A</span>
+                </td>
+                <td *ngIf="isPendingMode && canApprove">
+                  <ng-container *ngIf="isPendingQuotation(quotation)">
+                    <button type="button" class="btn btn-sm btn-success" (click)="approveQuotation(quotation)">{{'common.approve' | translate}}</button>
+                    <button type="button" class="btn btn-sm btn-danger" (click)="openRejectModal(quotation)">{{'common.reject' | translate}}</button>
+                  </ng-container>
+                  <span *ngIf="!isPendingQuotation(quotation)">{{ quotation.status | titlecase }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="!(selectedResult['quotationDetails'] || []).length">
+                <td [attr.colspan]="isPendingMode && canApprove ? 11 : 10" style="text-align: center;">No quotations found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+    <div class="vapp__footer">
+      <button type="button" class="vapp__btn vapp__btn--close" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isQuotationViewOpen" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Quotation Details</h3>
+  <div class="modal-body" *ngIf="viewQuotationHdr">
+    <h4 class="qquot-subtitle">Vendor Details</h4>
+    <table class="qquot-info-table table table-border">
+      <tr>
+        <td class="qquot-table-label">Vendor Name:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.vendor_name }}</td>
+        <td class="qquot-table-label">Vendor No:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.materials?.[0]?.vendor_no }}</td>
+      </tr>
+      <tr>
+        <td class="qquot-table-label">Quotation No:</td>
+        <td class="qquot-table-value">{{ quotationHdrNoDisplay(viewQuotationHdr) }}</td>
+        <td class="qquot-table-label">Quotation Date:</td>
+        <td class="qquot-table-value">{{ viewQuotationHdr.entry_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+    <h3 class="qquot-subtitle">Materials</h3>
+    <div class="qquot-table-wrap">
+      <table class="qquot-table table table-border">
+        <thead>
+          <tr>
+            <th>Material Type</th>
+            <th>Material Code</th>
+            <th>Material Name</th>
+            <th>Grade</th>
+            <th>Tax Type</th>
+            <th>Tax</th>
+            <th>Quotation Amount</th>
+            <th>Currency</th>
+            <!-- <th>Quotation Per</th> -->
+            <th *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">Pack Size</th>
+            <th *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">Valid Till</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mat of viewQuotationHdr.materials">
+            <td>{{ mat.material_type }} - {{ mat.material_subtype }}</td>
+            <td>{{ mat.material_code }}</td>
+            <td>{{ mat.material_name }}</td>
+            <td>{{ mat.grade || '-' }}</td>
+            <td>{{ mat.tax_type || 'Local' }}</td>
+            <td>{{ mat.gst_per }} %</td>
+            <td>{{ mat.quotation_amt }}</td>
+            <td>{{ mat.currency }}</td>
+            <!-- <td>{{ mat.quotation_per }}</td> -->
+            <td *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">{{ mat.pack_size }} {{ mat.pack_unit }}</td>
+            <td *ngIf="quotationHdrMaterialType() == 'Raw Material' || quotationHdrMaterialType() == 'Packing Material'">{{ mat.validTill | date: 'dd-MM-yyyy' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="modal-body" *ngIf="viewQuotationLoading">
+    Loading quotation details...
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeQuotationView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="isOpen" [clrModalSize]="'lg'">
+  <h3 class="modal-title">Add Remark</h3>
+  <div class="modal-body">
+    <textarea rows="4" name="Reject_remark" [(ngModel)]="Reject_remark" required class="qquot__textarea" style="width: 100%;"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="updateQuotation('reject')">{{'common.reject' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="isOpen = false">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>

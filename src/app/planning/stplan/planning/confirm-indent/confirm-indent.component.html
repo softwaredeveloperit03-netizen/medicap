@@ -1,0 +1,148 @@
+<div class="card ci-page">
+  <div class="card-header ci-page-header">
+    <div class="ci-header-row">
+      <div class="ci-header-title">Confirm Indent</div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="ci-search">
+      <label for="confirmIndentSearch">Search</label>
+      <input type="text" id="confirmIndentSearch" class="ci-search-input"
+        placeholder="Material, client, product, forecast…"
+        [(ngModel)]="searchText"
+        (ngModelChange)="applyFilter()"
+        [disabled]="confirmLoading">
+    </div>
+
+    <div class="card-text ci-loading" *ngIf="confirmLoading">
+      <p class="text-muted">Loading raised indents…</p>
+    </div>
+
+    <div class="card-text ci-confirm-panel" *ngIf="!confirmLoading">
+      <p class="text-muted small" *ngIf="visibleConfirmMaterials.length === 0">
+        No materials with raised indent awaiting confirmation.
+      </p>
+
+      <div class="unique-table-wrapper" *ngIf="visibleConfirmMaterials.length > 0">
+        <table class="table table-border unique-table ci-confirm-table">
+          <tr>
+            <th>Sr.</th>
+            <th>Client Name</th>
+            <th>Product Name</th>
+            <th>Product Code</th>
+            <th>Material Name</th>
+            <th>Material Code</th>
+            <th>Raised Indent</th>
+            <th>Indent Raised By</th>
+            <th>Raised Date</th>
+            <th>Status</th>
+            <th>Shortage Qty</th>
+            <th>UOM</th>
+            <th>Purchase Lead Time (days)</th>
+            <th>Delivery Time</th>
+            <th>Confirm Indent</th>
+            <th>Send for Purchase</th>
+            <th>Hold Indent</th>
+            <th>Cancel Indent</th>
+          </tr>
+          <tr *ngFor="let mat of visibleConfirmMaterials; let i = index; trackBy: trackByMaterial">
+            <td class="ci-col-sr">{{ i + 1 }}</td>
+            <td class="ci-cell-left">
+              {{ mat.client_name || '—' }}
+              <span *ngIf="mat.client_code" class="ci-mat-sub">({{ mat.client_code }})</span>
+            </td>
+            <td class="ci-cell-left ci-mat-name">{{ getProductName(mat) }}</td>
+            <td class="ci-cell-left">{{ getProductCode(mat) }}</td>
+            <td class="ci-cell-left ci-mat-name">{{ mat.material_name || '—' }}</td>
+            <td>{{ mat.material_code || '—' }}</td>
+            <td>{{ formatRaisedIndent(mat) }}</td>
+            <td>{{ getIndentRaisedBy(mat) }}</td>
+            <td>
+              <ng-container *ngIf="getIndentRaisedDate(mat) as raisedDt; else noRaisedDt">
+                {{ raisedDt | date:'dd/MM/yyyy HH:mm' }}
+              </ng-container>
+              <ng-template #noRaisedDt>—</ng-template>
+            </td>
+            <td>
+              <span class="ci-status-badge" [ngClass]="getIndentWorkflowStatus(mat).badgeClass">
+                {{ getIndentWorkflowStatus(mat).label }}
+              </span>
+            </td>
+            <td class="ci-qty">{{ mat.total_shortage || 0 }}</td>
+            <td>{{ getMaterialUom(mat) }}</td>
+            <td class="ci-lead-time">{{ getPurchaseLeadTime(mat) }}</td>
+            <td class="ci-lead-time">{{ getDeliveryTime(mat) }}</td>
+            <td class="ci-col-action">
+              <button type="button" class="btn btn-success btn-sm"
+                (click)="confirmMaterialIndent(mat)"
+                [disabled]="!canConfirmMaterial(mat) || mat.confirmActionLoading">
+                <span *ngIf="mat.confirmActionLoading" class="spinner spinner-inline"></span>
+                Confirm
+              </button>
+            </td>
+            <td class="ci-col-action">
+              <button type="button" class="btn btn-primary btn-sm"
+                (click)="sendMaterialIndentForPurchase(mat)"
+                [disabled]="!canSendMaterialForPurchase(mat) || mat.sendActionLoading">
+                <span *ngIf="mat.sendActionLoading" class="spinner spinner-inline"></span>
+                Send
+              </button>
+            </td>
+            <td class="ci-col-action">
+              <button type="button" class="btn btn-warning btn-sm"
+                (click)="openRemarkModal(mat, 'hold')"
+                [disabled]="!canHoldOrCancelMaterial(mat) || mat.holdActionLoading">
+                <span *ngIf="mat.holdActionLoading" class="spinner spinner-inline"></span>
+                Hold
+              </button>
+            </td>
+            <td class="ci-col-action">
+              <button type="button" class="btn btn-danger btn-sm"
+                (click)="openRemarkModal(mat, 'cancel')"
+                [disabled]="!canHoldOrCancelMaterial(mat) || mat.cancelActionLoading">
+                <span *ngIf="mat.cancelActionLoading" class="spinner spinner-inline"></span>
+                Cancel
+              </button>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="ci-more card-text" *ngIf="hasMoreConfirmMaterials">
+        <span class="text-muted">
+          Showing {{ visibleConfirmMaterials.length }} of {{ totalConfirmMaterialsFiltered }} material(s).
+        </span>
+        <button type="button" class="btn btn-sm btn-outline" (click)="showMoreConfirmMaterials()">Show more</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="remarkModalOpen" [clrModalClosable]="!remarkSubmitting">
+  <h3 class="modal-title">
+    {{ remarkAction === 'hold' ? 'Hold Indent' : 'Cancel Indent' }}
+  </h3>
+  <div class="modal-body">
+    <p class="text-muted small" *ngIf="selectedMat">
+      Material: <strong>{{ selectedMat.material_name || selectedMat.material_code }}</strong>
+    </p>
+    <p class="text-muted small" *ngIf="remarkAction === 'cancel'">
+      Cancelling returns this indent to <strong>Shortage Analysis → Cancelled Indent</strong> tab where it can be reprocessed or permanently cancelled.
+    </p>
+    <label>Remark <span style="color:red">*</span></label>
+    <textarea rows="3" class="ci-remark-input" [(ngModel)]="remarkText"
+      placeholder="Enter reason for {{ remarkAction === 'hold' ? 'hold' : 'cancellation' }}…"
+      [disabled]="remarkSubmitting"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeRemarkModal()" [disabled]="remarkSubmitting">Close</button>
+    <button type="button" class="btn"
+      [class.btn-warning]="remarkAction === 'hold'"
+      [class.btn-danger]="remarkAction === 'cancel'"
+      (click)="submitRemarkAction()" [disabled]="remarkSubmitting">
+      <span *ngIf="remarkSubmitting" class="spinner spinner-inline"></span>
+      {{ remarkAction === 'hold' ? 'Hold Indent' : 'Cancel Indent' }}
+    </button>
+  </div>
+</clr-modal>

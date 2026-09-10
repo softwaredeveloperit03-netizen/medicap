@@ -1,0 +1,95 @@
+<div class="logs-shell">
+  <div class="logs-header">
+    <div class="title-block">
+      <h2>Obsolute Specifications</h2>
+      <p>Previous versions where change control is approved</p>
+    </div>
+    <div class="actions">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search obsolete logs"
+          aria-label="Search obsolete specifications"
+        />
+      </div>
+      <button class="btn btn-sm btn-primary" routerLink="/master/specification">Back To Specification</button>
+      <button class="btn btn-sm btn-danger" routerLink="/master/specification">Close</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true">
+      <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column>Specification No.</clr-dg-column>
+      <clr-dg-column>Previous Version</clr-dg-column>
+      <clr-dg-column>Change Control No.</clr-dg-column>
+      <clr-dg-column>CC Status</clr-dg-column>
+      <clr-dg-column>Saved On</clr-dg-column>
+      <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let result of filteredLogs; let i = index" [clrDgItem]="result">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.specification_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.previous_version_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.linked_ctrl_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.linked_ctrl_status || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.entryOn | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="viewRow(result)">View</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+    <div class="empty-state" *ngIf="!loading && filteredLogs.length === 0">No obsolete specifications found.</div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="viewModalOpen" clrModalSize="xl">
+  <h3 class="modal-title">Obsolute Specification - Previous Version</h3>
+  <div class="modal-body" *ngIf="selected">
+    <p><strong>Specification No:</strong> {{ selected.specification_no }}</p>
+    <p><strong>Version:</strong> {{ selected.previous_version_no }}</p>
+    <p><strong>Type:</strong> {{ selectedSpecData.spec_type || '-' }}</p>
+    <p><strong>Material:</strong> {{ selectedSpecData.material_name || '-' }} ({{ selectedSpecData.material_code || '-' }})</p>
+    <p><strong>Storage:</strong> {{ selectedSpecData.storage_condition || selectedSpecData.storage || '-' }}</p>
+    <p><strong>Hazard:</strong> {{ selectedSpecData.hazardAndPrecautions || selectedSpecData.safety_precaution || '-' }}</p>
+
+    <h5>Specification Tests</h5>
+    <table class="table table-bordered table-sm">
+      <tr>
+        <th>Test Type</th><th>Test</th><th>Subtest</th><th>Limits</th><th>Method</th>
+      </tr>
+      <tr *ngFor="let t of selectedTests">
+        <td>{{ t.test_type }}</td>
+        <td>{{ t.test }}</td>
+        <td>{{ t.subtest }}</td>
+        <td>{{ t.limits }}</td>
+        <td>{{ t.test_method_no }}</td>
+      </tr>
+      <tr *ngIf="selectedTests.length === 0">
+        <td colspan="5">No test rows in previous version.</td>
+      </tr>
+    </table>
+
+    <h5>Revision History</h5>
+    <table class="table table-bordered table-sm">
+      <tr>
+        <th>Version</th><th>Change Control</th><th>Reason</th><th>Effective Date</th>
+      </tr>
+      <tr *ngFor="let r of selectedRevisions">
+        <td>{{ r.version_no }}</td>
+        <td>{{ r.change_mode }}</td>
+        <td>{{ r.reason }}</td>
+        <td>{{ r.effective_date | date:'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr *ngIf="selectedRevisions.length === 0">
+        <td colspan="4">No revision history rows.</td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeModal()">Close</button>
+  </div>
+</clr-modal>
+

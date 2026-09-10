@@ -1,0 +1,281 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Deviation Log</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/qa/deviation">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="clr-row">
+            <div class="clr-col-lg-4">
+                <label>From Date: </label>
+                <input type="date" name="from_date" [(ngModel)]="from_date">
+            </div>
+            <div class="clr-col-lg-4">
+                <label>To Date: </label>
+                <input type="date" name="to_date" [(ngModel)]="to_date">
+            </div>
+            <div class="clr-col-lg-4">
+                <button class="btn btn-primary" (click)="getDeviationLog()" style="margin-top: 33px;">{{'common.search' | translate}}</button>
+            </div>
+        </div>
+        <table class="table">
+          <tr>
+            <th>Sr.</th>
+            <th>Deviation No.</th>
+            <th> Document No.</th>
+            <th>Deviation For</th>
+            <th>Material code</th>
+            <th> Initiate Dept</th>
+            <th> Initiate Date</th>
+            <th> Initiate by</th>
+            <th>view</th>
+          </tr>
+          <tr *ngFor="let res of results;let i=index">
+            <td>{{ i+1 }}</td>
+            <td> {{ res.deviation_no }} </td>
+            <td>{{ res.document_no }}</td>
+            <td>{{ res.deviation_for }}</td>
+            <td> {{ res.material_code }} </td>
+            <td>{{  res.initiate_dept }}</td>
+            <td> {{ res.initiate_date | date: 'dd-MM-yyyy'}}</td>
+            <td>{{ res.initiate_by }}</td>
+            <td>
+              <button class="btn btn-sm btn-info" (click)="view(i)"> view</button>
+            </td>
+          </tr>
+          <tr *ngIf="results?.length==0">
+              <td colspan="8">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadLog()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;"> Deviation Details</div>
+          <div class="clr-col-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">
+              <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+            </button>
+          </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table  class="table">
+                <tr>
+                    <td style="text-align: left;width:40%">Document No.:</td>
+                    <td style="text-align: left;">{{ selectedResult['document_no']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;">Deviation For:</td>
+                  <td style="text-align: left;">{{ selectedResult['deviation_for']}}</td>
+              </tr>
+                <tr>
+                    <td style="text-align: left;">Material Code</td>
+                    <td style="text-align: left;">{{ selectedResult['material_code']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Description Of Deviation:</td>
+                    <td style="text-align: left;">{{ selectedResult['description']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Medicap Lot No/Equpment ID/ Instrument ID / Document No/No of Days:</td>
+                    <td style="text-align: left;">{{ selectedResult['document_no']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Immediate Action / Remedial Action:</td>
+                    <td style="text-align: left;">{{ selectedResult['immediate_action']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Impact Assessment:</td>
+                    <td style="text-align: left;">{{ selectedResult['impact_assessment']}}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Other Batches Implicated(if any):</td>
+                    <td style="text-align: left;">{{ selectedResult['impact_other']}}</td>
+                </tr>     
+            </table>
+            <h3>Deviation Data Observed In:</h3>
+            <table class="table">
+              <tr>
+                  <td style="text-align: left;">Sr.</td>
+                  <td style="text-align: left;">Observed In</td>
+              </tr>
+              <tr *ngFor="let res of selectedResult['observed_in'];let i=index">
+                <td style="text-align: left;">{{ i+1 }}</td>
+                <td style="text-align: left;">{{ res.name }}</td>
+              </tr>
+            </table>
+  
+          <h3>Attachments:</h3>
+          <table class="table">
+              <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;">Particular</th>
+                  <th>View Attachment</th>
+              </tr>
+              <tr *ngFor="let attachment of selectedResult['attachments']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td style="text-align: left;">{{ attachment.particular }}</td>
+                  <td>
+                      <button class="btn btn-sm btn-info" (click)="viewfile(attachment.file)">{{'common.view' | translate}}</button>
+                  </td>
+              </tr>
+          </table>   
+          <h3>Classification Of Deviation :</h3>
+          <table class="table">
+              <tr>
+                  <td style="text-align: left;width: 40%;">Classification Of Deviation</td>
+                  <td style="text-align: left;width: 40%;">{{ selectedResult['classification']}}</td>
+              </tr>
+          </table>
+          <h3>Head Quality Assurance Deviation is:</h3>
+          <table class="table">
+            <tr>
+                <td style="text-align: left;width: 40%;">Head Quality Assurance Deviation is:</td>
+                <td style="text-align: left;width: 40%;">{{ selectedResult['deviation_status']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;">RCA to be prepared:</td>
+                <td style="text-align: left;width: 40%;">{{ selectedResult['rca_prepared']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['deviation_status']=='REJECTED'">Justification:</td>
+                <td style="text-align: left;width: 40%;" *ngIf="selectedResult['deviation_status']=='REJECTED'">{{ selectedResult['deviation_status']}}</td>
+            </tr>
+          </table>
+          <h3>Investigation details:</h3>
+          <table class="table">
+            <tr>
+                <td style="text-align: left;width: 40%;">Investigation details (To be filled by Initiator):</td>
+                <td style="text-align: left;width: 40%;">{{ selectedResult['investigation_details']}}</td>
+            </tr>
+         </table>
+         <h3>Steps:</h3>
+         <table class="table">
+            <tr>
+                <td style="text-align: left;width: 40%;">Impact on Quality of the product:</td>
+                <td style="text-align: left;width: 40%;" colspan="3">{{ selectedResult['quality_impact']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;">Category of Deviation:</td>
+                <td style="text-align: left;width: 40%;" colspan="3">{{ selectedResult['category']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;">Regulatory Impact Assessment required ?</td>
+                <td style="text-align: left;width: 40%;" colspan="3">{{ selectedResult['assessment_impact']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;">Risk Assessment required ?</td>
+                <td style="text-align: left;width: 40%;">{{ selectedResult['assessment_risk']}}</td>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['assessment_risk']=='YES'"> Risk Assessment Number</td>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['assessment_risk']=='YES'">{{selectedResult['risk_no'] }} </td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;">Deviation occurred previously ?</td>
+                <td style="text-align: left;width: 40%;">{{ selectedResult['previously_occured']}}</td>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['previously_occured']=='YES'"> Reference Deviation No.:</td>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['previously_occured']=='YES'">{{selectedResult['prev_ref_no'] }} </td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;" *ngIf="selectedResult['previously_occured']=='YES'">Review of Previous Investigation report & CAPA ?</td>
+                <td style="text-align: left;width: 40%;"  *ngIf="selectedResult['previously_occured']=='YES'">{{ selectedResult['prev_investigation']}}</td>
+                <td style="text-align: left;width: 40%;" *ngIf="selectedResult['prev_investigation']=='YES'"> Reference CAPA No.:</td>
+                <td style="text-align: left;width: 40%;" *ngIf="selectedResult['prev_investigation']=='YES'">{{selectedResult['prev_investigation_no'] }} </td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;" >QA Assessment:</td>
+                <td style="text-align: left;width: 40%;"   colspan="3">{{ selectedResult['assessment_comment']}}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;" >Root / Probable / Contributory cause (s) of Deviation::</td>
+                <td style="text-align: left;width: 40%;"   colspan="3">{{ selectedResult['deviation_cause']}}</td>
+            </tr>
+         </table>
+         <h3>Corrective Actions / Preventive Actions :</h3>
+          <table class="table">
+              <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;"> Remedial Action </th>
+                  <th> status </th>
+                  <th> Responsible Person,(if not completed)</th>
+                  <th> Target Completion Date, if not completed </th>
+              </tr>
+              <tr *ngFor="let rem of selectedResult['remidial_action'];let i=index">
+                  <td> {{ i+1 }}</td>
+                  <td style="text-align: left;">{{ rem.rem_action }}</td>
+                  <td>{{ rem.completed }}</td>
+                  <td *ngIf="rem['completed']=='Not Completed'"> {{ rem.person }}</td>
+                  <td *ngIf="rem['completed']=='Not Completed'"> {{ rem.complete_date }}</td>
+              </tr>
+          </table>  
+          <table class="table">
+              <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;"> Prevent Action </th>
+                  <th> status </th>
+                  <th> Responsible Person,(if not completed)</th>
+                  <th> Target Completion Date, if not completed </th>
+              </tr>
+              <tr *ngFor="let rem of selectedResult['prevent_action'];let i=index">
+                  <td> {{ i+1 }}</td>
+                  <td style="text-align: left;">{{ rem.pre_action }}</td>
+                  <td>{{ rem.completed }}</td>
+                  <td> {{ rem.person }}</td>
+                  <td> {{ rem.complete_date }}</td>
+              </tr>
+          </table>      
+          <table class="table">
+              <tr>
+                  <th>Sr.</th>
+                  <th style="text-align: left;"> Corrective Action </th>
+                  <th> status </th>
+                  <th > Responsible Person,(if not completed)</th>
+                  <th> Target Completion Date, if not completed </th>
+              </tr>
+              <tr *ngFor="let rem of selectedResult['correct_action'];let i=index">
+                  <td> {{ i+1 }}</td>
+                  <td style="text-align: left;">{{ rem.corrective_action }}</td>
+                  <td>{{ rem.completed }}</td>
+                  <td> {{ rem.person }}</td>
+                  <td> {{ rem.complete_date }}</td>
+              </tr>
+          </table>  
+          <h3>Final Recommendation ( External party / Regulatory):</h3>
+          <table class="table">
+            <tr>
+                <td style="text-align: left;width: 40%;"> Final Recommendation ( External party / Regulatory):</td>
+                <td style="text-align: left;"> {{selectedResult['recommendation'] }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;"> Batch Disposition:</td>
+                <td style="text-align: left;"> {{selectedResult['batch_disposition'] }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;width: 40%;"> QA Comment:</td>
+                <td style="text-align: left;"> {{selectedResult['qa_comment'] }}</td>
+            </tr>
+          </table> 
+          <h3>Evaluation by Corporate Quality Assurance Comments:</h3> 
+          <table class="table">
+            <tr>
+                <td style="text-align: left;width: 40%;"> Evaluation by Corporate Quality Assurance Comments:</td>
+                <td style="text-align: left;"> {{selectedResult['cqa_comment'] }}</td>
+            </tr>
+          </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="downloadRecord()">{{'common.download' | translate}}</button>
+        <button class="btn btn-danger" (click)='isView=false'>{{'common.close' | translate}}</button>
+    </div>
+  </div>
+  

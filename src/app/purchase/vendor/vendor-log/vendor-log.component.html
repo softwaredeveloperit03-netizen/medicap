@@ -1,0 +1,309 @@
+<div class="avlog avlog--card" *ngIf="!isView">
+  <header class="avlog__header card-header mef-panel-header">
+    <h1 class="avlog__title mef-panel-header__title">Approved Vendor Log</h1>
+    <a class="avlog__btn avlog__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Vendor Registration' }">{{'common.close' | translate}}</a>
+  </header>
+  <div class="avlog__body">
+    <div class="avlog__toolbar">
+      <div class="avlog__filter">
+        <label class="avlog__search-label" for="avlog-search">Search</label>
+        <input id="avlog-search" type="text" class="avlog__search" placeholder="Search vendor, name, no., status, email…" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()" aria-label="Search approved vendors">
+      </div>
+      <div class="avlog__filter">
+        <label class="avlog__search-label" for="avlog-vendor-type">Vendor Type</label>
+        <select id="avlog-vendor-type" class="avlog__filter-select" [(ngModel)]="vendorType" (ngModelChange)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let t of vendorTypes" [ngValue]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="avlog__filter">
+        <label class="avlog__search-label" for="avlog-material-type">Material Type</label>
+        <select id="avlog-material-type" class="avlog__filter-select avlog__filter-select--wide" [(ngModel)]="materialType" (ngModelChange)="onFilterChange()">
+          <option value="">All</option>
+          <option *ngFor="let t of materialTypes" [ngValue]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="avlog__filter avlog__filter--end">
+        <label class="avlog__page-size-label" for="avlog-page-size">Rows per page</label>
+        <select id="avlog-page-size" class="avlog__page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" aria-label="Number of rows per page">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="avlog__table-wrap">
+      <clr-datagrid class="avlog__datagrid" [clrDgLoading]="loading">
+        <clr-dg-column class="avlog__col-sr">{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Vendor/Division</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Contact Person</clr-dg-column>
+        <clr-dg-column>Email Id</clr-dg-column>
+        <clr-dg-column>Qualified By</clr-dg-column>
+        <clr-dg-column>Vendor For</clr-dg-column>
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>{{'common.address' | translate}}</clr-dg-column>
+        <clr-dg-column>Country</clr-dg-column>
+        <clr-dg-column>Province/State</clr-dg-column>
+        <clr-dg-column>City</clr-dg-column>
+        <clr-dg-column>Postal Code</clr-dg-column>
+        <clr-dg-column class="avlog__col-status">{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column class="avlog__col-action">{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *ngFor="let ven of results; let i = index" [clrDgItem]="ven">
+          <clr-dg-cell class="avlog__cell-sr">{{ rowNumber(i) }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.vendor_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.vendor_name || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.vendor_Is || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.vendor_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.contact_person || ven.contact_number || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.contact_email || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.qualifiedBy || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.vendorFor || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.material_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.address || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.country || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.permanent_state || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.city || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ ven.pincode || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell class="avlog__cell-status"><strong>{{ ven.status || 'NA' }}</strong></clr-dg-cell>
+          <clr-dg-cell class="avlog__cell-action">
+            <button type="button" class="avlog__btn avlog__btn--view" (click)="view(ven)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-footer class="avlog__footer-row">
+          <div class="avlog__footer-download">
+            <button type="button" class="avlog__btn avlog__btn--excel" (click)="exportToExcel()">Download Excel</button>
+          </div>
+          <div class="avlog__pager">
+            <button type="button" class="avlog__pager-btn" [disabled]="page <= 1 || loading" (click)="goToPage(page - 1)">Prev</button>
+            <span class="avlog__pager-info">{{ pageStart }} - {{ pageEnd }} of {{ total }} vendors</span>
+            <button type="button" class="avlog__pager-btn" [disabled]="page >= totalPages || loading" (click)="goToPage(page + 1)">Next</button>
+          </div>
+        </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<!-- Vendor Details View (read-only, reference: Vendor Approval) -->
+<div class="vdetail vdetail--card mef-panel" *ngIf="isView">
+  <header class="vdetail__header mef-panel-header">
+    <h1 class="vdetail__name mef-panel-header__title">{{ selectedResult['vendor_name'] || 'Vendor' }}</h1>
+    <button type="button" class="vdetail__close mef-panel-header__close" (click)="isView = false" aria-label="Close">{{'common.close' | translate}}</button>
+  </header>
+  <div class="vdetail__body mef-panel-body">
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Basic Information</h2>
+      <div class="vdetail__table-wrap">
+        <table class="table table-border unique-table">
+          <tr>
+            <th>Status</th>
+            <td>{{ selectedResult['status'] || '-' }}</td>
+            <th>Vendor Type</th>
+            <td>{{ selectedResult['vendor_type'] || '-' }}</td>
+          </tr>
+          <tr>
+            <th>Material Type</th>
+            <td>{{ selectedResult['material_type'] || '-' }}</td>
+            <th>Vendor No.</th>
+            <td>{{ selectedResult['vendor_no'] || '-' }}</td>
+          </tr>
+          <tr>
+            <th>Country</th>
+            <td>{{ selectedResult['country'] || '—' }}</td>
+            <th>Vendor / division</th>
+            <td>{{ selectedResult['vendor_Is'] || '—' }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['vendor_Is'] === 'Division' && selectedResult['parentVendor']">
+            <th>Parent vendor</th>
+            <td colspan="3">{{ selectedResult['parentVenName'] || selectedResult['parentVendor'] || '—' }}</td>
+          </tr>
+          <tr>
+            <th>Contact Person</th>
+            <td>{{ selectedResult['contact_person'] || '-' }}</td>
+            <th>Phone</th>
+            <td>{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</td>
+          </tr>
+          <tr>
+            <th>{{'common.email' | translate}}</th>
+            <td>{{ selectedResult['contact_email'] || '-' }}</td>
+            <th>Vendor for</th>
+            <td>{{ selectedResult['vendorFor'] || '-' }}</td>
+          </tr>
+          <tr>
+            <th>Qualified by</th>
+            <td colspan="3">{{ selectedResult['qualifiedBy'] || '-' }}</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section" *ngIf="(selectedResult['other_contact'] || []).length">
+      <h2 class="vdetail__section-title mef-section-head">Other Contacts</h2>
+      <div class="datagrid-wrapper">
+        <clr-datagrid>
+          <clr-dg-column>Contact Type</clr-dg-column>
+          <clr-dg-column>{{'common.name' | translate}}</clr-dg-column>
+          <clr-dg-column>Telephone</clr-dg-column>
+          <clr-dg-column>{{'common.email' | translate}}</clr-dg-column>
+          <clr-dg-row *clrDgItems="let item of selectedResult['other_contact'] || []" [clrDgItem]="item">
+            <clr-dg-cell>{{ item.contactType || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.cPersonName || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ (item.cPersonMob | canadianPhone) || '-' }}</clr-dg-cell>
+            <clr-dg-cell>{{ item.cPersonEmail || '-' }}</clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Addresses</h2>
+      <div class="vdetail__split">
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Vendor Address</h3>
+          <div class="vdetail__table-wrap">
+            <table class="table table-border unique-table">
+              <tr>
+                <th>Unit Name</th>
+                <td>{{ selectedResult['vendor_name'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{'common.address' | translate}}</th>
+                <td>{{ selectedResult['address'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>Country</th>
+                <td>{{ selectedResult['country'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{ regionLabel(selectedResult['country']) }}</th>
+                <td>{{ selectedResult['permanent_state'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>City</th>
+                <td>{{ selectedResult['city'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{ postalLabel(selectedResult['country']) }}</th>
+                <td>{{ selectedResult['pincode'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>Phone</th>
+                <td>{{ (selectedResult['contact_number'] | canadianPhone) || '-' }}</td>
+              </tr>
+              <ng-container *ngIf="showVendorIndiaTax(selectedResult)">
+                <tr>
+                  <th>GST applicable</th>
+                  <td>{{ selectedResult['gst_applicable'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>State code (GST)</th>
+                  <td>{{ selectedResult['scode'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>GST No.</th>
+                  <td>{{ selectedResult['gst_no'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>PAN No.</th>
+                  <td>{{ selectedResult['panNo'] || '—' }}</td>
+                </tr>
+              </ng-container>
+            </table>
+          </div>
+        </div>
+        <div class="vdetail__block">
+          <h3 class="vdetail__block-title">Corporate Address</h3>
+          <div class="vdetail__table-wrap">
+            <table class="table table-border unique-table">
+              <tr>
+                <th>Office Name</th>
+                <td>{{ selectedResult['c_unit_name'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{'common.address' | translate}}</th>
+                <td>{{ selectedResult['c_address'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>Country</th>
+                <td>{{ selectedResult['c_country'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{ regionLabel(selectedResult['c_country']) }}</th>
+                <td>{{ selectedResult['c_state'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>City</th>
+                <td>{{ selectedResult['c_city'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>{{ postalLabel(selectedResult['c_country']) }}</th>
+                <td>{{ selectedResult['c_pincode'] || '-' }}</td>
+              </tr>
+              <tr>
+                <th>Phone</th>
+                <td>{{ (selectedResult['c_mobile_no'] | canadianPhone) || '-' }}</td>
+              </tr>
+              <ng-container *ngIf="showCorporateIndiaTax(selectedResult)">
+                <tr>
+                  <th>GST applicable</th>
+                  <td>{{ selectedResult['c_gst_applicable'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>State code (GST)</th>
+                  <td>{{ selectedResult['c_scode'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>GST No.</th>
+                  <td>{{ selectedResult['c_gst_no'] || '—' }}</td>
+                </tr>
+                <tr>
+                  <th>PAN No.</th>
+                  <td>{{ selectedResult['c_panNo'] || '—' }}</td>
+                </tr>
+              </ng-container>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vdetail__section mef-section">
+      <h2 class="vdetail__section-title mef-section-head">Digitally Signed By</h2>
+      <div class="vdetail__table-wrap">
+        <table class="table table-border unique-table">
+          <thead>
+          <tr>
+            <th>Role</th>
+            <th>Name</th>
+            <th>Date</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>Added By</td>
+            <td>{{ selectedResult['entry_by'] || '-' }}</td>
+            <td>{{ selectedResult['entry_date'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['approve_by']">
+            <td>Purchase Approved By</td>
+            <td>{{ selectedResult['approve_by'] || '-' }}</td>
+            <td>{{ selectedResult['approve_date'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['qaApproveBy']">
+            <td>QA Approved By</td>
+            <td>{{ selectedResult['qaApproveBy'] || '-' }}</td>
+            <td>{{ selectedResult['qaApproveOn'] | date:'dd-MM-yyyy' }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

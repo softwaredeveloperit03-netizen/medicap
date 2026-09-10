@@ -1,0 +1,165 @@
+<div class="dashboard-wrapper">
+  <section class="dept-launcher-greeting">
+    <p class="launcher-eyebrow">{{ greetingText }}</p>
+    <h1 class="launcher-title">Welcome, {{ userName }}</h1>
+    <p class="launcher-meta">
+      <i class="fa-solid fa-building"></i>
+      {{ userDepartment }}
+      <span class="launcher-dot"></span>
+      <i class="fa-solid fa-calendar-alt"></i>
+      {{ currentDateText }}
+    </p>
+  </section>
+
+  <section class="dept-launcher-controls">
+    <div class="launcher-search-wrap">
+      <i class="fa-solid fa-search launcher-search-icon"></i>
+      <input
+        type="text"
+        class="launcher-search-input"
+        placeholder="Search departments, modules..."
+        [(ngModel)]="searchQuery"
+        (input)="filterDepartments()"
+      />
+      <button class="launcher-clear-search" *ngIf="searchQuery" (click)="clearSearch()" type="button" aria-label="Clear search">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+
+    <div class="launcher-filter-scroll">
+      <div class="launcher-filter-buttons">
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'all'"
+            (click)="filterByCategory('all')"
+          >
+            <i class="fa-solid fa-border-all"></i> All
+          </button>
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'administrative'"
+            (click)="filterByCategory('administrative')"
+          >
+            <i class="fa-solid fa-briefcase"></i> Administrative
+          </button>
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'inventory'"
+            (click)="filterByCategory('inventory')"
+          >
+            <i class="fa-solid fa-boxes"></i> Inventory
+          </button>
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'operations'"
+            (click)="filterByCategory('operations')"
+          >
+            <i class="fa-solid fa-cogs"></i> Operations
+          </button>
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'quality'"
+            (click)="filterByCategory('quality')"
+          >
+            <i class="fa-solid fa-award"></i> Quality
+          </button>
+          <button
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'support'"
+            (click)="filterByCategory('support')"
+          >
+            <i class="fa-solid fa-life-ring"></i> Support
+          </button>
+          <button
+            *ngIf="canSeeExternalPanels"
+            type="button"
+            class="filter-btn"
+            [class.active]="selectedCategory === 'external'"
+            (click)="filterByCategory('external')"
+          >
+            <i class="fa-solid fa-network-wired"></i> External Panels
+          </button>
+          <button type="button" class="filter-btn filter-btn--status" routerLink="status">
+            <i class="fa-solid fa-chart-bar"></i> Status Board
+          </button>
+      </div>
+    </div>
+  </section>
+
+  <main class="dept-launcher-body">
+    <div class="section-header" *ngIf="!isLoading && !searchQuery && selectedCategory === 'all'">
+      <div class="section-title-wrap">
+        <h2 class="section-title">
+          <span class="title-icon"><i class="fa-solid fa-th-large"></i></span>
+          Department Modules
+        </h2>
+        <p class="section-desc">Select a module to open its workspace</p>
+      </div>
+      <span class="section-count">{{ filteredDepts.length }} available</span>
+    </div>
+    <div class="section-header" *ngIf="!isLoading && (searchQuery || selectedCategory !== 'all')">
+      <div class="section-title-wrap">
+        <h2 class="section-title">
+          <span class="title-icon"><i class="fa-solid fa-filter"></i></span>
+          {{ searchQuery ? 'Search Results' : getCategoryLabel(selectedCategory) }}
+        </h2>
+        <p class="section-desc" *ngIf="searchQuery">Matching "{{ searchQuery }}"</p>
+      </div>
+      <span class="section-count">{{ filteredDepts.length }} found</span>
+    </div>
+
+    <div class="dashboard-loading" *ngIf="isLoading" aria-live="polite">
+      <i class="fa-solid fa-circle-notch fa-spin"></i>
+      <span>Loading modules…</span>
+    </div>
+
+    <div
+      class="dept-grid"
+      cdkDropList
+      [cdkDropListData]="filteredDepts"
+      (cdkDropListDropped)="onCardDrop($event)"
+      *ngIf="!isLoading && filteredDepts.length > 0"
+    >
+      <article
+        class="dept-card"
+        cdkDrag
+        *ngFor="let dept of filteredDepts; trackBy: trackByDeptName"
+        [attr.data-category]="dept.category"
+        (click)="routeToDept(dept.name)"
+        [style.--card-accent]="'var(--app-navbar-gradient)'"
+        role="button"
+        tabindex="0"
+        (keydown.enter)="routeToDept(dept.name)"
+        (keydown.space)="routeToDept(dept.name); $event.preventDefault()"
+      >
+        <div class="card-accent-bar"></div>
+        <div class="card-shine" aria-hidden="true"></div>
+
+        <div class="card-icon-wrap">
+          <div class="card-icon">
+            <i [class]="dept.icon"></i>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <h3>{{ dept.displayName }}</h3>
+        </div>
+      </article>
+    </div>
+
+    <div class="no-results" *ngIf="!isLoading && filteredDepts.length === 0">
+      <div class="no-results-icon"><i class="fa-solid fa-search"></i></div>
+      <h3>No departments found</h3>
+      <p>Try adjusting your search or filter criteria</p>
+      <button type="button" class="btn-reset" (click)="clearSearch(); filterByCategory('all')">
+        Reset filters
+      </button>
+    </div>
+  </main>
+</div>

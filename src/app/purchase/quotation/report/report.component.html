@@ -1,0 +1,166 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Quotation Log</div>
+        <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-danger" [routerLink]="['/purchase']" [queryParams]="{ category: 'Quotation' }" >
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+
+
+
+      <div class="clr-row">
+        <div class="clr-col-lg-5">
+          <label>Search </label>
+          <input type="text" placeholder="Search..."   [(ngModel)]="searchQuery">
+         </div>
+      </div>
+
+      
+
+      <div class="card-text">
+        <div class="datagrid-wrapper">
+
+          <clr-datagrid    [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+            
+            <clr-dg-column>Sr.No. </clr-dg-column>
+            <clr-dg-column>Quotation Date</clr-dg-column>
+            <clr-dg-column >Quotation No</clr-dg-column>
+             <clr-dg-column >Vendor Name</clr-dg-column>
+            <clr-dg-column>Materials</clr-dg-column>
+            <clr-dg-column >{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        
+        <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ calculateStartSrNo() + i+1}}</clr-dg-cell>
+          <clr-dg-cell>{{ result.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell >{{ result.quotation_no }}</clr-dg-cell>
+             <clr-dg-cell>{{ result?.vendor_name }}</clr-dg-cell>
+            <clr-dg-cell>
+                <ul>
+                    <li *ngFor="let item of result.materials; let i = index">  {{ item.material_name }},</li>
+                </ul>  
+            </clr-dg-cell>
+            <clr-dg-cell><span style="color: green; font-weight: bold;" *ngIf="result.status == 'approve'">{{'common.approved' | translate}}</span> 
+              <span  style="font-weight: bold; color: blue;" *ngIf="result.status == 'pending'">{{'common.pending' | translate}}</span>
+             </clr-dg-cell>
+            <clr-dg-cell>
+                 <button class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">{{'common.view' | translate}}</button>
+            </clr-dg-cell>
+        </clr-dg-row>
+        <!-- <clr-dg-footer>  
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+            of {{pagination.totalItems}} 
+          </clr-dg-pagination>
+        </clr-dg-footer> -->
+    </clr-datagrid>
+  </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary"(click)="download()">{{'common.download' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+      <div class="card-header">Quotation Log</div>
+      <div class="card-block">
+          <div class="card-text">
+               
+              <h3>Vendor Details:</h3>
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left; ">Vendor Name:</td>
+                  <td style="text-align: left; ">{{selectedResult['vendor_name']}}</td>
+                  <td style="text-align: left; ">Vendor No:</td>
+                  <td style="text-align: left; ">{{selectedResult['vendor_quotation_no']}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; ">Email Id:</td>
+                  <td style="text-align: left; ">{{selectedResult['email']}}</td>
+                  <td style="text-align: left; ">Location:</td>
+                  <td style="text-align: left; ">{{selectedResult['city']}}</td>
+                </tr>
+              
+              </table>
+              <br>
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left;">Quotation No:</td>
+                  <td  style="text-align: left;">{{selectedResult['quotation_no']}}</td>
+                 </tr>
+                <tr>
+                  <td style="text-align: left;">View Quotation</td>
+                  <td style="text-align: left; margin: 0;padding: 0;">
+                    <button class="btn btn-sm btn-info" *ngIf="selectedResult['doc_url'] !== ''" (click)="uploadQuatation(selectedResult['doc_url'])" style="margin-top: 20px;">View Uploaded Quotation</button>
+                  </td>
+                  <td style="text-align: left; margin: 0;padding: 0;">
+                    <button class="btn btn-sm btn-info" *ngIf="selectedResult['doc_url'] === ''"  style="margin-top: 20px;">N/A</button>
+                  </td>
+                </tr>
+              </table>
+              <table class="table table-border">
+                  <tr>
+                     <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                     <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">TAX</th>
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Quotation Amount</th>
+                    <!-- <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Quotation per</th> -->
+                    <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Pack Size</th>
+                     
+                   </tr>
+                  <tr *ngFor="let result of selectedResult['materials']; let i = index">
+                     <td style="text-align: left;">{{result.material_code  }}</td>
+                    <td style="text-align: left;">{{result.material_name }}</td>
+                     <td style="text-align: left;">{{result.gst_per}}</td>
+                    <td style="text-align: left;">{{result.quotation_amt}}</td>
+                    <!-- <td style="text-align: left;">{{result.quotation_per}}</td> -->
+                    <td style="text-align: left;">{{result.pack_size}} {{result.pack_unit}}</td>
+                   </tr>
+              </table>
+          </div>
+      </div>
+
+
+
+
+
+    
+      <table class="table table-border">
+        <tr style="background-color:rgb(117, 162, 247) ;">
+          <td colspan="4" style="text-align: center;color:black;"><b>Digitaly Signed By</b></td>
+        </tr>
+          <tr>
+            <td>Prepared By <span style="font-size:20px;color:green;font-weight:bolder">&#10003;</span></td>
+            <td>{{selectedResult['entry_by']}}-{{selectedResult['entry_by_name']}}</td>
+            <td>Prepared on</td>
+            <td>{{selectedResult['entry_date'] | date: 'dd-MM-yyyy'}}  </td>
+          </tr>
+          <tr>
+            <td>Approved By <span style="font-size:20px;color:green;font-weight:bolder" *ngIf="selectedResult['approve_by']!='0'">&#10003;</span></td>
+            <td>{{selectedResult['approve_by']}}-{{selectedResult['approve_by_name']}}</td>             
+            <td>Approved on</td>
+            <td>{{selectedResult['approve_date'] | date: 'dd-MM-yyyy'}} </td>
+          </tr>
+      </table>
+         
+
+
+
+
+
+      <div class="card-footer">
+         <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+      </div>
+  </div>
+
+
+</div>

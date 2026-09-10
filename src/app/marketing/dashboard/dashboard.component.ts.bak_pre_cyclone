@@ -1,0 +1,146 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  description?: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  dept_head = 'No';
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  categories: string[] = ['All'];
+  filteredCards: DeptCard[] = [];
+
+  private allCards: DeptCard[] = [
+    { id: 'clients', title: 'Client Management', description: 'Manage clients and contacts', route: 'clients', icon: 'fa-users', category: 'Sales', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'leads', title: 'Lead Management', description: 'Track and manage leads', route: 'leads', icon: 'fa-bullhorn', category: 'Sales', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    // { id: 'quotation', title: 'Quotation', description: 'Create and manage quotations', route: 'quotation', icon: 'fa-file-invoice', category: 'Sales', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'po', title: 'Client PO/FO', description: 'Client purchase and factory orders', route: 'po', icon: 'fa-file-signature', category: 'Sales', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    // { id: 'ponew', title: 'PO (New)', description: 'New purchase order entry', route: 'ponew', icon: 'fa-file-contract', category: 'Sales', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    // { id: 'leaddquotation', title: 'Lead Quotation', description: 'Quotations from leads', route: 'leaddquotation', icon: 'fa-file-alt', category: 'Sales', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'complaint', title: 'Market Complaint', description: 'Log and track market complaints', route: 'complaint', icon: 'fa-envelope', category: 'Support', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'feedback', title: 'Customer Feedback', description: 'Customer feedback and logs', route: 'feedback/log', icon: 'fa-comments', category: 'Support', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'agent', title: 'Commission Agent', description: 'Commission agent management', route: 'agent/log', icon: 'fa-user-tie', category: 'Support', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'technical', title: 'Tech. Doc. Request', description: 'Technical document requests', route: 'technical', icon: 'fa-file-alt', category: 'Support', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    { id: 'sample', title: 'Sample Request Form', description: 'Request and track samples', route: 'sample', icon: 'fa-flask', category: 'Other', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'crmTracking', title: 'CRM Tracking', description: 'CRM tracking and reports', route: 'crmTracking', icon: 'fa-map-marked-alt', category: 'Other', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    // { id: 'approvalLicences', title: 'Approval & Licences', description: 'Approvals and licences', route: 'approvalLicences', icon: 'fa-certificate', category: 'Other', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    // { id: 'dossier', title: 'Dossier', description: 'Dossier and documents', route: 'dossier', icon: 'fa-folder-open', category: 'Other', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    // { id: 'factory_order', title: 'Factory Order', description: 'Factory order management', route: 'factory_order', icon: 'fa-industry', category: 'Other', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    // { id: 'product_list', title: 'Product List', description: 'View and manage product list', route: 'product_list', icon: 'fa-list', category: 'Other', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'registration_status', title: 'Registration Status', description: 'Registration status tracking', route: 'registration_status', icon: 'fa-clipboard-check', category: 'Other', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'registration_query', title: 'Registration Query', description: 'Registration queries', route: 'registration_query', icon: 'fa-question-circle', category: 'Other', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+  ];
+
+  paletteOptions = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.categories = ['All', ...Array.from(new Set(this.allCards.map(c => c.category)))];
+    this.get_rights();
+    this.updateFilteredCards();
+    const savedPalette = localStorage.getItem('marketing_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' +
+      encodeURIComponent(empId) +
+      '&dep_name=' +
+      encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.dept_head = r.dept_head || 'No';
+      this.cdr.markForCheck();
+    });
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter(c => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch = !q || c.title.toLowerCase().indexOf(q) !== -1 || (c.description && c.description.toLowerCase().indexOf(q) !== -1) || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  showAllTabs(): void {
+    this.selectedCategory = 'All';
+    this.searchQuery = '';
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('marketing_dashboard_palette', palette.name);
+    } catch (e) {}
+    this.cdr.markForCheck();
+  }
+}

@@ -1,0 +1,276 @@
+﻿<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Weighing Of Containers</div>
+        <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm" routerLink="/godownStore/packing/weighing" style="background-color: red;color: white;">
+            <clr-icon shape="window-close" class="is-solid"></clr-icon>CLOSE </button>
+        </div>
+      </div> 
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <table class="table table-border">
+          <tr>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving No</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving Date</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Vendor Name</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Packaging Slip</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+              <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">{{'common.table.action' | translate}}</th>
+          </tr>
+          <tr *ngFor="let result of results; let i = index">
+              <td style="text-align: left;">{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ result.receiving_no }}</td>
+              <td style="text-align: left;">{{ result.receiving_date | date : 'dd-MM-yyyy'}}</td>
+              <td style="text-align: left;">{{ result.vendor_name }}</td>
+              <td style="text-align: left;">{{ result.ch_no }}</td>
+              <td style="text-align: left;">{{ result.material_name}}</td>
+              <td style="text-align: left;">{{ result.material_code}}</td>
+              <td>
+                  <button class="btn btn-sm btn-info" (click)="viewResult(i)">{{'common.view' | translate}}</button>
+              </td>
+          </tr>
+          <tr *ngIf="results?.length == 0">
+              <td colspan="7">No. Records Found!</td>
+          </tr>
+      </table>
+     
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">Weighing Of Containers</div>
+    <div class="card-block">
+      <div class="card-text">
+        <h3>Challan Details:</h3>
+        <table class="table table-border">
+          <tr>
+            <td style="text-align: left;"><b>Material Name:</b></td>
+            <td colspan="3" style="text-align: left;">{{ selectedResult['material_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Vendor Name:</b></td>
+            <td style="text-align: left;">{{ selectedResult['vendor_name'] }}</td>
+            <td style="text-align: left;"><b>Material For</b></td>
+            <td style="text-align: left;" >{{ selectedResult['materialForName'] }} </td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Packaging Slip:</b></td>
+            <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+            <td style="text-align: left;"><b>Packaging Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] |date:'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left;"><b>PO Date:</b></td>
+            <td style="text-align: left;">{{ selectedResult['po_date'] |date:'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_type'] }}</td>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_subtype'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;">{{ selectedResult['material_code'] }}</td>
+            <td style="text-align: left;"><b>Material Grade:</b></td>
+            <td style="text-align: left;">{{ selectedResult['grade'] || 'NA' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Po Qty:</b></td>
+            <td style="text-align: left;"  >{{ selectedResult['qty'] }} {{ selectedResult['unit'] }}</td>
+       
+            <td style="text-align: left;"><b>Received Qty:</b></td>
+            <td style="text-align: left;" >{{ selectedResult['received_qty'] }} {{ selectedResult['unit'] }}</td>
+          </tr>
+        </table>
+        <br>
+        <form #weighingForm="ngForm">
+         
+            
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12"
+              (change)="selectResult($event.target.value)">
+              <label>Type:</label> 
+              <select name="receiving_type" (click)="Clearlength()" [(ngModel)]="receiving_type" ngModel required>
+                <option value="Counting">Counting</option>
+                 <option value="Counting Based on Weighing">Counting Based On Weighing</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12" *ngIf="isCount">
+              <label>No. Of Packs For Verification:</label>
+              <select name="criteria" (click)="packsizecalculation($event.target.value)"  [(ngModel)]="criteria" ngModel>
+                <option></option>
+                <option value="10">10%</option>
+                <option value="100">100%</option>
+              </select>
+            </div>
+
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12" *ngIf="!isCount">
+              <label>Balance:</label>
+              <select name="balance" [(ngModel)]="equipment_code" required
+                (change)="selectBalance($event.target.selectedIndex)">
+                <option></option>
+                <option *ngFor="let balance of balances; let i = index" [value]="balance.equipment_code">
+                  {{balance.equipment_code }} - {{ balance.equipment_name }}</option>
+              </select>
+            </div>
+          </div>
+          <div *ngIf="isCount">
+            <form #countForm="ngForm">
+              <table class="table table-border">
+                <tr>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Pack No.</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Pack Size ( Count Received On Pack In Nos )</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Actual Count</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Difference</th>
+                  <th style="background-color: rgb(14, 67, 112); color: white;">Done By</th>
+                 </tr>
+                <tr *ngFor="let res of weighingList; let i = index;">
+                  <td>{{i+1}}</td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="pack_no{{i}}" [(ngModel)]="res.pack_no" required style="margin: 0px;">
+                  </td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="pack_size{{i}}" (input)="calculate(i)" [(ngModel)]="res.pack_size" required style="margin:0px">
+                  </td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="actual_count{{i}}" (input)="calculate(i)" [(ngModel)]="res.actual_count" required style="margin: 0px;">
+                  </td>
+                  <td style="padding: 0px;">
+                    <input type="text" name="difference{{i}}" [(ngModel)]="res.difference" readonly style="margin: 0px;">
+                  </td>
+                  <td style="padding:0px"> 
+                    <select name="done_by1" [(ngModel)]="res.done_by"  required style="margin: 0px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors"  >{{ operator.firstname }}   {{ operator.lastname }} </option>
+                    </select>
+                  </td>
+                </tr>
+
+            
+              </table>
+            </form>
+
+          </div>
+       
+          <div *ngIf="isCountWeighing">
+            <div class="clr-row">
+
+            </div>
+
+            <form #weighForm="ngForm">
+              <table class="table table-border" *ngIf="weighingList?.length == 0" >
+                   
+              <tr>
+                <td colspan="8" style="text-align: left;padding:0px; color: blue;">
+                  &nbsp;<b>Count 100 No. Of Units | Weight Is</b> &nbsp;&nbsp;
+                    <input  type="text" name="process" [(ngModel)]="process" (input)="calculateResult()" style="width: 8%;" ngModel>
+                    &nbsp; <b>KG</b> 
+                </td>
+             
+  
+              </tr>
+                <tr>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">{{'common.table.srNo' | translate}}</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Challan Qty</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Total Expected Weight</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Actual Weight</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Actual Received</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Difference</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Done By</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr >
+                  <td style="padding:0px">0.</td>
+                  <td style="padding:0px"><input type="number" name="total_received" [(ngModel)]="total_received" 
+                     (input)="calculateResult()" style="margin:0px;"></td>
+                  <td style="padding:0px"><input type="number" name="expected_weighing"  readonly [(ngModel)]="expected_weighing" style="margin:0px;">
+                  </td>
+                  <td style="padding:0px"><input type="number"  (input)="calculateResult()" name="actual_weighing" [(ngModel)]="actual_weighing"  ngModel style="margin:0px;"></td>
+                  <td style="padding:0px"><input type="number" name="differance" [(ngModel)]="differance"  ngModel readonly style="margin:0px;"></td>
+                  <td style="padding:0px"><input type="number" name="differance" [(ngModel)]="differance"  ngModel readonly style="margin:0px;"></td>
+                  <td style="padding:0px"> 
+                    <select name="done_by" [(ngModel)]="done_by"  required style="margin: 0px;">
+                      <option></option>
+                      <option *ngFor="let operator of labors"  >{{ operator.firstname }}   {{ operator.lastname }} </option>
+                    </select>
+                  </td>
+                  <td><button class="btn btn-sm btn-primary" (click)="addWeighing(weighForm)">{{'common.add' | translate}}</button></td>
+                </tr>
+              </table>
+              <table class="table table-border" *ngIf="weighingList?.length > 0" >
+             
+                <tr>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">{{'common.table.srNo' | translate}}</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Challan Qty</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Total Expected Weight</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Actual Weight</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Actual Received</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Difference</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">Done By</th>
+                  <th style="background-color: rgb(12, 191, 245); color: rgb(0, 0, 0); font-weight:bolder;">{{'common.table.action' | translate}}</th>
+                </tr>
+                <tr *ngFor="let res of weighingList; let i = index;">
+                  <td>{{i+1}}</td>
+                  <td>{{res.total_received}}</td>
+                  <td>{{res.expected_weighing}}</td>
+                  <td>{{res.actual_weighing}}</td>
+                  <td>{{res.differance}}</td>
+                  <td>{{res.differance}}</td>
+                  <td>{{res.done_by}}</td>
+                  <td>
+                    <clr-icon shape="trash" class="is-error" (click)="delWeighing(i)"></clr-icon>
+                  </td>
+                </tr>
+              </table>
+            </form>
+
+
+          </div>
+
+       
+ 
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="openDigiSign(weighingForm,countingForm)">{{'common.save' | translate}}</button>
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>
+
+
+<clr-modal [(clrModalOpen)]="isDIGI" [clrModalClosable]="true">
+  <h3 class="modal-title">&#9989; Sign Digitally For User ID : <span style="color: blue;">{{emp_id}} </span></h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+          <form #addMaterialForm="ngForm">
+            <div class="modal-body">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <label>Enter Password Or 4 Digit Authorization PIN <span style="color: red">*</span></label>
+                <input type="password" name="loginPassward" [(ngModel)]="loginPassward" required >
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-success" (click)="digiSign(addMaterialForm)">{{'common.submit' | translate}}</button>
+       </div>
+    </div>
+  </div>
+</clr-modal>

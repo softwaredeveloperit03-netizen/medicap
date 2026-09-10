@@ -1,0 +1,36 @@
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { NewComponent } from './new/new.component';
+import { FormsModule } from '@angular/forms';
+import { SharedModule } from 'src/app/shared/shared.module';
+import { ClarityModule } from '@clr/angular';
+import { RouterModule, Routes } from '@angular/router';
+import { MasterComponent } from './master/master.component';
+import { LogComponent } from './log/log.component';
+import { TranslateModule } from '@ngx-translate/core';
+import { PackingEbmrMasterComponent } from './packing-ebmr-master/packing-ebmr-master.component';
+
+
+
+const routes: Routes = [
+  { path: '', component: DashboardComponent},
+  { path: 'new', component: NewComponent},
+  { path: 'master', component: MasterComponent},
+  { path: 'log', component: LogComponent},
+  { path: 'packing-ebmr-master', component: PackingEbmrMasterComponent },
+];
+@NgModule({
+  declarations: [
+    DashboardComponent, NewComponent,MasterComponent, LogComponent, PackingEbmrMasterComponent
+   
+  ],
+  imports: [
+    SharedModule, TranslateModule,
+    CommonModule,
+    FormsModule,
+    ClarityModule,
+    RouterModule.forChild(routes)
+  ]
+})
+export class BmrModule { }

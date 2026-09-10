@@ -1,0 +1,84 @@
+import { Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  software_type='';
+  plant_id='';
+  isLogin = false;
+  constructor(private service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+
+  }
+
+  ngOnInit() {
+    this.validateUser();
+    this.software_type = this.service.getPlantConfigFields('software_type');
+    this.plant_id = this.service.getPlantConfigFields('plant_id');
+    this.get_rights();
+
+  }
+  
+  isuser = 'No';
+  ischecker = 'No';
+  isapprover = 'No';
+  qms_approver = 'No';
+  dept_head = 'No';
+  isauditor = 'No';
+  plant_head = 'No';
+  shift_allocator = 'No';
+  rights;
+  loggedInDept;
+  trainig_cordinator = 'No';
+  get_rights() {this.service.get('hr/employee.php?type=getrights&emp_id=' 
+    +localStorage.getItem('emp_id') +'&dep_name=' +this.loggedInDept     
+       )
+      .subscribe((response) => {
+        this.rights = response;
+        this.isuser = this.rights[0].isuser;
+        this.ischecker = this.rights[0].ischecker;
+        this.isapprover = this.rights[0].isapprover;
+        this.qms_approver = this.rights[0].qms_approver;
+        this.dept_head = this.rights[0].dept_head;
+        this.isauditor = this.rights[0].isauditor;
+        this.plant_head = this.rights[0].plant_head;
+        this.shift_allocator = this.rights[0].shift_allocator;
+        this.trainig_cordinator = this.rights[0].trainig_cordinator;
+      });
+  }
+
+
+  checkLogin(formData) {
+    const data = formData.value;
+    this.service.post('checkLogin.php?type=newLogin&username=' + data['username'] + '&password=' + data["password"], JSON.stringify(data)).subscribe(response => {
+        if (response['status'] === 'success') {
+          localStorage.setItem('token', response['token']);
+          localStorage.setItem('department', response['department']);
+          localStorage.setItem('designation', response['designation']);
+          localStorage.setItem('user', response['user']);
+          localStorage.setItem('checker', response['checker']);
+          localStorage.setItem('approver', response['approver']);
+          localStorage.setItem('username', response['username']);
+          this.service.username = response['username'];
+          this.service.userChange();
+          if (response['department'] == 'Quality Control') {
+            this.isLogin = true;
+          }
+        } else {
+          this.isLogin = false;
+        }
+      });
+  }
+
+  validateUser() {
+    if (localStorage.getItem('token') !== null && localStorage.getItem('department') == 'Quality Control') {
+      this.isLogin = true;
+    } else {
+      this.isLogin = false;
+    }
+  }
+}

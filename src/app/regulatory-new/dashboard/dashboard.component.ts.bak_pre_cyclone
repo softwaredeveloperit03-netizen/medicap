@@ -1,0 +1,211 @@
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+
+interface RegCard {
+  id: string;
+  title: string;
+  description: string;
+  route: string | string[];
+  icon: string;
+  category: string;
+  gradient: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class DashboardComponent implements OnInit {
+  loggedInDept: string | null = null;
+  dept_head = 'No';
+
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  categories: string[] = ['All'];
+  filteredCards: RegCard[] = [];
+
+  paletteOptions = [
+    { name: 'Regulatory Indigo', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(67,56,202,0.14)' },
+    { name: 'Compliance Teal', swatch: '#ecfdf5', background: 'linear-gradient(135deg, #ecfdf5 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(15,118,110,0.14)' },
+    { name: 'Executive Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(51,65,85,0.12)' },
+    { name: 'Royal Violet', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(109,40,217,0.14)' },
+    { name: 'Ocean Blue', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(2,132,199,0.14)' },
+  ];
+  selectedPalette = this.paletteOptions[0];
+
+  private readonly allCards: RegCard[] = [
+    {
+      id: 'product-list',
+      title: 'Product List',
+      description: 'Regulatory product master list',
+      route: 'productMstr',
+      icon: 'fa-file-signature',
+      category: 'Masters',
+      gradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
+    },
+    {
+      id: 'dossier-index',
+      title: 'Dossier Index Master',
+      description: 'Manage dossier index master records',
+      route: 'dossierIndex',
+      icon: 'fa-id-card-alt',
+      category: 'Masters',
+      gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+    },
+    {
+      id: 'marketing-enquiry',
+      title: 'Marketing Enquiry',
+      description: 'Marketing enquiry workflow',
+      route: 'marketing_enquiry',
+      icon: 'fa-bullhorn',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+    },
+    {
+      id: 'approval-licences',
+      title: 'Approval / Licences',
+      description: 'Approvals and licence management',
+      route: 'approvalLicences',
+      icon: 'fa-certificate',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
+    },
+    {
+      id: 'dossier-req',
+      title: 'Dossier / DMF Request',
+      description: 'Create and track dossier requests',
+      route: 'dossierReq',
+      icon: 'fa-folder-open',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)',
+    },
+    {
+      id: 'docu-req',
+      title: 'Documentation Request',
+      description: 'Technical documentation requests',
+      route: '/marketing/technical',
+      icon: 'fa-file-alt',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #334155 0%, #64748b 100%)',
+    },
+    {
+      id: 'client-doc',
+      title: 'Client Document Request',
+      description: 'Client document request workflow',
+      route: 'client-doc-request',
+      icon: 'fa-file-upload',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+    },
+    {
+      id: 'register-init',
+      title: 'Registration Initiation',
+      description: 'Initiate product registration',
+      route: 'registerInit',
+      icon: 'fa-clipboard-check',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #15803d 0%, #22c55e 100%)',
+    },
+    {
+      id: 'register-query',
+      title: 'Regulatory & Client Query',
+      description: 'Regulatory and client query handling',
+      route: 'registerquery',
+      icon: 'fa-question-circle',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+    },
+    {
+      id: 'register-status',
+      title: 'Registration Status',
+      description: 'Track registration status updates',
+      route: 'registration_status',
+      icon: 'fa-tasks',
+      category: 'Activities',
+      gradient: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+    },
+  ];
+
+  constructor(
+    private service: DataAccessService,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    this.categories = ['All', ...Array.from(new Set(this.allCards.map((c) => c.category)))];
+    this.updateFilteredCards();
+
+    const savedPalette = localStorage.getItem('regulatory_new_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find((p) => p.name === savedPalette);
+      if (found) {
+        this.selectedPalette = found;
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  get_rights(): void {
+    this.service
+      .get(
+        'hr/employee.php?type=getrights&emp_id=' +
+          localStorage.getItem('emp_id') +
+          '&dep_name=' +
+          encodeURIComponent(this.loggedInDept || '')
+      )
+      .subscribe((response: any) => {
+        const r = Array.isArray(response) && response[0] ? response[0] : {};
+        this.dept_head = r.dept_head || 'No';
+        this.cdr.markForCheck();
+      });
+  }
+
+  updateFilteredCards(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredCards = this.allCards.filter((c) => {
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch =
+        !q ||
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.category.toLowerCase().includes(q);
+      return matchCategory && matchSearch;
+    });
+    this.cdr.markForCheck();
+  }
+
+  onSearchChange(): void {
+    this.updateFilteredCards();
+  }
+
+  selectCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.updateFilteredCards();
+  }
+
+  trackByCardId(_index: number, card: RegCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+    this.cdr.markForCheck();
+  }
+
+  setPalette(palette: (typeof this.paletteOptions)[0]): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try {
+      localStorage.setItem('regulatory_new_dashboard_palette', palette.name);
+    } catch {
+      /* ignore */
+    }
+    this.cdr.markForCheck();
+  }
+}

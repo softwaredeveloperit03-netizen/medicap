@@ -1,0 +1,229 @@
+<div class="card wolog-page" *ngIf="prodctWise && !matWise">
+  <div class="card-header wolog-page-header">
+    <div class="wolog-header-row">
+      <div class="wolog-header-title">Workorder Log</div>
+      <div class="wolog-header-actions">
+        <button type="button" class="btn btn-sm btn-outline" (click)="matView()" [disabled]="loading">
+          Material View
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="search-container">
+      <label for="tableSearchInput">Search</label>
+      <input type="text" id="tableSearchInput"
+        placeholder="Forecast, product, WO, client group…"
+        [(ngModel)]="searchText"
+        (ngModelChange)="applyFilter()"
+        [disabled]="loading">
+    </div>
+
+    <div class="wolog-loading" *ngIf="loading">
+      <span class="spinner spinner-inline"></span>
+      Loading work order log…
+    </div>
+
+    <div class="datagrid-wrapper wolog-product-grid-wrap" *ngIf="!loading">
+      <clr-datagrid [clrDgStickyHeader]="true" class="wolog-product-grid">
+        <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+        <clr-dg-column [clrDgField]="'planMonth'">Plan Month</clr-dg-column>
+        <clr-dg-column [clrDgField]="'mainGroupName'">Group</clr-dg-column>
+        <clr-dg-column [clrDgField]="'order_no'">Forecast No</clr-dg-column>
+        <clr-dg-column [clrDgField]="'workorder_no'">Work Order No</clr-dg-column>
+        <clr-dg-column>WO Date</clr-dg-column>
+        <clr-dg-column [clrDgField]="'product_code'">Product Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'product_name'">Product Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'packing_type'">Packing</clr-dg-column>
+        <clr-dg-column class="cell-num">Plan Qty</clr-dg-column>
+        <clr-dg-column [clrDgField]="'planUnit'">Unit</clr-dg-column>
+        <clr-dg-column>Indent Status</clr-dg-column>
+        <clr-dg-column>Action</clr-dg-column>
+
+        <clr-dg-row *ngFor="let wo of pendingpo; let i = index; trackBy: trackByIndex"
+          [style.backgroundColor]="wo.bg_color">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.order_no || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.workorder_no || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.Wo_Generated_on ? (wo.Wo_Generated_on | date:'dd/MM/yyyy') : '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.product_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-product">{{ wo.product_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.packing_type || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ wo.batch_size ?? '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ wo.planUnit || '—' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span class="wolog-wo-status" [ngClass]="getWoIndentStatus(wo).cssClass">
+              {{ getWoIndentStatus(wo).label }}
+            </span>
+          </clr-dg-cell>
+          <clr-dg-cell>
+            <button type="button" class="btn btn-primary btn-sm" (click)="View(wo)">View</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No work orders found</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<div class="card wolog-page" *ngIf="!prodctWise && matWise">
+  <div class="card-header wolog-page-header">
+    <div class="wolog-header-row">
+      <div class="wolog-header-title">Material Planning Log</div>
+      <div class="wolog-header-actions">
+        <button type="button" class="btn btn-sm btn-outline" (click)="ProdView()" [disabled]="loading">
+          Product View
+        </button>
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan" [queryParams]="{ returnUrl: '/planning' }">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block wolog-mat-card-block">
+    <div class="wolog-mat-toolbar">
+      <div class="search-container wolog-mat-search">
+        <label for="matLogSearchInput">Search</label>
+        <input type="text" id="matLogSearchInput"
+          placeholder="Material, product, WO, vendor…"
+          [(ngModel)]="searchText"
+          (ngModelChange)="applyFilter()"
+          [disabled]="loading">
+      </div>
+      <button type="button" class="btn btn-success btn-sm wolog-excel-btn"
+        (click)="exportMaterialLogExcel()"
+        [disabled]="!pendingpo?.length || loading">
+        Download Excel
+      </button>
+    </div>
+
+    <p class="wolog-mat-hint" *ngIf="pendingpo?.length && !loading">
+      Consolidated by material. Tentative receiving date = indent date + purchase lead time (days).
+    </p>
+
+    <div class="wolog-mat-loading" *ngIf="loading">
+      <span class="spinner spinner-inline"></span>
+      Loading material planning log…
+    </div>
+
+    <div class="datagrid-wrapper wolog-mat-grid-wrap" *ngIf="!loading">
+      <clr-datagrid [clrDgStickyHeader]="true" class="wolog-mat-grid">
+        <clr-dg-column [style.width.px]="48">Sr.</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_code'">Material Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'material_name'">Material Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'mat_type'">Type</clr-dg-column>
+        <clr-dg-column [clrDgField]="'client_group'">Client Group</clr-dg-column>
+        <clr-dg-column [clrDgField]="'vendor_names'">Vendor Names</clr-dg-column>
+        <clr-dg-column [clrDgField]="'product_code'">Product Code</clr-dg-column>
+        <clr-dg-column [clrDgField]="'product_name'">Product Name</clr-dg-column>
+        <clr-dg-column [clrDgField]="'workorder_no'">Work Order No.</clr-dg-column>
+        <clr-dg-column>Plan Month</clr-dg-column>
+        <clr-dg-column class="cell-num">Shortage</clr-dg-column>
+        <clr-dg-column class="cell-num">Indent Qty</clr-dg-column>
+        <clr-dg-column [clrDgField]="'uom'">UOM</clr-dg-column>
+        <clr-dg-column class="cell-num">Lead Time (Days)</clr-dg-column>
+        <clr-dg-column [clrDgField]="'purchase_status'">Purchase Status</clr-dg-column>
+        <clr-dg-column>Tentative Receiving</clr-dg-column>
+        <clr-dg-column>Indent No.</clr-dg-column>
+        <clr-dg-column>Indent Raised By</clr-dg-column>
+        <clr-dg-column>Indent Raised Date</clr-dg-column>
+        <clr-dg-column>Indent For Plan Month</clr-dg-column>
+        <clr-dg-column>Indent Status</clr-dg-column>
+
+        <clr-dg-row *ngFor="let mat of pendingpo; let i = index; trackBy: trackByIndex"
+          [style.backgroundColor]="mat.bg_color || null">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-material">{{ mat.material_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.mat_type || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.client_group || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-vendor">{{ mat.vendor_names || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.product_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-product">{{ mat.product_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.workorder_no || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatPlanMonthList(mat.planMonth) }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.shortage ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.req_qty ?? '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.uom || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">
+            {{ mat.purchase_lead_time_days != null && mat.purchase_lead_time_days !== '' ? mat.purchase_lead_time_days : '—' }}
+          </clr-dg-cell>
+          <clr-dg-cell>{{ mat.purchase_status || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatDisplayDate(mat.tentative_receiving_date) }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatIndentNumber(mat) }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.indent_raised_by_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatDisplayDate(mat.indent_raised_on) }}</clr-dg-cell>
+          <clr-dg-cell>{{ formatPlanMonthList(mat.indent_for_plan_month) }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span class="wolog-indent-label" [ngClass]="getMatLogIndentCss(mat)">
+              {{ getMatLogIndentLabel(mat) }}
+            </span>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No material log records found</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isView" clrModalSize="xl" class="wolog-view-modal">
+  <h3 class="modal-title">Work Order — {{ selectedWo?.workorder_no || '—' }}</h3>
+  <div class="modal-body" *ngIf="selectedWo">
+    <div class="wolog-modal-summary">
+      <span><strong>Forecast:</strong> {{ selectedWo.order_no || '—' }}</span>
+      <span><strong>Product:</strong> {{ selectedWo.product_code }} — {{ selectedWo.product_name || '—' }}</span>
+      <span>
+        <strong>Indent status:</strong>
+        <span class="wolog-wo-status" [ngClass]="getWoIndentStatus(selectedWo).cssClass">
+          {{ getWoIndentStatus(selectedWo).label }}
+        </span>
+      </span>
+    </div>
+
+    <div class="datagrid-wrapper wolog-detail-grid-wrap">
+      <clr-datagrid [clrDgStickyHeader]="true" class="wolog-detail-grid">
+        <clr-dg-column>Material Code</clr-dg-column>
+        <clr-dg-column>Material Name</clr-dg-column>
+        <clr-dg-column>Type</clr-dg-column>
+        <clr-dg-column class="cell-num">Required</clr-dg-column>
+        <clr-dg-column class="cell-num">Deduct RM</clr-dg-column>
+        <clr-dg-column class="cell-num">Shortage</clr-dg-column>
+        <clr-dg-column class="cell-num">Indent Qty</clr-dg-column>
+        <clr-dg-column>Indent Status</clr-dg-column>
+
+        <clr-dg-row *ngFor="let mat of selectedWo.Deductions || []; trackBy: trackByIndex">
+          <clr-dg-cell>{{ mat.material_code || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.material_name || '—' }}</clr-dg-cell>
+          <clr-dg-cell>{{ mat.mat_type || '—' }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ materialRequiredQty(mat) }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.deducted_from_RM ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.shortage ?? 0 }}</clr-dg-cell>
+          <clr-dg-cell class="cell-num">{{ mat.req_qty ?? '—' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <span class="wolog-indent-label" [ngClass]="getMaterialIndentDisplay(mat).cssClass">
+              {{ getMaterialIndentDisplay(mat).label }}
+            </span>
+          </clr-dg-cell>
+        </clr-dg-row>
+
+        <clr-dg-placeholder>No materials for this work order</clr-dg-placeholder>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="modal-footer wolog-modal-footer">
+    <button type="button" class="btn btn-secondary btn-sm"
+      (click)="updateStat('Cancel', selectedWo?.Deductions)"
+      [disabled]="!selectedWo?.Deductions?.length">
+      Cancel
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm"
+      (click)="updateStat('Hold', selectedWo?.Deductions)"
+      [disabled]="!selectedWo?.Deductions?.length">
+      Hold
+    </button>
+    <button type="button" class="btn btn-primary btn-sm" (click)="isView = false">Close</button>
+  </div>
+</clr-modal>

@@ -1,0 +1,476 @@
+<div class="card recon-page">
+  <header class="card-header recon-page-header">
+    <div class="recon-header-inner">
+      <div class="recon-header-text">
+        <h1 class="recon-header-title">
+          <i class="fas fa-project-diagram recon-title-icon" aria-hidden="true"></i>
+          Forecast–Order Reconciliation Hub
+        </h1>
+        <p class="recon-header-subtitle">
+          Trace forecast splits, MRP indents, work-order shortages, and confirmed indents in one place.
+          Forecast coverage is consumed before raising confirmed purchase indents.
+        </p>
+      </div>
+      <div class="recon-header-actions">
+        <button type="button" class="recon-btn recon-btn--ghost" (click)="loadTab()" [disabled]="loading">
+          <span *ngIf="loading" class="spinner spinner-inline"></span>
+          Refresh
+        </button>
+        <a class="recon-btn recon-btn--danger" routerLink="/mrp">Close MRP</a>
+        <a class="recon-btn recon-btn--ghost" routerLink="/planning">Close Planning</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="card-block recon-card-body">
+    <aside class="recon-info-banner" role="note">
+      <span class="recon-info-banner__icon" aria-hidden="true">i</span>
+      <div>
+        <strong>Consumption rule:</strong>
+        Forecast indent and stock coverage are applied first.
+        Confirmed (WO) shortage is raised only for the remaining gap.
+        Use <em>Status Report</em> for forecast vs today at a glance.
+        For material detail use <em>Net Confirmed Shortage</em>, <em>Double Indent Alert</em>, and <em>Forecast vs Actual Log</em> before purchase.
+      </div>
+    </aside>
+
+    <div class="recon-summary-grid" *ngIf="summaryChips.length && !loading">
+      <div
+        class="recon-summary-chip"
+        *ngFor="let chip of summaryChips"
+        [class.recon-summary-chip--ok]="chip.tone === 'ok'"
+        [class.recon-summary-chip--warn]="chip.tone === 'warn'"
+        [class.recon-summary-chip--danger]="chip.tone === 'danger'">
+        <strong>{{ chip.value }}</strong>
+        <span>{{ chip.label }}</span>
+      </div>
+    </div>
+
+    <section class="recon-panel" aria-label="Reconciliation views">
+      <nav class="recon-tab-nav" role="tablist" aria-label="Reconciliation tabs">
+        <button
+          type="button"
+          class="recon-tab"
+          role="tab"
+          *ngFor="let t of tabs"
+          [class.recon-tab--active]="activeTab === t.id"
+          [attr.aria-selected]="activeTab === t.id"
+          (click)="setTab(t.id)"
+          [title]="t.hint">
+          <span class="recon-tab__label">{{ t.label }}</span>
+          <span class="recon-tab__hint">{{ t.hint }}</span>
+        </button>
+      </nav>
+
+      <div class="recon-panel-toolbar">
+        <div class="recon-field">
+          <label for="reconSearch">Search</label>
+          <input
+            id="reconSearch"
+            type="search"
+            class="recon-input recon-input--search"
+            placeholder="Order, product, material, WO, month…"
+            [(ngModel)]="searchText"
+            (ngModelChange)="applyFilter()"
+            [disabled]="loading">
+        </div>
+        <div class="recon-filters">
+          <div class="recon-field">
+            <label for="reconYear">Year</label>
+            <input id="reconYear" type="text" class="recon-input recon-input--filter" placeholder="e.g. 2025" [(ngModel)]="yearFilter" [disabled]="loading">
+          </div>
+          <div class="recon-field">
+            <label for="reconMonth">Month</label>
+            <input id="reconMonth" type="text" class="recon-input recon-input--filter" placeholder="January" [(ngModel)]="monthFilter" [disabled]="loading">
+          </div>
+          <div class="recon-field">
+            <label for="reconOrder">Order No</label>
+            <input id="reconOrder" type="text" class="recon-input recon-input--filter" placeholder="FO…" [(ngModel)]="orderFilter" [disabled]="loading">
+          </div>
+          <button type="button" class="recon-btn recon-btn--primary" (click)="onFilterChange()" [disabled]="loading">Apply filters</button>
+        </div>
+        <div class="recon-toolbar-meta" *ngIf="!loading">
+          <span class="recon-count-pill">{{ visibleRows.length }} visible</span>
+        </div>
+      </div>
+
+      <div class="recon-panel-content">
+        <div class="recon-loading" *ngIf="loading">
+          <span class="spinner"></span>
+          <span>Loading reconciliation data…</span>
+        </div>
+
+        <div class="recon-empty" *ngIf="!loading && visibleRows.length === 0">
+          <span class="recon-empty__title">No records found</span>
+          <span>Try another tab or adjust year, month, or order filters.</span>
+        </div>
+
+        <!-- Tab: Status Report -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'report' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Forecast vs Current Status Report</h3>
+              <p>Side-by-side view: what was planned in forecast vs what exists today (WO, indents, shortage, issue)</p>
+            </div>
+            <span class="recon-report-date" *ngIf="summary.report_as_of">
+              Report as of: <strong>{{ summary.report_as_of }}</strong>
+            </span>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table recon-table--report">
+              <thead>
+                <tr class="recon-report-group-row">
+                  <th colspan="4" class="recon-report-group recon-report-group--base">Order Details</th>
+                  <th colspan="3" class="recon-report-group recon-report-group--forecast">What Was Forecasted</th>
+                  <th colspan="4" class="recon-report-group recon-report-group--current">Current Status (Today)</th>
+                  <th colspan="3" class="recon-report-group recon-report-group--summary">Summary</th>
+                </tr>
+                <tr>
+                  <th>Sr</th>
+                  <th>Order No</th>
+                  <th>Product</th>
+                  <th>Month</th>
+                  <th class="recon-th-num recon-col-forecast">Fcst Qty</th>
+                  <th class="recon-th-num recon-col-forecast">Fcst Indent</th>
+                  <th class="recon-col-forecast">Indent / PO</th>
+                  <th class="recon-th-num recon-col-current">WO Qty</th>
+                  <th class="recon-col-current">WO No(s)</th>
+                  <th class="recon-th-num recon-col-current">Net Short</th>
+                  <th class="recon-th-num recon-col-current">Issued</th>
+                  <th>Lifecycle</th>
+                  <th>Match</th>
+                  <th>Current Situation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index" [class.recon-row--awaiting]="row.lifecycle_stage === 'Awaiting Confirmed Order'">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.order_no }}</span>
+                    <span class="recon-td-sub">{{ row.order_status || '—' }}</span>
+                  </td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.product_name || row.product_code }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.product_code }}</span>
+                  </td>
+                  <td>{{ row.month_year }}</td>
+                  <td class="recon-td-num recon-col-forecast recon-forecast-val">{{ row.forecast_qty || 0 }}</td>
+                  <td class="recon-td-num recon-col-forecast">
+                    {{ row.forecast_indent_qty || 0 }}
+                    <span class="recon-td-sub" *ngIf="row.forecast_indent_lines > 0">{{ row.forecast_indent_lines }} line(s)</span>
+                  </td>
+                  <td class="recon-col-forecast recon-td-sub">{{ row.forecast_po_status || '—' }}</td>
+                  <td class="recon-td-num recon-col-current">
+                    <span [class.recon-current-val]="num(row.wo_qty) > 0">{{ row.wo_qty || 0 }}</span>
+                    <span class="recon-td-sub" *ngIf="num(row.qty_gap) !== 0">Gap: {{ row.qty_gap }}</span>
+                  </td>
+                  <td class="recon-col-current">
+                    <span class="recon-td-primary">{{ row.workorder_nos || '—' }}</span>
+                    <span class="recon-td-sub">{{ row.wo_status || '' }}</span>
+                  </td>
+                  <td class="recon-td-num recon-col-current" [class.recon-shortage]="num(row.net_shortage) > 0">
+                    {{ row.net_shortage || 0 }}
+                    <span class="recon-td-sub recon-offset" *ngIf="num(row.forecast_offset) > 0">−{{ row.forecast_offset }} fcst</span>
+                  </td>
+                  <td class="recon-td-num recon-col-current">{{ row.issued_qty || 0 }}</td>
+                  <td><span [ngClass]="lifecycleClass(row.lifecycle_stage)">{{ row.lifecycle_stage }}</span></td>
+                  <td><span [ngClass]="statusClass(row.match_status)">{{ row.match_status }}</span></td>
+                  <td class="recon-situation-cell">{{ row.current_situation }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Map -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'map' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Forecast vs Confirmed Map</h3>
+              <p>Monthly forecast split aligned to work orders</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Order No</th>
+                  <th>Product</th>
+                  <th>Forecast Month</th>
+                  <th class="recon-th-num">Split Qty</th>
+                  <th>WO No(s)</th>
+                  <th class="recon-th-num">WO Qty</th>
+                  <th>Aligned</th>
+                  <th>Match Status</th>
+                  <th>Order Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td><span class="recon-td-primary">{{ row.order_no }}</span></td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.product_name_ref || row.product_name }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.product_code }}</span>
+                  </td>
+                  <td>{{ row.forecast_month }}-{{ row.forecast_year }}</td>
+                  <td class="recon-td-num">{{ row.split_qty }}</td>
+                  <td>{{ row.workorder_nos || '—' }}</td>
+                  <td class="recon-td-num">{{ row.wo_qty_total || row.wo_qty || 0 }}</td>
+                  <td>{{ row.month_aligned }}</td>
+                  <td><span [ngClass]="statusClass(row.match_status)">{{ row.match_status }}</span></td>
+                  <td>{{ row.order_status || row.wo_status || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Forecast -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'forecast' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Forecast Actions</h3>
+              <p>MRP indents raised from requirement analysis</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Material</th>
+                  <th>Order No</th>
+                  <th>Month</th>
+                  <th class="recon-th-num">Indent Qty</th>
+                  <th class="recon-th-num">Net Stock</th>
+                  <th class="recon-th-num">Booked</th>
+                  <th>Indent No</th>
+                  <th>Status</th>
+                  <th>PO No</th>
+                  <th>Raised On</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.material_name }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.material_code }}</span>
+                  </td>
+                  <td>{{ row.order_no || '—' }}</td>
+                  <td>{{ row.month_year }}</td>
+                  <td class="recon-td-num">{{ row.ordered_qty }}</td>
+                  <td class="recon-td-num">{{ row.net_available_qty }}</td>
+                  <td class="recon-td-num">{{ row.booked_qty }}</td>
+                  <td>{{ row.indend_no || row.request_no || '—' }}</td>
+                  <td>{{ row.indent_status || row.mrp_line_status || '—' }}</td>
+                  <td>{{ row.po_no || '—' }}</td>
+                  <td>{{ row.indent_date || row.entry_date || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Confirmed -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'confirmed' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Net Confirmed Shortage</h3>
+              <p>WO shortage after forecast indent offset</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Order / WO</th>
+                  <th>Material</th>
+                  <th class="recon-th-num">WO Required</th>
+                  <th class="recon-th-num">Gross Short</th>
+                  <th class="recon-th-num">Forecast Offset</th>
+                  <th class="recon-th-num">Net Short</th>
+                  <th class="recon-th-num">Net Stock</th>
+                  <th>Rule</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.order_no }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.workorder_no }}</span>
+                  </td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.material_name }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.material_code }}</span>
+                  </td>
+                  <td class="recon-td-num">{{ row.wo_required_qty }}</td>
+                  <td class="recon-td-num">{{ row.gross_wo_shortage }}</td>
+                  <td class="recon-td-num recon-offset">{{ row.forecast_indent_offset }}</td>
+                  <td class="recon-td-num" [class.recon-shortage]="num(row.net_confirmed_shortage) > 0">{{ row.net_confirmed_shortage }}</td>
+                  <td class="recon-td-num">{{ row.net_available_qty }}</td>
+                  <td><span class="recon-td-sub">{{ row.consumption_rule }}</span></td>
+                  <td><span [ngClass]="statusClass(row.action)">{{ row.action }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Double -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'double' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Double Indent Alert</h3>
+              <p>Materials with both forecast and WO indents</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Order No</th>
+                  <th>Material</th>
+                  <th class="recon-th-num">Forecast Indent</th>
+                  <th>Months</th>
+                  <th class="recon-th-num">WO Shortage</th>
+                  <th class="recon-th-num">Overlap</th>
+                  <th>WO Indent</th>
+                  <th>Risk</th>
+                  <th>Resolve</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td><span class="recon-td-primary">{{ row.order_no }}</span></td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.material_name }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.material_code }}</span>
+                  </td>
+                  <td class="recon-td-num">{{ row.forecast_indent_qty }}</td>
+                  <td>{{ row.forecast_months || '—' }}</td>
+                  <td class="recon-td-num">{{ row.wo_shortage_total }}</td>
+                  <td class="recon-td-num recon-shortage">{{ row.overlap_qty }}</td>
+                  <td>{{ row.wo_indent_no || row.wo_indent_status }}</td>
+                  <td><span [ngClass]="statusClass(row.risk)">{{ row.risk }}</span></td>
+                  <td><span class="recon-td-sub">{{ row.resolve_action }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Month -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'month' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Month-wise Coverage</h3>
+              <p>Forecast planned quantity vs confirmed WO quantity</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Month</th>
+                  <th>Order No</th>
+                  <th>Product</th>
+                  <th class="recon-th-num">Forecast Qty</th>
+                  <th class="recon-th-num">Confirmed Qty</th>
+                  <th class="recon-th-num">Gap</th>
+                  <th class="recon-th-num">Coverage</th>
+                  <th class="recon-th-num">WO Count</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td>{{ row.month_year }}</td>
+                  <td><span class="recon-td-primary">{{ row.order_no }}</span></td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.product_name || row.product_code }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.product_code }}</span>
+                  </td>
+                  <td class="recon-td-num">{{ row.forecast_qty }}</td>
+                  <td class="recon-td-num">{{ row.confirmed_qty }}</td>
+                  <td class="recon-td-num" [class.recon-shortage]="num(row.gap_qty) > 0">{{ row.gap_qty }}</td>
+                  <td class="recon-td-num">{{ row.coverage_pct }}%</td>
+                  <td class="recon-td-num">{{ row.wo_count }}</td>
+                  <td><span [ngClass]="statusClass(row.status)">{{ row.status }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Log -->
+        <div class="recon-table-section" *ngIf="!loading && activeTab === 'log' && visibleRows.length > 0">
+          <div class="recon-table-caption">
+            <div>
+              <h3>Forecast vs Actual Log</h3>
+              <p>Material-level consumption and variance audit trail</p>
+            </div>
+          </div>
+          <div class="recon-table-wrap">
+            <table class="recon-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Order</th>
+                  <th>Product</th>
+                  <th>Material</th>
+                  <th>Month</th>
+                  <th class="recon-th-num">Fcst Indent</th>
+                  <th class="recon-th-num">WO Req</th>
+                  <th class="recon-th-num">Fcst Used</th>
+                  <th class="recon-th-num">Net Short</th>
+                  <th class="recon-th-num">WO Indent</th>
+                  <th class="recon-th-num">Issued</th>
+                  <th class="recon-th-num">Variance</th>
+                  <th>WO(s)</th>
+                  <th>Log Statement</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of visibleRows; let i = index">
+                  <td class="recon-td-sr">{{ i + 1 }}</td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.order_no }}</span>
+                    <span class="recon-td-sub">{{ row.order_status }}</span>
+                  </td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.product_name || row.product_code }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.product_code }}</span>
+                  </td>
+                  <td>
+                    <span class="recon-td-primary">{{ row.material_name }}</span>
+                    <span class="recon-td-sub recon-td-code">{{ row.material_code }}</span>
+                  </td>
+                  <td>{{ row.month_year || '—' }}</td>
+                  <td class="recon-td-num">{{ row.forecast_indent_qty || 0 }}</td>
+                  <td class="recon-td-num">{{ row.wo_required_qty || 0 }}</td>
+                  <td class="recon-td-num recon-offset">{{ row.forecast_consumed || 0 }}</td>
+                  <td class="recon-td-num" [class.recon-shortage]="num(row.net_confirmed_shortage) > 0">{{ row.net_confirmed_shortage || 0 }}</td>
+                  <td class="recon-td-num">{{ row.wo_indent_qty || 0 }}</td>
+                  <td class="recon-td-num">{{ row.actual_issued_qty || 0 }}</td>
+                  <td class="recon-td-num" [class.recon-shortage]="num(row.variance_qty) > 0">{{ row.variance_qty || 0 }}</td>
+                  <td><span class="recon-td-sub">{{ row.workorder_nos || '—' }}</span></td>
+                  <td class="recon-log-statement">{{ row.log_statement }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

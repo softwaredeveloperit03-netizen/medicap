@@ -1,0 +1,213 @@
+ 
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Dedusting Material Log</h2>
+    <div class="mef-panel-header__actions">
+      <button type="button" class="btn btn-sm btn-success" routerLink="awaiting">Awaiting Materials for Dedusting</button>
+      <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/store/raw">{{'common.close' | translate}}</button>
+    </div>
+  </header>
+  <div class="card-block">
+    <div class="card-text">
+ 
+            <div class="clr-row">
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Material Type :  </label>
+                  <select name="searchQuery" [(ngModel)]="material_type" (click)="getPendingDedustingMaterials()"  >
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  </select>
+              </div>
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+            <div class="datagrid-wrapper">
+              <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                  <clr-dg-column>Receivig No./Dt.</clr-dg-column>
+                  <clr-dg-column>Material Type</clr-dg-column>
+                  <clr-dg-column>PO No./Dt.</clr-dg-column>
+                  <clr-dg-column>Payment Slip/Dt.</clr-dg-column>
+                  <clr-dg-column>Vendor Name</clr-dg-column>
+                  <clr-dg-column>Material Name</clr-dg-column>
+                  <clr-dg-column>Material Code</clr-dg-column>
+                  <clr-dg-column>Dedusting By/Dt.</clr-dg-column>
+                  <clr-dg-column>Billign Qty.</clr-dg-column>
+                  <clr-dg-column>Short. Qty.</clr-dg-column>
+                  <clr-dg-column>Damage Qty.</clr-dg-column>
+                  <clr-dg-column>Received Qty.</clr-dg-column>
+                  <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+          
+                  <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                      <clr-dg-cell>{{ result.receiving_no}} / {{ result.receiving_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.po_no}} / {{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.ch_no}} / {{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.dedusting_by}} / {{ result.dedusting_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.qty }}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.short_qty || 0}}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.hold_qty || 0}}  {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>{{ result.received_qty }} {{ result.unit }}</clr-dg-cell>
+                      <clr-dg-cell>
+                          <button class="btn btn-sm btn-info" (click)="view(result)">PROCEED</button>
+                      </clr-dg-cell>
+                  </clr-dg-row>
+
+              </clr-datagrid>
+            </div>
+ 
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger"routerLink="/store/raw">{{'common.close' | translate}}</button>
+  </div>
+</div>
+ 
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card recv-page">
+    <header class="card-header mef-panel-header">
+      <h2 class="mef-panel-header__title">Dedusting Material Details</h2>
+      <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+    </header>
+    <div class="card-block">
+      <div class="card-text">
+
+        <table class="table table-border" style="border: 1px solid black;">
+          <tr>
+            <td style="text-align: left;"><b>Receiving No.:</b></td>
+            <td style="text-align: left;">{{ selectedReport['receiving_no'] }}</td>
+            <td style="text-align: left;"><b>Receiving Dt. :</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['receiving_date'] |date: 'dd-MM-yyyy' }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Name:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_name'] }}</td>
+            <td style="text-align: left;"><b>Material Code:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['material_code'] }}</td>
+          </tr>
+          <tr >
+            <td style="text-align: left;"><b>Vendor No. :</b></td>
+            <td style="text-align: left;">{{ selectedReport['vendor_no'] }}</td>
+            <td style="text-align: left;"><b>Vendor Name :</b></td>
+            <td style="text-align: left;">{{ selectedReport['vendor_name'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Payment Slip:</b></td>
+            <td style="text-align: left;">{{ selectedReport['ch_no'] }}</td>
+            <td style="text-align: left;"><b>Payment Slip Date:</b></td>
+            <td style="text-align: left;">{{ selectedReport['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>PO No.:</b></td>
+            <td style="text-align: left;">{{ selectedReport['po_no'] }}</td>
+            <td style="text-align: left;"><b>Material Type:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_type'] }}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left;"><b>Material Subtype:</b></td>
+            <td style="text-align: left;">{{ selectedReport['material_subtype'] }}</td>
+            <td style="text-align: left;"><b>Qty:</b></td>
+            <td style="text-align: left;border-right: 1px solid black;">{{ selectedReport['qty']}} {{selectedReport['unit'] }}</td>
+          </tr>
+          <!-- <tr>
+            <td style="text-align: left;"><b>Material For:</b></td>
+            <td style="text-align: left;">{{ selectedReport['materialForName'] }}</td>
+          </tr> -->
+        </table>
+
+        <h3>Labeling Details:</h3>
+ 
+        <table class="table table-border" >
+          <tr>
+            <td style="font-weight:bolder; background-color:aqua;">Medicap Lot No</td>
+            <td style="font-weight:bolder; background-color:aqua;">Batch Qty</td>
+            <td style="font-weight:bolder; background-color:aqua;">Pack Size</td>
+            <td style="font-weight:bolder; background-color:aqua;">{{'common.unit' | translate}}</td>
+            <td style="font-weight:bolder; background-color:aqua;">No Of Containers</td>
+            <td style="font-weight:bolder; background-color:aqua;">Mfg Date</td>
+            <td style="font-weight:bolder; background-color:aqua;">Exp Date</td>
+            <td style="font-weight:bolder; background-color:aqua;">COA Received:</td>
+            <td style="font-weight:bolder; background-color:aqua;">Upload COA:</td>
+          </tr>
+          <tr *ngFor="let list of selectedReport['batches'] ;let i=index">
+            <td style="font-weight: bolder;color: blue;">{{list.batch_no}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.qty_received}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.pack_size}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.unit}}</td>
+            <td style="font-weight: bolder;color: blue;">{{ list.total_containers }}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.mfg_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+            <td style="font-weight: bolder;color: blue;">{{list.coa_received}}</td>
+            <td style="font-weight: bolder;color: blue;" >
+              <button class="btn btn-info btn-sm" [disabled]="list.coa_files === ''"  (click)="viewCoafile(list.coa_files)">{{'common.view' | translate}}</button>  
+            </td>
+          </tr>
+        </table>
+      
+        <h3>Dedusting Details:</h3>
+        <form #dedustingForm="ngForm">
+
+          <table class="table table-border">
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Vacuum</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Operated By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['equipment_code']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['operator']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['vsdate'] | date: 'dd-MM-yyyy'}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['vfrom_time']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['vto_time']}}</td>
+            </tr>
+          </table>
+
+          <table class="table table-border" >
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Area Cleaned By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['area_cleaned_by']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['area_sdate'] | date: 'dd-MM-yyyy'}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['area_cleaned_from']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['area_cleaned_to']}}</td>
+            </tr>
+          </table>
+
+          <table class="table table-border" >
+            <tr>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Equipment Cleaned By</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.date' | translate}}</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Start Time</th>
+              <th style="background-color: rgb(14, 67, 112); color: white;">Stop Time</th>
+            </tr>
+            <tr>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['equip_cleaned_by']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['equip_sdate'] | date: 'dd-MM-yyyy'}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['equip_cleaned_from']}}</td>
+              <td style="text-align:left; color:blue;"> {{dedusting_details['equip_cleaned_to']}}</td>
+            </tr>
+          </table>
+
+        </form>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadPDF('manual')">{{'common.download' | translate}}</button>
+      <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+</div>

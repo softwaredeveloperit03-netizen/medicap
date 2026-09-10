@@ -1,0 +1,180 @@
+<div class="card recv-page" *ngIf="!isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Sampling of Retest</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" routerLink="/qc/sampling/retest">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="clr-row">
+      <div class="clr-col-lg-4">
+        <label>Search</label>
+        <input type="text" placeholder="Search..." [(ngModel)]="searchQuery" (keyup)="applyFilter()">
+      </div>
+    </div>
+    <clr-datagrid class="recv-datagrid" [clrDgLoading]="loading">
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>Material Type</clr-dg-column>
+      <clr-dg-column>Category</clr-dg-column>
+      <clr-dg-column>Material Code</clr-dg-column>
+      <clr-dg-column>Material Name</clr-dg-column>
+      <clr-dg-column>Medicap Lot No</clr-dg-column>
+      <clr-dg-column>Receiving no.</clr-dg-column>
+      <clr-dg-column>Release Date</clr-dg-column>
+      <clr-dg-column>Retest Date</clr-dg-column>
+      <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_type || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_subtype || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_code || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.material_name || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.batch_no || res.ar_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.grn_no || '-' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.release_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ res.retest_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-info btn-sm" (click)="view(i)">{{'common.view' | translate}}</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+      <clr-dg-placeholder *ngIf="!loading && !results?.length">{{'common.noRecords' | translate}}</clr-dg-placeholder>
+    </clr-datagrid>
+  </div>
+</div>
+
+<div class="card recv-page" *ngIf="isView">
+  <header class="card-header mef-panel-header">
+    <h2 class="mef-panel-header__title">Retest Sampling Details</h2>
+    <button type="button" class="btn btn-sm mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <table class="table table-border recv-kv-table">
+      <tr>
+        <td><b>Material Code</b></td><td>{{ selectedResult.material_code }}</td>
+        <td><b>Material Name</b></td><td>{{ selectedResult.material_name }}</td>
+      </tr>
+      <tr>
+        <td><b>Medicap Lot No</b></td><td>{{ selectedResult.batch_no || selectedResult.ar_no }}</td>
+        <td><b>Receiving no.</b></td><td>{{ selectedResult.grn_no }}</td>
+      </tr>
+      <tr>
+        <td><b>Release Date</b></td><td>{{ selectedResult.release_date | date:'dd-MM-yyyy' }}</td>
+        <td><b>Retest Date</b></td><td>{{ selectedResult.retest_date | date:'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+
+    <form #areaForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>Balance ID</label>
+          <select name="balance_id" ngModel required (change)="selectBalance($any($event.target).selectedIndex)">
+            <option></option>
+            <option *ngFor="let balance of balances" [value]="balance.equipment_code">{{ balance.equipment_code }} - {{ balance.equipment_name }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>LAF ID</label>
+          <select name="laf_id" ngModel required (change)="selectLAF($any($event.target).selectedIndex)">
+            <option></option>
+            <option *ngFor="let equipment of lafs" [value]="equipment.equipment_code">{{ equipment.equipment_code }} - {{ equipment.equipment_name }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Cleaning status of area</label>
+          <select name="cleaning_status" ngModel="Satisfactory" required>
+            <option>Satisfactory</option>
+            <option>Not Satisfactory</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Temp. (℃)</label>
+          <input type="text" name="temp" ngModel required>
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Relative Humidity (%)</label>
+          <input type="text" name="humidity" ngModel required>
+        </div>
+      </div>
+
+      <h4>Start LAF</h4>
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <button type="button" class="btn btn-primary" (click)="getCurrentTime()">START</button>
+          <input type="time" name="laf_start_time" [(ngModel)]="start_time" readonly tabindex="-1">
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Pressure Differential Reading</label>
+          <input type="text" name="pressure_reading" ngModel required>
+        </div>
+      </div>
+
+      <table class="table table-border recv-kv-table">
+        <tr>
+          <th>Containers Received</th>
+          <th>Containers Sampled</th>
+          <th>Sample Qty / Container</th>
+          <th>Reserve Sample Qty</th>
+          <th>{{'common.unit' | translate}}</th>
+        </tr>
+        <tr>
+          <td><input type="text" name="containers_input" [(ngModel)]="containers" (keyup)="calculation()"></td>
+          <td><input type="text" name="sampling_containers_input" [(ngModel)]="sampling_containers" (keyup)="calculation()"></td>
+          <td><input type="text" name="sample_qty_input" [(ngModel)]="sample_qty" (keyup)="calculation()"></td>
+          <td><input type="text" name="reserve_qty_input" [(ngModel)]="reserve_qty" (keyup)="calculation()"></td>
+          <td>
+            <select name="sample_unit_input" [(ngModel)]="sample_unit" (change)="calculation()">
+              <option></option>
+              <option *ngFor="let unit of units">{{ unit.unit }}</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+
+      <table class="table table-border recv-kv-table" *ngIf="container_details?.length">
+        <tr>
+          <th>Container No.</th>
+          <th>Sample Qty</th>
+          <th>Reserve Qty</th>
+          <th>Total Qty</th>
+          <th>UOM</th>
+        </tr>
+        <tr *ngFor="let container of container_details; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ container.sample_qty }}</td>
+          <td>{{ container.reserve_qty }}</td>
+          <td>{{ container.total_qty }}</td>
+          <td>{{ container.unit }}</td>
+        </tr>
+      </table>
+
+      <div class="clr-row">
+        <div class="clr-col-lg-6">
+          <label>Proper consignment label affixed</label>
+          <select name="label_affixed" ngModel required>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Condition of Containers</label>
+          <select name="container_condition" ngModel required>
+            <option>Intact</option>
+            <option>Damaged Unacceptable</option>
+            <option>Partially Damage But Acceptable</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Start Sampling</label>
+          <input type="time" name="start_sampling" ngModel required>
+        </div>
+        <div class="clr-col-lg-6">
+          <label>Stop Sampling</label>
+          <input type="time" name="stop_sampling" ngModel required>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-success" (click)="saveSampling(areaForm)">{{'common.save' | translate}}</button>
+    <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>

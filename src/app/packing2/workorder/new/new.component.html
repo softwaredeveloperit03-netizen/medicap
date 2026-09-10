@@ -1,0 +1,458 @@
+﻿<div class="card">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Packing Work Order / Data Sheet</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/packing/workorder">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <form #formulaForm="ngForm">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Client Type:</label>
+            <select name="client_type" [(ngModel)]="client_type" required>
+              <option>Own</option>
+              <option>Third Party</option>
+              <option>LL</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="client_type !== 'Own'">
+            <label>Client Name</label>
+            <select name="client_code" ngModel (change)="getdivision($event.target.selectedIndex)">
+              <option  *ngFor="let list of clients" value="{{list.client_code}}">{{list.company}}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="client_type !== 'Own'">
+            <label>Division:</label>
+            <select name="division" ngModel>
+              <option></option>
+              <option *ngFor="let list of division">{{list.division}}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Category:</label>
+            <select name="category" ngModel required>
+              <option>Export</option>
+              <option>Domestic</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Combi-Kit:</label>
+            <select name="combikit" [(ngModel)]="combikit" required>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+          <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="combikit == 'Yes'">
+            <label>No. of Products in Combo-Kit:</label>
+            <select name="combikit_no" ngModel required>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+            </select>
+          </div> -->
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Dosage Form:</label>
+            <select name="dosage_form" ngModel required (change)="selectDosage($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let dosage of dosages" [value]="dosage.dosage_form">{{ dosage.dosage_form }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Product Name:</label>
+            <select name="product_code" ngModel required (change)="getproductdetails($event.target.selectedIndex)">
+              <option></option>
+              <option *ngFor="let product of products" [value]="product.product_code">{{product.product_name}} - {{ product.grade }}</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Generic Name:</label>
+            <textarea rows="2" name="generic" [ngModel]="selectedProd['generic_name']" readonly></textarea>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+            <label>Batch Size:</label>
+            <input type="text" name="batch_size" ngModel required>
+          </div>
+        </div>
+        <h3>Packing Configuration:</h3>
+        <clr-checkbox-container clrInline>
+          <label>Packing Style:</label>
+          <clr-checkbox-wrapper>
+            <input type="checkbox" clrCheckbox name="mono" [(ngModel)]="mono" />
+            <label>Mono</label>
+          </clr-checkbox-wrapper>
+          <clr-checkbox-wrapper>
+            <input type="checkbox" clrCheckbox name="outer" [(ngModel)]="outer" />
+            <label>Outer</label>
+          </clr-checkbox-wrapper>
+          <clr-checkbox-wrapper>
+            <input type="checkbox" clrCheckbox name="shrink" [(ngModel)]="shrink" />
+            <label>Shrink</label>
+          </clr-checkbox-wrapper>
+        </clr-checkbox-container>
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Primary Qty:</label>
+            <input type="text" name="primary_qty" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="mono">
+            <label>Mono Carton Qty:</label>
+            <input type="text" name="mono_qty" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="outer">
+            <label>Outer Carton Qty:</label>
+            <input type="text" name="outer_qty" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="shrink">
+            <label>Shrink Qty:</label>
+            <input type="text" name="shrink_qty" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Shipper Qty:</label>
+            <input type="text" name="shipper_qty" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Primary packing Type:</label>
+            <select name="packing_type" ngModel required>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">Alu-Alu Blister</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">Alu-Alu Strip</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">PVC Alu Blister</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">Amber PVC Alu Blister</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">HDPE Bottle</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">Glass Bottle</option>
+                <option *ngIf="dosage == 'Tablet' || 'Powder' || 'Capsule'">Sachet</option>
+                <option *ngIf="dosage == 'Liquid'">Glass Bottle</option>
+                <option *ngIf="dosage == 'Liquid'">PVC Bottle</option>
+                <option *ngIf="dosage == 'Liquid'">HDPE Bottle</option>
+                <option *ngIf="dosage == 'Cream || Gel || Ointment'">Alu Tube</option>
+                <option *ngIf="dosage == 'Cream || Gel || Ointment'">PVC Tube</option>
+                <option *ngIf="dosage == 'Cream || Gel || Ointment'">HDPE Bottle</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Shipper Configuration:</label>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              Width: ( mm ) <input type="text" name="average_weight" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              Lenght: ( mm )<input type="text" name="average_weight" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              Height: ( mm )<input type="text" name="average_weight" ngModel required>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Ply: </label>
+              <select ngModel name="ply">
+                  <option>3 Ply</option>
+                  <option>5 Ply</option>
+                  <option>7 ply</option>
+              </select>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Printing Matter Language:</label>
+              <input type="text">
+          </div>
+        </div>
+      </form>
+
+      <h3>Primary Packing Materials:</h3>
+      <form #materialForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_code" ngModel>
+                <option></option>
+                <option *ngFor="let material of primarymaterial;" [value]="material.material_code">{{ material.material_name }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty:</label>
+              <input type="number" name="qty" style="padding: 4px 5px;" (change)="totalqtycln()" (keyup)="totalqtycln()" [(ngModel)]="primaryqty" [min]="0" onkeydown="javascript: return event.keyCode == 69 ? false : true" step=".01" oninput="validity.valid||(value='');" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Overages (%):</label>
+              <input type="number" name="overages" style="padding: 4px 5px;" [(ngModel)]="primaryover" required (change)="totalqtycln()" (keyup)="totalqtycln()">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Total Quantity</label>
+              <input type="number" name="totalqty" style="padding: 4px 5px;" ngModel="{{primarytotal | number : '1.2-2'}}" required readonly>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Unit:</label>
+              <select name="unit" ngModel required style="padding: 4px 5px;">
+                <option></option>
+                <option value="Kg">Kg</option>
+                <option value="Gram">Gram</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Role:</label>
+              <select name="role" ngModel required>
+                <option>Primary</option>
+                <option>Secondary</option>
+                <option>Tertiary</option>
+                <option>Tube</option>
+                <option>Bottole</option>
+                <option>Mono Carton</option>
+                <option>Leaflat</option>
+                <option>Label</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Printing Status:</label>
+              <select name="print" ngModel required>
+                <option>Printed</option>
+                <option>Plan</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <button class="btn btn-primary" (click)="primaryadd(materialForm)" style="margin-top: 30px;">{{'common.add' | translate}}</button>
+            </div>
+          </div>
+      </form>
+
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th>Total Qty</th>
+            <th style="text-align: left;">Role</th>
+            <th style="text-align: left;">Printing Status</th>
+            <th>Del</th>
+        </tr>
+        <tr *ngFor="let comp of primarymaterialList; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td>{{ comp.qty }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>{{ comp.totalqty }} {{ comp.unit }}</td>
+            <td style="text-align: left;">{{ comp.role }}</td>
+            <td style="text-align: left;">{{ comp.print }}</td>
+            <td>
+                <clr-icon shape="trash" class="is-error"></clr-icon>
+            </td>
+        </tr>
+        <tr *ngIf="primarymaterialList.length == 0">
+            <td colspan="7">{{'common.noRecords' | translate}}</td>
+        </tr>
+    </table>
+
+      <h3>Secondary Packing Materials:</h3>
+      <form #rawForm="ngForm">
+          <div class="clr-row">  
+            <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_code" ngModel>
+                <option></option>
+                <option *ngFor="let material of secondaryMaterial;" [value]="material.material_code">{{ material.material_name }} - {{ material.grade }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty:</label>
+              <input type="number" name="qty" [(ngModel)]="secondaryqty" [min]="0" (change)="totalqtycln()" (keyup)="totalqtycln()" onkeydown="javascript: return event.keyCode == 69 ? false : true" step=".01" oninput="validity.valid||(value='');" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Overages(%):</label>
+              <input type="number" name="overages" [(ngModel)]="secondaryover" required (change)="totalqtycln()" (keyup)="totalqtycln()">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Total Quantity</label>
+              <input type="number" name="totalqty" style="padding: 4px 5px;" ngModel="{{secondarytotal | number : '1.2-2'}}" required readonly>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Unit:</label>
+              <select name="unit" ngModel required>
+                <option></option>
+                <option value="Kg">Kg</option>
+                <option value="Num">Num</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Role:</label>
+              <select name="role" ngModel required>
+                <option>Carton</option>
+                <option>Mono carton</option>
+                <option>Leaflat</option>
+                <option>Sleeves</option>
+                <option>Lable</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-1 clr-col-md-1 clr-col-sm-12 clr-col-xs-12">
+              <button class="btn btn-primary" (click)="secondaryadd(rawForm)" style="margin-top:30px">{{'common.add' | translate}}</button>
+            </div>
+          </div>
+      </form>
+
+      <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th>Qty</th>
+              <th>Overages</th>
+              <th style="text-align: left;">Role</th>
+              <th>Del</th>
+          </tr>
+          <tr *ngFor="let comp of secondarymaterialList; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+              <td style="text-align: left;">{{ comp.role }}</td>
+              <td>
+                  <clr-icon shape="trash" class="is-error"></clr-icon>
+              </td>
+          </tr>
+          <tr *ngIf="secondarymaterialList.length == 0">
+              <td colspan="7">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+
+      <h3>Tertiary Packing Materials List:</h3>
+      <form #tertiaryForm="ngForm">
+          <div class="clr-row">  
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_code" ngModel>
+                <option></option>
+                <option *ngFor="let material of tertiaryMaterial;" [value]="material.material_code">{{ material.material_name }}</option>
+              </select>
+            </div>
+    
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty:</label>
+              <input type="number" name="qty" [(ngModel)]="tertiaryqty" [min]="0" (change)="totalqtycln()" (keyup)="totalqtycln()" onkeydown="javascript: return event.keyCode == 69 ? false : true" oninput="validity.valid||(value=0);" step=".01" required>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Overages(%):</label>
+              <input type="number" name="overages" [(ngModel)]="tertiaryover" required (change)="totalqtycln()" (keyup)="totalqtycln()">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Total Quantity</label>
+              <input type="number" name="totalqty" style="padding: 4px 5px;" ngModel="{{tertiarytotal | number : '1.2-2'}}" required readonly>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Unit:</label>
+              <select name="unit" ngModel required>
+                <option></option>
+                <option value="Kg">Kg</option>
+                <option value="Num">Num</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-1 clr-col-md-1 clr-col-sm-12 clr-col-xs-12">
+              <button class="btn btn-primary" (click)="tertiaryadd(tertiaryForm)" style="margin-top:30px">{{'common.add' | translate}}</button>
+            </div>
+          </div>
+      </form>
+
+      <table class="table">
+          <tr>
+              <th>Sr.</th>
+              <th style="text-align: left;">Material type</th>
+              <th style="text-align: left;">Material Code</th>
+              <th>Qty</th>
+              <th>Overages</th>
+              <th style="text-align: left;">Del</th>
+          </tr>
+          <tr *ngFor="let comp of tertiarymaterialList; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td style="text-align: left;">{{ comp.material_subtype }}</td>
+              <td style="text-align: left;">{{ comp.material_code }}</td>
+              <td>{{ comp.qty }} {{ comp.unit }}</td>
+              <td>{{ comp.overages }}</td>
+              <td>
+                  <clr-icon shape="trash" class="is-error"></clr-icon>
+              </td>
+          </tr>
+          <tr *ngIf="tertiarymaterialList.length == 0">
+              <td colspan="6">{{'common.noRecords' | translate}}</td>
+          </tr>
+      </table>
+
+      
+      <h3>Other Materials:</h3>
+      <form #packForm="ngForm">
+          <div class="clr-row">
+            <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+              <label>Material Name:</label>
+              <select name="material_code" ngModel>
+                <option></option>
+                <option *ngFor="let material of otherMaterial;" [value]="material.material_code">{{ material.material_name }} - {{ material.grade }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Qty:</label>
+              <input type="text" name="qty" ngModel required (change)="totalqtycln()" (keyup)="totalqtycln()">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Overages (%):</label>
+              <input type="number" name="overages" ngModel required (change)="totalqtycln()" (keyup)="totalqtycln()">
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <label>Unit:</label>
+              <select name="unit" ngModel required>
+                <option></option>
+                <option *ngFor="let unit of units">{{ unit.unit }}</option>
+              </select>
+            </div>
+            <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+              <button class="btn btn-primary" (click)="otheradd(packForm)" style="margin-top:30px">{{'common.add' | translate}}</button>
+            </div>
+          </div>
+      </form>
+
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Qty</th>
+            <th>Overages</th>
+            <th>Del</th>
+        </tr>
+        <tr *ngFor="let comp of othermaterialList; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.overages }}</td>
+            <td>
+                <clr-icon shape="trash" class="is-error"></clr-icon>
+            </td>
+        </tr>
+        <tr *ngIf="othermaterialList.length == 0">
+            <td colspan="6">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+
+      <h3>Printed Packing Materials Art Work:</h3>
+      <table class="table">
+        <tr>
+            <th>Sr.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th>Upload</th>
+        </tr>
+        <tr *ngFor="let comp of packingList; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td><clr-icon shape="trash" class="is-error"></clr-icon></td>
+        </tr>
+        <tr *ngIf="packingList.length == 0">
+            <td colspan="6">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="save(formulaForm)">{{'common.save' | translate}}</button>
+  </div>
+</div>

@@ -1,0 +1,136 @@
+<div class="indt">
+  <div class="card indt__card">
+    <div class="card-header indt__header">
+      <div class="indt__header-row clr-row">
+        <div class="clr-col-lg-4"><h2 class="indt__title">Purchase Requisition For Merge</h2></div>
+        <div class="clr-col-lg-8 indt__actions indt__actions--end">
+          <button type="button" class="btn btn-sm indt__btn indt__btn--success" routerLink="/purchase/indend/raw/merge">Merge Purchase Requisition Log</button>
+          <button type="button" class="btn btn-sm indt__btn indt__btn--close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase Requisition' }">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <div class="clr-row">
+          <div class="clr-col-lg-5">
+            <label for="edit-search">Search</label>
+            <input id="edit-search" type="text" class="indt-input" placeholder="Search..." [(ngModel)]="searchQuery" aria-label="Search table">
+          </div>
+          <div class="clr-col-lg-4 indt__merge-actions">
+            <br>
+            <button type="button" class="btn indt__btn indt__btn--success" (click)="mergeMat()">Merge Selected Materials</button>
+          </div>
+        </div>
+        <clr-datagrid class="indt__datagrid" [clrDgLoading]="loading" [clrDgFilter]="searchQuery">
+          <clr-dg-column [clrDgSortable]="false">Select To Merge</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.date' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Request No</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Material Type</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Material Code</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Material Name</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Qty.</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">{{'common.department' | translate}}</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Requirement Date</clr-dg-column>
+          <clr-dg-column [clrDgSortable]="false">Entered By</clr-dg-column>
+          <clr-dg-row *clrDgItems="let indend of filteredMaterials; let i = index" [clrDgItem]="indend" [ngStyle]="{'background-color': materialCodeColors[indend.material_code]}">
+            <clr-dg-cell><input type="checkbox" name="selected{{ i }}" class="indt-checkbox" [(ngModel)]="indend.selected" [attr.aria-label]="'Select row ' + (i + 1)" title="Select row {{ i + 1 }}"></clr-dg-cell>
+            <clr-dg-cell>{{ indend.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.request_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.req_qty }} {{ indend.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.department }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.requirement || 'NA' }}</clr-dg-cell>
+            <clr-dg-cell>{{ indend.entry_by }}</clr-dg-cell>
+          </clr-dg-row>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="isMerge" clrModalSize="xl" [clrModalClosable]="true" class="indt-modal">
+  <h3 class="modal-title">Merge Materials Make Single PO</h3>
+  <div class="modal-body">
+    <div class="card indt__card">
+      <div class="card-block">
+        <div class="card-text">
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <div class="indt-table-wrap" *ngIf="final_material.length == 0">
+                <table class="indt-table table table-border">
+                  <thead>
+                    <tr>
+                      <th>Sr. No.</th>
+                      <th>{{'common.date' | translate}}</th>
+                      <th>Request No</th>
+                      <th>Material Type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Qty.</th>
+                      <th>{{'common.department' | translate}}</th>
+                      <th>Entered By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                                <tr *ngFor="let indend of meargeList; let i = index"
+                                    [ngStyle]="{'background-color': materialCodeColors[indend.material_code]}">
+                                    <td>{{i+1}}</td>
+                                    <td>{{indend.entry_date | date:'dd-MM-yyyy'}}</td>
+                                    <td>{{indend.request_no}}</td>
+                                    <td>{{indend.material_type}}</td>
+                                    <td>{{indend.material_code}}</td>
+                                    <td>{{indend.material_name}}</td>
+                                    <td>{{indend.req_qty}} {{indend.unit}}</td>
+                                    <td>{{indend.department}}</td>
+                                    <td>{{indend.entry_by}}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" class="indt__total-label"><b>Total Qty.</b></td>
+                                    <td colspan="3" class="indt__total-value">{{ totalQty }} {{ meargeList[0]?.unit }}</td>
+                                </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="indt-table-wrap" *ngIf="final_material.length > 0">
+                <table class="indt-table table table-border">
+                  <thead>
+                    <tr>
+                      <th>Sr. No.</th>
+                      <th>{{'common.date' | translate}}</th>
+                      <th>Request No</th>
+                      <th>Material Type</th>
+                      <th>Material Code</th>
+                      <th>Material Name</th>
+                      <th>Qty.</th>
+                      <th>{{'common.department' | translate}}</th>
+                      <th>Entered By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let indend of final_material; let i = index" [ngStyle]="{'background-color': materialCodeColors[indend.material_code]}">
+                      <td>{{ i + 1 }}</td>
+                      <td>####</td>
+                      <td>####</td>
+                      <td>{{ indend.material_type }}</td>
+                      <td>{{ indend.material_code }}</td>
+                      <td>{{ indend.material_name }}</td>
+                      <td>{{ indend.req_qty }} {{ indend.unit }}</td>
+                      <td>{{ indend.department }}</td>
+                      <td>####</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="button" *ngIf="!isBtn" class="btn indt__btn indt__btn--primary" (click)="SaveMerge()">Merge Materials</button>
+        <button type="button" *ngIf="isBtn" class="btn indt__btn indt__btn--success" (click)="save()">{{'common.submit' | translate}}</button>
+      </div>
+    </div>
+  </div>
+</clr-modal>

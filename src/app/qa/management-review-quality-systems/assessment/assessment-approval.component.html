@@ -1,0 +1,90 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">MRT Review / Approval ({{ formNo }})</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+          <button class="btn btn-sm" routerLink="/qa/management-review-quality-systems/assessment" style="background-color: red; color: white">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column>Assessment No.</clr-dg-column>
+        <clr-dg-column>Review Period</clr-dg-column>
+        <clr-dg-column>Year</clr-dg-column>
+        <clr-dg-column>Prepared By</clr-dg-column>
+        <clr-dg-column>Action</clr-dg-column>
+        <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.assessment_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.review_period }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.review_year }}</clr-dg-cell>
+          <clr-dg-cell>{{ row.prepared_by }}</clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">REVIEW</button></clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+      <div *ngIf="!loading && !results?.length" style="text-align:center;padding:20px;color:#64748b">No pending assessments for MRT.</div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">MRT Review — {{ selected?.assessment_no }}</div>
+    <div class="card-block">
+      <table class="mrq-form__sheet-table">
+        <tr>
+          <td class="mrq-form__label-cell">REF:</td>
+          <td class="mrq-form__value-cell">{{ sopRef }}</td>
+          <td class="mrq-form__label-cell">Period:</td>
+          <td class="mrq-form__value-cell">{{ selected?.review_period }} / {{ selected?.review_year }}</td>
+        </tr>
+        <tr>
+          <td class="mrq-form__label-cell">Prepared By:</td>
+          <td colspan="3" class="mrq-form__value-cell">{{ selected?.prepared_by }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Performance Indicators</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Indicator</th><th>Status</th><th>Summary</th><th>Remarks</th></tr>
+        <tr *ngFor="let ind of selected?.indicators; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ ind.name }}</td>
+          <td>{{ ind.status }}</td>
+          <td>{{ ind.summary }}</td>
+          <td>{{ ind.remarks }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">CAPA Actions</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Action</th><th>Responsible</th><th>Target</th></tr>
+        <tr *ngFor="let act of selected?.capa_actions; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ act.action }}</td>
+          <td>{{ act.responsible }}</td>
+          <td>{{ act.target_date | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr *ngIf="!selected?.capa_actions?.length"><td colspan="4">No CAPA actions</td></tr>
+      </table>
+
+      <div class="clr-row">
+        <div class="clr-col-12"><label>Overall Conclusion</label><textarea class="mrq-form__textarea" readonly [value]="selected?.overall_conclusion || ''"></textarea></div>
+        <div class="clr-col-12"><label>Recommendations</label><textarea class="mrq-form__textarea" readonly [value]="selected?.recommendations || ''"></textarea></div>
+        <div class="clr-col-12">
+          <label>MRT Comment</label>
+          <textarea class="mrq-form__textarea" [(ngModel)]="mrtComment" name="mrt_comment"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-success" (click)="decide('approve')" [disabled]="processing">APPROVE</button>
+      <button class="btn btn-warning" (click)="decide('return')" [disabled]="processing">RETURN</button>
+      <button class="btn btn-primary" (click)="downloadPdf(selected.id)">PDF</button>
+      <button class="btn btn-danger" (click)="isView = false">BACK</button>
+    </div>
+  </div>
+</div>

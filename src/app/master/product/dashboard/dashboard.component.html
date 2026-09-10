@@ -1,0 +1,442 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Products</div>
+      <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-success" routerLink="new">New Product</button>
+
+        <button class="btn btn-sm btn-danger" routerLink="/master">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text datagrid-wrapper">
+      <clr-datagrid [clrDgLoading]="loading">
+
+          <clr-dg-column>Sr.No</clr-dg-column>
+          <clr-dg-column>FG Type</clr-dg-column>
+          <!-- <clr-dg-column clrDgField="product_code" *ngIf="plant_id !=='72'">Product Code</clr-dg-column> -->
+          <clr-dg-column>Product Code</clr-dg-column>
+          <clr-dg-column>Product Nature</clr-dg-column>
+          <clr-dg-column>Product Name</clr-dg-column>
+          <clr-dg-column>Grade</clr-dg-column>
+
+          <clr-dg-column>Manufactured Under</clr-dg-column>
+          <!-- <clr-dg-column clrDgField="storage_condition">Storage Condition</clr-dg-column> -->
+          <clr-dg-column >Action</clr-dg-column>
+
+          <clr-dg-row *ngFor="let result of products; let i = index" [clrDgItem]="result">
+          <clr-dg-cell>{{ calculateStartSrNo() + i+1}}.</clr-dg-cell>
+          <clr-dg-cell>{{ result.product_type }}</clr-dg-cell>
+          <!-- <clr-dg-cell >{{ result.product_code }}</clr-dg-cell> -->
+          <clr-dg-cell>{{ result.product_code1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.product_nature }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.product_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ result.grade }}</clr-dg-cell>
+
+          <clr-dg-cell>{{ result.manufactured_under }}</clr-dg-cell>
+          <!-- <clr-dg-cell>{{ result.storage_condition }}</clr-dg-cell> -->
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-warning-outline btn-icon" (click)="view(calculateStartSrNo() + i)">
+              <clr-icon shape="eye" class="is-warning" style="width:10px; height:10px;" ></clr-icon>
+            </button>
+            <button class="btn btn-sm btn-warning-outline btn-icon" (click)="edit(calculateStartSrNo() + i)">
+              <clr-icon shape="pencil" class="is-warning" style="width:10px; height:10px;" ></clr-icon>
+            </button>
+            <button class="btn btn-sm btn-danger-outline btn-icon" (click)="del(calculateStartSrNo() + i)">
+              <clr-icon shape="trash" class="is-danger" style="width:10px; height:10px;" ></clr-icon>
+            </button>
+
+        </clr-dg-cell>
+      </clr-dg-row>
+      <clr-dg-footer>  <!--copy this <clr-dg-footer> complete tag -->
+        <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+          {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+          of {{pagination.totalItems}}
+        </clr-dg-pagination>
+      </clr-dg-footer>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="download()">Download</button>
+  </div>
+</div>
+
+
+
+
+<clr-modal [(clrModalOpen)]="isEdit" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Update Product</h3>
+  <div class="modal-body">
+    <form #productForm="ngForm">
+      <div class="clr-row">
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Finished Goods Type:<span style="color: red">*</span></label>
+          <select name="product_type" [(ngModel)]="product_type" required>
+            <option>API</option>
+            <option>Intermediate</option>
+            <option>Fine Chemicals</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Product Nature:<span style="color: red">*</span></label>
+          <select name="product_nature" ngModel required>
+            <option>SOLID</option>
+            <option>LIQUID</option>
+            <option>SEMI SOLID</option>
+            <option>GASES</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Product Name:<span style="color: red">*</span></label>
+          <input type="text" name="product_name" [(ngModel)]="product_name" #product="ngModel" required maxlength="40">
+          <span style="color: red;" *ngIf="product.invalid && product.touched">Please Enter Product Name!</span>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+          <label>Grade:<span style="color: red">*</span></label>
+          <select name="grade" [(ngModel)]="grade" required>
+            <option *ngFor="let grade of grades">{{ grade.grade }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Manufactured Under:</label>
+          <select name="manufactured_under" ngModel="Own" required (change)="getClients($event.target.value)">
+            <option>Own</option>
+            <option>Client</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+          <label>Product Appearance:<span style="color: red">*</span></label>
+          <input type="text" name="product_apperance" [(ngModel)]="product_apperance" required #apperance="ngModel"
+            placeholder="e.g. amorphous, crystal" maxlength="50" pattern="[A-Z a-z]{1,50}">
+          <span style="color: red;" *ngIf="apperance.invalid && apperance.touched">Please Enter Character Only!</span>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+          <label>Storage Condition:<span style="color: red">*</span></label>
+          <input type="text" name="storage_condition" [(ngModel)]="storage_condition" maxlength="30"
+            #condition="ngModel" required>
+          <span style="color: red;" *ngIf="storage_condition.invalid && storage_condition.touched">Please Enter Storage
+            Condition!</span>
+        </div>
+        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+          <label>Manufactured Under:<span style="color: red">*</span> </label>
+          <select name="manufactured_under" [(ngModel)]="manufactured_under" required
+            (change)="getClients($event.target.value)">
+            <option>Own</option>
+            <option>Client</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12"
+          *ngIf="productForm.value.manufactured_under == 'Client'">
+          <label>Manufactured For Client:<span style="color: red">*</span></label>
+          <select name="manufactured_for" [(ngModel)]="manufactured_for" required>
+            <option *ngFor="let client of clients">{{ client.company }}</option>
+          </select>
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+          <label>Type:<span style="color: red">*</span> </label>
+          <select name="type" [(ngModel)]="type" required>
+            <option>Regulatory</option>
+            <option>Non Regulatory</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="editProduct(productForm)">Update</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+<clr-modal [(clrModalOpen)]="isDelete" [clrModalSize]="'xl'">
+  <h3 class="modal-title" style="color: green;">Are you sure want to delete this product:</h3>
+  <div class="modal-body">
+    <table class="table table-border">
+      <tr>
+        <td style="text-align: left;width: 15%;">Product Code:</td>
+        <td style="text-align: left;">{{selectedResult['product_code']}}</td>
+        <td style="text-align: left;width:15%">Product Name:</td>
+        <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left;">Grade:</td>
+        <td style="text-align: left;">{{selectedResult['grade']}}</td>
+        <td style="text-align: left;">Product Type:</td>
+        <td style="text-align: left;">{{selectedResult['product_type']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left;">Product Appearance:</td>
+        <td style="text-align: left;">{{selectedResult['product_apperance']}}</td>
+        <td style="text-align: left;">Storage Condition:</td>
+        <td style="text-align: left;">{{selectedResult['storage_condition']}}</td>
+      </tr>
+      <tr>
+        <td style="text-align: left;">Manufactured Under:</td>
+        <td style="text-align: left;">{{selectedResult['manufactured_under']}}</td>
+        <td style="text-align: left;">Manufactured For:</td>
+        <td style="text-align: left;" *ngIf="selectedResult['manufactured_for']!==''">
+          {{selectedResult['manufactured_for']}}</td>
+        <td style="text-align: left;" *ngIf="selectedResult['manufactured_for']==''">NA</td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-danger" (click)="delete()">Delete</button>
+  </div>
+</clr-modal>
+
+
+
+
+
+
+
+
+
+
+
+
+  <!-- <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Product Details</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm" (click)="isView=false" style="background-color: red;color: white;">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+      <table class="table table-border">
+        <tr>
+          <td style="text-align: left;width: 15%;">Product Code:</td>
+          <td style="text-align: left;">{{selectedResult['product_code']}}</td>
+          <td style="text-align: left;width:15%">Product Name:</td>
+          <td style="text-align: left;">{{selectedResult['product_name']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Grade:</td>
+          <td style="text-align: left;">{{selectedResult['grade']}}</td>
+          <td style="text-align: left;">Product Type:</td>
+          <td style="text-align: left;">{{selectedResult['product_type']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Product Appearance:</td>
+          <td style="text-align: left;">{{selectedResult['product_apperance']}}</td>
+          <td style="text-align: left;">Storage Condition:</td>
+          <td style="text-align: left;">{{selectedResult['storage_condition']}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;">Manufactured Under:</td>
+          <td style="text-align: left;">{{selectedResult['manufactured_under']}}</td>
+          <td style="text-align: left;">Manufactured For:</td>
+          <td style="text-align: left;" *ngIf="selectedResult['manufactured_under']=='Client'">
+            {{selectedResult['company']}}</td>
+          <td style="text-align: left;" *ngIf="selectedResult['manufactured_under']=='Own'">NA</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div> -->
+
+<div class="card" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;"> Finished Product</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="viewf()" style="background-color: red;color: white;">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+        <div class="clr-row">
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Finished Goods Type:<span style="color: red">*</span></label>
+            <input type="text" name="product_type" [(ngModel)]="product_type" readonly>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Product Nature:<span style="color: red">*</span></label>
+            <input type="text" name="product_nature" [(ngModel)]="product_nature" readonly>
+          </div>
+
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+            <label>Product Name:<span style="color: red">*</span></label>
+            <input type="text" name="product_name" [(ngModel)]="product_name" readonly>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Grade:<span style="color: red">*</span></label>
+            <input type="text" name="grade" [(ngModel)]="grade" readonly>
+          </div>
+
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+            <label>Manufactured Under:</label>
+            <input type="text" name="manufactured_under" [(ngModel)]="manufactured_under" readonly>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-4">
+            <label>UOM:<span style="color: red">*</span></label>
+            <input type="text" name="uom" [(ngModel)]="uom" readonly>
+          </div>
+
+          <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-4 clr-col-xs-4">
+            <label>Alternate UOM:<span style="color: red">*</span></label>
+            <input type="text" name="alt_uom" [(ngModel)]="alt_uom" readonly>
+          </div>
+        </div>
+
+        <div class="clr-row">
+          <div class="card">
+            <div class="card-header" style="text-align: center">
+              <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+                  Other Information</div>
+                <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+
+                </div>
+              </div>
+            </div>
+            <div class="card-block">
+              <div class="row container-fluid">
+                <div class="clr-row">
+
+                   <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>CAS Number:</label>
+                    <input type="text" name="cas_number" [(ngModel)]="cas_number" readonly>
+                  </div>
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Molecular Weight (gm/mole):</label>
+                    <input type="text" name="molecular_weight" [(ngModel)]="molecular_weight" readonly>
+                  </div>
+
+                   <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Molecular Formula:</label>
+                    <input type="text" name="molecular_formula" [(ngModel)]="molecular_formula" readonly>
+                  </div>
+
+                   <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Storage Condition:</label>
+                    <input type="text" name="storage_condition" [(ngModel)]="storage_condition" readonly>
+                  </div>
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Safety Instructions:</label>
+                    <input type="text" name="safety_instructions" [(ngModel)]="safety_instructions" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                    <label>Product Appearance:</label>
+                    <input type="text" name="product_apperance" [(ngModel)]="product_apperance" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Other Description:</label>
+                    <input type="text" name="other_description" [(ngModel)]="other_description" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>CE Number:</label>
+                    <input type="text" name="ce_number" [(ngModel)]="ce_number" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Color Index:</label>
+                    <input type="text" name="color_index" [(ngModel)]="color_index" readonly>
+                  </div>
+
+                  <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>MSDS Upload:</label>
+                    <input type="text" name="msds_file_path" [(ngModel)]="msds_file_path" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Product License :</label>
+                    <input type="file" name="product_license_path" [(ngModel)]="product_license_path"
+                      (change)="onFileChanged($event,3)">
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>WHO COPP :</label>
+                    <input type="file" name="who_copp_path" [(ngModel)]="who_copp_path"
+                      (change)="onFileChanged($event,4)">
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>CE Certificate :</label>
+                    <input type="file" name="ce_certificate_path" [(ngModel)]="ce_certificate_path"
+                      (change)="onFileChanged($event,5)">
+                  </div> -->
+
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-6 clr-col-xs-12">
+                    <label>QC Lead Time(Days)</label>
+                    <input type="text" name="qc_lead_time" [(ngModel)]="qc_lead_time" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>PKA Value:</label>
+                    <input type="text" name="pka_value" [(ngModel)]="pka_value" readonly>
+                  </div>
+
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Market Type: </label>
+                    <input type="text" name="market_type" [(ngModel)]="market_type" readonly>
+                  </div>
+                </div>
+
+                <h3>Attachments:</h3>
+            <table class="table">
+                <tr>
+                    <td style="text-align: left;">MSDS Upload:</td>
+                    <td>
+                        <button class="btn btn-sm" (click)="openlic(selectedResult['product_lic'])">VIEW FILE</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Product License :</td>
+                    <td>
+                        <button class="btn btn-sm" (click)="openfsc(selectedResult['fsc'])">VIEW FILE</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">COPP:</td>
+                    <td>
+                        <button class="btn btn-sm" (click)="opencopp(selectedResult['copp'])">VIEW FILE</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">CE Certificate :</td>
+                    <td>
+                        <button class="btn btn-sm" (click)="opencertificate(selectedResult['copp'])">VIEW FILE</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Uploaded Photo :</td>
+                    <td>
+                        <button class="btn btn-sm" (click)="openphoto(selectedResult['photo'])">VIEW FILE</button>
+                    </td>
+                </tr>
+            </table>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+  <!-- <div class="card-footer">
+    <button type="button" class="btn btn-danger" (click)="isView=false">CLOSE</button>
+  </div> -->
+</div>

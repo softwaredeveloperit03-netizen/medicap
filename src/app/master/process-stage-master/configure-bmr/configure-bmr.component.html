@@ -1,0 +1,1153 @@
+<section class="cbmr-page" aria-label="Configure BMR">
+  <header class="cbmr-header cbmr-no-print">
+    <div class="cbmr-header__titles">
+      <h1 class="cbmr-title">Configure BMR</h1>
+      <p class="cbmr-subtitle">
+        Choose dosage form and process template from Process Type Master, then review serial stage / step /
+        substep structure with provisions.
+      </p>
+    </div>
+    <div class="cbmr-header__tools">
+      <button type="button" class="btn btn-outline btn-sm" routerLink="/master/process-stage-master">Back</button>
+      <button
+        type="button"
+        class="btn btn-danger btn-sm"
+        routerLink="/master"
+        [queryParams]="{ dept: deptId }"
+      >
+        Close
+      </button>
+    </div>
+  </header>
+
+  <div class="cbmr-alert-wrap cbmr-no-print">
+    <clr-alert clrAlertType="danger" [clrAlertClosable]="false" *ngIf="schemaStatus === 'error'">
+      <clr-alert-item>
+        <span class="alert-text">{{ schemaError }}</span>
+      </clr-alert-item>
+    </clr-alert>
+
+    <clr-alert clrAlertType="info" [clrAlertClosable]="false" *ngIf="schemaStatus === 'loading'">
+      <clr-alert-item>
+        <span class="alert-text">Synchronising Configure BMR table…</span>
+      </clr-alert-item>
+    </clr-alert>
+  </div>
+
+  <div class="cbmr-panel cbmr-no-print" *ngIf="schemaStatus === 'ready'">
+    <fieldset class="cbmr-fieldset">
+      <legend class="cbmr-legend">Dosage form &amp; process mapping</legend>
+      <div class="cbmr-grid">
+        <div class="cbmr-field">
+          <label for="cbmr-dosage">Dosage form</label>
+          <select
+            id="cbmr-dosage"
+            name="selectedDosageForm"
+            [(ngModel)]="selectedDosageForm"
+            (ngModelChange)="onDosageFormChange()"
+          >
+            <option [value]="cbmrDosagePlaceholder">— Select dosage form —</option>
+            <option *ngFor="let df of dosageFormOptions" [value]="df">{{ dosageFormOptionLabel(df) }}</option>
+          </select>
+          <span class="cbmr-hint" *ngIf="loadingDefinitions">Loading dosage forms…</span>
+        </div>
+        <div class="cbmr-field">
+          <label for="cbmr-process">Process template</label>
+          <select
+            id="cbmr-process"
+            name="selectedProcessTitle"
+            [(ngModel)]="selectedProcessTitle"
+            (ngModelChange)="onProcessTemplateChange()"
+            [disabled]="selectedDosageForm === cbmrDosagePlaceholder"
+          >
+            <option value="">— Select template —</option>
+            <option *ngFor="let d of filteredDefinitions()" [value]="d.process_title">{{ processDefLabel(d) }}</option>
+          </select>
+          <span class="cbmr-hint" *ngIf="loadingDefinitions">Loading templates…</span>
+          <span class="cbmr-hint cbmr-hint-muted" *ngIf="existingEntryAt">
+            Last saved for this dosage &amp; template: {{ existingEntryAt }}
+          </span>
+        </div>
+      </div>
+      <div class="cbmr-actions-row">
+        <button
+          type="button"
+          class="btn btn-outline"
+          (click)="refreshStructure()"
+          [disabled]="selectedDosageForm === cbmrDosagePlaceholder || !(selectedProcessTitle || '').trim() || loadingStructure"
+        >
+          {{ loadingStructure ? 'Loading…' : 'Refresh structure' }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="saveMapping()" [disabled]="saving || structureRows.length === 0">
+          {{ saving ? 'Saving…' : 'Save mapping' }}
+        </button>
+      </div>
+    </fieldset>
+  </div>
+
+  <ng-template #cbmrTree let-nodes="nodes" let-depth="depth">
+    <ul class="cbmr-tree__list" [class.cbmr-tree__list--nested]="(depth ?? 0) > 0">
+      <li *ngFor="let n of nodes; trackBy: manufacturingTreeTrack" class="cbmr-tree__node">
+        <button
+          type="button"
+          class="cbmr-tree__row cbmr-tree__row--btn"
+          [ngClass]="manufacturingTreeRowClass(n.row)"
+          [class.cbmr-tree__row--on]="isDynamicNodeActive(n.row.sequence_path)"
+          [attr.aria-current]="isDynamicNodeActive(n.row.sequence_path) ? 'true' : null"
+          [attr.aria-label]="hierarchyLevelLabel(n.row) + ' ' + displayCaption(n.row) + ', path ' + n.row.sequence_path"
+          (click)="onManufacturingTreeRowClick(n.row, $event)"
+        >
+          <span class="cbmr-tree__path">{{ n.row.sequence_path }}</span>
+          <span class="cbmr-tree__cap">{{ manufacturingTreeCaption(n.row) }}</span>
+          <span
+            class="cbmr-tree__seq-badge"
+            *ngIf="provisionSequenceCountForManufacturingPath(n.row.sequence_path) > 0"
+          >{{ provisionSequenceCountForManufacturingPath(n.row.sequence_path) }}</span>
+        </button>
+        <ng-container *ngIf="n.children.length">
+          <ng-container *ngTemplateOutlet="cbmrTree; context: { nodes: n.children, depth: (depth ?? 0) + 1 }"></ng-container>
+        </ng-container>
+      </li>
+    </ul>
+  </ng-template>
+
+  <ng-template #cbmrProvisionFormat let-provId="provId">
+    <ng-container [ngSwitch]="provId">
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'equipments'">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Equipment name</th>
+            <th>Make</th>
+            <th>ID / code</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let eq of equipmentRowsForProvisionPrint(); let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ eq.equipment_name }}</td>
+            <td>{{ eq.make }}</td>
+            <td>{{ eq.equipment_code }}</td>
+          </tr>
+          <tr *ngIf="!equipmentRowsForProvisionPrint().length">
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr *ngIf="!equipmentRowsForProvisionPrint().length">
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'line_clearance'">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Check point</th>
+            <th>Done by</th>
+            <th>Checked by</th>
+            <th>Date / time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Area cleaned as per SOP</td><td></td><td></td><td></td></tr>
+          <tr><td>2</td><td>Previous batch labels / material removed</td><td></td><td></td><td></td></tr>
+          <tr><td>3</td><td>Line clearance approved</td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'stage_yield'">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Theoretical</th>
+            <th>Actual</th>
+            <th>% Yield</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Stage yield</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'inprocess_analysis'">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Test / parameter</th>
+            <th>Specification</th>
+            <th>Result</th>
+            <th>Done by</th>
+            <th>Checked by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>2</td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'weighing'">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Material</th>
+            <th>Gross wt.</th>
+            <th>Tare wt.</th>
+            <th>Net wt.</th>
+            <th>Done by</th>
+            <th>Checked by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'procedure'">
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>Instruction</th>
+            <th>Done by</th>
+            <th>Checked by</th>
+            <th>Date / time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>2</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>3</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <table class="cbmr-equipment-table cbmr-provision-format-table" *ngSwitchCase="'additional_parameter'">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Parameter</th>
+            <th>Value</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ep of evaluationParameterChips(structureRowForActivePath() || null); let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ ep.label }}</td>
+            <td></td>
+            <td>{{ ep.detail }}</td>
+          </tr>
+          <tr *ngIf="!evaluationParameterChips(structureRowForActivePath() || null).length">
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="cbmr-muted" *ngSwitchDefault>Default format for this provision is not defined yet.</p>
+    </ng-container>
+  </ng-template>
+
+  <section class="cbmr-workbench" *ngIf="schemaStatus === 'ready'" aria-label="Workbench">
+    <p class="cbmr-muted cbmr-workbench-msg" *ngIf="loadingStructure">Loading hierarchy…</p>
+    <p
+      class="cbmr-muted cbmr-workbench-msg"
+      *ngIf="!loadingStructure && selectedDosageForm !== cbmrDosagePlaceholder && (selectedProcessTitle || '').trim() && !structureRows.length"
+    >
+      No lines returned for this template in Process Type Master. Configure fixed stages on the left; add hierarchy lines in the master to
+      enable manufacturing nodes.
+    </p>
+
+    <div class="cbmr-workbench__grid cbmr-no-print" *ngIf="!loadingStructure || structureRows.length">
+      <aside class="cbmr-rail cbmr-rail--left">
+        <div class="cbmr-rail__title">Stages</div>
+        <div class="cbmr-rail__group">
+          <div class="cbmr-rail__label">Fixed stages</div>
+          <button
+            type="button"
+            class="cbmr-rail__btn"
+            [class.cbmr-rail__btn--active]="leftNavId === 'productBatch'"
+            (click)="selectFixedNav('productBatch')"
+          >
+            Product &amp; batch details
+          </button>
+          <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="leftNavId === 'approval'" (click)="selectFixedNav('approval')">
+            Approval
+          </button>
+          <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="leftNavId === 'equipment'" (click)="selectFixedNav('equipment')">
+            Equipment
+          </button>
+          <button
+            type="button"
+            class="cbmr-rail__btn"
+            [class.cbmr-rail__btn--active]="leftNavId === 'unitFormula'"
+            (click)="selectFixedNav('unitFormula')"
+          >
+            Unit formula
+          </button>
+          <button
+            type="button"
+            class="cbmr-rail__btn"
+            [class.cbmr-rail__btn--active]="leftNavId === 'dispensing'"
+            (click)="selectFixedNav('dispensing')"
+          >
+            Dispensing
+          </button>
+        </div>
+        <div class="cbmr-rail__dynamic-wrap" *ngIf="structureRows.length" [class.cbmr-rail__dynamic-wrap--active]="leftNavId === 'dynamic'">
+          <div
+            class="cbmr-rail__title cbmr-rail__title--sub cbmr-rail__title--mfg"
+            role="button"
+            tabindex="0"
+            [attr.title]="'Reload stage / step / substep from Process Type Master for this template'"
+            (click)="onManufacturingTitleClick($event)"
+            (keydown.enter)="onManufacturingTitleClick($event)"
+            (keydown.space)="$event.preventDefault(); onManufacturingTitleClick($event)"
+          >Manufacturing (stage master)</div>
+          <p class="cbmr-micro cbmr-muted" *ngIf="refreshingManufacturingStructure">Refreshing from Process Type Master…</p>
+          <div class="cbmr-mfg-tree-panel">
+            <ng-container *ngTemplateOutlet="cbmrTree; context: { nodes: manufacturingTreeNodes, depth: 0 }"></ng-container>
+          </div>
+        </div>
+        <div class="cbmr-rail__mfg-footer" *ngIf="structureRows.length">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm cbmr-rail__pdf-btn"
+            (click)="downloadProvisionSequencePdf()"
+            [disabled]="!canDownloadProvisionSequencePdf() || downloadingProvisionPdf"
+            [attr.title]="canDownloadProvisionSequencePdf() ? 'Download complete BMR PDF — all stages / steps / substeps in hierarchy order' : 'Select a process template with manufacturing structure first'"
+          >
+            {{ downloadingProvisionPdf ? 'Generating PDF…' : 'Print / download format' }}
+          </button>
+          <p class="cbmr-micro cbmr-muted cbmr-rail__pdf-hint" *ngIf="canDownloadProvisionSequencePdf()">
+            {{ structureRows.length }} manufacturing node(s) — one continuous BMR PDF (server-generated).
+          </p>
+          <p class="cbmr-micro cbmr-muted cbmr-rail__pdf-hint" *ngIf="!canDownloadProvisionSequencePdf()">
+            Select dosage form and process template to enable BMR PDF download.
+          </p>
+        </div>
+      </aside>
+
+      <main class="cbmr-center">
+        <header class="cbmr-center__head">
+          <ng-container *ngIf="leftNavId === 'dynamic' && rightAuxTab === 'main'">
+          <div
+            class="cbmr-center__action-bar"
+            *ngIf="selectedStructureRow() as chipRow"
+          >
+            <span class="cbmr-center__action-label">Stage actions (from process type master)</span>
+            <div class="cbmr-center__action-btns">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline cbmr-action-chip"
+                *ngFor="let a of enabledMasterActionChips(chipRow)"
+                (click)="scrollToMasterActionChip(a.id)"
+              >
+                {{ a.label }}
+              </button>
+            </div>
+            <p class="cbmr-center__action-empty cbmr-muted" *ngIf="enabledMasterActionChips(chipRow).length === 0">
+              No provisions enabled for this node in Process Type Master.
+            </p>
+          </div>
+          <div
+            class="cbmr-center__action-bar cbmr-center__eval-bar"
+            *ngIf="selectedStructureRow() as evRow"
+          >
+            <span class="cbmr-center__action-label">Evaluation parameters (from process type master)</span>
+            <div class="cbmr-center__action-btns">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline cbmr-action-chip"
+                *ngFor="let ev of evaluationParameterChips(evRow)"
+                [title]="ev.detail"
+                (click)="scrollToEvaluationParameters()"
+              >
+                {{ ev.label }}
+              </button>
+            </div>
+            <p class="cbmr-center__action-empty cbmr-muted" *ngIf="evaluationParameterChips(evRow).length === 0">
+              No evaluation parameters for this node.
+            </p>
+          </div>
+          </ng-container>
+          <ng-container *ngIf="centerTopTitle() as topTitle">
+            <h2
+              class="cbmr-center__title"
+              *ngIf="!(leftNavId === 'dynamic' && isManufacturingDesignTarget())"
+            >{{ topTitle }}</h2>
+          </ng-container>
+          <ng-container *ngIf="centerSubTitle() as subTitle">
+            <p
+              class="cbmr-center__sub"
+              *ngIf="!(leftNavId === 'dynamic' && isManufacturingDesignTarget())"
+            >{{ subTitle }}</p>
+          </ng-container>
+        </header>
+
+        <div class="cbmr-center__body">
+        <div class="cbmr-center__empty cbmr-muted" *ngIf="leftNavId === 'dynamic' && !selectedDynamicSequencePath">
+          Select a stage, step, or substep under Manufacturing (stage master).
+        </div>
+
+        <ng-container *ngIf="leftNavId === 'productBatch' || (leftNavId === 'dynamic' && selectedDynamicSequencePath) || (leftNavId !== 'dynamic' && leftNavId !== 'productBatch' && activeCapturePathKey)">
+        <div
+          *ngIf="leftNavId === 'dynamic' && selectedDynamicSequencePath"
+          class="cbmr-seq-order-panel cbmr-no-print"
+          id="cbmr-provision-gen-panel"
+        >
+          <h3 class="cbmr-seq-order-panel__title">
+            Sequential order
+            <ng-container *ngIf="selectedStructureRow() as seqHdr"> — {{ hierarchyLevelLabel(seqHdr) }}: {{ displayCaption(seqHdr) }}</ng-container>
+          </h3>
+          <p class="cbmr-micro cbmr-seq-order-panel__intro" *ngIf="selectedStructureRow() as seqIntro">
+            Path <strong>{{ seqIntro.sequence_path }}</strong>.
+            <ng-container *ngIf="activeProvisionChips.length">
+              Provisions enabled for this {{ hierarchyLevelLabel(seqIntro).toLowerCase() }} in Process Type Master (value <strong>1</strong>):
+              <span *ngFor="let p of activeProvisionChips; let last = last">{{ p.label }}<ng-container *ngIf="!last">, </ng-container></span>.
+            </ng-container>
+            <ng-container *ngIf="!activeProvisionChips.length">
+              No provision flags are set to <strong>1</strong> on this row in Process Type Master.
+            </ng-container>
+          </p>
+          <div class="cbmr-seq-order-panel__row" *ngIf="activeProvisionChips.length; else noProvOptsTop">
+            <label class="cbmr-seq-order-panel__lbl" for="cbmr-prov-dd">Provision</label>
+            <select
+              id="cbmr-prov-dd"
+              class="cbmr-input cbmr-select cbmr-seq-order-panel__select"
+              name="selectedProvisionForGenerate"
+              [(ngModel)]="selectedProvisionForGenerate"
+              (ngModelChange)="onProvisionDropdownChange()"
+            >
+              <option value="">— Select provision —</option>
+              <option *ngFor="let p of activeProvisionChips; trackBy: provisionChipTrack" [value]="p.id">{{ p.label }}</option>
+            </select>
+            <button type="button" class="btn btn-primary btn-sm" (click)="generateProvisionSequence()">Add to sequence</button>
+            <button type="button" class="btn btn-outline btn-sm" (click)="generateAllProvisionsForActiveNode()">Add all</button>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              (click)="printProvisionFormat()"
+              [disabled]="!canPrintProvisions()"
+            >
+              {{ provisionPrintButtonLabel() }}
+            </button>
+          </div>
+          <p
+            class="cbmr-micro cbmr-muted cbmr-seq-order-panel__seq-hint"
+            *ngIf="!provisionSequencesForActivePath().length && activeProvisionChips.length && selectedStructureRow() as seqHint"
+          >
+            Pick a provision and click <strong>Add to sequence</strong> to build the order for this {{ hierarchyLevelLabel(seqHint).toLowerCase() }}.
+          </p>
+          <ol class="cbmr-seq-order-panel__list" *ngIf="provisionSequencesForActivePath().length">
+            <li
+              *ngFor="let seq of provisionSequencesForActivePath(); let si = index"
+              class="cbmr-seq-order-panel__list-item"
+              [class.cbmr-seq-order-panel__list-item--on]="isProvisionSequenceItemActive(seq)"
+            >
+              <span class="cbmr-seq-order-panel__order">{{ seq.order }}.</span>
+              <button type="button" class="cbmr-seq-order-panel__link" (click)="showProvisionFormat(seq.id)">{{ seq.label }}</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger-btnlike"
+                (click)="removeProvisionSequence(activeCapturePathKey, si)"
+                aria-label="Remove from sequence"
+              >×</button>
+            </li>
+          </ol>
+          <ng-template #noProvOptsTop>
+            <p class="cbmr-muted cbmr-seq-order-panel__empty">
+              No provisions enabled for this node in <strong>Process Type Master</strong>.
+            </p>
+          </ng-template>
+        </div>
+
+        <div class="cbmr-center__content">
+          <ng-container *ngIf="leftNavId === 'dynamic' && isManufacturingDesignTarget()">
+          <div
+            class="cbmr-design-context"
+            *ngIf="activeDesignContext() as ctx"
+            [ngClass]="designContextLevelClass(ctx)"
+            role="status"
+            aria-live="polite"
+          >
+            <div class="cbmr-design-context__row">
+              <span class="cbmr-design-context__badge">{{ ctx.levelLabel }}</span>
+              <span class="cbmr-design-context__tab">{{ ctx.rightTabLabel }}</span>
+            </div>
+            <p class="cbmr-design-context__eyebrow">Designing BMR for</p>
+            <h2 class="cbmr-design-context__title">{{ ctx.caption }}</h2>
+            <p class="cbmr-design-context__crumb" *ngIf="ctx.breadcrumb">{{ ctx.breadcrumb }}</p>
+            <p class="cbmr-design-context__meta">
+              Hierarchy path <strong>{{ ctx.manufacturingPath }}</strong>
+              · {{ ctx.provisionSequenceCount }} provision sequence block(s) on this form
+            </p>
+          </div>
+
+          </ng-container>
+
+          <ng-container *ngIf="showFixedSegmentHead()">
+          <div class="cbmr-section-head" *ngIf="activeDesignContext() as fctx">
+            <span class="cbmr-section-head__badge">{{ fctx.levelLabel }}</span>
+            <h2 class="cbmr-section-head__title">{{ fctx.caption }}</h2>
+            <p class="cbmr-section-head__meta">{{ fctx.rightTabLabel }}</p>
+          </div>
+          </ng-container>
+
+          <div class="cbmr-product-batch-wrap" *ngIf="leftNavId === 'productBatch'">
+            <div class="cbmr-scope-row cbmr-no-print">
+              <label class="cbmr-scope-row__lbl" for="cbmr-bmr-scope">BMR configuration</label>
+              <select
+                id="cbmr-bmr-scope"
+                name="bmrScopeMode"
+                class="cbmr-scope-row__select"
+                [(ngModel)]="productInformation.bmrScopeMode"
+              >
+                <option value="product_specific">Product-specific BMR</option>
+                <option value="common">Common BMR</option>
+              </select>
+            </div>
+            <div class="cbmr-product-table-scroll">
+              <table class="cbmr-product-info-table">
+                <thead>
+                  <tr>
+                    <th *ngIf="productInformation.bmrScopeMode === 'product_specific'">Product name</th>
+                    <th *ngIf="productInformation.bmrScopeMode === 'product_specific'">NMR number</th>
+                    <th *ngIf="productInformation.bmrScopeMode === 'product_specific'">Product code</th>
+                    <th>Process type</th>
+                    <th>Batch size</th>
+                    <th>Unit formula number</th>
+                    <th>Generic name of product</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td *ngIf="productInformation.bmrScopeMode === 'product_specific'">
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_product_name"
+                        [(ngModel)]="productInformation.product_name"
+                        placeholder="Trade / finished product name"
+                      />
+                    </td>
+                    <td *ngIf="productInformation.bmrScopeMode === 'product_specific'">
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_nmr_number"
+                        [(ngModel)]="productInformation.nmr_number"
+                        placeholder="NMR number"
+                      />
+                    </td>
+                    <td *ngIf="productInformation.bmrScopeMode === 'product_specific'">
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_product_code"
+                        [(ngModel)]="productInformation.product_code"
+                        placeholder="Product code"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_process_type"
+                        [(ngModel)]="productInformation.process_type"
+                        placeholder="Process type"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_batch_size"
+                        [(ngModel)]="productInformation.batch_size"
+                        placeholder="e.g. 100000"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_unit_formula_number"
+                        [(ngModel)]="productInformation.unit_formula_number"
+                        placeholder="UF number"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        class="cbmr-input"
+                        name="pi_generic_name"
+                        [(ngModel)]="productInformation.generic_name"
+                        placeholder="Generic / pharmacopoeial name"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="cbmr-center__action-bar cbmr-center__eval-bar cbmr-product-batch__eval" *ngIf="aggregatedEvaluationChips().length">
+              <span class="cbmr-center__action-label">Evaluation parameters (configured on manufacturing stages)</span>
+              <div class="cbmr-center__action-btns">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline cbmr-action-chip"
+                  *ngFor="let ev of aggregatedEvaluationChips()"
+                  [title]="ev.detail"
+                  (click)="onAggregatedEvaluationChipClick(ev)"
+                >
+                  {{ ev.label }}
+                </button>
+              </div>
+            </div>
+            <p class="cbmr-muted cbmr-product-batch-footnote">
+              For <strong>common BMR</strong>, product name, NMR number, and product code are hidden — capture the generic description only. Values
+              save with <strong>Save mapping</strong>.
+            </p>
+          </div>
+
+          <ng-container *ngIf="leftNavId === 'dynamic' && selectedDynamicSequencePath">
+            <ng-container *ngIf="selectedStructureRow() as eqRow">
+            <div class="cbmr-mfg-node-data" id="cbmr-mfg-node-print-root">
+            <div class="cbmr-mfg-node-data__head">
+              <h3 class="cbmr-mfg-node-data__title">Process Type Master — this {{ hierarchyLevelLabel(eqRow) | lowercase }} only</h3>
+              <button type="button" class="btn btn-outline btn-sm" (click)="printSelectedNodeData()">Print this node</button>
+            </div>
+            <div class="cbmr-node-sheet" id="cbmr-node-provisions-summary">
+              <div class="cbmr-ladder__params cbmr-node-sheet__params">
+                <div class="cbmr-ladder__param-row">
+                  <span class="cbmr-ladder__param-label">Provisions</span>
+                  <span class="cbmr-ladder__param-val">{{ provisionDetailLine(eqRow) }}</span>
+                </div>
+                <div class="cbmr-ladder__param-row" *ngIf="additionalParamsDetail(eqRow)" id="cbmr-node-evaluation-params">
+                  <span class="cbmr-ladder__param-label">Additional parameters</span>
+                  <span class="cbmr-ladder__param-val">{{ additionalParamsDetail(eqRow) }}</span>
+                </div>
+                <div class="cbmr-ladder__param-row">
+                  <span class="cbmr-ladder__param-label">In-process checks by</span>
+                  <span class="cbmr-ladder__param-val">{{ ipcDetail(eqRow) }}</span>
+                </div>
+              </div>
+            </div>
+           
+
+          <div
+            class="cbmr-provision-print-bundle"
+            id="cbmr-provision-print-root"
+            *ngIf="leftNavId === 'dynamic' && isManufacturingDesignTarget() && showProvisionPrintBundle()"
+          >
+           
+
+            <ng-container *ngIf="provisionSequencesForActivePath().length; else singleProvisionPreview">
+              <section
+                *ngFor="let seq of provisionSequencesForActivePath(); let last = last"
+                class="cbmr-provision-print__page"
+                [class.cbmr-provision-print__page--on]="isProvisionSequenceItemActive(seq)"
+                [class.cbmr-provision-print__page--last]="last"
+                [id]="provisionPageElementId(seq.id)"
+                [attr.aria-label]="'Provision ' + seq.order + ': ' + seq.label"
+              >
+                <header class="cbmr-provision-print__head" *ngIf="activeDesignContext() as pctx">
+                  <span class="cbmr-provision-print__page-badge">Page {{ seq.order }} of {{ provisionSequencesForActivePath().length }}</span>
+                  <h3 class="cbmr-provision-print__title">{{ seq.order }}. {{ seq.label }}</h3>
+                  <p class="cbmr-micro cbmr-provision-print__node">
+                    {{ pctx.caption }} · path {{ pctx.manufacturingPath || pctx.sequencePath }}
+                  </p>
+                </header>
+                <ng-container *ngTemplateOutlet="cbmrProvisionFormat; context: { provId: seq.id }"></ng-container>
+              </section>
+            </ng-container>
+
+            <ng-template #singleProvisionPreview>
+              <section
+                *ngIf="activeProvisionPreviewId() as prevId"
+                class="cbmr-provision-print__page cbmr-provision-print__page--single"
+                [id]="provisionPageElementId(prevId)"
+              >
+                <header class="cbmr-provision-print__head" *ngIf="activeDesignContext() as pctx">
+                  <h3 class="cbmr-provision-print__title">{{ provisionFormatTitle(prevId) }}</h3>
+                 
+                </header>
+                <ng-container *ngTemplateOutlet="cbmrProvisionFormat; context: { provId: prevId }"></ng-container>
+              </section>
+            </ng-template>
+          </div>
+            </div>
+          </ng-container>
+          </ng-container>
+
+          <p class="cbmr-muted cbmr-provision-gen__pick-hint cbmr-no-print" *ngIf="showProvisionPickHint()">
+            Select a <strong>Stage</strong>, <strong>Step</strong>, or <strong>Substep</strong> under Manufacturing (stage master) to configure that node only.
+          </p>
+
+          <div class="cbmr-capture-panel cbmr-no-print" *ngIf="showCenterCaptureForm()">
+            <p class="cbmr-capture-hint cbmr-capture-hint-lead">
+              Capture path <span class="cbmr-capture-path">{{ activeCapturePathKey }}</span>
+            </p>
+              <div class="cbmr-capture-toolbar">
+                <button type="button" class="btn btn-primary btn-sm" (click)="addCaptureField(activeCapturePathKey)">
+                  Add another question
+                </button>
+              </div>
+              <div
+                class="cbmr-capture-field"
+                *ngFor="let f of fieldsForPath(activeCapturePathKey); let fi = index; trackBy: captureFieldTrack"
+              >
+                <div class="cbmr-capture-field__head">
+                  <div class="cbmr-capture-field__head-text">
+                    <span class="cbmr-capture-field__badge">{{ fi + 1 }}</span>
+                    <div class="cbmr-capture-field__titles">
+                      <span class="cbmr-capture-field__title">{{ designerFieldHeading(f, fi) }}</span>
+                      <span class="cbmr-capture-field__meta">{{ designerFieldSubtitle(f) }}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger-btnlike"
+                    (click)="removeCaptureField(activeCapturePathKey, fi)"
+                    aria-label="Remove this question"
+                  >
+                    Remove question
+                  </button>
+                </div>
+
+                <!-- 1 · What people see -->
+                <div class="cbmr-capture-sect">
+                  <h4 class="cbmr-capture-sect__ttl">What the operator sees on screen</h4>
+                  <p class="cbmr-capture-sect__intro">
+                    This text appears on their form. Plain language helps everyone fill it faster and with fewer errors.
+                  </p>
+                  <div class="cbmr-capture-grid cbmr-capture-grid-tight">
+                    <div class="cbmr-capture-cell cbmr-span-2-wide">
+                      <label [attr.for]="'cap_l_' + f.id">Question or field title<span class="cbmr-req-dot">*</span></label>
+                      <span class="cbmr-micro">Shows in bold above the box (e.g. “Batch quantity recorded”).</span>
+                      <input
+                        type="text"
+                        [attr.id]="'cap_l_' + f.id"
+                        class="cbmr-input"
+                        [(ngModel)]="f.label"
+                        [attr.name]="'cap_l_' + f.id"
+                        placeholder="e.g. Record the actual blending time"
+                      />
+                    </div>
+                    <div class="cbmr-capture-cell">
+                      <label [attr.for]="'cap_ct_' + f.id">Answer type</label>
+                      <span class="cbmr-micro">Chooses keyboard, date-picker, dropdown, etc.</span>
+                      <select
+                        [attr.id]="'cap_ct_' + f.id"
+                        class="cbmr-input cbmr-select"
+                        [(ngModel)]="f.controlType"
+                        [attr.name]="'cap_ct_' + f.id"
+                      >
+                        <option *ngFor="let o of captureFriendlyControlOptions" [value]="o.value">{{ o.label }}</option>
+                      </select>
+                    </div>
+                    <div class="cbmr-capture-cell cbmr-span-2-wide">
+                      <label [attr.for]="'cap_ht_' + f.id">Instruction for the operator (optional)</label>
+                      <span class="cbmr-micro">Explains exactly what to enter. Shown smaller under the title.</span>
+                      <textarea
+                        [attr.id]="'cap_ht_' + f.id"
+                        class="cbmr-textarea"
+                        rows="2"
+                        [(ngModel)]="f.helpText"
+                        [attr.name]="'cap_ht_' + f.id"
+                        placeholder='e.g. "Enter duration in whole minutes."'
+                      ></textarea>
+                    </div>
+                    <div class="cbmr-capture-cell">
+                      <label [attr.for]="'cap_ph_' + f.id">Grey hint inside the box (optional)</label>
+                      <span class="cbmr-micro">Short example only — disappears when they type.</span>
+                      <input
+                        type="text"
+                        [attr.id]="'cap_ph_' + f.id"
+                        class="cbmr-input"
+                        [(ngModel)]="f.placeholder"
+                        [attr.name]="'cap_ph_' + f.id"
+                        placeholder="e.g. 120"
+                      />
+                    </div>
+                    <div class="cbmr-capture-cell">
+                      <label [attr.for]="'cap_df_' + f.id">Pre-filled value (optional)</label>
+                      <span class="cbmr-micro">Shows when they open the screen; they can overwrite it.</span>
+                      <input
+                        type="text"
+                        [attr.id]="'cap_df_' + f.id"
+                        class="cbmr-input"
+                        [(ngModel)]="f.defaultValue"
+                        [attr.name]="'cap_df_' + f.id"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2 · Simple rules -->
+                <div class="cbmr-capture-sect cbmr-capture-sect-accent">
+                  <h4 class="cbmr-capture-sect__ttl">Simple rules</h4>
+                  <div class="cbmr-capture-checks-rows">
+                    <label class="cbmr-check-row">
+                      <input type="checkbox" [(ngModel)]="f.required" [attr.name]="'cap_req_' + f.id" />
+                      <span class="cbmr-check-row__text">
+                        <strong>Must be filled before save</strong>
+                        <span class="cbmr-micro">Operators cannot proceed without answering.</span>
+                      </span>
+                    </label>
+                    <label class="cbmr-check-row">
+                      <input type="checkbox" [(ngModel)]="f.readOnly" [attr.name]="'cap_ro_' + f.id" />
+                      <span class="cbmr-check-row__text">
+                        <strong>Read-only (show only)</strong>
+                        <span class="cbmr-micro">Shows a value they cannot edit — use for calculations or QC notes.</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- 3 · List / dropdown -->
+                <fieldset class="cbmr-capture-dd" *ngIf="captureIsDropdownFamily(f)">
+                  <legend>When answers come from a list</legend>
+                  <p class="cbmr-dd-intro">
+                    Use this only if operators must pick predefined options instead of typing freely — same country → state behaviour.
+                  </p>
+                  <div class="cbmr-capture-grid">
+                    <div class="cbmr-capture-cell cbmr-span-2-wide">
+                      <label [attr.for]="'cap_dm_' + f.id">List source</label>
+                      <span class="cbmr-micro">Fixed list you type vs list loaded from master data table.</span>
+                      <select
+                        [attr.id]="'cap_dm_' + f.id"
+                        class="cbmr-input cbmr-select"
+                        [(ngModel)]="f.dropdownMode"
+                        [attr.name]="'cap_dm_' + f.id"
+                      >
+                        <option value="">— Select —</option>
+                        <option value="static">Same options every time (you type values below)</option>
+                        <option value="dynamic">From master table — you map columns here; live loading is wired later</option>
+                      </select>
+                    </div>
+                    <div class="cbmr-capture-cell cbmr-span-2-wide">
+                      <label [attr.for]="'cap_dep_' + f.id">Depends on another field (optional)</label>
+                      <span class="cbmr-micro">Technical field code of the previous dropdown (example: chose country → then states).</span>
+                      <input
+                        type="text"
+                        [attr.id]="'cap_dep_' + f.id"
+                        class="cbmr-input mono"
+                        [(ngModel)]="f.dependsOnField"
+                        [attr.name]="'cap_dep_' + f.id"
+                        placeholder='e.g. country_id — must match technical name'
+                      />
+                    </div>
+                    <div class="cbmr-capture-cell cbmr-span-2-wide" *ngIf="f.dropdownMode === 'dynamic'">
+                      <p class="cbmr-micro cbmr-micro-strong">
+                        Define which master table and columns this list will use. The sample below uses a fixed layout in the app — it does not read your database.
+                      </p>
+                      <div class="cbmr-mini-grid">
+                        <div class="cbmr-span-3">
+                          <label [attr.for]="'cap_fkt_' + f.id">Master table name</label>
+                          <span class="cbmr-micro">Use the same name you will bind at runtime (e.g. equipment). Built-in samples exist for common names — see “Show sample list”.</span>
+                          <input
+                            type="text"
+                            [attr.id]="'cap_fkt_' + f.id"
+                            class="cbmr-input mono"
+                            [(ngModel)]="f.fkTable"
+                            [attr.name]="'cap_fkt_' + f.id"
+                            placeholder="equipment"
+                          />
+                        </div>
+                        <div>
+                          <label [attr.for]="'cap_fkv_' + f.id">Stored value column</label>
+                          <span class="cbmr-micro">Code or id stored with the batch record (operators often do not see this).</span>
+                          <input
+                            type="text"
+                            [attr.id]="'cap_fkv_' + f.id"
+                            class="cbmr-input mono"
+                            [(ngModel)]="f.fkValueColumn"
+                            [attr.name]="'cap_fkv_' + f.id"
+                            placeholder="equipment_code"
+                          />
+                        </div>
+                        <div>
+                          <label [attr.for]="'cap_fkd_' + f.id">Label column (what operators read)</label>
+                          <span class="cbmr-micro">Descriptive text beside the picker.</span>
+                          <input
+                            type="text"
+                            [attr.id]="'cap_fkd_' + f.id"
+                            class="cbmr-input mono"
+                            [(ngModel)]="f.fkDisplayColumn"
+                            [attr.name]="'cap_fkd_' + f.id"
+                            placeholder="equipment_name"
+                          />
+                        </div>
+                        <div class="cbmr-span-3">
+                          <div class="cbmr-dd-toolbar cbmr-dd-toolbar--inline">
+                            <label [attr.for]="'cap_fkm_' + f.id">Auto-filled read-outs from the same row</label>
+                            <button type="button" class="btn btn-outline btn-xs" (click)="suggestMirrorsFromPreset(f)">
+                              Suggest from built-in layout
+                            </button>
+                          </div>
+                          <span class="cbmr-micro">One line per field: column|Friendly label. Example: capacity|Rated capacity</span>
+                          <textarea
+                            [attr.id]="'cap_fkm_' + f.id"
+                            class="cbmr-textarea mono"
+                            rows="3"
+                            [(ngModel)]="f.lookupMirrorText"
+                            [attr.name]="'cap_fkm_' + f.id"
+                            placeholder="capacity|Rated capacity&#10;model|Model"
+                          ></textarea>
+                        </div>
+                        <div class="cbmr-span-3">
+                          <label [attr.for]="'cap_fkw_' + f.id">Which rows appear (optional filter)</label>
+                          <span class="cbmr-micro">For documentation / future query — not run in this screen.</span>
+                          <input
+                            type="text"
+                            [attr.id]="'cap_fkw_' + f.id"
+                            class="cbmr-input mono"
+                            [(ngModel)]="f.fkWhereClause"
+                            [attr.name]="'cap_fkw_' + f.id"
+                            placeholder='e.g. is_active = 1'
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cbmr-capture-cell cbmr-span-2-wide cbmr-dd-perf" *ngIf="f.dropdownMode === 'dynamic'">
+                      <span class="cbmr-micro-strong">Performance (long lists)</span>
+                      <div class="cbmr-capture-checks-rows cbmr-inline-checks">
+                        <label class="cbmr-inline">
+                          <input type="checkbox" [(ngModel)]="f.lazyLoad" [attr.name]="'cap_ll_' + f.id" />
+                          Load options only when opened
+                        </label>
+                        <label class="cbmr-inline">
+                          <input type="checkbox" [(ngModel)]="f.paginated" [attr.name]="'cap_pg_' + f.id" />
+                          Load pages of options (large tables)
+                        </label>
+                      </div>
+                    </div>
+                    <div class="cbmr-capture-cell cbmr-span-2-wide" *ngIf="f.dropdownMode === 'static'">
+                      <label [attr.for]="'cap_so_' + f.id">Type each fixed choice (one line each)</label>
+                      <span class="cbmr-micro">Format code|label operators see · example M|Morning shift</span>
+                      <textarea
+                        [attr.id]="'cap_so_' + f.id"
+                        class="cbmr-textarea mono"
+                        rows="4"
+                        [(ngModel)]="f.staticOptionsText"
+                        [attr.name]="'cap_so_' + f.id"
+                        placeholder='M | Morning&#10;E | Evening'
+                      ></textarea>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <!-- Operator-visible preview -->
+                <div class="cbmr-operator-preview-shell">
+                  <div class="cbmr-operator-preview-bar">
+                    <h4 class="cbmr-operator-preview-title">Looks like this on screen for operators</h4>
+                    <button type="button" class="btn btn-sm btn-outline" (click)="applyLookupHeuristicsFromQuestion(f)">
+                      Suggest list source from wording
+                    </button>
+                  </div>
+                  <p class="cbmr-operator-preview-note">
+                    This mimics what shop-floor colleagues see when a built-in sample exists for your table name. It is not live data.
+                  </p>
+                  <div class="cbmr-operator-preview-frame" [class.cbmr-operator-preview-frame--readonly]="f.readOnly">
+                    <strong class="cbmr-op-q">{{ operatorPreviewTitle(f, fi) }}</strong>
+                    <span class="cbmr-op-req-mark" *ngIf="f.required">*</span>
+                    <span class="cbmr-op-required-badge" *ngIf="f.required">Required before save</span>
+                    <p class="cbmr-op-help" *ngIf="f.helpText?.trim()">{{ f.helpText }}</p>
+                    <ng-container [ngSwitch]="f.controlType">
+                      <input *ngSwitchCase="'text'" class="cbmr-op-control" disabled type="text" [placeholder]="f.placeholder" [value]="f.defaultValue" />
+                      <textarea
+                        *ngSwitchCase="'textarea'"
+                        class="cbmr-op-control"
+                        rows="3"
+                        disabled
+                        [placeholder]="f.placeholder || '—'"
+                        [value]="f.defaultValue"
+                      ></textarea>
+                      <input *ngSwitchCase="'decimal'" class="cbmr-op-control" disabled type="text" inputmode="decimal" [placeholder]="f.placeholder || '0.00'" [value]="f.defaultValue" />
+                      <input *ngSwitchCase="'number'" class="cbmr-op-control" disabled type="text" inputmode="numeric" [placeholder]="f.placeholder || 'Number'" [value]="f.defaultValue" />
+                      <input *ngSwitchCase="'email'" class="cbmr-op-control" disabled type="email" [placeholder]="f.placeholder || 'name@company.com'" [value]="f.defaultValue" />
+                      <input *ngSwitchCase="'date'" class="cbmr-op-control" disabled type="text" [placeholder]="f.placeholder || 'YYYY-MM-DD'" [value]="f.defaultValue" />
+                      <input *ngSwitchCase="'datetime'" class="cbmr-op-control" disabled type="text" [placeholder]="f.placeholder || 'Date & time'" [value]="f.defaultValue" />
+                      <input *ngSwitchCase="'time'" class="cbmr-op-control" disabled type="text" [placeholder]="f.placeholder || 'HH:mm'" [value]="f.defaultValue" />
+                      <label *ngSwitchCase="'checkbox'" class="cbmr-op-check">
+                        <input type="checkbox" disabled checked />
+                        <span>{{ operatorPreviewCheckboxCaption(f, fi) }}</span>
+                      </label>
+                      <label *ngSwitchCase="'radio'" class="cbmr-op-check">
+                        <input type="radio" disabled [attr.name]="'cbmr_rprev_' + f.id" checked />
+                        <span>{{ operatorPreviewCheckboxCaption(f, fi) }}</span>
+                      </label>
+                      <ng-container *ngSwitchCase="'dropdown'">
+                        <select
+                          *ngIf="f.dropdownMode === 'dynamic'"
+                          class="cbmr-op-control cbmr-op-select-preview"
+                          [disabled]="f.readOnly"
+                          [ngModel]="getPreviewDynamicDropdownModel(f)"
+                          (ngModelChange)="setPreviewDynamicDropdownModel(f, $event)"
+                          [attr.name]="'cbmr_dyn_prev_dd_' + f.id"
+                        >
+                          <ng-container *ngIf="dropdownPreview(f.id).error && !(dropdownPreview(f.id).rows?.length)">
+                            <option value="" disabled>{{ dropdownPreview(f.id).error }}</option>
+                          </ng-container>
+                          <ng-container *ngIf="!dropdownPreview(f.id).error || (dropdownPreview(f.id).rows?.length ?? 0) > 0">
+                            <option value="">— {{ f.placeholder?.trim() || 'Choose…' }} —</option>
+                            <option *ngFor="let r of dropdownPreview(f.id).rows || []" [value]="r.value">{{ r.label || r.value }}</option>
+                            <option *ngIf="!(dropdownPreview(f.id).rows?.length) && !dropdownPreview(f.id).error" value="" disabled>
+                              Tap “Show sample list” under this preview (needs a recognised table layout)
+                            </option>
+                          </ng-container>
+                        </select>
+                        <select
+                          *ngIf="f.dropdownMode !== 'dynamic'"
+                          class="cbmr-op-control cbmr-op-select-preview"
+                          [disabled]="!parseStaticOptionsForPreview(f).length || f.readOnly"
+                          [ngModel]="getPreviewStaticDropdownModel(f)"
+                          (ngModelChange)="setPreviewStaticDropdownModel(f, $event)"
+                          [attr.name]="'cbmr_st_prev_dd_' + f.id"
+                        >
+                          <option value="">— {{ f.placeholder?.trim() || 'Choose…' }} —</option>
+                          <option *ngFor="let o of parseStaticOptionsForPreview(f)" [value]="o.value">{{ o.label }}</option>
+                          <option *ngIf="!parseStaticOptionsForPreview(f).length" value="" disabled>Add fixed choices above</option>
+                        </select>
+                      </ng-container>
+                      <select *ngSwitchCase="'multiselect'" class="cbmr-op-control cbmr-op-select-preview-multiple" disabled multiple size="3">
+                        <ng-container *ngIf="f.dropdownMode === 'dynamic'">
+                          <option *ngFor="let row of dropdownPreview(f.id).rows || []" [value]="row.value">{{ row.label }}</option>
+                        </ng-container>
+                        <ng-container *ngIf="f.dropdownMode !== 'dynamic'">
+                          <option *ngFor="let o of parseStaticOptionsForPreview(f)" [value]="o.value">{{ o.label }}</option>
+                        </ng-container>
+                      </select>
+                      <input *ngSwitchCase="'autocomplete'" class="cbmr-op-control" disabled type="text" placeholder="Type to filter list… (preview)" />
+                      <label *ngSwitchCase="'file'" class="cbmr-op-file-note">— File picker will appear —</label>
+                      <textarea *ngSwitchDefault class="cbmr-op-control" rows="1" disabled [placeholder]="f.placeholder" [value]="f.defaultValue"></textarea>
+                    </ng-container>
+                    <div class="cbmr-op-mirror-row" *ngIf="f.controlType === 'dropdown' && f.dropdownMode === 'dynamic' && mirrorsForDropdownOperatorPreview(f).length">
+                      <div class="cbmr-op-mirror-chip" *ngFor="let m of mirrorsForDropdownOperatorPreview(f)">
+                        <span class="cbmr-op-mirror-cap">{{ m.caption }}</span>
+                        <span class="cbmr-op-mirror-val">{{ m.text }}</span>
+                      </div>
+                    </div>
+                    <p class="cbmr-op-readonly" *ngIf="f.readOnly">Read-only · operator cannot edit</p>
+                  </div>
+                  <div class="cbmr-dd-preview-controls" *ngIf="captureIsDropdownFamily(f) && f.dropdownMode === 'dynamic'">
+                    <div class="cbmr-capture-cell cbmr-span-2-wide" *ngIf="(f.dependsOnField || '').trim()">
+                      <label [attr.for]="'cap_dep_pv_' + f.id">Sample value for “{{ f.dependsOnField.trim() }}”</label>
+                      <span class="cbmr-micro">Optional documentation for cascading behaviour; this screen’s sample list does not filter by it.</span>
+                      <input
+                        type="text"
+                        [attr.id]="'cap_dep_pv_' + f.id"
+                        class="cbmr-input mono"
+                        [ngModel]="previewDependsDraft(f.id)"
+                        (ngModelChange)="setPreviewDependsDraft(f.id, $event)"
+                        [attr.name]="'cap_dep_pv_' + f.id"
+                        placeholder="Match the parent field’s stored value"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-outline btn-sm"
+                      (click)="refreshLocalLookupPresetSample(f)"
+                    >
+                      Show sample list
+                    </button>
+                  </div>
+                </div>
+
+                <details class="cbmr-capture-tech cbmr-no-print">
+                  <summary class="cbmr-capture-tech-sum">Advanced — exports, IDs &amp; IT checks</summary>
+                  <div class="cbmr-capture-tech-inner">
+                    <p class="cbmr-micro cbmr-micro-block">
+                      Operators never see these. Use them only if you integrate reports or need technical column names matching other systems.
+                    </p>
+                    <div class="cbmr-capture-grid cbmr-capture-grid-tight">
+                      <div class="cbmr-capture-cell">
+                        <label [attr.for]="'cap_fn_' + f.id">Technical field code</label>
+                        <span class="cbmr-micro">Database / export ID (underscores)</span>
+                        <input
+                          type="text"
+                          [attr.id]="'cap_fn_' + f.id"
+                          class="cbmr-input mono"
+                          [(ngModel)]="f.fieldName"
+                          [attr.name]="'cap_fn_' + f.id"
+                          placeholder='e.g. blend_duration_minutes'
+                        />
+                      </div>
+                      <div class="cbmr-capture-cell cbmr-span-2-wide">
+                        <label [attr.for]="'cap_val_' + f.id">Pattern validation (optional)</label>
+                        <span class="cbmr-micro">For ICT only — restricts format if you use scripted validation.</span>
+                        <input
+                          type="text"
+                          [attr.id]="'cap_val_' + f.id"
+                          class="cbmr-input mono"
+                          [(ngModel)]="f.validationPattern"
+                          [attr.name]="'cap_val_' + f.id"
+                          placeholder="Regular expression pattern"
+                        />
+                      </div>
+                      <div class="cbmr-capture-cell cbmr-span-2-wide">
+                        <span class="cbmr-micro-strong">Shows in spreadsheets &amp; search screens later</span>
+                        <div class="cbmr-capture-checks-rows cbmr-inline-checks">
+                          <label class="cbmr-inline">
+                            <input type="checkbox" [(ngModel)]="f.unique" [attr.name]="'cap_unq_' + f.id" />
+                            No duplicate answers
+                          </label>
+                          <label class="cbmr-inline">
+                            <input type="checkbox" [(ngModel)]="f.searchable" [attr.name]="'cap_srch_' + f.id" />
+                            Searchable column
+                          </label>
+                          <label class="cbmr-inline">
+                            <input type="checkbox" [(ngModel)]="f.filterable" [attr.name]="'cap_filt_' + f.id" />
+                            Filter dropdowns/reports
+                          </label>
+                          <label class="cbmr-inline">
+                            <input type="checkbox" [(ngModel)]="f.sortable" [attr.name]="'cap_sort_' + f.id" />
+                            Sortable column
+                          </label>
+                          <label class="cbmr-inline">
+                            <input type="checkbox" [(ngModel)]="f.hidden" [attr.name]="'cap_hid_' + f.id" />
+                            Hide on screen — keep for audits only
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              </div>
+              <details class="cbmr-sql-sketch-details">
+                <summary>For IT preview only — suggested SQL &amp; list queries</summary>
+                <p class="cbmr-micro cbmr-micro-block">Nothing here runs automatically. Copy for database design if useful.</p>
+                <textarea class="cbmr-sql-textarea" rows="12" readonly [value]="captureSqlSketch(activeCapturePathKey)"></textarea>
+              </details>
+          </div>
+
+        </div>
+        </ng-container>
+        </div>
+      </main>
+
+      <aside class="cbmr-rail cbmr-rail--right" aria-label="Quality and other modules">
+        <div class="cbmr-rail__title">Other forms</div>
+        <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="rightAuxTab === 'main'" (click)="setRightAuxTab('main')">
+          Main form
+        </button>
+        <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="rightAuxTab === 'inprocess'" (click)="setRightAuxTab('inprocess')">
+          In-process
+        </button>
+        <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="rightAuxTab === 'ipqc'" (click)="setRightAuxTab('ipqc')">
+          IPQC
+        </button>
+        <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="rightAuxTab === 'qms'" (click)="setRightAuxTab('qms')">
+          QMS
+        </button>
+        <button type="button" class="cbmr-rail__btn" [class.cbmr-rail__btn--active]="rightAuxTab === 'breakdown'" (click)="setRightAuxTab('breakdown')">
+          Breakdown
+        </button>
+        <p class="cbmr-rail__hint">Forms here are scoped to the left selection (including fixed stages). Add more checklist types in master later.</p>
+      </aside>
+    </div>
+  </section>
+</section>
+

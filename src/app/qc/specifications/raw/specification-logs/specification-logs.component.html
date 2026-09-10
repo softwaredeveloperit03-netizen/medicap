@@ -1,0 +1,247 @@
+<div class="logs-shell">
+  <div class="logs-header">
+    <div class="title-block">
+      <h2>Specification Logs</h2>
+      <p>Single table for RM/PM/FP/Inprocess/Water logs</p>
+    </div>
+
+    <div class="logs-header__tools">
+      <div class="filter-row">
+        <button
+          type="button"
+          class="filter-btn"
+          *ngFor="let f of filters"
+          [class.active]="activeFilter === f.id"
+          (click)="setFilter(f.id)"
+        >
+          {{ f.label }}
+        </button>
+      </div>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search logs"
+          aria-label="Search specification logs"
+        />
+      </div>
+      <div class="header-btns">
+        <button type="button" class="header-btn header-btn--download" (click)="downloadSpecificationLog()">
+          Download
+        </button>
+        <a class="header-btn header-btn--secondary" routerLink="/master/specification/specification-revision">
+          Back To Revision
+        </a>
+        <a class="header-btn header-btn--close" routerLink="/master/specification/raw">
+          Close
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap" [class.raw-single-line]="activeFilter === 'raw'">
+    <clr-datagrid class="logs-grid" [clrDgLoading]="loading" >
+      <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+      <clr-dg-column>Spec. No.</clr-dg-column>
+      <clr-dg-column>Spec. Type</clr-dg-column>
+      <clr-dg-column>Item Code</clr-dg-column>
+      <clr-dg-column>Item Name</clr-dg-column>
+      <clr-dg-column>Version No.</clr-dg-column>
+      <clr-dg-column>Supersede No.</clr-dg-column>
+      <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+      <clr-dg-column>Entry By/On</clr-dg-column>
+      <clr-dg-column>Check By/On</clr-dg-column>
+      <clr-dg-column>App. By/On</clr-dg-column>
+      <clr-dg-column>Revision Request</clr-dg-column>
+      <clr-dg-column>Revision Status</clr-dg-column>
+      <clr-dg-column *ngIf="shouldShowViewSpecificationColumn()">View Specification</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let result of filteredLogs; let i = index" [clrDgItem]="result">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.specification_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.spec_type }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.version_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.supersede_no }}</clr-dg-cell>
+        <clr-dg-cell>
+          <strong [class.status-revision-due]="getDisplayStatus(result) === 'Revision Due'" [class.revision-blink]="isStatusBlinking(result)">
+            {{ getDisplayStatus(result) | uppercase }}
+          </strong>
+        </clr-dg-cell>
+        <clr-dg-cell>{{ result.entry_by }} / {{ result.entry_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.check_by }} / {{ result.check_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ result.approve_by }} / {{ result.approve_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button
+            class="btn btn-sm"
+            [ngClass]="getRevisionButtonClass(result)"
+            [disabled]="isRevisionButtonDisabled(result)"
+            (click)="onRevisionAction(result)"
+          >
+            {{ getRevisionButtonLabel(result) }}
+          </button>
+        </clr-dg-cell>
+        <clr-dg-cell>
+          <span [class.blocked-status]="getRevisionWorkflowStatus(result) === 'Blocked'" [class.released-status]="getRevisionWorkflowStatus(result) === 'Released Under Change Control'">
+            {{ getRevisionWorkflowStatus(result) }}
+          </span>
+        </clr-dg-cell>
+        <clr-dg-cell *ngIf="shouldShowViewSpecificationColumn()">
+          <button
+            class="btn btn-sm btn-info"
+            [disabled]="!canViewApprovedSpec(result)"
+            (click)="openApprovedSpec(result)"
+          >
+            View Specification
+          </button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+
+    <div class="empty-state" *ngIf="!loading && filteredLogs.length === 0">
+      No specification logs found.
+    </div>
+  </div>
+</div>
+
+<clr-modal [(clrModalOpen)]="revisionModalOpen" [clrModalClosable]="true" clrModalSize="md">
+  <h3 class="modal-title">Revision Request Form</h3>
+  <div class="modal-body" *ngIf="selectedSpec">
+    <form #revForm="ngForm">
+      <div class="clr-form-group">
+        <label for="rev-reason">Reason for Revision <span class="required">*</span></label>
+        <input id="rev-reason" type="text" class="clr-input" name="reason" [(ngModel)]="revisionForm.reason" required placeholder="Enter reason" aria-label="Reason for revision">
+      </div>
+      <div class="clr-form-group">
+        <label for="rev-remarks">{{'common.remarks' | translate}}</label>
+        <textarea id="rev-remarks" class="clr-textarea" name="remarks" [(ngModel)]="revisionForm.remarks" rows="3" placeholder="Remarks (optional)" aria-label="Remarks"></textarea>
+      </div>
+      <div class="clr-form-group" *ngIf="selectedSpec">
+        <label>Specification</label>
+        <p class="static-value">{{ selectedSpec.specification_no || 'NA' }} - {{ selectedSpec.material_name || 'NA' }}</p>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="submitRevisionRequest()" [disabled]="!revisionForm.reason">{{'common.submit' | translate}}</button>
+    <button type="button" class="btn btn-outline" (click)="closeRevisionModal()">{{'common.cancel' | translate}}</button>
+  </div>
+</clr-modal>
+
+<clr-modal [(clrModalOpen)]="viewModalOpen" [clrModalClosable]="true" clrModalSize="xl">
+  <h3 class="modal-title">Approved Specification Form</h3>
+  <div class="modal-body spec-view-modal" *ngIf="selectedApprovedSpec">
+    <div class="spec-view-grid">
+      <div><strong>Specification No:</strong> {{ selectedApprovedSpec.specification_no || '-' }}</div>
+      <div><strong>Type:</strong> {{ selectedApprovedSpec.spec_type || '-' }}</div>
+      <div><strong>Item Code:</strong> {{ selectedApprovedSpec.material_code || '-' }}</div>
+      <div><strong>Item Name:</strong> {{ selectedApprovedSpec.material_name || '-' }}</div>
+    </div>
+
+    <div class="spec-panel">
+      <div class="spec-panel__header">Version Control</div>
+      <div class="spec-panel__body">
+        <div class="spec-view-grid spec-view-grid--wide">
+          <div><strong>Specification No:</strong> {{ selectedApprovedSpec.specification_no || '-' }}</div>
+          <div><strong>Supersede No:</strong> {{ selectedApprovedSpec.supersede_no || '-' }}</div>
+          <div><strong>Version No:</strong> {{ selectedApprovedSpec.version_no || '-' }}</div>
+          <div *ngIf="selectedApprovedSpec.specIs === 'Existing'"><strong>Issued Date:</strong> {{ selectedApprovedSpec.issuedDate || '-' }}</div>
+          <div><strong>Review Date:</strong> {{ selectedApprovedSpec.review_date || '-' }}</div>
+          <div><strong>Effective Date:</strong> {{ selectedApprovedSpec.effective_date || '-' }}</div>
+          <div><strong>Reanalysis Period:</strong> {{ selectedApprovedSpec.retest_period ? (selectedApprovedSpec.retest_period + ' Month') : '-' }}</div>
+          <div><strong>Sampling Plan Type:</strong> {{ selectedApprovedSpec.sampling_plan || '-' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">General Information</div>
+    <div class="spec-view-grid spec-view-grid--wide">
+      <div class="spec-view-field"><strong>Storage:</strong> {{ selectedApprovedSpec.storage_condition || '-' }}</div>
+      <div class="spec-view-field"><strong>Sampling:</strong> {{ selectedApprovedSpec.samplingDetails || '-' }}</div>
+      <div class="spec-view-field"><strong>Hazard &amp; Precautions:</strong> {{ selectedApprovedSpec.hazardAndPrecautions || '-' }}</div>
+      <div class="spec-view-field"><strong>STO:</strong> {{ selectedApprovedSpec.stockTransfer || '-' }}</div>
+      <div class="spec-view-field" *ngIf="selectedApprovedSpec.note"><strong>Note:</strong> {{ selectedApprovedSpec.note }}</div>
+    </div>
+
+    <div class="spec-panel">
+      <div class="spec-panel__header">Sampling Plan</div>
+      <div class="spec-panel__body">
+        <div class="spec-view-grid spec-view-grid--wide">
+          <div *ngIf="selectedApprovedSpec.sampling_plan === 'Test Specific'"><strong>Chemical Qty:</strong> {{ selectedApprovedSpec.chemical_qty ?? '-' }}</div>
+          <div *ngIf="selectedApprovedSpec.sampling_plan === 'Test Specific'"><strong>Physical Qty:</strong> {{ selectedApprovedSpec.physical_qty ?? '-' }}</div>
+          <div *ngIf="selectedApprovedSpec.sampling_plan === 'Test Specific'"><strong>Micro Qty:</strong> {{ selectedApprovedSpec.micro_qty ?? '-' }}</div>
+          <div *ngIf="selectedApprovedSpec.sampling_plan === 'Test Specific'"><strong>Identification Qty:</strong> {{ selectedApprovedSpec.indentification_qty ?? '-' }}</div>
+          <div><strong>Sample Qty:</strong> {{ selectedApprovedSpec.sample_qty ?? '-' }}</div>
+          <div><strong>Control Sample Qty:</strong> {{ selectedApprovedSpec.control_sample ?? '-' }}</div>
+          <div><strong>Additional Sample Qty:</strong> {{ selectedApprovedSpec.additional_sample ?? '-' }}</div>
+          <div><strong>Total Sample Qty:</strong> {{ selectedApprovedSpec.totalsample_qty ?? '-' }}</div>
+          <div><strong>Unit:</strong> {{ selectedApprovedSpec.unit || '-' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Add Specification</div>
+    <div class="table-wrap inner-table-wrap">
+      <clr-datagrid >
+        <clr-dg-column>Sr</clr-dg-column>
+        <clr-dg-column>Test For</clr-dg-column>
+        <clr-dg-column>Test Type</clr-dg-column>
+        <clr-dg-column>Test</clr-dg-column>
+        <clr-dg-column>Subtest</clr-dg-column>
+        <clr-dg-column *ngIf="isRawOrPackingApprovedSpec()">Reference</clr-dg-column>
+        <clr-dg-column *ngIf="showApprovedSpecTestSampleQty()">Sample Qty</clr-dg-column>
+        <clr-dg-column>Limit Type</clr-dg-column>
+        <clr-dg-column>Limits</clr-dg-column>
+        <clr-dg-column>Outside Testing</clr-dg-column>
+        <clr-dg-column *ngIf="isRawApprovedSpec()">Retest</clr-dg-column>
+        <clr-dg-column>Test Method</clr-dg-column>
+        <clr-dg-column *ngIf="isFinishApprovedSpec()">Stability Indicating</clr-dg-column>
+        <clr-dg-column *ngIf="isFinishApprovedSpec()">Bulk Release</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let t of selectedApprovedSpec.spectTests; let i = index" [clrDgItem]="t">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.testFor || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.test_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.test || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.subtest || '-' }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="isRawOrPackingApprovedSpec()">{{ t.reference_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="showApprovedSpecTestSampleQty()">{{ t.sample_qty || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.limit_type || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.limits || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.outside_testing || '-' }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="isRawApprovedSpec()">{{ t.retest || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ t.test_method_no || '-' }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="isFinishApprovedSpec()">{{ t.release_stability || '-' }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="isFinishApprovedSpec()">{{ t.bulk_release || '-' }}</clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+
+    <div class="section-title">Revision History</div>
+    <div class="table-wrap inner-table-wrap">
+      <clr-datagrid >
+        <clr-dg-column>Sr</clr-dg-column>
+        <clr-dg-column>Version No</clr-dg-column>
+        <clr-dg-column>Change Control No</clr-dg-column>
+        <clr-dg-column>Reason</clr-dg-column>
+        <clr-dg-column>Effective Date</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let rv of selectedApprovedSpec.revisionList; let j = index" [clrDgItem]="rv">
+          <clr-dg-cell>{{ j + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ rv.version_no || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ rv.change_mode || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ rv.reason || '-' }}</clr-dg-cell>
+          <clr-dg-cell>{{ rv.effective_date || '-' }}</clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-info" (click)="downloadApprovedSpecPdf()" [disabled]="!selectedApprovedSpec?.specification_no">
+      Download PDF
+    </button>
+    <button type="button" class="btn btn-outline" (click)="closeApprovedSpecModal()">Close</button>
+  </div>
+</clr-modal>

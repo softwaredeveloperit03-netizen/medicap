@@ -1,0 +1,211 @@
+ 
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-lg-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Inwards Log</div>
+      <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+          <button class="btn btn-sm btn-success" routerLink="/store/challan/frompo">From Po</button>
+          <button class="btn btn-sm btn-success" routerLink="/store/challan/local">Local Purchase</button>
+          <button class="btn btn-sm btn-primary" routerLink="/store/challan/return">Returnable</button>
+          <button class="btn btn-sm btn-danger" routerLink="/store/challan">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+
+          <div class="store-appr__toolbar">
+            <div class="store-appr__filters">
+              <div class="store-appr__field">
+                <label class="store-appr__label">Material Type</label>
+                <select class="store-appr__input" name="materialTypeFilter" [(ngModel)]="materialTypeFilter">
+                  <option value="All">All</option>
+                  <option>Raw Material</option>
+                  <option>Packing Material</option>
+                  <option>Engg Store Mech</option>
+                  <option>Engg Store Elect</option>
+                  <option>Stationary</option>
+                  <option>Housekeeping</option>
+                  <option>Canteen</option>
+                  <option>Building Material</option>
+                  <option>Machine Spares (Dedicated)</option>
+                  <option>Machine Spares (Common)</option>
+                  <option>QC Materials</option>
+                  <option>IT Materials</option>
+                  <option>Others</option>
+                  <option>Service</option>
+                  <option>Equipment</option>
+                </select>
+              </div>
+              <div class="store-appr__field store-appr__field--search">
+                <label class="store-appr__label">Search</label>
+                <input class="store-appr__input" type="text" placeholder="Search by inward no, PO no, challan, vendor..." [(ngModel)]="searchQuery">
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary store-appr__btn store-appr__btn--clear" (click)="clearFilters()">{{'common.clear' | translate}}</button>
+            </div>
+            <div class="store-appr__page-size">
+              <label class="store-appr__label">Rows / Page</label>
+              <select class="store-appr__input store-appr__input--sm" [(ngModel)]="pageSize" name="pageSize">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="20">20</option>
+                <option [ngValue]="50">50</option>
+                <option [ngValue]="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="datagrid-wrapper store-appr__datagrid">
+            <clr-datagrid class="store-appr__grid" [clrDgLoading]="loading" >
+
+                <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                <clr-dg-column>Material Type.</clr-dg-column>
+                <clr-dg-column>Inward No.</clr-dg-column>
+                <clr-dg-column>PO No./Dt.</clr-dg-column>
+                <clr-dg-column>Packaging Slip</clr-dg-column>
+                <clr-dg-column>Packaging Slip Dt.</clr-dg-column>
+                <clr-dg-column>Vendor Name</clr-dg-column>
+                <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column>Entry By/Dt.</clr-dg-column>
+                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        
+                <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                <clr-dg-cell>{{ result.material_type}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.inward_no}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.po_no}} / {{ result.po_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.ch_no}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.challan_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+                <clr-dg-cell>{{ result.status  | uppercase}}</clr-dg-cell>
+                <clr-dg-cell>{{ result.entry_by}} / {{ result.entry_date |date:'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>
+                    <button class="btn btn-sm btn-info store-appr__btn store-appr__btn--action" (click)="view(result)">PROCEED</button>
+                </clr-dg-cell>
+                </clr-dg-row>
+                <clr-dg-footer>
+                  <clr-dg-pagination #pagination [clrDgPageSize]="pageSize">
+                    {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }} records
+                  </clr-dg-pagination>
+                </clr-dg-footer>
+            </clr-datagrid>
+
+          </div>
+ 
+    </div>
+  </div>
+</div>
+
+   
+  
+  
+  <div class="card store-appr__detail-card" *ngIf="isView">
+    <div class="card-header store-appr__detail-header">Challan Details For Approval</div>
+    <div class="card-block store-appr__detail-block">
+      <div class="card-text store-appr__detail-body">
+
+
+      <h3 class="store-appr__section-title">Vendor Details</h3>
+      <table class="table table-border store-appr__table store-appr__table--compact">
+        <tr>
+          <td style="text-align: left; width: 20%;">Vendor No.:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Vendor Name:</td>
+          <td style="text-align: left; ">{{ selectedResult['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+          <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+          <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+          <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <td style="text-align: left; width: 20%;">PO No./Date:</td>
+          <td style="text-align: left;"> {{ selectedResult['po_no'] }} </td>
+          <td style="text-align: left; width: 20%;">PO Date:</td>
+          <td style="text-align: left;"> {{ selectedResult['po_date'] | date: 'dd-MM-yyyy'}}</td>
+        </tr>
+      </table>
+ 
+  
+      <h3 class="store-appr__section-title">Materials</h3>
+      <div class="store-appr__table-wrap">
+      <table class="table table-border store-appr__table store-appr__table--compact store-appr__table--materials">
+        <tr>
+          <th style="background-color: rgb(14, 67, 112); color: white;">{{'common.table.srNo' | translate}}</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Code</th>
+          <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Invoice No./Dt.</th>
+          <th style="background-color: rgb(14, 67, 112); color: white; ">Invoice Rate</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">GST%</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+        </tr>
+        <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+          <td>{{i+1}}</td>
+          <td style="text-align: left;">{{ comp.material_type }} - {{ comp.material_subtype }}</td>
+          <td style="text-align: left;">{{ comp.material_code ||'NA' }}</td>
+          <td style="text-align: left;">{{ comp.material_name ||'NA' }}</td>
+          <td>{{ comp.grade ||'NA' }}</td>
+          <td>{{ comp.qty }} {{ comp.unit }}</td>
+          <td>{{ (comp.rate || 0) | number:'1.2-2' }}/{{ comp.unit || '-' }}</td>
+          <td>{{ comp.tax_invoice }} / {{ comp.tax_invoice_date | date:'dd-MM-yyyy' }}</td>
+          <td>{{ (comp.received_rate || 0) | number:'1.2-2' }}</td>
+          <td>{{ comp.gst }}</td>
+          <td>{{ (comp.gross_total || 0) | number:'1.2-2' }}</td>
+          <td>{{ (comp.gst_total || 0) | number:'1.2-2' }}</td>
+          <td>{{ (comp.net_total || 0) | number:'1.2-2' }}</td>
+          <td>{{ (comp.diff || 0) | number:'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="selectedResult['materials'].length == 0">
+          <td colspan="14">{{'common.noRecords' | translate}}</td>
+        </tr>
+      </table>
+      </div>
+
+
+      <h3 class="store-appr__section-title">Upload Challan</h3>
+                    
+      <table class="table table-border store-appr__table store-appr__table--compact" >
+          <tr>
+              <td style="font-weight: bold; background-color:aquamarine;">Document Name</td>
+              <td style="font-weight: bold; background-color:aquamarine;">Receiving no</td>
+              <td style="font-weight: bold; background-color:aquamarine;">View</td>
+          </tr>
+              <tr *ngFor="let inv of uploadedFileNames; let i = index;">
+              <td>{{inv.docName}}</td>
+              <td>{{inv.docNo}}</td>
+              <td style="margin: 0; padding: 0;">
+                  <button class="btn btn-primary btn-sm store-appr__btn store-appr__btn--file" (click)="viewFile(inv.file)">{{'common.view' | translate}}</button>
+              </td>
+          </tr>
+      </table>
+
+       
+
+      <table class="table table-border store-appr__table store-appr__table--compact">
+          <tr>
+              <td style="text-align:center;"><strong></strong></td>
+              <td style="text-align:center;"><strong>Entry By</strong></td>
+              <td style="text-align:center;"><strong>Approved By</strong></td>
+          </tr>
+          <tr>
+              <td style="text-align:center;"><strong>Sign. /Date</strong></td>
+              <td style="text-align:center;color:blue;">{{selectedResult['entry_by'] || '-'}} / {{selectedResult['entry_date'] || '-'}}</td>
+              <td style="text-align:center;color:blue;">{{selectedResult['approve_by'] || '-'}} / {{selectedResult['approve_date'] || '-'}}</td>
+          </tr>
+      </table>
+    
+
+      </div>
+    </div>
+    <div class="card-footer store-appr__detail-footer">
+      <button class="btn btn-primary store-appr__btn store-appr__btn--footer" (click)="downloadDocumentChecklist()">Download Document Checklist</button>
+      <button class="btn btn-danger store-appr__btn store-appr__btn--footer" (click)="isView =false">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+ 

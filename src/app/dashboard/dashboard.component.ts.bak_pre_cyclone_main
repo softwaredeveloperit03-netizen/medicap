@@ -1,0 +1,547 @@
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { DataAccessService } from 'src/app/data-access.service';
+import { trigger, transition, style, animate } from '@angular/animations';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+
+declare let alertify;
+
+export interface DeptItem {
+  name: string;
+  displayName: string;
+  icon: string;
+  category: string;
+  color: string;
+  description: string;
+  badge?: string;
+  badgeIcon?: string;
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+  animations: [
+    trigger('fadeInUp', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('400ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ])
+    ])
+  ]
+})
+export class DashboardComponent implements OnInit {
+  plant_head = 'No';
+  quality_head = 'No';
+  rights: any[] | undefined;
+  searchQuery = '';
+  selectedCategory = 'all';
+  filteredDepts: DeptItem[] = [];
+  allValid = false;
+
+  /** Selected palette gradient for cards - applied to border and accents */
+  selectedPalette = '';
+  paletteBarOpen = false;
+
+  /** User's preferred card order (department names). Persisted in localStorage. */
+  preferredOrder: string[] = [];
+  private readonly STORAGE_KEY_ORDER = 'dashboard_card_order';
+  /** Default icon color when no palette selected (blue) */
+  readonly defaultIconColor = '#2563eb';
+
+  readonly paletteOptions: { id: string; label: string; gradient: string; iconColor: string }[] = [
+    { id: 'default', label: 'Default', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', iconColor: '#2563eb' },
+    { id: 'coral', label: 'Coral', gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%)', iconColor: '#dc2626' },
+    { id: 'ocean', label: 'Ocean', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', iconColor: '#0284c7' },
+    { id: 'forest', label: 'Forest', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', iconColor: '#059669' },
+    { id: 'sunset', label: 'Sunset', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', iconColor: '#ea580c' },
+    { id: 'plum', label: 'Plum', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', iconColor: '#7c3aed' },
+    { id: 'teal', label: 'Teal', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', iconColor: '#0d9488' },
+    { id: 'berry', label: 'Berry', gradient: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', iconColor: '#9333ea' },
+    { id: 'mint', label: 'Mint', gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', iconColor: '#0d9488' },
+    { id: 'lavender', label: 'Lavender', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', iconColor: '#7c3aed' },
+    { id: 'peach', label: 'Peach', gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', iconColor: '#c2410c' },
+    { id: 'slate', label: 'Slate', gradient: 'linear-gradient(135deg, #485563 0%, #29323c 100%)', iconColor: '#1e293b' },
+    { id: 'rose', label: 'Rose', gradient: 'linear-gradient(135deg, #f857a6 0%, #ff5858 100%)', iconColor: '#e11d48' },
+    { id: 'sky', label: 'Sky', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', iconColor: '#0369a1' },
+    { id: 'amber', label: 'Amber', gradient: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)', iconColor: '#d97706' },
+    { id: 'indigo', label: 'Indigo', gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', iconColor: '#4f46e5' },
+    { id: 'emerald', label: 'Emerald', gradient: 'linear-gradient(135deg, #059669 0%, #34d399 100%)', iconColor: '#047857' },
+    { id: 'crimson', label: 'Crimson', gradient: 'linear-gradient(135deg, #dc2626 0%, #f97316 100%)', iconColor: '#b91c1c' }
+  ];
+
+  departments: DeptItem[] = [
+    { name: 'Exports', displayName: 'Import & Export', icon: 'fas fa-chart-line', category: 'administrative', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Business Analytics & Reports' },
+    { name: 'Management', displayName: 'Management', icon: 'fas fa-chart-line', category: 'administrative', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Business Analytics & Reports' },
+    { name: 'master', displayName: 'Master', icon: 'fas fa-crown', category: 'support', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Master Data Management', badge: 'Core', badgeIcon: 'fas fa-star' },
+    { name: 'Admin', displayName: 'Admin', icon: 'fas fa-cogs', category: 'administrative', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: 'System Administration' },
+    { name: 'Reception', displayName: 'Reception', icon: 'fas fa-cogs', category: 'administrative', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: 'System Administration' },
+    { name: 'Account', displayName: 'Account', icon: 'fas fa-wallet', category: 'administrative', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', description: 'Financial Management' },
+    { name: 'Marketing', displayName: 'Marketing', icon: 'fas fa-bullhorn', category: 'operations', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Sales & Marketing' },
+    { name: 'Purchase', displayName: 'Purchase', icon: 'fas fa-shopping-cart', category: 'inventory', color: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', description: 'Procurement & Sourcing' },
+    { name: 'Human Resource', displayName: 'Human Resource', icon: 'fas fa-users', category: 'administrative', color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', description: 'HR Management' },
+    { name: 'Regulatory', displayName: 'Regulatory', icon: 'fas fa-balance-scale', category: 'quality', color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', description: 'Compliance & Regulations' },
+    { name: 'Security', displayName: 'Material Management', icon: 'fas fa-shield-alt', category: 'administrative', color: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', description: 'Security Management' },
+    { name: 'Planning', displayName: 'Planning', icon: 'fas fa-project-diagram', category: 'operations', color: 'linear-gradient(135deg, #ff8a80 0%, #ea6100 100%)', description: 'Production Planning' },
+    { name: 'Production', displayName: 'Production', icon: 'fas fa-industry', category: 'operations', color: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)', description: 'Manufacturing Operations' },
+    { name: 'Packing', displayName: 'Packing', icon: 'fas fa-box', category: 'operations', color: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', description: 'Packaging Operations' },
+    { name: 'Quality Control', displayName: 'Quality Control', icon: 'fas fa-clipboard-check', category: 'quality', color: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)', description: 'QC Testing & Analysis' },
+    { name: 'Quality Assurance', displayName: 'Quality Assurance', icon: 'fas fa-award', category: 'quality', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'QA & Compliance', badge: 'Critical', badgeIcon: 'fas fa-shield-alt' },
+    { name: 'Engineering', displayName: 'Engineering', icon: 'fas fa-tools', category: 'support', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Maintenance & Engineering' },
+    { name: 'IT', displayName: 'IT', icon: 'fas fa-laptop-code', category: 'support', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', description: 'Information Technology' },
+    { name: 'EHS', displayName: 'EHS', icon: 'fas fa-hard-hat', category: 'support', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', description: 'Environment Health Safety' },
+    { name: 'Store', displayName: 'Store', icon: 'fas fa-warehouse', category: 'inventory', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Warehouse Management' },
+    // { name: 'Day Store', displayName: 'Day Store', icon: 'fas fa-warehouse', category: 'inventory', color: 'linear-gradient(135deg, #af0d3e 0%, #fee140 100%)', description: 'Warehouse Management' },
+    { name: 'Enginering Store', displayName: 'General Store', icon: 'fas fa-warehouse', category: 'inventory', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Warehouse Management' },
+    { name: 'Dispatch', displayName: 'Dispatch', icon: 'fas fa-shipping-fast', category: 'operations', color: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', description: 'Logistics & Dispatch' },
+    { name: 'Plant Head', displayName: 'Plant Head', icon: 'fas fa-user-cog', category: 'operations', color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', description: 'Plant Management', badge: 'Admin', badgeIcon: 'fas fa-user-shield' },
+    { name: 'R AND D', displayName: 'Product Development', icon: 'fas fa-flask', category: 'quality', color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', description: 'Research & Development' },
+    { name: 'NPD', displayName: 'NPD', icon: 'fas fa-lightbulb', category: 'quality', color: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', description: 'New Product Development' },
+    { name: 'E Logs', displayName: 'E-Logbook', icon: 'fas fa-book', category: 'support', color: 'linear-gradient(135deg, #ff8a80 0%, #ea6100 100%)', description: 'Electronic Logbooks' },
+    { name: 'Q-Head', displayName: 'Q-Head', icon: 'fas fa-book', category: 'quality', color: 'linear-gradient(135deg, #ff8a80 0%, #ea6100 100%)', description: 'Quality Head' },
+  ];
+
+  constructor(private service: DataAccessService, private router: Router) {}
+
+  ngOnInit(): void {
+    this.initializeDepartments();
+    this.get_rights();
+    this.checkIfPlantHead();
+    const savedPalette = localStorage.getItem('dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(p => p.id === savedPalette);
+      if (found) this.selectedPalette = found.gradient;
+    }
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY_ORDER);
+      if (saved) this.preferredOrder = JSON.parse(saved);
+    } catch { this.preferredOrder = []; }
+  }
+
+  private isYesFlag(value: any): boolean {
+    if (value === null || value === undefined) return false;
+    const normalized = String(value).trim().toLowerCase();
+    return (
+      normalized === 'yes' ||
+      normalized === 'y' ||
+      normalized === 'true' ||
+      normalized === '1' ||
+      normalized === 'on'
+    );
+  }
+
+  /** Normalize any department label to dashboard card `name` (e.g. QA → Quality Assurance). */
+  private resolveDashboardCardName(deptRaw: unknown): string {
+    const fromApi = String(deptRaw ?? '').trim();
+    if (!fromApi) {
+      return '';
+    }
+    let s = fromApi.toLowerCase().replace(/\./g, '').replace(/&/g, ' and ');
+    s = s.replace(/\s*department\s*$/i, '').trim();
+    s = s.replace(/\s+/g, ' ');
+    const compact = s.replace(/\s/g, '');
+
+    const toCard: Record<string, string> = {
+      qa: 'Quality Assurance',
+      qualityassurance: 'Quality Assurance',
+      'quality assurance': 'Quality Assurance',
+      'q a': 'Quality Assurance',
+      qc: 'Quality Control',
+      qualitycontrol: 'Quality Control',
+      'quality control': 'Quality Control',
+      'q c': 'Quality Control',
+      hr: 'Human Resource',
+      humanresource: 'Human Resource',
+      'human resources': 'Human Resource',
+      'human resource': 'Human Resource',
+      rnd: 'R AND D',
+      'r and d': 'R AND D',
+      'research and development': 'R AND D',
+      'product development': 'R AND D',
+      npd: 'NPD',
+      'new product development': 'NPD',
+      accounts: 'Account',
+      account: 'Account',
+      it: 'IT',
+      'information technology': 'IT',
+      qhead: 'Q-Head',
+      'q-head': 'Q-Head',
+      'q head': 'Q-Head',
+      'quality head': 'Q-Head',
+      security: 'Security',
+      'material management': 'Security',
+      'materials management': 'Security',
+      materialmanagement: 'Security',
+      materialsmanagement: 'Security',
+      'material managment': 'Security',
+      exports: 'Exports',
+      'import and export': 'Exports',
+      'import export': 'Exports',
+      'enginering store': 'Enginering Store',
+      'engineering store': 'Enginering Store',
+      'general store': 'Enginering Store',
+    };
+
+    if (toCard[s]) {
+      return toCard[s];
+    }
+    if (toCard[compact]) {
+      return toCard[compact];
+    }
+    if (s.includes('quality assurance')) {
+      return 'Quality Assurance';
+    }
+    if (s.includes('quality control')) {
+      return 'Quality Control';
+    }
+    if (s.includes('material') && s.includes('management')) {
+      return 'Security';
+    }
+    if (s === 'security' || compact === 'security') {
+      return 'Security';
+    }
+
+    const byDisplay = this.departments.find((d) => {
+      const disp = (d.displayName || '').trim().toLowerCase();
+      const nm = (d.name || '').trim().toLowerCase();
+      const raw = fromApi.toLowerCase();
+      return disp === raw || nm === raw;
+    });
+    if (byDisplay) {
+      return byDisplay.name;
+    }
+
+    const exactCard = this.departments.find(
+      (d) => d.name.toLowerCase() === fromApi.toLowerCase()
+    );
+    if (exactCard) {
+      return exactCard.name;
+    }
+
+    return fromApi.replace(/\s+/g, ' ').trim();
+  }
+
+  private rightsRowDepartmentCard(row: any): string {
+    if (!row) {
+      return '';
+    }
+    const resolved =
+      row.dashboard_department ||
+      this.resolveDashboardCardName(row.department);
+    return resolved || String(row.department || '').trim();
+  }
+
+  private rightsDepartmentMatches(rightDept: unknown, dashboardDeptName: string, row?: any): boolean {
+    const cardFromRights = row
+      ? this.rightsRowDepartmentCard(row)
+      : this.resolveDashboardCardName(rightDept);
+    const cardTarget = this.resolveDashboardCardName(dashboardDeptName);
+    if (!cardFromRights || !cardTarget) {
+      return false;
+    }
+    return cardFromRights.toLowerCase() === cardTarget.toLowerCase();
+  }
+
+  /** Row can open department (role Yes, approved status, or main rights row). */
+  private rightsRowAllowsDeptAccess(row: any): boolean {
+    if (!row || typeof row !== 'object') {
+      return false;
+    }
+    const status = String(row.status ?? '')
+      .trim()
+      .toLowerCase();
+    if (status === 'approve' || status === 'approved' || status === 'active') {
+      return true;
+    }
+    if (this.isYesFlag(row.main)) {
+      return true;
+    }
+    const flags = [
+      row.isuser,
+      row.ischecker,
+      row.isapprover,
+      row.dept_head,
+      row.qms_approver,
+      row.isauditor,
+      row.shift_allocator,
+      row.trainig_cordinator,
+      row.task_assigner,
+      row.plant_head,
+      row.quality_head,
+    ];
+    return flags.some((f) => this.isYesFlag(f));
+  }
+
+  private rightsHasDepartment(deptName: string): boolean {
+    const target = this.resolveDashboardCardName(deptName);
+    if (!target) {
+      return false;
+    }
+    const targetLc = target.toLowerCase();
+    return (this.rights || []).some((r: any) => {
+      const rowCard = this.rightsRowDepartmentCard(r);
+      return rowCard.toLowerCase() === targetLc;
+    });
+  }
+
+  get_rights(): void {
+    const empId = encodeURIComponent(localStorage.getItem('emp_id') || '');
+    this.service
+      .get(
+        'hr/employee.php?type=getrightsDashboard&emp_id=' +
+          empId +
+          '&dep_name=' +
+          encodeURIComponent(localStorage.getItem('department') || '')
+      )
+      .subscribe(
+        (response: any) => {
+          let rows = response;
+          if (typeof rows === 'string') {
+            try {
+              rows = JSON.parse(rows);
+            } catch {
+              rows = [];
+            }
+          }
+          this.rights = Array.isArray(rows) ? rows : [];
+      const anyQualityHead = this.rights.some((r: any) => this.isYesFlag(r.quality_head));
+      const first = this.rights.length > 0 ? this.rights[0] : null;
+      if (anyQualityHead) {
+        this.quality_head = 'Yes';
+      } else if (first && first.quality_head !== undefined) {
+        this.quality_head = first.quality_head;
+      }
+      this.filterDepartments();
+    }, () => {
+      this.rights = [];
+      this.filterDepartments();
+    });
+  }
+
+  checkIfPlantHead(): void {
+    this.service.get('hr/employee.php?type=checkIfPlantHead&emp_id=' + localStorage.getItem('emp_id')).subscribe(
+      (response: any) => {
+        const first = Array.isArray(response) && response.length > 0 ? response[0] : response;
+        this.plant_head = first && first.plant_head !== undefined ? first.plant_head : 'No';
+        this.quality_head = first && first.quality_head !== undefined ? first.quality_head : this.quality_head;
+        this.filterDepartments();
+      },
+      () => {
+        this.plant_head = 'No';
+        this.quality_head = 'No';
+        this.filterDepartments();
+      }
+    );
+  }
+
+  initializeDepartments(): void {
+    this.filteredDepts = [...this.departments];
+  }
+  filterDepartments(): void {
+    let filtered = [...this.departments];
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(
+        dept =>
+          dept.displayName.toLowerCase().includes(q) ||
+          dept.description.toLowerCase().includes(q) ||
+          dept.name.toLowerCase().includes(q)
+      );
+    }
+    if (this.selectedCategory !== 'all') {
+      filtered = filtered.filter(dept => dept.category === this.selectedCategory);
+    }
+    if (this.rights !== undefined) {
+      filtered = filtered.filter(dept => {
+        if (dept.name === 'Plant Head') return this.isYesFlag(this.plant_head);
+        if (dept.name === 'Q-Head') return this.isYesFlag(this.quality_head);
+        if (dept.name === 'R AND D' || dept.name === 'NPD') {
+          if (this.isYesFlag(this.quality_head)) return true;
+          return this.rightsHasDepartment(dept.name);
+        }
+        if (dept.name === 'master' || dept.name === 'E Logs') return true;
+        if (dept.name === 'Day Store') {
+          return (this.rights || []).some((r: any) =>
+            this.resolveDashboardCardName(r.dashboard_department || r.department) === 'Store'
+          );
+        }
+        return this.rightsHasDepartment(dept.name);
+      });
+    }
+    this.filteredDepts = this.sortByPreferredOrder(filtered);
+  }
+
+  private sortByPreferredOrder(list: DeptItem[]): DeptItem[] {
+    if (!this.preferredOrder.length) return list;
+    const orderMap = new Map(this.preferredOrder.map((name, i) => [name, i]));
+    return [...list].sort((a, b) => {
+      const ia = orderMap.has(a.name) ? orderMap.get(a.name)! : 1e9;
+      const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 1e9;
+      return ia - ib;
+    });
+  }
+
+  onCardDrop(event: CdkDragDrop<DeptItem[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    this.justDragged = true;
+    moveItemInArray(this.filteredDepts, event.previousIndex, event.currentIndex);
+    this.preferredOrder = this.filteredDepts.map(d => d.name);
+    try {
+      localStorage.setItem(this.STORAGE_KEY_ORDER, JSON.stringify(this.preferredOrder));
+    } catch { }
+  }
+
+  filterByCategory(category: string): void {
+    this.selectedCategory = category;
+    this.filterDepartments();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.filterDepartments();
+  }
+
+  trackByDeptName(_index: number, dept: DeptItem): string {
+    return dept.name;
+  }
+
+  getCardGradient(dept: DeptItem): string {
+    return this.selectedPalette || dept.color;
+  }
+
+  /** Icon glyph color: blue by default, or the selected palette's icon color */
+  getIconColor(): string {
+    if (!this.selectedPalette) return this.defaultIconColor;
+    const opt = this.paletteOptions.find(p => p.gradient === this.selectedPalette);
+    return opt ? opt.iconColor : this.defaultIconColor;
+  }
+
+  togglePaletteBar(): void {
+    this.paletteBarOpen = !this.paletteBarOpen;
+  }
+
+  selectPalette(option: { id: string; gradient: string }): void {
+    this.selectedPalette = option.gradient;
+    localStorage.setItem('dashboard_palette', option.id);
+    if (option.id === 'default') this.selectedPalette = '';
+  }
+
+  getCurrentDate(): string {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  getUserName(): string {
+    return localStorage.getItem('username') || 'User';
+  }
+
+  getUserDepartment(): string {
+    return localStorage.getItem('department') || 'No Department';
+  }
+
+  private justDragged = false;
+
+  routeToDept(deptName: string): void {
+    if (this.justDragged) {
+      this.justDragged = false;
+      return;
+    }
+    if (deptName === 'E Logs') {
+      this.router.navigate(['/equipmentusage']);
+      return;
+    }
+
+    this.allValid = false;
+    const rightsList = this.rights || [];
+
+    for (let i = 0; i < rightsList.length; i++) {
+      const row = rightsList[i];
+      if (this.rightsDepartmentMatches(row.department, deptName, row)) {
+        if (deptName === 'master' || deptName === 'E Logs' || this.rightsRowAllowsDeptAccess(row)) {
+          this.allValid = true;
+          break;
+        }
+      }
+      if (deptName === 'Plant Head' && this.isYesFlag(this.plant_head)) {
+        this.allValid = true;
+        break;
+      }
+      if (deptName === 'Q-Head' && this.isYesFlag(this.quality_head)) {
+        this.allValid = true;
+        break;
+      }
+      if ((deptName === 'R AND D' || deptName === 'NPD') && this.isYesFlag(this.quality_head)) {
+        this.allValid = true;
+        break;
+      }
+      if (deptName === 'Day Store' && rightsList[i].department === 'Store') {
+        this.allValid = true;
+        break;
+      }
+    }
+
+    if (deptName === 'Plant Head' && this.isYesFlag(this.plant_head)) this.allValid = true;
+    if ((deptName === 'R AND D' || deptName === 'NPD') && this.isYesFlag(this.quality_head)) this.allValid = true;
+    if (deptName === 'master') this.allValid = true;
+
+    if (!this.allValid) {
+      alertify.error('Access Denied');
+      return;
+    }
+
+    const navMap: Record<string, string> = {
+      'Plant Head': '/plant_head',
+      'master': '/master',
+      'Exports': '/Exports',
+      'Management': '/management',
+      'Admin': '/admin',
+      'Account': '/accounts',
+      'Marketing': '/marketing',
+      'Purchase': '/purchase',
+      'Human Resource': '/hr',
+      'Regulatory': '/regulatory',
+      'Security': '/security',
+      'Planning': '/planning',
+      'Production': '/fproduction',
+      'Packing': '/packing',
+      'Quality Control': '/qc',
+      'Quality Assurance': '/qa',
+      'Engineering': '/engineering',
+      'IT': '/it',
+      'EHS': '/ehs',
+      'Store': '/store',
+      'Enginering Store': '/engi-store',
+      'Day Store': '/daystore',
+      'Dispatch': '/dispatch',
+      'R AND D': '/rnd',
+      'NPD': '/npd',
+      'Reception': '/reception',
+      'Q-Head': '/qhead',
+    };
+ 
+    const path = navMap[deptName];
+    if (path) {
+      if (deptName === 'master') {
+        const plant_id = localStorage.getItem('plant_id');
+           this.router.navigate(['/master']);
+      } else if (deptName === 'Day Store') {
+        this.setDept('Store');
+        this.router.navigate([path]);
+      } else {
+        if (deptName !== 'Plant Head' && deptName !== 'master') this.setDept(deptName);
+        this.router.navigate([path]);
+      }
+    } else {
+      alertify.error('Please Contact Admin..');
+    }
+    this.allValid = false;
+  }
+
+  setDept(dept: string): void {
+    localStorage.setItem('department', dept);
+  }
+}

@@ -1,0 +1,276 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px;">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+          Email Tracking Log
+        </div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px;">
+          <button type="button" class="btn btn-sm btn-success" (click)="downloadPdf()" style="margin-right: 5px;">
+            <i class="fas fa-download"></i> {{ 'common.download' | translate }}
+          </button>
+          <button class="btn btn-sm btn-primary" routerLink="/marketing/crmTracking/email/new" style="margin-right: 5px;">
+            <i class="fas fa-plus"></i> New
+          </button>
+          <button class="btn btn-sm btn-primary" routerLink="/marketing/crmTracking" style="margin-right: 5px;">
+            <i class="fas fa-arrow-left"></i> Back
+          </button>
+          <button class="btn btn-sm" routerLink="/marketing/crmTracking" style="background-color: red; color: white;">
+            CLOSE
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="card-text">
+        <!-- Filters -->
+        <div class="clr-row" style="margin-bottom: 15px;">
+          <div class="clr-col-lg-3">
+            <label>Classification:</label>
+            <select [(ngModel)]="filterClassification" (change)="filter()">
+              <option value="">All</option>
+              <option value="Domestic">Domestic</option>
+              <option value="Export">Export</option>
+            </select>
+          </div>
+          <div class="clr-col-lg-9" style="text-align: right;">
+            <button class="btn btn-sm btn-info" (click)="refresh()" style="margin-right: 5px;">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-sm btn-secondary" (click)="clearFilter()">
+              Clear Filter
+            </button>
+          </div>
+        </div>
+
+        <div class="datagrid-wrapper">
+          <clr-datagrid [clrDgLoading]="loading" >
+            <clr-dg-column>Sr. No</clr-dg-column>
+            <clr-dg-column>Classification</clr-dg-column>
+            <clr-dg-column>Client Name</clr-dg-column>
+            <clr-dg-column>Contact Person</clr-dg-column>
+            <clr-dg-column>Email ID</clr-dg-column>
+            <clr-dg-column>Phone Number</clr-dg-column>
+            <clr-dg-column>Website</clr-dg-column>
+            <clr-dg-column>Country</clr-dg-column>
+            <clr-dg-column>State</clr-dg-column>
+            <clr-dg-column>Place</clr-dg-column>
+            <clr-dg-column>Created Date & Time</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+            <clr-dg-row *clrDgItems="let email of emails; let i = index" [clrDgItem]="email">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>
+                <span [ngClass]="getClassificationClass(email.classification)">
+                  {{ email.classification || 'N/A' }}
+                </span>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ email.client_name || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ email.contact_person || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ email.email_id || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ email.phone_number || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <a *ngIf="email.website" [href]="email.website" target="_blank" style="color: #0072a3;">
+                  {{ email.website }}
+                </a>
+                <span *ngIf="!email.website">N/A</span>
+              </clr-dg-cell>
+              <clr-dg-cell>{{ email.country || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ email.state || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ email.place || 'N/A' }}</clr-dg-cell>
+              <clr-dg-cell>{{ formatDateTime(email.created_date_time) }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button class="btn btn-sm btn-info" (click)="view(i)" title="View Details">
+                  <i class="fas fa-eye"></i> View
+                </button>
+              </clr-dg-cell>
+            </clr-dg-row>
+
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                <clr-dg-page-size [clrPageSizeOptions]="[10, 20, 50, 100]">Records per page</clr-dg-page-size>
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }}
+                of {{ pagination.totalItems }} records
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div *ngIf="emails.length === 0 && !loading" style="text-align: center; padding: 20px;">
+          <p>No records found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Modal -->
+<clr-modal [(clrModalOpen)]="isView" [clrModalSize]="'xl'">
+  <h3 class="modal-title">Email Tracking Details</h3>
+  <div class="modal-body" *ngIf="selectedEmail">
+    <!-- Section 1: Classification -->
+    <div class="section-header">
+      <h4>1. Classification</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-12">
+        <strong>Classification:</strong> 
+        <span [ngClass]="getClassificationClass(selectedEmail.classification)">
+          {{ selectedEmail.classification || 'N/A' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Section 2: Client Details -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>2. Client Details</h4>
+    </div>
+    <div class="clr-row">
+      <div class="clr-col-lg-6">
+        <strong>Client Name:</strong> {{ selectedEmail.client_name || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Contact Person:</strong> {{ selectedEmail.contact_person || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Email ID:</strong> {{ selectedEmail.email_id || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Alternate Email:</strong> {{ selectedEmail.alternate_email || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Phone Number:</strong> {{ selectedEmail.phone_number || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Alternate Phone:</strong> {{ selectedEmail.alternate_phone || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Website:</strong> 
+        <a *ngIf="selectedEmail.website" [href]="selectedEmail.website" target="_blank">{{ selectedEmail.website }}</a>
+        <span *ngIf="!selectedEmail.website">N/A</span>
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Country:</strong> {{ selectedEmail.country || 'N/A' }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>State:</strong> {{ selectedEmail.state || 'N/A' }}
+      </div>
+      <div class="clr-col-lg-6">
+        <strong>Place:</strong> {{ selectedEmail.place || 'N/A' }}
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top: 20px;" *ngIf="selectedEmail.hr_remark">
+      <h4>3. HR Remark</h4>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.hr_remark">
+      <div class="clr-col-lg-12">
+        <div style="padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+          {{ selectedEmail.hr_remark }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Additional Information -->
+    <div class="section-header" style="margin-top: 20px;" *ngIf="selectedEmail.subject || selectedEmail.email_body || selectedEmail.status">
+      <h4>4. Email Information</h4>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.subject || selectedEmail.email_body || selectedEmail.status">
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.subject">
+        <strong>Subject:</strong> {{ selectedEmail.subject }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.status">
+        <strong>Status:</strong> {{ selectedEmail.status }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.email_body">
+      <div class="clr-col-lg-12">
+        <strong>Email Body:</strong>
+        <div style="padding: 10px; background-color: #f5f5f5; border-radius: 4px; margin-top: 5px;">
+          {{ selectedEmail.email_body }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: System Information -->
+    <div class="section-header" style="margin-top: 20px;">
+      <h4>5. System Information</h4>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6">
+        <strong>Created Date & Time:</strong> {{ formatDateTime(selectedEmail.created_date_time) }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.modified_date_time">
+        <strong>Modified Date & Time:</strong> {{ formatDateTime(selectedEmail.modified_date_time) }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;">
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.created_by">
+        <strong>Created By:</strong> {{ selectedEmail.created_by }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.last_modified_by">
+        <strong>Last Modified By:</strong> {{ selectedEmail.last_modified_by }}
+      </div>
+    </div>
+
+    <!-- Section 5: Additional Details (if available) -->
+    <div class="section-header" style="margin-top: 20px;" *ngIf="selectedEmail.remarks || selectedEmail.followup_required === 'Yes' || selectedEmail.response_received === 'Yes'">
+      <h4>6. Additional Details</h4>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.remarks">
+      <div class="clr-col-lg-12">
+        <strong>Remarks:</strong>
+        <div style="padding: 10px; background-color: #f5f5f5; border-radius: 4px; margin-top: 5px;">
+          {{ selectedEmail.remarks }}
+        </div>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.followup_required === 'Yes'">
+      <div class="clr-col-lg-6">
+        <strong>Followup Required:</strong> {{ selectedEmail.followup_required }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.followup_date">
+        <strong>Followup Date & Time:</strong> {{ selectedEmail.followup_date | date: 'dd-MM-yyyy' }} {{ selectedEmail.followup_time }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.response_received === 'Yes'">
+      <div class="clr-col-lg-6">
+        <strong>Response Received:</strong> {{ selectedEmail.response_received }}
+      </div>
+      <div class="clr-col-lg-6" *ngIf="selectedEmail.response_date">
+        <strong>Response Date & Time:</strong> {{ selectedEmail.response_date | date: 'dd-MM-yyyy' }} {{ selectedEmail.response_time }}
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.response_details">
+      <div class="clr-col-lg-12">
+        <strong>Response Details:</strong>
+        <div style="padding: 10px; background-color: #f5f5f5; border-radius: 4px; margin-top: 5px;">
+          {{ selectedEmail.response_details }}
+        </div>
+      </div>
+    </div>
+    <div class="clr-row" style="margin-top: 10px;" *ngIf="selectedEmail.attachment_url">
+      <div class="clr-col-lg-12">
+        <strong>Attachment:</strong> 
+        <a [href]="selectedEmail.attachment_url" target="_blank" class="btn btn-sm btn-primary">
+          <i class="fas fa-download"></i> Download
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-success" (click)="downloadDetailPdf()">
+      <i class="fas fa-download"></i> {{ 'common.download' | translate }}
+    </button>
+    <button type="button" class="btn btn-outline" (click)="closeView()">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+

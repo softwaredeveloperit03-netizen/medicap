@@ -1,0 +1,198 @@
+<div class="container-fluid" *ngIf="!isView">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Line Clearance Form</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/qa/ipqa/lineclearance" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <clr-datagrid>
+                    <clr-dg-column>Request No.</clr-dg-column>
+                    <clr-dg-column>{{'common.department' | translate}}</clr-dg-column>
+                    <clr-dg-column>Room Name</clr-dg-column>
+                    <clr-dg-column>Request By</clr-dg-column>
+                    <clr-dg-column>Request Date</clr-dg-column>
+                    <clr-dg-column>view</clr-dg-column>
+                
+                    <clr-dg-row *ngFor="let request of requests; let i = index">
+                        <clr-dg-cell>{{request.clearance_no}}</clr-dg-cell>
+                        <clr-dg-cell>{{request.department}}</clr-dg-cell>
+                        <clr-dg-cell>{{request.section}}</clr-dg-cell>
+                        <clr-dg-cell>{{request.request_by}}</clr-dg-cell>
+                        <clr-dg-cell>{{request.request_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+                        <clr-dg-cell>
+                            <button class="btn btn-info btn-sm" (click)="getMaterials(i)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+        <div class="card-header">Line Clearance Form</div>
+        <div class="card-block">
+            <div class="card-text">
+                <div *ngIf="materials['section'] == 'Sampling'">
+                    <table class="table">
+                        <tr>
+                            <td>Department:</td>
+                            <td>{{ materials['department'] }}</td>
+                            <td>Room Name</td>
+                            <td>{{ materials['section'] }}</td>
+                        </tr>
+                        <tr>
+                            <td>Material / Product Name:</td>
+                            <td>{{ materials['material_name'] }}</td>
+                            <td>Receiving no:</td>
+                            <td>{{ materials['grn_no'] }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div *ngIf="materials['section'] == 'Dispensing'">
+                    <table class="table">
+                        <tr>
+                            <td style="width: 15%;"><b>Department:</b></td>
+                            <td style="border-right: 1px solid;">{{ materials['department'] }}</td>
+                            <td style="width: 15%;"><b>Room Name:</b></td>
+                            <td>{{ materials['section'] }}</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 15%;"><b>Product Name:</b></td>
+                            <td style="border-right: 1px solid;">{{ materials['product_name'] }}</td>
+                            <td style="width: 15%;"><b>Medicap Lot No:</b></td>
+                            <td>{{ materials['batch_no'] }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <h4>Previous Product Details:</h4>
+                <table class="table">
+                    <tr>
+                        <td style="width: 15%;">Product / Material Name:</td>
+                        <td style="border-right: 1px solid;">{{ materials['previous_material_name'] }}</td>
+                        <td style="width: 15%;">Receiving no:</td>
+                        <td>{{ materials['previous_grn_no'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15%;">Area Cleaned By:</td>
+                        <td style="border-right: 1px solid;">{{ materials['previous_cleaned_by'] }}</td>
+                        <td style="width: 15%;">Cleaning Date & Time:</td>
+                        <td>{{ materials['previous_cleaning_date'] }}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15%;">Activity Done By:</td>
+                        <td style="border-right: 1px solid;">{{ materials['previous_activity_by'] }}</td>
+                        <td style="width: 15%;">Date:</td>
+                        <td>{{ materials['previous_activity_date'] }}</td>
+                    </tr>
+                </table>
+                <h3>Checkpoints:</h3>
+                <table class="table">
+                    <tr>
+                        <th>Sr.</th>
+                        <th>Checkpoints</th>
+                        <th>Production Status</th>
+                        <th>QA Remark</th>
+                    </tr>
+                    <tr *ngFor="let checkpoint of materials['checkpoints']; let i = index">
+                        <td>{{ i + 1 }}.</td>
+                        <td>{{ checkpoint.checkpoints }}</td>
+                        <td>{{ checkpoint.production_status }}</td>
+                        <td style="padding: 0px;">
+                            <select name="qa_remark{{i}}" [(ngModel)]="checkpoint.qa_remark" style="margin: 0px;" required>
+                                <option></option>
+                                <option>OK</option>
+                                <option>Not OK</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+                <br>
+                <form #cleaningForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Equipment Name:</label>
+                            <select name="equipment_name" ngModel required (change)="getEquipmentID($event.target.selectedIndex)">
+                                <option></option>
+                                <option *ngFor="let equipment of equipments">{{ equipment.equipment_name }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Equipment Id:</label>
+                            <select name="equipment_id" ngModel required>
+                                <option></option>
+                                <option *ngFor="let equipment of equipment_codes">{{ equipment.equipment_code }}</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Area:</label>
+                            <select name="area_cleaned" ngModel="Cleaned">
+                                <option>Cleaned</option>
+                                <option>UnCleaned</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Traces of Previous Product:</label>
+                            <select name="product_traces" ngModel="No">
+                                <option>Yes</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Is Sanitization Done:</label>
+                            <select name="sanitization_done" ngModel="No" (change)="checkSanitization($event.target.value)">
+                                <option>Yes</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="isSanitization">
+                            <label>Scenitization Time:</label>
+                            <input type="time" name="sanitization_time" ngModel>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Temperature: &#8451;</label>
+                            <input type="text" name="temperature" ngModel>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Humidity: %</label>
+                            <input type="text" name="humidity" ngModel>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Status Label:</label>
+                            <select name="status_label" ngModel="Available">
+                                <option>Available</option>
+                                <option>Not Available</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Balance / Equipment Cleaned:</label>
+                            <select name="balance_cleaned" ngModel="Cleaned">
+                                <option>Cleaned</option>
+                                <option>Uncleaned</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                            <label>Remark:</label>
+                            <textarea name="remark" rows="2" ngModel required></textarea>
+                        </div>
+                    </div>
+                    <div class="clr-checkbox-wrapper">
+                        <input type="checkbox" id="checkbox1" name="isaccept" ngModel class="clr-checkbox" required>
+                        <label for="checkbox1">I Obsereved and certified that the area is ready for next activity so line clearance has been given.</label>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" (click)="cleaningForm.form.valid && saveCleaningForm(cleaningForm)" [disabled]="cleaningForm.form.invalid">{{'common.submit' | translate}}</button>
+            <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+</div>

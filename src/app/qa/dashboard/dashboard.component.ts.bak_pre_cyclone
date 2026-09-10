@@ -1,0 +1,285 @@
+import { Component, HostListener, OnInit } from '@angular/core';
+import { DataAccessService } from 'src/app/data-access.service';
+import {
+  DashboardSidebarEntry,
+  sidebarFromCategories,
+  slugifyLabel,
+} from 'src/app/shared/dashboard-master-nav';
+
+interface DeptCard {
+  id: string;
+  title: string;
+  route: string;
+  icon: string;
+  category: string;
+  gradient: string;
+  showWhen?: 'isapprover' | 'dept_head';
+}
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css'],
+})
+export class DashboardComponent implements OnInit {
+  isapprover = 'No';
+  dept_head = 'No';
+  trainig_cordinator = 'No';
+  pendingSampleCount = 0;
+  loggedInDept: string | null = null;
+  rights: any;
+  searchQuery = '';
+  selectedCategory = 'All';
+  showPalette = false;
+  mobileSidebarOpen = false;
+  private readonly sidebarBreakpointPx = 1024;
+
+  qaCards: DeptCard[] = [
+    { id: 'revision', title: 'Revision Request', route: 'revision', icon: 'fa-exclamation-triangle', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'qms-incident', title: 'Incident Reporting', route: 'qms/incident', icon: 'fa-biohazard', category: 'QMS', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'complaints', title: 'Complaints Management', route: 'complaints', icon: 'fa-comment-alt', category: 'QMS', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'capa', title: 'CAPA (Legacy)', route: 'qms/capa/dashboard', icon: 'fa-tasks', category: 'QMS', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'corrective-preventive-action', title: 'CAPA (SOP-QA-070)', route: 'corrective-preventive-action', icon: 'fa-clipboard-check', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'risk', title: 'Risk Management', route: 'risk', icon: 'fa-exclamation-triangle', category: 'QMS', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'training', title: 'Training', route: 'training', icon: 'fa-chalkboard-teacher', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'oos', title: 'OOS', route: 'oos', icon: 'fa-times-circle', category: 'QMS', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    { id: 'breakdown', title: 'Breakdown', route: 'breakdown', icon: 'fa-wrench', category: 'QMS', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { id: 'recall', title: 'Product Recall', route: 'recall', icon: 'fa-exclamation-circle', category: 'QMS', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    { id: 'vendor', title: 'Vendor Management', route: 'vendor', icon: 'fa-truck', category: 'QMS', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'responsibility', title: 'Job & Responsibilities', route: 'responsibility', icon: 'fa-tasks', category: 'QMS', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'batch-formula-log', title: 'Batch Formula Approval', route: 'batch-formula-log', icon: 'fa-file-alt', category: 'QMS', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'rootcause', title: 'RCA', route: 'rootcause', icon: 'fa-tasks', category: 'QMS', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'equipment-cleaning-verification', title: 'Equipment Cleaning Verification', route: 'equipment-cleaning-verification', icon: 'fa-vial', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'employee-training-records', title: 'Employee Training Records', route: 'employee-training-records', icon: 'fa-user-graduate', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'employee-initials-signature', title: 'Employee Initials & Signature', route: 'employee-initials-signature', icon: 'fa-signature', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'gmp-inspection-qc-labs', title: 'GMP Inspection QC Labs', route: 'gmp-inspection-qc-labs', icon: 'fa-microscope', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'gmp-inspection-clinical-site', title: 'GMP Inspection Clinical Site', route: 'gmp-inspection-clinical-site', icon: 'fa-hospital', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'standard-operating-documents', title: 'Standard Operating Documents', route: 'standard-operating-documents', icon: 'fa-file-alt', category: 'QMS', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'conditional-release', title: 'Conditional Release', route: 'conditional-release', icon: 'fa-unlock-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'waste-disposal-pharma', title: 'Waste Disposal', route: 'waste-disposal-pharma', icon: 'fa-trash-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'returned-finished-products', title: 'Returned Finished Products', route: 'returned-finished-products', icon: 'fa-undo-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'annual-product-quality-review', title: 'Annual Product Quality Review', route: 'annual-product-quality-review', icon: 'fa-chart-bar', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'stepwise-qa-release', title: 'Stepwise QA Review & Release', route: 'stepwise-qa-release', icon: 'fa-tasks', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'retention-commercial-drug-products', title: 'Commercial Drug Retention', route: 'retention-commercial-drug-products', icon: 'fa-archive', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'management-review-quality-systems', title: 'Management Review of Quality Systems', route: 'management-review-quality-systems', icon: 'fa-handshake', category: 'QMS', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'deviation', title: 'Deviation', route: 'qms/deviation', icon: 'fa-exclamation-triangle', category: 'QMS', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    // { id: 'changecontrol', title: 'Change Control', route: 'qms/change-control', icon: 'fa-edit', category: 'QMS', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+    { id: 'sops', title: 'SOP', route: 'qms/sops', icon: 'fa-file-alt', category: 'QMS', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    // { id: 'user', title: 'Technical User Rights', route: 'user', icon: 'fa-user-shield', category: 'QA Activities', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'ipqa', title: 'IPQA', route: 'ipqa', icon: 'fa-microscope', category: 'QA Activities', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'batchrelease', title: 'Batch Release', route: 'batchrelease', icon: 'fa-certificate', category: 'QA Activities', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'bmr', title: 'Batch Approval', route: 'bmr', icon: 'fa-file-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhen: 'isapprover' },
+    // { id: 'specification', title: 'Specification for Approvals', route: 'specification', icon: 'fa-file-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', showWhen: 'isapprover' },
+    { id: 'rejection', title: 'Rejection Management', route: 'rejection', icon: 'fa-ban', category: 'QA Activities', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'controlsample', title: 'Control Sample', route: 'controlsample', icon: 'fa-vial', category: 'QA Activities', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'stability', title: 'Stability Management', route: 'stability', icon: 'fa-chart-line', category: 'QA Activities', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    // { id: 'Additional', title: 'Additional User Rights', route: 'Additional', icon: 'fa-file-alt', category: 'QA Activities', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    // { id: 'request', title: 'Document Rev. Request', route: 'request', icon: 'fa-file-signature', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'label', title: 'Label Request', route: 'label', icon: 'fa-tags', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { id: 'client-doc-request', title: 'Client Document Request', route: 'technical-document/document', icon: 'fa-file-signature', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', showWhen: 'dept_head' },
+    { id: 'conditional-release-approval', title: 'Conditional Release Approval', route: 'conditional-release/approval', icon: 'fa-user-check', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhen: 'dept_head' },
+    { id: 'returned-products-approval', title: 'Returned Products QA Review', route: 'returned-finished-products/approval', icon: 'fa-user-check', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhen: 'dept_head' },
+    { id: 'stepwise-qa-approval', title: 'Stepwise QA Release Approval', route: 'stepwise-qa-release/approval', icon: 'fa-user-check', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', showWhen: 'dept_head' },
+    { id: 'sample-request', title: 'Sample Request - Issue Qty', route: '/marketing/sample/checking', icon: 'fa-vial', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', showWhen: 'dept_head' },
+    { id: 'enviornmental', title: 'Environment Monitoring', route: 'enviornmental', icon: 'fa-globe', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { id: 'maintenance', title: 'Maintenance Note', route: 'maintenance', icon: 'fa-tools', category: 'Request / Actions', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { id: 'label-approval', title: 'Label Approval', route: 'label-approval', icon: 'fa-check-square', category: 'Operations', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', showWhen: 'isapprover' },
+    { id: 'lab-incident', title: 'Lab Incident', route: 'lab-incident', icon: 'fa-flask', category: 'Operations', gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)' },
+    { id: 'audit', title: 'Audit / Self Inspection', route: 'audit', icon: 'fa-clipboard-check', category: 'Operations', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+    { id: 'technical-document', title: 'Technical Document', route: '/qa/document/index', icon: 'fa-file-alt', category: 'Operations', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+    { id: 'daily', title: 'Temp/Pres Diff Read', route: 'daily', icon: 'fa-thermometer-half', category: 'Operations', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { id: 'soft-restriction', title: 'Software Restrictions', route: 'soft-restriction', icon: 'fa-lock', category: 'Operations', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+    // { id: 'restrict ion', title: 'Restriction', route: 'restriction', icon: 'fa-ban', category: 'Operations', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    // { id: 'approvalLicences', title: 'Approval / Licences', route: 'approvalLicences', icon: 'fa-tachometer-alt', category: 'Operations', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+    { id: 'auditreport', title: 'Audit Trail', route: 'auditreport', icon: 'fa-file-alt', category: 'Other', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { id: 'approval', title: 'Approval', route: 'approval', icon: 'fa-clipboard-check', category: 'QA Activities', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    // { id: 'rej-approvals', title: 'Rejection Approvals', route: 'rej-approvals', icon: 'fa-clipboard-check', category: 'Other', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', showWhen: 'isapprover' },
+    { id: 'Artwork Management', title: 'Artwork Management', route: 'artwork', icon: 'fa-folder-open', category: 'Other', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  ];
+
+  paletteOptions: { name: string; swatch: string; background: string; cardShadow: string }[] = [
+    { name: 'Aurora', swatch: '#eef2ff', background: 'linear-gradient(135deg, #eef2ff 0%, #f5f7fa 100%)', cardShadow: '0 10px 30px rgba(102,126,234,0.15)' },
+    { name: 'Sunrise', swatch: '#fff9f0', background: 'linear-gradient(135deg, #fff9f0 0%, #f7f8fc 100%)', cardShadow: '0 10px 30px rgba(255,183,94,0.18)' },
+    { name: 'Seafoam', swatch: '#ccfbf1', background: 'linear-gradient(135deg, #f0fffa 0%, #f4f7ff 100%)', cardShadow: '0 10px 30px rgba(56,189,158,0.16)' },
+    { name: 'Slate', swatch: '#f1f5f9', background: 'linear-gradient(135deg, #f7f9fb 0%, #eef2f7 100%)', cardShadow: '0 10px 30px rgba(59,66,82,0.12)' },
+    { name: 'Lavender', swatch: '#ede9fe', background: 'linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%)', cardShadow: '0 10px 30px rgba(139,92,246,0.15)' },
+    { name: 'Mint', swatch: '#d1fae5', background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', cardShadow: '0 10px 30px rgba(16,185,129,0.15)' },
+    { name: 'Peach', swatch: '#ffedd5', background: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)', cardShadow: '0 10px 30px rgba(249,115,22,0.15)' },
+    { name: 'Sky', swatch: '#e0f2fe', background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', cardShadow: '0 10px 30px rgba(14,165,233,0.15)' },
+    { name: 'Rose', swatch: '#ffe4e6', background: 'linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%)', cardShadow: '0 10px 30px rgba(244,63,94,0.15)' },
+    { name: 'Amber', swatch: '#fef3c7', background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)', cardShadow: '0 10px 30px rgba(245,158,11,0.15)' },
+    { name: 'Stone', swatch: '#e7e5e4', background: 'linear-gradient(135deg, #fafaf9 0%, #e7e5e4 100%)', cardShadow: '0 10px 30px rgba(120,113,108,0.12)' },
+    { name: 'Indigo', swatch: '#e0e7ff', background: 'linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%)', cardShadow: '0 10px 30px rgba(99,102,241,0.18)' }
+  ];
+  selectedPalette: { name: string; swatch: string; background: string; cardShadow: string } = this.paletteOptions[0];
+
+  constructor(private service: DataAccessService) {
+    this.loggedInDept = localStorage.getItem('department');
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.windowWidth() >= this.sidebarBreakpointPx) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  private windowWidth(): number {
+    return typeof window !== 'undefined' ? window.innerWidth : this.sidebarBreakpointPx;
+  }
+
+  get isNarrowViewport(): boolean {
+    return this.windowWidth() < this.sidebarBreakpointPx;
+  }
+
+  toggleMobileSidebar(): void {
+    this.mobileSidebarOpen = !this.mobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.mobileSidebarOpen = false;
+  }
+
+  get sidebarEntries(): DashboardSidebarEntry[] {
+    return sidebarFromCategories(this.getCategories(), (label) =>
+      label === 'All' ? 'fa-th-large' : 'fa-folder-open'
+    );
+  }
+
+  get selectedSidebarId(): string {
+    return this.selectedCategory === 'All' ? 'all' : slugifyLabel(this.selectedCategory);
+  }
+
+  get currentSidebarEntry(): DashboardSidebarEntry | undefined {
+    return this.sidebarEntries.find((e) => e.id === this.selectedSidebarId);
+  }
+
+  selectSidebar(entry: DashboardSidebarEntry): void {
+    this.selectedCategory = entry.filterKey;
+    if (this.isNarrowViewport) {
+      this.mobileSidebarOpen = false;
+    }
+  }
+
+  countForSidebar(filterKey: string): number {
+    return this.qaCards.filter((c) => {
+      if (!this.isCardAllowed(c)) {
+        return false;
+      }
+      if (filterKey === 'All') {
+        return true;
+      }
+      return c.category === filterKey;
+    }).length;
+  }
+
+  trackBySidebarId(_index: number, entry: DashboardSidebarEntry): string {
+    return entry.id;
+  }
+
+  isCardAllowed(c: DeptCard): boolean {
+    if (c.showWhen === 'isapprover' && this.isapprover !== 'Yes') {
+      return false;
+    }
+    if (c.showWhen === 'dept_head' && this.dept_head !== 'Yes') {
+      return false;
+    }
+    return true;
+  }
+
+  ngOnInit(): void {
+    this.get_rights();
+    this.getPendingSampleCount();
+    this.showMeetingInvitePopup();
+    const savedPalette = localStorage.getItem('qa_dashboard_palette');
+    if (savedPalette) {
+      const found = this.paletteOptions.find(function(p) { return p.name === savedPalette; });
+      if (found) { this.selectedPalette = found; }
+    }
+  }
+
+  showMeetingInvitePopup(): void {
+    const empId = localStorage.getItem('emp_id') || '';
+    if (!empId) {
+      return;
+    }
+    this.service
+      .get('qa/managementReviewQualitySystems.php?type=getMyMeetingNotifications&emp_id=' + encodeURIComponent(empId))
+      .subscribe((response: any) => {
+        const list = Array.isArray(response) ? response : [];
+        if (!list.length) {
+          return;
+        }
+        const messages = list
+          .map((n: any, i: number) => (i + 1) + '. ' + (n.message || ''))
+          .join('<br/><br/>');
+        if (typeof (window as any).alertify !== 'undefined') {
+          (window as any).alertify.alert('Management Review Meeting Invitation', messages, () => {
+            list.forEach((n: any) => {
+              if (n?.id) {
+                this.service
+                  .get(
+                    'qa/managementReviewQualitySystems.php?type=ackMeetingNotification&id=' +
+                      encodeURIComponent(n.id) +
+                      '&emp_id=' +
+                      encodeURIComponent(empId)
+                  )
+                  .subscribe();
+              }
+            });
+          });
+        }
+      });
+  }
+
+  getPendingSampleCount(): void {
+    this.service.get('marketing/sample.php?type=getPendingSampleCount').subscribe((response: any) => {
+      this.pendingSampleCount = response && response.count ? response.count : 0;
+    });
+  }
+
+  get_rights(): void {
+    const empId = localStorage.getItem('emp_id');
+    if (!empId) { return; }
+    this.service.get(
+      'hr/employee.php?type=getrights&emp_id=' + encodeURIComponent(empId) + '&dep_name=' + encodeURIComponent(this.loggedInDept || '')
+    ).subscribe((response: any) => {
+      this.rights = response;
+      const r = Array.isArray(response) && response[0] ? response[0] : {};
+      this.isapprover = r.isapprover || 'No';
+      this.dept_head = r.dept_head || 'No';
+      this.trainig_cordinator = r.trainig_cordinator || 'No';
+    });
+  }
+
+  getCategories(): string[] {
+    return ['All'].concat(Array.from(new Set(this.qaCards.map(function(c) { return c.category; }))));
+  }
+
+  getFilteredCards(): DeptCard[] {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    return this.qaCards.filter((c: DeptCard) => {
+      if (!this.isCardAllowed(c)) {
+        return false;
+      }
+      const matchCategory = this.selectedCategory === 'All' || c.category === this.selectedCategory;
+      const matchSearch =
+        !q || c.title.toLowerCase().indexOf(q) !== -1 || c.category.toLowerCase().indexOf(q) !== -1;
+      return matchCategory && matchSearch;
+    });
+  }
+
+  trackByCardId(_index: number, card: DeptCard): string {
+    return card.id;
+  }
+
+  togglePalette(): void {
+    this.showPalette = !this.showPalette;
+  }
+
+  setPalette(palette: { name: string; swatch: string; background: string; cardShadow: string }): void {
+    this.selectedPalette = palette;
+    this.showPalette = false;
+    try { localStorage.setItem('qa_dashboard_palette', palette.name); } catch (e) {}
+  }
+}

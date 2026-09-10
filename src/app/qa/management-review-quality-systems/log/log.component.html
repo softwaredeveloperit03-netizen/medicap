@@ -1,0 +1,142 @@
+<div class="container-fluid" *ngIf="!isView">
+  <div class="card">
+    <div class="card-header" style="text-align: center">
+      <div class="clr-row" style="margin-bottom: -10px">
+        <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">Management Review Meeting Log</div>
+        <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+          <button class="btn btn-sm" routerLink="/qa/management-review-quality-systems" style="background-color: red; color: white">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="clr-row" style="margin-bottom: 12px">
+        <div class="clr-col-3">
+          <label>From Date</label>
+          <input class="mrq-form__input" type="date" [(ngModel)]="fromDate" name="from_date" />
+        </div>
+        <div class="clr-col-3">
+          <label>To Date</label>
+          <input class="mrq-form__input" type="date" [(ngModel)]="toDate" name="to_date" />
+        </div>
+        <div class="clr-col-3" style="padding-top: 22px">
+          <button class="btn btn-sm btn-info" (click)="getMeetingsLog()">Search</button>
+        </div>
+      </div>
+      <clr-datagrid [clrDgLoading]="loading">
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_no">Meeting No.</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_in">Meeting In</clr-dg-column>
+        <clr-dg-column clrDgField="meeting_date">Meeting Date</clr-dg-column>
+        <clr-dg-column clrDgField="review_period">Review Period</clr-dg-column>
+        <clr-dg-column clrDgField="status">Status</clr-dg-column>
+        <clr-dg-column>Action</clr-dg-column>
+        <clr-dg-row *clrDgItems="let user of results; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_in }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.meeting_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.review_period }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.status }}</clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="view(i)">VIEW</button></clr-dg-cell>
+        </clr-dg-row>
+      </clr-datagrid>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadLogPdf()">Download Log PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+  <div class="card">
+    <div class="card-header">Meeting Log — {{ selectedResult?.meeting_no }} ({{ formNo }})</div>
+    <div class="card-block">
+      <table class="mrq-form__sheet-table">
+        <tr>
+          <td class="mrq-form__label-cell">REF:</td>
+          <td class="mrq-form__value-cell">{{ sopRef }}</td>
+          <td class="mrq-form__label-cell">Status:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.status }}</td>
+        </tr>
+        <tr>
+          <td class="mrq-form__label-cell">Meeting In:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_in }}</td>
+          <td class="mrq-form__label-cell">Meeting Date:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_date | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <td class="mrq-form__label-cell">Review Period:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.review_period }}</td>
+          <td class="mrq-form__label-cell">Venue:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_venue }}</td>
+        </tr>
+        <tr>
+          <td class="mrq-form__label-cell">Chairperson:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.meeting_chairperson }}</td>
+          <td class="mrq-form__label-cell">QA Representative:</td>
+          <td class="mrq-form__value-cell">{{ selectedResult?.qa_representative }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Participants:</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Name</th><th>Department</th><th>Designation</th><th>Attendance</th></tr>
+        <tr *ngFor="let user of selectedResult?.participants; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ user.firstname || user.emp_name }}</td>
+          <td>{{ user.department }}</td>
+          <td>{{ user.designation }}</td>
+          <td>{{ user.attendance || '-' }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Agenda &amp; Minutes:</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Agenda</th><th>Details</th><th>Discussion</th><th>Decision</th></tr>
+        <tr *ngFor="let item of selectedResult?.agenda; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ item.agenda }}</td>
+          <td>{{ item.detail }}</td>
+          <td>{{ selectedResult?.mom_discussions?.[i]?.discussion || '-' }}</td>
+          <td>{{ selectedResult?.mom_discussions?.[i]?.decision || '-' }}</td>
+        </tr>
+      </table>
+
+      <h3 class="mrq-form__section-title">Action Items:</h3>
+      <table class="table table-border">
+        <tr><th>Sr.</th><th>Action</th><th>Responsible</th><th>Target Date</th></tr>
+        <tr *ngFor="let act of selectedResult?.action_items; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ act.action }}</td>
+          <td>{{ act.responsible }}</td>
+          <td>{{ act.target_date | date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr *ngIf="!selectedResult?.action_items?.length"><td colspan="4">No action items.</td></tr>
+      </table>
+
+      <div class="clr-row">
+        <div class="clr-col-12"><label>Conclusions:</label><textarea class="mrq-form__textarea" readonly [value]="selectedResult?.conclusions || ''"></textarea></div>
+        <div class="clr-col-12"><label>Remarks:</label><textarea class="mrq-form__textarea" readonly [value]="selectedResult?.remark || ''"></textarea></div>
+        <div class="clr-col-6"><label>Next Review Date:</label><input class="mrq-form__input" type="text" readonly [value]="selectedResult?.next_review_date | date: 'dd-MM-yyyy'" /></div>
+        <div class="clr-col-6"><label>MOM Prepared By:</label><input class="mrq-form__input" type="text" readonly [value]="selectedResult?.mom_prepared_by || ''" /></div>
+        <div class="clr-col-12">
+          <label>QA Verified By:</label>
+          <input class="mrq-form__input" type="text" readonly [value]="selectedResult?.qa_verified_by || ''" />
+          <button
+            type="button"
+            class="btn btn-sm btn-success mrq-form__stamp-btn"
+            *ngIf="selectedResult?.status === 'complete' && !hasQaStamp(selectedResult?.qa_verified_by)"
+            (click)="stampQaVerified(selectedResult)"
+            [disabled]="stamping"
+          >
+            QA Verified
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" (click)="downloadMomPdf(selectedResult.id)">Download PDF</button>
+      <button class="btn btn-danger" (click)="isView = false">BACK</button>
+    </div>
+  </div>
+</div>

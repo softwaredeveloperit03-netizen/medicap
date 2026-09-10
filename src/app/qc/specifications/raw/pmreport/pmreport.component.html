@@ -1,0 +1,425 @@
+<div class="container-fluid" *ngIf="!isView">
+
+<div class="card"  >
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-6" style="color: aliceblue;margin-top: -2px;text-align: left;">Packing Material Specification Log</div>
+      <div class="clr-col-lg-6" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/master/specification/raw"> {{'common.close' | translate}} </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block">
+    <div class="card-text">
+            <div class="clr-row">
+              <div class="clr-col-lg-5">
+                  <label>Search </label>
+                  <input type="text" placeholder="Search..." [(ngModel)]="searchQuery">
+              </div>
+            </div>
+
+            <div class="datagrid-wrapper">
+                <clr-datagrid [clrDgLoading]="loading" [clrDgFilter]="searchQuery" >
+
+                    <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                    <clr-dg-column>Spec. No.</clr-dg-column>
+                    <clr-dg-column>Spec. Type</clr-dg-column>
+                    <clr-dg-column>Item Code</clr-dg-column>
+                    <clr-dg-column>Item Name</clr-dg-column>
+                    <clr-dg-column>Version No.</clr-dg-column>
+                    <clr-dg-column>Supersede No.</clr-dg-column>
+                    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+                    <clr-dg-column>Entry By/On</clr-dg-column>
+                    <clr-dg-column>Check By/On</clr-dg-column>
+                    <clr-dg-column>App. By/On</clr-dg-column>
+                    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            
+                    <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result"  >
+                        <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                        <clr-dg-cell>{{ result.specification_no}}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.spec_type}}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_code}}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.material_name}}</clr-dg-cell>
+                        <clr-dg-cell>{{ result.version_no }} </clr-dg-cell>
+                        <clr-dg-cell>{{ result.supersede_no }} </clr-dg-cell>
+                         <clr-dg-cell>
+                          <strong *ngIf="result.status == 'Pending'" style="color: red;">{{ result.status | uppercase }}</strong> 
+                          <strong *ngIf="result.status == 'Checked'" style="color: blue;">{{ result.status | uppercase }}</strong> 
+                          <strong *ngIf="result.status == 'Approved'" style="color: green;">{{ result.status | uppercase }}</strong> 
+                         </clr-dg-cell>
+                        <clr-dg-cell>{{ result.entry_by }} / {{ result.entry_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell>{{ result.check_by }} / {{ result.check_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell>{{ result.approve_by }} / {{ result.approve_date | date:'dd-MM-yyyy'}} </clr-dg-cell>
+                        <clr-dg-cell >
+                          <button class="btn btn-sm btn-info" (click)="view(result)">{{'common.view' | translate}}</button>
+                        </clr-dg-cell>
+                    </clr-dg-row>
+                </clr-datagrid>
+            </div>
+
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-danger"routerLink="/master/specification/raw">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+</div>
+
+<div class="container-fluid" *ngIf="isView">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Packing Material Specification Log</div>
+          <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-block">
+        <div class="card-text">
+
+          <form #specForm="ngForm">
+
+            <div class="clr-row">
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label>Specification Type:<span style="color: red">*</span></label>
+                <input  type="text"  name="spec_type" [(ngModel)]="selectedResult['spec_type']" readonly>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label >
+                  <strong *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">Product Type : <span style="color:red">*</span></strong>
+                  <strong *ngIf="selectedResult['spec_type'] == 'Raw Material' || selectedResult['spec_type'] == 'Packing Material'">Subtype : <span style="color:red">*</span></strong>
+                </label>    
+                <input  type="text"  name="material_subtype" [(ngModel)]="selectedResult['material_subtype']" readonly>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label >
+                  <strong *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">Product Name : <span style="color:red">*</span></strong>
+                  <strong *ngIf="selectedResult['spec_type'] == 'Raw Material' || selectedResult['spec_type'] == 'Packing Material'">Material Name : <span style="color:red">*</span></strong>
+                </label>    
+                <input  type="text"  name="material_name" [(ngModel)]="selectedResult['material_name']" readonly>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                <label ><strong>Item Code : <span style="color:red">*</span></strong></label>
+                <input  type="text"   name="material_code" [(ngModel)]="selectedResult['material_code']" readonly>
+              </div>
+
+              <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['spec_type'] == 'Raw Material' || selectedResult['spec_type'] == 'Packing Material'">
+                <label ><strong>Grade : <span style="color:red">*</span></strong></label>
+                <input  type="text"   name="material_grade" [(ngModel)]="selectedResult['material_grade']" readonly>
+              </div>
+
+            </div>
+
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <div class="card">
+                  <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Version Control</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                    </div>
+                  </div>
+
+                  <div class="card-block">
+                    <div class="card-text">
+
+                      <div class="clr-row">
+        
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Specification No. : <span style="color:red">*</span></strong></label>
+                          <input type="text" name="specification_no" [(ngModel)]="selectedResult['specification_no']" required  readonly>
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" >
+                          <label><strong> Supersede No. : <span style="color:red">*</span></strong></label>
+                          <input type="text" name="supersede_no" [(ngModel)]="selectedResult['supersede_no']" required  readonly >
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Version No. : <span style="color:red">*</span></strong></label>
+                          <input type="text" name="version_no" [(ngModel)]="selectedResult['version_no']" required  readonly>
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['specIs'] == 'Existing'">
+                          <label><strong> Issued Date : <span style="color:red">*</span></strong></label>
+                          <input type="date" name="issuedDate" [(ngModel)]="selectedResult['issuedDate']" required  readonly >
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['specIs'] == 'Existing'">
+                          <label><strong> Review Date : <span style="color:red">*</span></strong></label>
+                          <input type="date" name="review_date" [(ngModel)]="selectedResult['review_date']" required  readonly >
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedResult['specIs'] == 'Existing'" >
+                          <label><strong>Effective Date : <span style="color:red">*</span></strong></label>
+                          <input type="date" name="effective_date" [(ngModel)]="selectedResult['effective_date']" required  readonly>
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" >
+                          <label><strong>Reanalysis Period : <span style="color:red">*</span></strong></label><br>
+                          <span> {{selectedResult['retest_period']}} Month</span>
+                        </div>
+
+                        <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" >
+                          <label><strong>Sampling Plan : <span style="color:red">*</span></strong></label><br>
+                          <span> {{selectedResult['sampling_plan']}} Month</span>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <div class="card">
+                  <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;"><strong>General Information : <span style="color:red">*</span></strong> </div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                          <button class="btn btn-sm btn-info btn-icon" (click)="toggleShow1()"><clr-icon shape="eye" class="is-warning"></clr-icon></button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-block" *ngIf="isShow1">
+                    <div class="card-text">
+                      <div class="clr-row">
+        
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Storage Requirement : <span style="color:red">*</span></strong></label>
+                          <textarea  name="storage_condition" [(ngModel)]="selectedResult['storage_condition']" readonly rows="2" required  ></textarea>
+                        </div>
+
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Sampling : <span style="color:red">*</span></strong></label>
+                          <textarea  name="samplingDetails" [(ngModel)]="selectedResult['samplingDetails']" readonly rows="2" required  ></textarea>
+                        </div>
+
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Hazard & Precautions If Any : <span style="color:red">*</span></strong></label>
+                          <textarea  name="hazardAndPrecautions" [(ngModel)]="selectedResult['hazardAndPrecautions']" readonly rows="2" required  ></textarea>
+                        </div>
+
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Stock Transfer (STO) : </strong></label>
+                          <textarea  name="stockTransfer" [(ngModel)]="selectedResult['stockTransfer']" readonly rows="2"   ></textarea>
+                        </div>
+
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                          <label><strong> Note : </strong></label>
+                          <textarea  name="note" [(ngModel)]="selectedResult['note']" readonly rows="2"   ></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+    
+            <div class="clr-row" >
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <div class="card">
+                  <div class="card-header" style="text-align: center">
+                    <div class="clr-row" style="margin-bottom: -10px;">
+                      <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;"> Sampling Plan</div>
+                      <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                    </div>
+                  </div>
+                  <div class="card-block" >
+                    <div class="card-text">
+                        <div class="clr-row" >
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">
+                            <label><strong>Checmical Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="chemical_qty" [(ngModel)]="selectedResult['chemical_qty']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">
+                            <label><strong>Physical Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="physical_qty" [(ngModel)]="selectedResult['physical_qty']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">
+                            <label><strong>Micro Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="micro_qty" [(ngModel)]="selectedResult['micro_qty']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">
+                            <label><strong>Indentification Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="indentification_qty" [(ngModel)]="selectedResult['indentification_qty']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12" >
+                            <label><strong>Sample Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="sample_qty" [(ngModel)]="selectedResult['sample_qty']" required readonly  >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                            <label><strong>Control Sample Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="control_sample" [(ngModel)]="selectedResult['control_sample']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                            <label><strong>Additional Sample Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="additional_sample" [(ngModel)]="selectedResult['additional_sample']" required readonly  >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                            <label><strong>Total Sample Qty : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="totalsample_qty" [(ngModel)]="selectedResult['totalsample_qty']" required readonly >
+                          </div>
+
+                          <div class="clr-col-lg-2 clr-col-md-2 clr-col-xs-12">
+                            <label><strong>Unit : <span style="color:red">*</span></strong></label>
+                            <input type="text" name="unit" [(ngModel)]="selectedResult['unit']" required readonly >
+                          </div>
+
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </form>
+      
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <div class="card">
+                <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Specification :-</div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                  </div>
+                </div>
+                <div class="card-block" >
+                  <div class="card-text">
+                    <div class="clr-row">
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                          <div class="datagrid-wrapper">
+                              <clr-datagrid [clrDgLoading]="loading"   >
+
+                                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                                  <clr-dg-column>Test For</clr-dg-column>
+                                  <clr-dg-column>Test Type</clr-dg-column>
+                                  <clr-dg-column>Test</clr-dg-column>
+                                  <clr-dg-column>Subtest</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['spec_type'] == 'Raw Material' || selectedResult['spec_type'] == 'Packing Material'">Reference</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">Sample Qty</clr-dg-column>
+                                  <clr-dg-column>Limit Type</clr-dg-column>
+                                  <clr-dg-column>Limits</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['spec_type'] == 'Raw Material'">Stock Tranfer(STO) </clr-dg-column>
+                                  <clr-dg-column>Outside Testing</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['spec_type'] == 'Raw Material'">Recurring Inspection</clr-dg-column>
+                                  <clr-dg-column>Test Method</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">Stability Indicating</clr-dg-column>
+                                  <clr-dg-column *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">Bulk Release</clr-dg-column>
+                                  <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+                          
+                                  <clr-dg-row *clrDgItems="let result of selectedResult['spectTests']; let i = index" [clrDgItem]="result"  >
+                                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.testFor}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.test_type}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.test}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.subtest}}</clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['spec_type'] == 'Raw Material' || selectedResult['spec_type'] == 'Packing Material'">{{ result.reference_type}}</clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['sampling_plan'] == 'Test Specific'">{{ result.sample_qty }} </clr-dg-cell>
+                                      <clr-dg-cell>{{ result.limit_type }} </clr-dg-cell>
+                                      <clr-dg-cell>{{ result.limits }} </clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['spec_type'] == 'Raw Material'">{{ result.sto }}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.outside_testing }}</clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['spec_type'] == 'Raw Material'">{{ result.retest }}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.test_method_no }}</clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">{{ result.release_stability }}</clr-dg-cell>
+                                      <clr-dg-cell *ngIf="selectedResult['spec_type'] == 'Semi Finished Goods' || selectedResult['spec_type'] == 'Finish Product'">{{ result.bulk_release }}</clr-dg-cell>
+                                      <clr-dg-cell>
+                                          <button class="btn btn-sm btn-danger" (click)="delTest(i)">DEL</button>
+                                      </clr-dg-cell>
+                                  </clr-dg-row>
+                              </clr-datagrid>
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <div class="card">
+                <div class="card-header" style="text-align: center">
+                  <div class="clr-row" style="margin-bottom: -10px;">
+                    <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">Revision History </div>
+                    <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;"></div>
+                  </div>
+                </div>
+                <div class="card-block" >
+                  <div class="card-text">
+                    <div class="clr-row">
+                      <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                          <div class="datagrid-wrapper">
+                              <clr-datagrid [clrDgLoading]="loading"   >
+
+                                  <clr-dg-column style="width: 10;">{{'common.table.srNo' | translate}}</clr-dg-column>
+                                  <clr-dg-column>Version No.</clr-dg-column>
+                                  <clr-dg-column>Change Control No.</clr-dg-column>
+                                  <clr-dg-column>Reason for change / Rev.Description</clr-dg-column>
+                                  <clr-dg-column>Effective Date</clr-dg-column>
+
+                                  <clr-dg-row *clrDgItems="let result of selectedResult['revisionList']; let i = index" [clrDgItem]="result"  >
+                                      <clr-dg-cell>{{ i+1}}.</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.version_no}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.change_mode}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.reason}}</clr-dg-cell>
+                                      <clr-dg-cell>{{ result.effective_date}}</clr-dg-cell>
+                                  </clr-dg-row>
+                              </clr-datagrid>
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clr-row">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                  <table class="table table-border">
+                      <tr>
+                          <td style="text-align:left;background-color:rgb(12, 87, 148);color:white"><strong>Checking / Rejection Remark :- <span style="color:red">*</span></strong></td>
+                      </tr>
+                      <tr>
+                          <td style="text-align:left;color:blue;"> {{selectedResult['checkingRemark']}}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align:left;background-color:rgb(12, 87, 148);color:white"><strong>Approval / Rejection Remark :- <span style="color:red">*</span></strong></td>
+                      </tr>
+                      <tr>
+                          <td style="text-align:left;color:blue;"> {{selectedResult['approvalRemark']}}</td>
+                      </tr>
+                  </table>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+      <div class="card-footer"  >
+          <button class="btn btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+      </div>
+    </div>
+</div>

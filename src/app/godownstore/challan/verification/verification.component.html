@@ -1,0 +1,291 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+          <div class="clr-col-lg-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Challan Received For Verification</div>
+          <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+            <button class="btn btn-sm btn-danger" routerLink="/godownStore/challan">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+    </div>
+   
+          
+        <clr-datagrid [clrDgLoading]="loading">
+        
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+             <clr-dg-column >{{'common.date' | translate}}</clr-dg-column>
+             <clr-dg-column >Material Type</clr-dg-column>
+            <!-- <th style="text-align:center; background-color: rgb(14, 67, 112); color: white">Vendor Name</th> -->
+             <clr-dg-column >Packaging Slip</clr-dg-column>
+             <clr-dg-column >Packaging Slip Date</clr-dg-column>
+             
+              <clr-dg-column>View</clr-dg-column>
+     
+              <clr-dg-row *clrDgItems="let result of results; let i = index"[clrDgItem]="result">
+                <clr-dg-cell>{{ calculateStartSrNo() + i+1}} </clr-dg-cell>
+               <clr-dg-cell>{{ result.entry_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+               <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <!-- <td style="text-align: left;">{{ result.vendor_name }}</td> -->
+               <clr-dg-cell>{{ result.ch_no }}</clr-dg-cell>
+               <clr-dg-cell>{{ result.challan_date | date: 'dd-MM-yyyy'}}</clr-dg-cell>
+                <clr-dg-cell>
+              <button class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">{{'common.view' | translate}}</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+          <clr-dg-footer>  <!--copy this <clr-dg-footer> complete tag -->
+            <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+              {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+              of {{pagination.totalItems}} 
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+   
+  
+  
+  <div class="card" *ngIf="isView">
+    <div class="card-header">Challan Details For Approval</div>
+    <div class="card-block">
+      <div class="card-text">
+        <h3>Vendor Details:</h3>
+        <table class="table table-border">
+          <!-- <tr>
+            <td style="text-align: left; width: 20%;">Vendor No.:</td>
+            <td style="text-align: left; ">{{ selectedResult['vendor_no'] }}</td>
+            <td style="text-align: left; width: 20%;">Vendor Name:</td>
+            <td style="text-align: left; ">{{ selectedResult['vendor_name'] }}</td>
+          </tr> -->
+          <tr>
+            <td style="text-align: left; width: 20%;">Packaging Slip:</td>
+            <td style="text-align: left;">{{ selectedResult['ch_no'] }}</td>
+            <td style="text-align: left; width: 20%;">Packaging Slip Date.:</td>
+            <td style="text-align: left;">{{ selectedResult['challan_date'] | date: 'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; width: 20%;">PO No:</td>
+            <td style="text-align: left;"> {{ selectedResult['po_no'] }}</td>
+            <td style="text-align: left; width: 20%;">PO Date:</td>
+            <td style="text-align: left;">{{ selectedResult['po_date'] | date: 'dd-MM-yyyy'}}</td>
+          </tr>
+          <tr>
+ 
+            <td style="text-align: left; width: 20%;">Transport:</td>
+            <td style="text-align: left;" colspan="3" >{{ selectedResult['transport'] }}</td>
+          </tr>
+        
+        </table>
+  
+        <div *ngIf="selectedLocation?.length != 0">
+          <h3>Location Details:</h3>
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;width: 15%;">GST Type:</td>
+              <td style="text-align: left;width: 35%;">{{ selectedLocation['gst_type'] }}</td>
+              <td style="text-align: left;width: 15%;">GST No.:</td>
+              <td style="text-align: left;">{{ selectedLocation['gst_no'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left; width: 15%;">Address:</td>
+              <td style="text-align: left;" colspan="3">{{ selectedLocation['address'] }}</td>
+            </tr>
+          </table>
+        </div>
+  
+        <h3>Materials:</h3>
+        <table class="table table-border" *ngIf="selectedResult['material_type']=='Raw Material'|| selectedResult['material_type']=='Packing Material'">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Code</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Invoice No.</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Invoice Rate</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Material For</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_type }}-{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td style="text-align: left;">{{ comp.material_name }}</td>
+            <td>{{ comp.gradeName }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.rate }}</td>
+            <td>{{ comp.tax_invoice }}</td>
+            <td>{{ comp.received_rate }}</td> 
+            <td>{{ comp.gst }}</td>
+            <td>{{ comp.gross_total }}</td>
+            <td>{{ comp.gst_total }}</td>
+            <td>{{ comp.net_total }}</td>
+            <td>{{ comp.diff }}</td>
+            <td>{{ comp.materialForName }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length == 0">
+              <td colspan="13">{{'common.noRecords' | translate}}</td>
+          </tr>
+    
+        </table>
+        <table class="table table-border" *ngIf="selectedResult['material_type']=='General Material'">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Type</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Code</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white">Material Name</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Received Rate</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Required For</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_type }}-{{ comp.material_subtype }}</td>
+            <td style="text-align: left;">{{ comp.material_code }}</td>
+            <td style="text-align: left;">{{ comp.material_name }}</td>
+            <td>{{ comp.grade }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.rate }}</td>
+            <td style="padding: 0px;width: 20px;">
+              <input type="text" name="recevied_rate" [(ngModel)]="comp['received_rate']" required (keyup)="calculation(i)" style="margin: 0px;height: 33px;">
+            </td>
+            <td>{{ comp.diff }}</td>
+            <td>{{ comp.required_for }}</td>
+            <td>{{ comp.gst }}</td>
+            <td>{{ comp.gross_total }}</td>
+            <td>{{ comp.gst_total }}</td>
+            <td>{{ comp.net_total }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length == 0">
+              <td colspan="13">{{'common.noRecords' | translate}}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length !== 0">
+            <td colspan="10" style="text-align: right;">Total:</td>
+            <td style="font-weight: 600;">{{ selectedResult['gross_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['gst_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['net_total'] }}</td>
+          </tr>
+        </table>
+        <table class="table table-border" *ngIf="selectedResult['material_type']=='Chemicals'">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Chemical No</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Chemical Name</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Received Rate</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Required For</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.chemical_no }}</td>
+            <td style="text-align: left;">{{ comp.chemical_name }}</td>
+            <td>{{ comp.grade }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.rate }}</td>
+            <td style="padding: 0px;width: 20px;">
+              <input type="text" name="recevied_rate" [(ngModel)]="comp['received_rate']" required (keyup)="calculation(i)" style="margin: 0px;height: 33px;">
+            </td>
+            <td>{{ comp.diff }}</td>
+            <td>{{ comp.required_for }}</td>
+            <td>{{ comp.gst }}</td>
+            <td>{{ comp.gross_total }}</td>
+            <td>{{ comp.gst_total }}</td>
+            <td>{{ comp.net_total }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length == 0">
+              <td colspan="13">{{'common.noRecords' | translate}}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length !== 0">
+            <td colspan="10" style="text-align: right;">Total:</td>
+            <td style="font-weight: 600;">{{ selectedResult['gross_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['gst_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['net_total'] }}</td>
+          </tr>
+        </table>
+        <table class="table table-border" *ngIf="selectedResult['material_type']=='Glasswares'">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Glassware No</th>
+            <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Glassware Descripion</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Grade</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Qty</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Rate/Unit</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Received Rate</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Diff.</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Required For</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">GST</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Gross</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Tax</th>
+            <th style="background-color: rgb(14, 67, 112); color: white;">Net</th>
+          </tr>
+          <tr *ngFor="let comp of selectedResult['materials']; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.glassware_no }}</td>
+            <td style="text-align: left;">{{ comp.description }}</td>
+            <td>{{ comp.grade }}</td>
+            <td>{{ comp.qty }} {{ comp.unit }}</td>
+            <td>{{ comp.rate }}</td>
+            <td style="padding: 0px;width: 20px;">
+              <input type="text" name="recevied_rate" [(ngModel)]="comp['received_rate']" required (keyup)="calculation(i)" style="margin: 0px;height: 33px;">
+            </td>
+            <td>{{ comp.diff }}</td>
+            <td>{{ comp.required_for }}</td>
+            <td>{{ comp.gst }}</td>
+            <td>{{ comp.gross_total }}</td>
+            <td>{{ comp.gst_total }}</td>
+            <td>{{ comp.net_total }}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length == 0">
+              <td colspan="13">{{'common.noRecords' | translate}}</td>
+          </tr>
+          <tr *ngIf="selectedResult['materials'].length !== 0">
+            <td colspan="10" style="text-align: right;">Total:</td>
+            <td style="font-weight: 600;">{{ selectedResult['gross_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['gst_total'] }}</td>
+            <td style="font-weight: 600;">{{ selectedResult['net_total'] }}</td>
+          </tr>
+        </table>
+        <br>
+        <div class="clr-row">
+          <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark:</label>
+            <!-- <input type="text" name="remark" [(ngModel)]="remark" rows="2"></input> -->
+            <input type="text" name="remark" [(ngModel)]="remark">
+  
+          </div>
+          <div class="clr-col-lg-2 clr-col-md-2 clr-col-sm-12 clr-col-xs-12" style="margin-top:25px;" *ngIf="selectedResult['challan_file'].length>0">
+            <button class="btn btn-info btn-sm"
+            (click)="viewChallan(selectedResult['challan_file'])">VIEW Challan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" style="background-color:green" (click)="updateChallan('approve')">VERIFY</button> 
+      <button class="btn btn-primary" (click)="updateChallan('hold')">Keep On Hold</button>    
+      <button class="btn btn-danger" (click)="updateChallan('reject')">{{'common.reject' | translate}}</button>
+      <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+    </div>
+  </div>
+  
+  <!----<div class="clr-col-lg-10 clr-col-md-10 clr-col-sm-12 clr-col-xs-12">
+            <label>Remark:</label>
+            <input type="text" name="remark" [(ngModel)]="selectedResult['remark']" readonly>
+          </div>--->

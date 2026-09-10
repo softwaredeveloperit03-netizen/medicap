@@ -1,0 +1,179 @@
+<div class="card rcd-form" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        QA Head — Conditional Release Approval (SOP-QA-020)
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" routerLink="/qa/conditional-release" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <ul class="nav nav-tabs" style="margin-bottom: 0.75rem">
+      <li class="nav-item">
+        <button type="button" class="btn btn-sm" [class.btn-primary]="activeTab === 'pending'" [class.btn-outline]="activeTab !== 'pending'" (click)="setTab('pending')">
+          Section 2 — Conditional Approval ({{ pendingList.length }})
+        </button>
+      </li>
+      <li class="nav-item" style="margin-left: 0.35rem">
+        <button type="button" class="btn btn-sm" [class.btn-primary]="activeTab === 'final'" [class.btn-outline]="activeTab !== 'final'" (click)="setTab('final')">
+          Section 3 — Final Full Release ({{ finalList.length }})
+        </button>
+      </li>
+    </ul>
+
+    <div *ngIf="activeTab === 'pending'">
+      <table class="table table-compact">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>Product</th>
+            <th>Code #</th>
+            <th>Lot #</th>
+            <th>Requested By</th>
+            <th>Date Required</th>
+            <th>Resubmit</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of pendingList; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ r.product_name }}</td>
+            <td>{{ r.product_code }}</td>
+            <td>{{ r.lot_no }}</td>
+            <td>{{ r.requested_by }}</td>
+            <td>{{ r.date_required | date: 'dd-MM-yyyy' }}</td>
+            <td>{{ r.resubmit_count > 0 ? 'Yes (' + r.resubmit_count + ')' : 'No' }}</td>
+            <td><button class="btn btn-sm btn-primary" (click)="viewEntry(r)">Review</button></td>
+          </tr>
+          <tr *ngIf="!pendingList?.length">
+            <td colspan="8" style="text-align: center">No pending requests</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="activeTab === 'final'">
+      <table class="table table-compact">
+        <thead>
+          <tr>
+            <th>Sr.</th>
+            <th>CR #</th>
+            <th>Product</th>
+            <th>Lot #</th>
+            <th>QA Approved</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of finalList; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ r.cr_no }}</td>
+            <td>{{ r.product_name }}</td>
+            <td>{{ r.lot_no }}</td>
+            <td>{{ r.qa_approval_by }} / {{ r.qa_approval_date | date: 'dd-MM-yyyy' }}</td>
+            <td><span class="label" [ngClass]="getStatusClass(r.status)">{{ r.status_label || r.status }}</span></td>
+            <td><button class="btn btn-sm btn-success" (click)="finalRelease(r)">Final Release</button></td>
+          </tr>
+          <tr *ngIf="!finalList?.length">
+            <td colspan="7" style="text-align: center">No items pending final release</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="card rcd-form" *ngIf="isView && selectedEntry">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Review Conditional Release Request
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-secondary" (click)="closeView()">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="rcd-form__section-title">1. Request for Conditional Release</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Material/Product</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.product_name }}</td>
+        <td class="rcd-form__label-cell">Code # / Lot #</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.product_code }} / {{ selectedEntry.lot_no }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Sample Quantity</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.sample_quantity }}</td>
+        <td class="rcd-form__label-cell">Date Required</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.date_required | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Description</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedEntry.description }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Justification</td>
+        <td class="rcd-form__value-cell" colspan="3">{{ selectedEntry.justification }}</td>
+      </tr>
+      <tr>
+        <td class="rcd-form__label-cell">Requested By / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.requested_by }} / {{ selectedEntry.requested_by_date | date: 'dd-MM-yyyy' }}</td>
+        <td class="rcd-form__label-cell">Dept Approval / Date</td>
+        <td class="rcd-form__value-cell">{{ selectedEntry.dept_approval_by }} / {{ selectedEntry.dept_approval_date | date: 'dd-MM-yyyy' }}</td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">2. QA Approval — Section 2</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Proceed with Processing</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <label style="margin-right: 1rem"><input type="radio" name="proceed" value="Yes" [(ngModel)]="proceedProcessing" /> Yes</label>
+          <label><input type="radio" name="proceed" value="No" [(ngModel)]="proceedProcessing" /> No (Decline)</label>
+        </td>
+      </tr>
+      <tr *ngIf="proceedProcessing === 'No'">
+        <td class="rcd-form__label-cell">Decline Reason <span class="rcd-form__required">*</span></td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <textarea class="rcd-form__textarea" [(ngModel)]="declineReason" rows="2" placeholder="Reason for not proceeding (logged as CR# N/A per SOP)"></textarea>
+        </td>
+      </tr>
+      <tr *ngIf="proceedProcessing === 'Yes'">
+        <td class="rcd-form__label-cell">Also Record Final Release (Sec. 3)</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <clr-checkbox-wrapper>
+            <input type="checkbox" clrCheckbox [(ngModel)]="recordFinalRelease" />
+            <label>Record Final Approval for Full Release now (if all documentation and QC testing is already complete)</label>
+          </clr-checkbox-wrapper>
+        </td>
+      </tr>
+    </table>
+
+    <div class="rcd-form__section-title">Reject for Correction (Return to Requester)</div>
+    <table class="rcd-form__sheet-table">
+      <tr>
+        <td class="rcd-form__label-cell">Rejection Reason</td>
+        <td class="rcd-form__value-cell" colspan="3">
+          <textarea class="rcd-form__textarea" [(ngModel)]="rejectReason" rows="2" placeholder="If information is incomplete, reject with reason so requester can edit and resubmit"></textarea>
+        </td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 0.75rem">
+      <button class="btn btn-success" *ngIf="proceedProcessing === 'Yes'" (click)="approve()">Approve &amp; Assign CR#</button>
+      <button class="btn btn-warning" *ngIf="proceedProcessing === 'No'" (click)="decline()">Decline (CR# N/A)</button>
+      <button class="btn btn-danger" (click)="reject()" style="margin-left: 0.35rem">Reject — Return to Requester</button>
+    </div>
+  </div>
+</div>

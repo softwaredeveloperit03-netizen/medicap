@@ -1,0 +1,401 @@
+﻿<div class="container-fluid">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">Prepare New SOP </div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" routerLink="/qms/sops" style="background-color: red;color: white;">{{'common.close' | translate}}</button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #prepareForm="ngForm">
+                    <div class="clr-row">
+                        <div class="clr-col-12">
+                            <label>Department:</label>
+                            <select name="department" ngModel required>
+                                <option></option>
+                                <option *ngFor="let department of departments">{{ department.department_name }}</option>
+                            </select>
+                          </div>
+                        <div class="clr-col-12">
+                          <label>SOP Title:</label>
+                          <input type="text" name="title" ngModel required>
+                        </div>
+                        <div class="clr-col-12">
+                          <label>SOP For:</label>
+                          <select name="sop_for" ngModel required (change)="checkFor($event.target.value)">
+                            <option>Product</option>
+                            <option>Equipment</option>
+                            <option>QMS</option>
+                            <option>System</option>
+                            <option>Process</option>
+                            <option>Procedure</option>
+                            <option>Other</option>
+                          </select>
+                        </div>
+                        <div class="clr-col-12" *ngIf="isEquipment">
+                          <label>Equipment Name:</label>
+                          <select name="equipment_code" ngModel required>
+                            <option></option>
+                            <option *ngFor="let equipment of equipments" [value]="equipment.equipment_code">{{ equipment.equipment_code }} - {{ equipment.equipment_name }}</option>
+                          </select>
+                        </div>
+                        <div class="clr-col-12" *ngIf="isOther">
+                          <label>Other:</label>
+                          <input type="text" name="other" ngModel required>
+                        </div>
+                        <div class="clr-col-12">
+                            <label>Version No.:</label>
+                            <input type="text" name="version_no" ngModel required>
+                          </div>
+                    </div>
+                    <div class="clr-row">
+                        <div class="clr-col-12">
+                            <h4>Purpose</h4>
+                            <editor name="purpose" ngModel [apiKey]="api" [init]="init">
+                            </editor>
+                        </div>
+          
+                        <div class="clr-col-12">
+                            <h4>Scope</h4>
+                            <editor name="scope" ngModel [apiKey]="api" [init]="init">
+                            </editor>
+                        </div>
+        
+                        <div class="clr-col-12">
+                            <h4>Role and Responsibility:</h4>
+                            <form #designationForm="ngForm">
+                                <table class="table">
+                                    <tr>
+                                    <th>Role</th>
+                                    <th>Responsibility</th>
+                                    <th>ADD</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0px;">
+                                            <select name="designation" ngModel required style="margin: 0px; height: 33px;">
+                                                <option></option>
+                                                <option *ngFor="let designation of designations">{{ designation.designation }}</option>
+                                            </select>
+                                        </td>
+                                        <td style="padding: 0px;">
+                                            <input type="text" name="responsibility" ngModel required style="margin: 0px; height: 33px;">
+                                        </td>
+                                        <td style="padding: 0px; vertical-align: middle;">
+                                            <button class="btn btn-sm btn-info" (click)="addDesignation(designationForm)">{{'common.add' | translate}}</button>
+                                        </td>
+                                    </tr>
+                                    <tr *ngFor="let role of roleList; let i = index">
+                                    <td>{{ role.designation }}</td>
+                                    <td style="text-align: left;">{{ role.responsibility }}</td>
+                                    <td>
+                                        <clr-icon shape="trash" class="is-error" (click)="deleteDesignation(i)"></clr-icon>
+                                    </td>
+                                    </tr>
+                                    <tr *ngIf="roleList?.length == 0">
+                                        <td colspan="3">{{'common.noRecords' | translate}}</td>
+                                    </tr>
+                                </table>
+                            </form>
+                        </div>
+
+                        <div class="clr-col-12">
+                            <h4>Definition:</h4>
+                            <form #definitionForm="ngForm">
+                                <table class="table">
+                                    <tr>
+                                    <th>Terms</th>
+                                    <th>Definition</th>
+                                    <th>ADD</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0px;">
+                                            <input type="text" name="term" ngModel required style="margin: 0px; height: 33px;">
+                                        </td>
+                                        <td style="padding: 0px;">
+                                            <input type="text" name="definition" ngModel required style="margin: 0px; height: 33px;">
+                                        </td>
+                                        <td style="padding: 0px; vertical-align: middle;">
+                                            <button class="btn btn-sm btn-info" (click)="addDefinition(definitionForm)">{{'common.add' | translate}}</button>
+                                        </td>
+                                    </tr>
+                                    <tr *ngFor="let role of definitionList;let i = index">
+                                    <td style="text-align: left;">{{ role.term }}</td>
+                                    <td style="text-align: left;">{{ role.definition }}</td>
+                                    <td>
+                                        <clr-icon shape="trash" class="is-error" (click)="deleteDefinition(i)"></clr-icon>
+                                    </td>
+                                    </tr>
+                                    <tr *ngIf="definitionList?.length == 0">
+                                        <td colspan="3">{{'common.noRecords' | translate}}</td>
+                                    </tr>
+                                </table>
+                            </form>
+                        </div>
+          
+                      <div class="clr-col-12">
+                        <h4>External References And Associated Documents:</h4>
+                        <div class="card">
+                            <div class="card-block">
+                                <div class="card-title">1. External References:</div>
+                                <div class="card-text">
+                                    <form #externalForm="ngForm">
+                                        <table class="table">
+                                            <tr>
+                                                <th>External Document No.</th>
+                                                <th>Title</th>
+                                                <th>{{'common.table.action' | translate}}</th>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 0px;">
+                                                    <input type="text" name="document_no" ngModel required style="margin: 0px; height: 33px;">
+                                                </td>
+                                                <td style="padding: 0px;">
+                                                    <input type="text" name="title" ngModel required style="margin: 0px; height: 33px;">
+                                                </td>
+                                                <td style="padding: 0px; vertical-align: middle;">
+                                                    <button class="btn btn-sm btn-info" (click)="addExternal(externalForm)">{{'common.add' | translate}}</button>
+                                                </td>
+                                            </tr>
+                                            <tr *ngFor="let list of externalList; let i = index">
+                                                <td style="text-align: left;">{{ list.document_no }}</td>
+                                                <td style="text-align: left;">{{ list.title }}</td>
+                                                <td>
+                                                    <clr-icon shape="trash" class="is-error" (click)="deleteExternal(i)"></clr-icon>
+                                                </td>
+                                            </tr>
+                                            <tr *ngIf="externalList?.length == 0">
+                                                <td colspan="3">{{'common.noRecords' | translate}}</td>
+                                            </tr>
+                                        </table>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="card-block">
+                                <div class="card-title">2. Associated Documents:</div>
+                                <div class="card-text">
+                                    <form #associatedForm="ngForm">
+                                        <table class="table">
+                                            <tr>
+                                                <th>Associated Document No.</th>
+                                                <th>Title</th>
+                                                <th>{{'common.table.action' | translate}}</th>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 0px;">
+                                                    <input type="text" name="document_no" ngModel required style="margin: 0px; height: 33px;">
+                                                </td>
+                                                <td style="padding: 0px;">
+                                                    <input type="text" name="title" ngModel required style="margin: 0px; height: 33px;">
+                                                </td>
+                                                <td style="padding: 0px; vertical-align: middle;">
+                                                    <button class="btn btn-sm btn-info" (click)="addAssociated(associatedForm)">{{'common.add' | translate}}</button>
+                                                </td>
+                                            </tr>
+                                            <tr *ngFor="let list of associatedList; let i = index">
+                                                <td style="text-align: left;">{{ list.document_no }}</td>
+                                                <td style="text-align: left;">{{ list.title }}</td>
+                                                <td>
+                                                    <clr-icon shape="trash" class="is-error" (click)="deleteAssociated(i)"></clr-icon>
+                                                </td>
+                                            </tr>
+                                            <tr *ngIf="associatedList?.length == 0">
+                                                <td colspan="3">{{'common.noRecords' | translate}}</td>
+                                            </tr>
+                                        </table>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                      </div>
+          
+                      <div class="clr-col-12">
+                        <h4>Process Overview</h4>
+                        <editor name="process" ngModel [apiKey]="api" [init]="init">
+                        </editor>
+                      </div>
+          
+                      <div class="clr-col-12">
+                        <h4>Procedure</h4>
+                        <editor name="procedures" ngModel [apiKey]="api" [init]="init">
+                        </editor>
+                      </div>
+          
+                      <div class="clr-col-12">
+                        <h4>Abbreviation </h4>
+                        <editor name="abbreviation" ngModel [apiKey]="api" [init]="init">
+                        </editor>
+                      </div>
+                    </div>
+                  </form>
+
+                  <div class="clr-row">
+                    <div class="clr-col-12">
+                        <div class="card">
+                        <div class="card-block">
+                            <div class="card-title">Training Requirement:</div>
+                            <div class="card-text">
+                            <form #trainingForm="ngForm">
+                                <div class="clr-row">
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                    <label>{{'common.department' | translate}}</label>
+                                    <select name="department" ngModel required>
+                                    <option></option>
+                                    <option *ngFor="let item of departments; let i = index">{{item.department_name}}</option>
+                                    </select>
+                                </div>
+                                </div>
+                            </form>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary" (click)="addTraining(trainingForm)">{{'common.add' | translate}}</button>
+                        </div>
+                        <div class="card-block">
+                            <div class="card-text">
+                            <table class="table">
+                                <tr>
+                                <th>Sr</th>
+                                <th>{{'common.department' | translate}}</th>
+                                <th>{{'common.table.action' | translate}}</th>
+                                </tr>
+                                <tr *ngFor="let user of trainingList; let i = index">
+                                <td>{{ i+1 }}</td>
+                                <td>{{user}}</td>
+                                <td style="text-align: center;">
+                                    <clr-icon shape="trash" class="is-error" (click)="deleteTraining(i)"></clr-icon>
+                                </td>
+                                </tr>
+                                <tr *ngIf="trainingList.length === 0">
+                                <td colspan="3" style="height: 40px;">No Record found</td>
+                                </tr>
+                            </table>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="clr-col-12">
+                        <div class="card">
+                        <div class="card-block">
+                            <div class="card-title">Distribution</div>
+                            <div class="card-text">
+                            <form #distributionForm="ngForm">
+                                <div class="clr-row">
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                    <label>{{'common.department' | translate}}</label>
+                                    <select name="department" ngModel required>
+                                    <option></option>
+                                    <option *ngFor="let item of departments; let i = index">{{item.department_name}}</option>
+                                    </select>
+                                </div>
+                                </div>
+                            </form>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary" (click)="addDistribution(distributionForm)">{{'common.add' | translate}}</button>
+                        </div>
+                        <div class="card-block">
+                            <div class="card-text">
+                            <table class="table">
+                                <tr>
+                                <th>Sr</th>
+                                <th>{{'common.department' | translate}}</th>
+                                <th>{{'common.table.action' | translate}}</th>
+                                </tr>
+                                <tr *ngFor="let user of distributionList; let i = index">
+                                <td>{{ i+1 }}</td>
+                                <td>{{user}}</td>
+                                <td style="text-align: center;">
+                                    <clr-icon shape="trash" class="is-error" (click)="deleteDistribution(i)"></clr-icon>
+                                </td>
+                                </tr>
+                                <tr *ngIf="distributionList.length === 0">
+                                <td colspan="3" style="height: 40px;">No Record found</td>
+                                </tr>
+                            </table>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+        
+                    <div class="clr-col-12">
+                        <div class="card">
+                        <div class="card-block">
+                            <div class="card-title">Attachments</div>
+                            <div class="card-text">
+                            <div class="clr-row">
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <label>Select Multiple Files</label>
+                                <input type="file" name="attachments" multiple ngModel required style="height: auto;" accept="application/pdf">
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+            
+                    <div class="clr-col-12">
+                        <div class="card">
+                        <div class="card-block">
+                            <div class="card-title">Revision History</div>
+                            <div class="card-text">
+                            <form #revisionForm="ngForm">
+                                <div class="clr-row">
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Version No</label>
+                                    <input type="text" name="ver_no" ngModel required>
+                                </div>
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Change Mode</label>
+                                    <input type="text" name="change_mode" ngModel required>
+                                </div>
+                                <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                                    <label>Reason for change</label>
+                                    <input type="text" name="change_reason" ngModel required>
+                                </div>
+                                </div>
+                            </form>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary" (click)="addRevision(revisionForm)">{{'common.add' | translate}}</button>
+                        </div>
+                        <div class="card-block">
+                            <div class="card-text">
+                            <table class="table">
+                                <tr>
+                                <th>Sr</th>
+                                <th>Version No</th>
+                                <th>Change Mode</th>
+                                <th>Reason for change</th>
+                                <th>{{'common.table.action' | translate}}</th>
+                                </tr>
+                                <tr *ngFor="let user of revisionList; let i = index">
+                                <td>{{ i+1 }}</td>
+                                <td>{{user.ver_no}}</td>
+                                <td>{{user.change_mode}}</td>
+                                <td>{{user.change_reason}}</td>
+                                <td style="text-align: center;">
+                                    <clr-icon shape="trash" class="is-error" (click)="deleteRevision(i)"></clr-icon>
+                                </td>
+                                </tr>
+                                <tr *ngIf="revisionList.length === 0">
+                                <td colspan="5" style="height: 40px;">No Record found</td>
+                                </tr>
+                            </table>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                  </div>
+            </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-primary" (click)="save(prepareForm)">PREPARE</button>
+        </div>
+    </div>
+</div>

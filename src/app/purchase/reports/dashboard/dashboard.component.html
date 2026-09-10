@@ -1,0 +1,3417 @@
+<div class="vapp vapp--page">
+  <div class="vapp vapp--card">
+    <header class="vapp__header card-header mef-panel-header">
+      <h1 class="vapp__title mef-panel-header__title">Reports</h1>
+      <button type="button" class="vapp__btn vapp__btn--close mef-panel-header__close" [routerLink]="['/purchase']" [queryParams]="{ category: 'Purchase Report' }">{{'common.close' | translate}}</button>
+    </header>
+  <div class="vapp__body">
+      <div class="reports__toolbar">
+        <div class="reports__filter-row">
+          <div class="reports__filter-group reports__report-select">
+            <label class="reports__head-label">Report <span class="vapp__required">*</span></label>
+            <select class="vapp__control reports__head-select" name="raw_report" [(ngModel)]="raw_report" (change)="onReportChange()" aria-label="Select report type">
+              <option value="">-- Select Report --</option>
+              <option>Quotation Report</option>
+              <option>MIS Report</option>
+              <option>PO Status Report</option>
+              <option>Monthly PO Report</option>
+              <option value="Indend Report">Purchase Requisition Report</option>
+              <option>On Hold Purchase Report</option>
+              <option>Approved Vendor List</option>
+              <option>Material Vendor Mapping Report</option>
+              <option>Quotation Comparative Report</option>
+              <option>Vendor Wise Quotation Report</option>
+              <option>Purchase Report</option>
+              <option>Vendor Wise Purchase Report</option>
+              <option>Material Type Wise PO Report</option>
+              <option>Cancelled PO Report</option>
+              <option>Provisional Approved Vendor</option>
+            </select>
+          </div>
+          <div class="reports__filter-group reports__date-group" *ngIf="raw_report">
+            <label>From Date:</label>
+            <input class="reports__control" type="date" name="from_date" [(ngModel)]="from_date" aria-label="From date" />
+          </div>
+          <div class="reports__filter-group reports__date-group" *ngIf="raw_report">
+            <label>To Date:</label>
+            <input class="reports__control" type="date" name="to_date" [(ngModel)]="to_date" aria-label="To date" />
+          </div>
+          <button type="button" class="btn btn-primary btn-sm reports__btn-xs" *ngIf="raw_report" (click)="searchCurrentReport()">
+            <clr-icon shape="search"></clr-icon>&nbsp;Search
+          </button>
+          <div class="reports__filter-group" *ngIf="raw_report == 'MIS Report'">
+            <label>Month:</label>
+            <input class="reports__control" type="month" name="MisMonth" [(ngModel)]="MisMonth" aria-label="Select month" />
+          </div>
+          <button type="button" class="btn btn-primary btn-sm reports__btn-xs" *ngIf="raw_report == 'MIS Report'" (click)="MIS_BY_MONTH()">
+            <clr-icon shape="calendar"></clr-icon>&nbsp;Month
+          </button>
+          <div class="reports__search-wrap" *ngIf="raw_report">
+            <clr-icon shape="search"></clr-icon>
+            <input type="text" class="reports__search-input reports__control" [(ngModel)]="searchTerm" placeholder="Search..." aria-label="Search report data" />
+          </div>
+          <div class="reports__toolbar-actions" *ngIf="raw_report">
+            <button type="button" class="btn btn-outline btn-sm reports__btn-xs" (click)="clearFilter()">
+              <clr-icon shape="times"></clr-icon>&nbsp;Clear
+            </button>
+            <button type="button" class="btn btn-primary btn-sm reports__btn-xs" (click)="downloadCurrentReportExcel()">
+              <clr-icon shape="download"></clr-icon>&nbsp;Excel
+            </button>
+          </div>
+        </div>
+        <div class="reports__active-title" *ngIf="raw_report">
+          <strong>{{ raw_report }}</strong>
+          <span class="reports__active-meta"> | {{ getFilteredReportData().length }} records</span>
+        </div>
+      </div>
+      <!---- Quotation Report ---->
+      <div *ngIf="raw_report == 'Quotation Report'">
+        <div class="reports__datagrid-wrap" *ngIf="!isViewstock">
+          <clr-datagrid [clrDgLoading]="loading">
+            <label>Quotation Report</label>
+            <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+            <clr-dg-column>Quotation No</clr-dg-column>
+            <clr-dg-column>Vendor Name</clr-dg-column>
+            <clr-dg-column>No. of Material</clr-dg-column>
+            <clr-dg-column>Quoatation Date</clr-dg-column>
+            <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            <clr-dg-row *clrDgItems="let result of getFilteredReportData(); let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.quotation_no || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.vendor_name || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.no_of_products ?? 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.status || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button type="button" class="btn btn-sm btn-info" (click)="Viewstock(i)">{{'common.view' | translate}}</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+        </div>
+
+        <div class="reports__view-card card" *ngIf="isViewstock">
+          <div class="reports__view-header card-header">Quotation Report</div>
+          <div class="card-block">
+            <div class="card-text">
+              <div class="reports__table-wrap">
+              <table class="reports__table reports__table-info table table-border">
+                <tr>
+                  <td class="reports__label-cell">Vendor Name:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["vendor_name"] || 'NA' }}</td>
+                  <td class="reports__label-cell">Vendor No:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["vendor_no"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Email Id:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["email"] || 'NA' }}</td>
+                  <td class="reports__label-cell">GST No:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["gst_no"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Location:</td>
+                  <td class="reports__value-cell" colspan="3">{{ selectedResult?.["city"] || 'NA' }}</td>
+                </tr>
+              </table>
+              <br />
+              <table class="reports__table reports__table-info table table-border">
+                <tr>
+                  <td class="reports__label-cell">Quatation No:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["quotation_no"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Quotation Date:</td>
+                  <td class="reports__value-cell">{{ selectedResult?.["entry_date"] | date : "dd-MM-yyyy" }}</td>
+                </tr>
+              </table>
+              <div class="reports__table-wrap">
+              <table class="reports__table table table-border">
+                <thead>
+                <tr>
+                  <th class="reports__th">Material Type</th>
+                  <th class="reports__th">Material Code</th>
+                  <th class="reports__th">Material Name</th>
+                  <th class="reports__th">GST</th>
+                  <th class="reports__th">Quotation Amount</th>
+                  <th class="reports__th">Quotation per</th>
+                  <th class="reports__th">Pack Size</th>
+                  <th class="reports__th">Pack Size Unit</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let result of selectedResult?.['materials'] || []; let i = index">
+                  <td>{{ result?.material_type || 'NA' }} - {{ result?.material_subtype || 'NA' }}</td>
+                  <td>{{ result?.material_code || result?.chemical_no || 'NA' }}</td>
+                  <td>{{ result?.material_name || result?.chemical_name || 'NA' }}</td>
+                  <td>{{ result?.gst ?? 'NA' }}</td>
+                  <td>{{ result?.quotation_amt ?? 'NA' }}</td>
+                  <td>{{ result?.quotation_per ?? 'NA' }}</td>
+                  <td>{{ result?.pack_size ?? 'NA' }}</td>
+                  <td>{{ result?.pack_size_unit ?? 'NA' }}</td>
+                </tr>
+                <tr *ngIf="!(selectedResult?.['materials']?.length)">
+                  <td colspan="8" class="reports__no-data">NO DATA</td>
+                </tr>
+                </tbody>
+              </table>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quotation Comparative Report -->
+      <div *ngIf="raw_report == 'Quotation Comparative Report'">
+        <div class="reports__datagrid-wrap" *ngIf="!isViewresult">
+          <clr-datagrid [clrDgLoading]="loading">
+            <label>Quotation Comparative Report</label>
+            <clr-dg-column>Sr.</clr-dg-column>
+            <clr-dg-column>Material Type</clr-dg-column>
+            <clr-dg-column>Material Subtype</clr-dg-column>
+            <clr-dg-column>Material Code</clr-dg-column>
+            <clr-dg-column>Material Name</clr-dg-column>
+            <clr-dg-column>Grade</clr-dg-column>
+            <clr-dg-column>No of Quotation</clr-dg-column>
+            <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+            <clr-dg-row *clrDgItems="let result of getFilteredReportData(); let i = index" [clrDgItem]="result">
+              <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.material_type || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.material_subtype || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.material_code || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.material_name || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ result?.grade || 'NA' }}</clr-dg-cell>
+              <clr-dg-cell>{{ (result?.quotationDetails?.length) ?? 0 }}</clr-dg-cell>
+              <clr-dg-cell>
+                <button type="button" class="btn btn-sm btn-info" (click)="viewcamperative(i)">{{'common.view' | translate}}</button>
+              </clr-dg-cell>
+            </clr-dg-row>
+            <clr-dg-footer>
+              <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+              </clr-dg-pagination>
+            </clr-dg-footer>
+          </clr-datagrid>
+
+        </div>
+        <div class="reports__view-card card" *ngIf="isViewresult">
+          <div class="reports__view-header card-header">Quotation Comparative Chart</div>
+          <div class="card-block">
+            <div class="card-text">
+              <table class="reports__table reports__table-info table table-border">
+                <tr>
+                  <td class="reports__label-cell">Material Type:</td>
+                  <td class="reports__value-cell">{{ selectedcomparative?.["material_type"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Material Subtype:</td>
+                  <td class="reports__value-cell">{{ selectedcomparative?.["material_subtype"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Material Code:</td>
+                  <td class="reports__value-cell">{{ selectedcomparative?.["material_code"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Material Name:</td>
+                  <td class="reports__value-cell">{{ selectedcomparative?.["material_name"] || 'NA' }}</td>
+                </tr>
+                <tr>
+                  <td class="reports__label-cell">Grade:</td>
+                  <td class="reports__value-cell">{{ selectedcomparative?.["grade"] || 'NA' }}</td>
+                </tr>
+              </table>
+              <h3>Quotations:</h3>
+              <div class="reports__table-wrap">
+              <table class="reports__table table table-border">
+                <thead>
+                <tr>
+                  <th class="reports__th">Sr.</th>
+                  <th class="reports__th">Vendor Name</th>
+                  <th class="reports__th">Quotation No.</th>
+                  <th class="reports__th">Quotation Rate</th>
+                  <th class="reports__th">Quotation Date</th>
+                  <th class="reports__th">View Quotation</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let quotation of selectedcomparative?.['quotationDetails'] || []; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ quotation?.vendor_name || 'NA' }}</td>
+                  <td>{{ quotation?.quotation_no || 'NA' }}</td>
+                  <td>{{ quotation?.quotation_amt ?? 'NA' }} / {{ quotation?.quotation_per ?? 'NA' }}</td>
+                  <td>{{ quotation?.entry_date | date : "dd-MM-yyyy" }}</td>
+                  <td>
+                    <button type="button" class="btn btn-sm btn-info" (click)="uploadQuatation(quotation?.doc_url)">View Quotation</button>
+                  </td>
+                </tr>
+                <tr *ngIf="!(selectedcomparative?.['quotationDetails']?.length)">
+                  <td colspan="6" class="reports__no-data">NO DATA</td>
+                </tr>
+                </tbody>
+              </table>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vendor Wise Quotation Report -->
+      <div *ngIf="raw_report == 'Vendor Wise Quotation Report'">
+      <div class="reports__datagrid-wrap" *ngIf="!isViewstatement">
+      <clr-datagrid [clrDgLoading]="loading">
+        <label>Vendor Wise Quotation Report</label>
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+        <clr-dg-row *clrDgItems="let user of getFilteredReportData(); let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.vendor_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.vendor_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.vendor_name || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button type="button" class="btn btn-sm btn-icon" (click)="viewvendorvisequation(i)">{{'common.view' | translate}}</button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+      </div>
+      <div class="reports__view-card card" *ngIf="isViewstatement">
+        <div class="card-header">Vendor Wise Quotation Report</div>
+        <!-- <div class="card-block">
+              <div class="card-text">
+                  <table class="table table-border">
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Material Code:</td>
+                          <td style="text-align: left;">{{ selectedResult['material_code'] }}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Material Name:</td>
+                          <td style="text-align: left;">{{ selectedResult['material_name'] }}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Quotation per kg:</td>
+                          <td style="text-align: left;">{{ selectedResult['quotation'] }}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Quotation Amt:</td>
+                          <td style="text-align: left;">{{ selectedResult['quot_amt'] }}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Gst:</td>
+                          <td style="text-align: left;">{{ selectedResult['gst'] }}</td>
+                      </tr>
+                      <tr>
+                          <td style="text-align: left;width: 20%;">Total Amount:</td>
+                          <td style="text-align: left;">{{ selectedResult['total_amt'] }}</td>
+                      </tr>
+                  </table>
+                </div>
+              </div> -->
+        <h3>Quotations:</h3>
+        <table class="table table-border">
+          <tr>
+            <th style="background-color: rgb(14, 67, 112); color: white">
+              Sr.No
+            </th>
+            <th style="background-color: rgb(14, 67, 112); color: white">
+              Vendor No.
+            </th>
+            <th style="
+                text-align: center;
+                background-color: rgb(14, 67, 112);
+                color: white;
+              ">
+              Vendor Name
+            </th>
+            <th style="background-color: rgb(14, 67, 112); color: white">
+              Quotation No.
+            </th>
+            <th style="background-color: rgb(14, 67, 112); color: white">
+              Material Type
+            </th>
+            <th style="background-color: rgb(14, 67, 112); color: white">
+              Quotation Date
+            </th>
+            <!-- <th style="background-color: rgb(14, 67, 112); color: white;">View Quotation</th> -->
+          </tr>
+          <tr *ngFor="
+              let quotation of selectedvendorquation['quatation'];
+              let i = index
+            ">
+            <td>{{ i + 1 }}.</td>
+            <td>{{ quotation.vendor_no }}</td>
+            <td style="text-align: left">{{ quotation.vendor_name }}</td>
+            <td>{{ quotation.quotation_no }}</td>
+            <td>{{ quotation.material_type }}</td>
+            <td>{{ quotation.entry_date | date : "dd-MM-yyyy" }}</td>
+            <!-- <td><button class="btn btn-sm btn-primary">Quotaion</button></td> -->
+          </tr>
+        </table>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!-- Material Wise Quotation Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Material Wise Quotation Report' && !isViewtaking">
+        <label>Material Wise Quotation Report</label>
+
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>Material Code</clr-dg-column>
+        <clr-dg-column>Material Name</clr-dg-column>
+        <clr-dg-column>Quotation Amount</clr-dg-column>
+        <clr-dg-column>GST</clr-dg-column>
+        <clr-dg-column>Total Quotation Amt</clr-dg-column>
+        <clr-dg-column>Quotation No</clr-dg-column>
+        <clr-dg-column>Quotation Date</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let Taking of materialquatation; let i = index" [clrDgItem]="Taking">
+          <clr-dg-cell>{{ Taking.material_type }}.</clr-dg-cell>
+          <clr-dg-cell>{{
+            Taking.material_code | date : "dd-MM-yyyy"
+            }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.material_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.quot_amt }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.gst }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.total_quot }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.quot_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.quot_date }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewmatvisequatation(calculateStartSrNo() + i)">
+              View
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button class="btn btn-primary" (click)="download5()" *ngIf="raw_report == 'Material Wise Quotation Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewtaking">
+        <div class="card-header">Vendor Wise Quotation Report</div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left; width: 20%">Material Code:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["material_code"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Material Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["material_name"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Quotation per kg:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["quotation"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Quotation Amt:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["quot_amt"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Gst:</td>
+                <td style="text-align: left">{{ selectedResult["gst"] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Total Amount:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["total_amt"] }}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+      </div>
+
+      <!--- Purchase Report  --->
+      <div *ngIf="raw_report == 'Purchase Report'">
+      <div class="reports__datagrid-wrap" *ngIf="!isViewedit">
+      <clr-datagrid [clrDgLoading]="loading">
+        <label>Purchase Report</label>
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column>Po Type</clr-dg-column>
+        <clr-dg-column>Approval Date</clr-dg-column>
+        <clr-dg-column>P.O Date</clr-dg-column>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>Purchase Requisition No</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Gross Total</clr-dg-column>
+        <clr-dg-column>Tax Total</clr-dg-column>
+        <clr-dg-column>Net Total</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+        <clr-dg-row *clrDgItems="let user of getFilteredReportData(); let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.po_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.po_no || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.indent_no?.length > 0 ? user.indent_no : 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.vendor_name || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.gross_total ?? 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.gst_total ?? 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user?.final_total ?? 'NA' }}</clr-dg-cell>
+          <clr-dg-cell style="color: brown">{{ user?.status || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell><button type="button" class="btn btn-sm btn-info" (click)="viewOrder(i)">{{'common.view' | translate}}</button></clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [clrDgPageSize]="10">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+      </div>
+
+      <div class="container-fluid" *ngIf="isViewedit">
+        <div class="card">
+          <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px">
+              <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+                Purchase Order Log
+              </div>
+              <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px">
+                <button class="btn btn-sm" (click)="isViewedit = false" style="background-color: red; color: white">
+                  <clr-icon shape="window-close" class="is-solid"></clr-icon>
+                  CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="card-block">
+            <div class="card-text">
+              <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                <tr>
+                  <td style="
+                      text-align: left;
+                      background-color: rgb(14, 67, 112);
+                      color: white;
+                    " colspan="4">
+                    Supplier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; color: rgb(14, 67, 112)">
+                    Vendor Name
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["vendor_name"] ? selectedOrder["vendor_name"] :'NA'}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      color: rgb(14, 67, 112);
+                      width: 20%;
+                    ">
+                    Address:
+                  </td>
+                  <td style="text-align: left; width: 40%">
+                    {{ selectedOrder["address"] ? selectedOrder["address"] : 'NA'}}
+                  </td>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    GSTIN:
+                  </td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["gst_no"] ? selectedOrder["gst_no"] :'NA' }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    State:
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["state_name"] ? selectedOrder["state_name"] :'NA' }}
+                  </td>
+                </tr>
+              </table>
+              <div class="clr-row">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Bill To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company<span style="color: red">*</span>
+                      </td>
+                      <!-- <td style="text-align: left;padding: 0%;" colspan="3">
+                  <select name="billcompany_code" [(ngModel)]="billcompany_code" required (change)="getBillCompany(billcompany_code)">
+                      <option></option>
+                      <option *ngFor="let com of companies" [value]="com.company_code">{{com.company_name}}</option>
+                  </select>
+              </td> -->
+                      <td style="text-align: left">
+                        {{ selectedBill?.company_name }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill?.address }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill?.gst_no }}
+                      </td>
+                    </tr>
+                    <!-- <tr>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State Code:</td>
+              <td style="text-align: left;">{{ selectedBill?.state_code }}</td>
+          </tr> -->
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">{{ selectedBill?.area }}</td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill?.present_state }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">{{ selectedBill?.pin }}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Ship To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company:<span style="color: red">*</span>
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["company_name"] ? selectedShip["company_name"] :'NA'}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["address"] ? selectedShip["address"] :'NA'}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["gst_no"] ? selectedShip["gst_no"] :'NA'}}
+                      </td>
+                    </tr>
+                    <!-- <tr>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State Code:</td>
+              <td style="text-align: left;">{{ selectedShip['state_code'] }}</td>
+          </tr> -->
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["area"] ? selectedShip["area"] :'NA'}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["present_state"] ? selectedShip["present_state"] : 'NA'}}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["pin"] ?selectedShip["pin"] : 'NA' }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              <br />
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left; width: 15%">PO No.:</td>
+                  <td style="text-align: left">{{ selectedOrder["po_no"] }}</td>
+                  <td style="text-align: left; width: 15%">PO Date:</td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["entry_date"] | date : "dd-MM-yyyy" }}
+                  </td>
+                  <td style="text-align: left; width: 15%">Transport:</td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length > 0">
+                    {{ selectedOrder["transport"] }}
+                  </td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length == 0">
+                    N/A
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <div>
+              <table class="table table-border">
+                <tr>
+                  <th>{{'common.table.srNo' | translate}}</th>
+                  <th>Material Type</th>
+                  <th>Material Name</th>
+                  <th>Material Code</th>
+                  <th>Qty</th>
+                  <th>Quotation Amt.</th>
+                  <th>Gross Total</th>
+                  <th>Discount</th>
+                  <th>Tax Total</th>
+                  <th>Net Total</th>
+                  <th>Scheduled Dil.Dt</th>
+                </tr>
+                <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>
+                    {{ user.material_subtype }}{{ user.material_subtype1 }}
+                  </td>
+                  <td>{{ user.material_name }} - {{ user.gradeName }}</td>
+                  <td>{{ user.material_code }}</td>
+                  <td>{{ user.qty }} {{ user.unit }}</td>
+                  <td>{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                  <td>{{ user.gross_total }}</td>
+                  <td style="text-align: right">{{ user.disc_amt }}</td>
+                  <td>{{ user.tax_total }}</td>
+                  <td>{{ user.net_total }}</td>
+                  <td *ngIf="user.delivery_schedule_date != '0000-00-00'">
+                    {{ user.delivery_schedule_date | date : "dd-MM-yyyy" }}
+                  </td>
+                  <td *ngIf="user.delivery_schedule_date == '0000-00-00'">
+                    N/A
+                  </td>
+                </tr>
+                <tr *ngIf="selectedOrder['materials']?.length == 0">
+                  <td colspan="9">No Record Found!</td>
+                </tr>
+              </table>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: center">Gross Total</th>
+                  <th style="text-align: center">Discount</th>
+                  <th style="text-align: center">Tax Total</th>
+                  <th style="text-align: center">Other Charges</th>
+                  <th style="text-align: center">Shipping & Handling</th>
+                  <th style="text-align: center">{{'common.total' | translate}}</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px">
+                    <input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']" style="margin: 0px"
+                      readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="discount" [(ngModel)]="selectedOrder['disc_amt']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="other_charges" [(ngModel)]="otherCharges" required style="margin: 0px"
+                      readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="shipping_handling" [(ngModel)]="shippingHandling" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button type="button" class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+      </div>
+      </div>
+
+      <!----- MIS Report ----->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'MIS Report'">
+        <label>MIS Report</label>
+
+        <clr-dg-column>Sr. </clr-dg-column>
+        <clr-dg-column>Supplied Name</clr-dg-column>
+        <!-- <clr-dg-column>Invoice No.</clr-dg-column> -->
+        <!-- <clr-dg-column>Invoice Date</clr-dg-column> -->
+        <clr-dg-column clrDgField="po_no">Payment Terms</clr-dg-column>
+        <clr-dg-column>PO No.</clr-dg-column>
+        <clr-dg-column>Material Description</clr-dg-column>
+        <clr-dg-column>QTY</clr-dg-column>
+        <clr-dg-column>{{'common.unit' | translate}}</clr-dg-column>
+        <clr-dg-column>Rate</clr-dg-column>
+        <clr-dg-column>{{'common.amount' | translate}}</clr-dg-column>
+        <!-- <clr-dg-column>Transport Charges / Freight Charges</clr-dg-column>
+        <clr-dg-column>CGST / SGST</clr-dg-column> -->
+        <clr-dg-column>Total Amount</clr-dg-column>
+        <!-- <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column> -->
+
+        <clr-dg-row *clrDgItems="let mis of Taking; let i = index" [clrDgItem]="mis">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}.</clr-dg-cell>
+          <clr-dg-cell>{{ mis.vendor_name }}</clr-dg-cell>
+          <!-- <clr-dg-cell *ngIf="Taking.tax_invoice != ''">{{
+            mis.tax_invoice
+          }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="Taking.tax_invoice == ''">NA</clr-dg-cell> -->
+          <clr-dg-cell>{{
+            mis.tax_invoice_date | date : "dd-MM-yyyy"
+            }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.term || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.po_no || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.material_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.qty }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.uom }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.quotation_amt }}</clr-dg-cell>
+          <!-- <clr-dg-cell>{{ mis.gross_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.other_charges }}</clr-dg-cell>
+          <clr-dg-cell>{{ mis.gst_total }}</clr-dg-cell> -->
+          <clr-dg-cell>{{ mis.final_total }}</clr-dg-cell>
+          <!-- <clr-dg-cell><button class="btn btn-sm btn-info" (click)="viewmis(i)">{{'common.view' | translate}}</button></clr-dg-cell> -->
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="download310()"
+          *ngIf="raw_report == 'MIS Report'">
+          DOWNLOAD
+        </button>
+      </div>
+
+      <!-- Vendor Wise Purchase Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Vendor Wise Purchase Report'">
+        <label>Vendor Wise Purchase Report</label>
+
+        <clr-dg-column>Vendor Code</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>No of PO</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let Taking of Takings; let i = index" [clrDgItem]="Taking">
+          <clr-dg-cell>{{ Taking.vendor_code }}.</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.vendor_type || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ Taking.po }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewvendor(calculateStartSrNo() + i)">
+              View
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelVendorWisePurchase()"
+          *ngIf="raw_report == 'Vendor Wise Purchase Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewvendor">
+        <div class="card-header">Vendor Wise Purchase Report</div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left; width: 20%">PO No:</td>
+                <td style="text-align: left">{{ selectedResult["po_no"] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Material Type:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["material_type"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">Material Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["material_name"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">PO Qty:</td>
+                <td style="text-align: left">{{ selectedResult["po_qty"] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%">PO Amt</td>
+                <td style="text-align: left">{{ selectedResult["po_amt"] }}</td>
+              </tr>
+            </table>
+
+            <h3>Quotations:</h3>
+            <table class="table table-border">
+              <tr>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  Sr.
+                </th>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  Vendor No.
+                </th>
+                <th style="
+                    text-align: left;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Vendor Name
+                </th>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  Quotation No.
+                </th>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  Quotation Rate
+                </th>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  Quotation Date
+                </th>
+                <th style="background-color: rgb(14, 67, 112); color: white">
+                  View Quotation
+                </th>
+              </tr>
+              <tr *ngFor="
+                  let quotation of selectedResult['quotations'];
+                  let i = index
+                ">
+                <td>{{ i + 1 }}.</td>
+                <td>{{ quotation.vendor_no }}</td>
+                <td style="text-align: left">{{ quotation.vendor_name }}</td>
+                <td>{{ quotation.quotation_no }}</td>
+                <td>
+                  {{ quotation.quotation_amt }} / {{ quotation.quotation_per }}
+                </td>
+                <td>{{ quotation.entry_date | date : "dd-MM-yyyy" }}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary">Quotaion</button>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!-- Material Type Wise PO Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Material Type Wise PO Report'">
+        <label>Material Type Wise PO Report</label>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>P.O Date</clr-dg-column>
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>Material Code</clr-dg-column>
+        <clr-dg-column>Material Name</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of Users; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.material_type }}.</clr-dg-cell>
+          <clr-dg-cell>{{ user.material_code }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.material_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewtype(calculateStartSrNo() + i)">
+              View
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelMaterialTypeWisePOReport()"
+          *ngIf="raw_report == 'Material Type Wise PO Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="container-fluid" *ngIf="isViewtype">
+        <div class="card">
+          <div class="card-block">
+            <div class="card-text">
+              <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                <tr>
+                  <td style="
+                      text-align: left;
+                      background-color: rgb(14, 67, 112);
+                      color: white;
+                    " colspan="4">
+                    Supplier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; color: rgb(14, 67, 112)">
+                    Vendor Name
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["vendor_name"] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      color: rgb(14, 67, 112);
+                      width: 20%;
+                    ">
+                    Address:
+                  </td>
+                  <td style="text-align: left; width: 40%">
+                    {{ selectedOrder["address_factory"] }}
+                  </td>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    GSTIN:
+                  </td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["gst_no"] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    State:
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["state_name"] }}
+                  </td>
+                </tr>
+              </table>
+              <div class="clr-row">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Bill To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company<span style="color: red">*</span>
+                      </td>
+
+                      <td style="text-align: left">
+                        {{ selectedBill["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Ship To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company:<span style="color: red">*</span>
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              <br />
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left; width: 15%">PO No.:</td>
+                  <td style="text-align: left">{{ selectedOrder["po_no"] }}</td>
+                  <td style="text-align: left; width: 15%">PO Date:</td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["entry_date"] | date : "dd-MM-yyyy" }}
+                  </td>
+                  <td style="text-align: left; width: 15%">Transport:</td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length > 0">
+                    {{ selectedOrder["transport"] }}
+                  </td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length == 0">
+                    N/A
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <div>
+              <table class="table table-border">
+                <tr>
+                  <th>Sr.</th>
+                  <th>Material Type</th>
+                  <th>Material Name</th>
+                  <th>Material Code</th>
+                  <th>Qty</th>
+                  <th>Quotation Amt.</th>
+                  <th>Gross Total</th>
+                  <th>Discount</th>
+                  <th>Tax Total</th>
+                  <th>Net Total</th>
+                  <th>Scheduled Dil.Dt</th>
+                </tr>
+                <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ user.material_subtype }}</td>
+                  <td>{{ user.material_name }}</td>
+                  <td>{{ user.material_code }}</td>
+                  <td>{{ user.qty }} {{ user.unit }}</td>
+                  <td>{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                  <td>{{ user.gross_total }}</td>
+                  <td style="text-align: right">{{ user.disc_amt }}</td>
+                  <td>{{ user.tax_total }}</td>
+                  <td>{{ user.net_total }}</td>
+                  <td>
+                    {{ user.delivery_schedule_date | date : "dd-MM-yyyy" }}
+                  </td>
+                </tr>
+                <tr *ngIf="selectedOrder['materials']?.length == 0">
+                  <td colspan="9">No Record Found!</td>
+                </tr>
+              </table>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: left">Gross Total</th>
+                  <th style="text-align: left">Discount</th>
+                  <th style="text-align: left">Tax Total</th>
+                  <th style="text-align: left">Other Charges</th>
+                  <th style="text-align: left">Shipping & Handling</th>
+                  <th style="text-align: left">{{'common.total' | translate}}</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px">
+                    <input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']" style="margin: 0px"
+                      readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="discount" [(ngModel)]="selectedOrder['discount']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="other_charges" [(ngModel)]="selectedOrder['other_charges']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="shipping_handling" [(ngModel)]="selectedOrder['shipping_handling']"
+                      required style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <br />
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <label>Terms & Conditions:</label>
+                <table class="table table-border">
+                  <tr>
+                    <th style="text-align: left">Sr</th>
+                    <th style="text-align: left">Term Heading</th>
+                    <th style="text-align: left">Terms</th>
+                  </tr>
+                  <tr *ngFor="let term of terms_condition; let i = index">
+                    <td style="text-align: left">{{ i + 1 }}</td>
+                    <td style="text-align: left">{{ term.term_heading }}</td>
+                    <td style="text-align: left">{{ term.term }}</td>
+                  </tr>
+                </table>
+                <br />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!--- Cancelled PO Report --->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Cancelled PO Report'">
+        <label>Cancelled PO Report</label>
+
+        <clr-dg-column>Sr. </clr-dg-column>
+        <clr-dg-column>Po Type</clr-dg-column>
+        <clr-dg-column>Approval Date</clr-dg-column>
+        <clr-dg-column>P.O Date</clr-dg-column>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>Purchase Requisition No</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Gross Total</clr-dg-column>
+        <clr-dg-column>Tax Total</clr-dg-column>
+        <clr-dg-column>Net Total</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of orders1; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="user?.indent_no?.length > 0">{{
+            user.indent_no
+            }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="user?.indent_no?.length == 0">N/A</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gross_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gst_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.final_total }}</clr-dg-cell>
+          <clr-dg-cell style="color: brown" *ngIf="user.status == 'Rejected'">{{
+            user.status
+            }}</clr-dg-cell>
+          <clr-dg-cell style="color: green" *ngIf="user.status == 'Approved'">{{
+            user.status
+            }}</clr-dg-cell>
+          <clr-dg-cell style="color: red" *ngIf="user.status == 'Cancelled'">{{
+            user.status
+            }}</clr-dg-cell>
+          <clr-dg-cell style="color: blue" *ngIf="user.status == 'On Hold'">{{
+            user.status
+            }}</clr-dg-cell>
+
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="viewOrder1(calculateStartSrNo() + i)">
+              view
+            </button></clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelCancelledPOReport()"
+          *ngIf="raw_report == 'Cancelled PO Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="container-fluid" *ngIf="isViewOrder">
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+              <tr>
+                <td style="
+                    text-align: left;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  " colspan="4">
+                  Supplier Details
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; color: rgb(14, 67, 112)">
+                  Vendor Name
+                </td>
+                <td style="text-align: left" colspan="3">
+                  {{ selectedOrder1["vendor_name"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; color: rgb(14, 67, 112); width: 20%">
+                  Address:
+                </td>
+                <td style="text-align: left; width: 40%">
+                  {{ selectedOrder1["address"] }}
+                </td>
+                <td style="text-align: left; width: 20%; color: rgb(14, 67, 112)">
+                  GSTIN:
+                </td>
+                <td style="text-align: left">{{ selectedOrder1["gst_no"] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 20%; color: rgb(14, 67, 112)">
+                  State:
+                </td>
+                <td style="text-align: left" colspan="3">
+                  {{ selectedOrder1["state_name"] }}
+                </td>
+              </tr>
+            </table>
+            <div class="clr-row">
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        background-color: rgb(14, 67, 112);
+                        color: white;
+                      " colspan="4">
+                      Bill To
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left; color: rgb(14, 67, 112)">
+                      Name Of Company<span style="color: red">*</span>
+                    </td>
+                    <!-- <td style="text-align: left;padding: 0%;" colspan="3">
+                  <select name="billcompany_code" [(ngModel)]="billcompany_code" required (change)="getBillCompany(billcompany_code)">
+                      <option></option>
+                      <option *ngFor="let com of companies" [value]="com.company_code">{{com.company_name}}</option>
+                  </select>
+              </td> -->
+                    <td style="text-align: left">
+                      {{ selectedBill1?.company_name }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left; color: rgb(14, 67, 112)">
+                      Address:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedBill1?.address }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Gst No:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedBill1?.gst_no }}
+                    </td>
+                  </tr>
+                  <!-- <tr>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State Code:</td>
+              <td style="text-align: left;">{{ selectedBill1?.state_code }}</td>
+          </tr> -->
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Location:
+                    </td>
+                    <td style="text-align: left">{{ selectedBill1?.area }}</td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      State:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedBill1?.present_state }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Pin:
+                    </td>
+                    <td style="text-align: left">{{ selectedBill1?.pin }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        background-color: rgb(14, 67, 112);
+                        color: white;
+                      " colspan="4">
+                      Ship To
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left; color: rgb(14, 67, 112)">
+                      Name Of Company:<span style="color: red">*</span>
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedShip1["company_name"] }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: left; color: rgb(14, 67, 112)">
+                      Address:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedShip1["address"] }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Gst No:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedShip1["gst_no"] }}
+                    </td>
+                  </tr>
+                  <!-- <tr>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State Code:</td>
+              <td style="text-align: left;">{{ selectedShip1['state_code'] }}</td>
+          </tr> -->
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Location:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedShip1["area"] }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      State:
+                    </td>
+                    <td style="text-align: left">
+                      {{ selectedShip1["present_state"] }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="
+                        text-align: left;
+                        width: 20%;
+                        color: rgb(14, 67, 112);
+                      ">
+                      Pin:
+                    </td>
+                    <td style="text-align: left">{{ selectedShip1["pin"] }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+            <br />
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left; width: 15%">PO No.:</td>
+                <td style="text-align: left">{{ selectedOrder1["po_no"] }}</td>
+                <td style="text-align: left; width: 15%">PO Date:</td>
+                <td style="text-align: left">
+                  {{ selectedOrder1["entry_date"] | date : "dd-MM-yyyy" }}
+                </td>
+                <td style="text-align: left; width: 15%">Transport:</td>
+                <td style="text-align: left" *ngIf="selectedOrder1['transport'].length > 0">
+                  {{ selectedOrder1["transport"] }}
+                </td>
+                <td style="text-align: left" *ngIf="selectedOrder1['transport'].length == 0">
+                  N/A
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <div>
+            <table class="table table-border">
+              <tr>
+                <th>Sr.</th>
+                <th>Material Type</th>
+                <th>Material Name</th>
+                <th>Material Code</th>
+                <th>Qty</th>
+                <th>Quotation Amt.</th>
+                <th>Gross Total</th>
+                <th>Discount</th>
+                <th>Tax Total</th>
+                <th>Net Total</th>
+                <th>Scheduled Dil.Dt</th>
+              </tr>
+              <tr *ngFor="let user of selectedOrder1['materials']; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td>{{ user.material_subtype }}{{ user.material_subtype1 }}</td>
+                <td>{{ user.material_name }} - {{ user.gradeName }}</td>
+                <td>{{ user.material_code }}</td>
+                <td>{{ user.qty }} {{ user.unit }}</td>
+                <td>{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                <td>{{ user.gross_total }}</td>
+                <td style="text-align: right">{{ user.disc_amt }}</td>
+                <td>{{ user.tax_total }}</td>
+                <td>{{ user.net_total }}</td>
+                <td *ngIf="user.delivery_schedule_date != '0000-00-00'">
+                  {{ user.delivery_schedule_date | date : "dd-MM-yyyy" }}
+                </td>
+                <td *ngIf="user.delivery_schedule_date == '0000-00-00'">N/A</td>
+              </tr>
+              <tr *ngIf="selectedOrder1['materials']?.length == 0">
+                <td colspan="9">No Record Found!</td>
+              </tr>
+            </table>
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left">Gross Total</th>
+                <th style="text-align: left">Discount</th>
+                <th style="text-align: left">Tax Total</th>
+                <th style="text-align: left">Other Charges</th>
+                <th style="text-align: left">Shipping & Handling</th>
+                <th style="text-align: left">{{'common.total' | translate}}</th>
+              </tr>
+              <tr>
+                <td style="padding: 0px">
+                  <input type="text" name="net_total" [(ngModel)]="selectedOrder1['gross_total']" style="margin: 0px"
+                    readonly />
+                </td>
+                <td style="padding: 0px">
+                  <input type="text" name="discount" [(ngModel)]="selectedOrder1['disc_amt']" required
+                    style="margin: 0px" readonly />
+                </td>
+                <td style="padding: 0px">
+                  <input type="text" name="gst_total" [(ngModel)]="selectedOrder1['gst_total']" required
+                    style="margin: 0px" readonly />
+                </td>
+                <td style="padding: 0px">
+                  <input type="text" name="other_charges" [(ngModel)]="selectedOrder1['other_charges']" required
+                    style="margin: 0px" readonly />
+                </td>
+                <td style="padding: 0px">
+                  <input type="text" name="shipping_handling" [(ngModel)]="selectedOrder1['shipping_handling']" required
+                    style="margin: 0px" readonly />
+                </td>
+                <td style="padding: 0px">
+                  <input type="text" name="final_total" [(ngModel)]="selectedOrder1['final_total']" required
+                    style="margin: 0px" readonly />
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!-- PO Status Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'PO Status Report'">
+        <label>PO Status Report</label>
+        <clr-dg-column>Sr.No </clr-dg-column>
+        <clr-dg-column>Po Date</clr-dg-column>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>Material Type</clr-dg-column>
+        <clr-dg-column>Material Receiving Status</clr-dg-column>
+        <clr-dg-column>Po Status</clr-dg-column>
+        <!-- <clr-dg-column clrDgField="po_action">Po Action</clr-dg-column> -->
+        <clr-dg-column>Receiving no</clr-dg-column>
+        <clr-dg-column>Sampling Status</clr-dg-column>
+        <clr-dg-column>QC Status</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of postatus; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.receiving || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ user.status }}</clr-dg-cell>
+          <!-- <clr-dg-cell><button class="btn btn-sm btn-primary">{{'common.table.action' | translate}}</button></clr-dg-cell> -->
+          <clr-dg-cell>{{ user.grn_no || 'NA'}}</clr-dg-cell>
+          <clr-dg-cell>{{ user.sample_status || 'NA' }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.qc_status || 'NA'}}</clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <!-- <div class="clr-row">
+    <button class="btn btn-primary" (click)="download13()"*ngIf="raw_report=='PO Status Report'">DOWNLOAD EXCEL</button>
+  </div> -->
+
+      <!-- <div class="container-fluid" *ngIf="isViewuser">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+          <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+            <tr>
+              <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Supplier Details
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align:left;color: rgb(14, 67, 112);">Vendor Name</td>
+              <td style="text-align: left;" colspan="3">{{ selectedOrder['vendor_name'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;color: rgb(14, 67, 112); width: 20%;">Address:</td>
+              <td style="text-align: left;width: 40%;">{{ selectedOrder['address_factory'] }}</td>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">GSTIN:</td>
+              <td style="text-align: left;">{{ selectedOrder['gst_no'] }}</td>
+            </tr>
+            <tr>
+              <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+              <td style="text-align: left;" colspan="3">{{ selectedOrder['state_name'] }}</td>
+            </tr>
+          </table>
+          <div class="clr-row">
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Bill To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company<span style="color: red">*</span>
+                  </td>
+                 
+                  <td style="text-align: left;">{{ selectedBill['company_name'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedBill['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;">{{ selectedBill['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedBill['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+                  <td style="text-align: left;">{{ selectedBill['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Pin:</td>
+                  <td style="text-align: left;">{{ selectedBill['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+              <table class="table table-border" style="border:solid rgb(14, 67, 112) 1px ;">
+                <tr>
+                  <td style="text-align: left;background-color: rgb(14, 67, 112);color: white;" colspan="4">Ship To</td>
+                </tr>
+                <tr>
+                  <td style="text-align:left;color: rgb(14, 67, 112);">Name Of Company:<span style="color: red">*</span>
+                  </td>
+                  <td style="text-align: left;">
+                    {{ selectedShip['company_name'] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;color: rgb(14, 67, 112);">Address:</td>
+                  <td style="text-align: left;">{{ selectedShip['address'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Gst No:</td>
+                  <td style="text-align: left;">{{ selectedShip['gst_no'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Location:</td>
+                  <td style="text-align: left;">{{ selectedShip['area'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">State:</td>
+                  <td style="text-align: left;">{{ selectedShip['present_state'] }}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left;width: 20%;color: rgb(14, 67, 112);">Pin:</td>
+                  <td style="text-align: left;">{{ selectedShip['pin'] }}</td>
+                </tr>
+              </table>
+            </div>
+          </div><br>
+          <table class="table table-border">
+            <tr>
+              <td style="text-align: left;width: 15%;">PO No.:</td>
+              <td style="text-align: left;">{{ selectedOrder['po_no'] }}</td>
+              <td style="text-align: left;width: 15%;">PO Date:</td>
+              <td style="text-align: left;">{{ selectedOrder['entry_date'] |date:'dd-MM-yyyy'}}</td>
+              <td style="text-align: left;width: 15%;">Transport:</td>
+              <td style="text-align: left;" *ngIf="selectedOrder['transport'].length>0">{{ selectedOrder['transport'] }}
+              </td>
+              <td style="text-align: left;" *ngIf="selectedOrder['transport'].length==0">N/A</td>
+            </tr>
+          </table>
+        </div>
+  
+        <div>
+          <table class="table table-border">
+            <tr>
+              <th>Sr.</th>
+              <th>Material Type</th>
+              <th>Material Name</th>
+              <th>Material Code</th>
+              <th>Qty</th>
+              <th>Quotation Amt.</th>
+              <th>Gross Total</th>
+              <th>Discount</th>
+              <th>Tax Total</th>
+              <th>Net Total</th>
+              <th>Scheduled Dil.Dt</th>
+            </tr>
+            <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+              <td>{{ i + 1 }}.</td>
+              <td>{{user.material_subtype}}</td>
+              <td>{{user.material_name}}</td>
+              <td>{{user.material_code}}</td>
+              <td>{{user.qty}} {{user.unit}}</td>
+              <td>{{user.quotation_amt}} / {{user.quotation_per}}</td>
+              <td>{{user.gross_total}}</td>
+              <td style="text-align: right;">{{user.disc_amt}}</td>
+              <td>{{user.tax_total}}</td>
+              <td>{{user.net_total}}</td>
+              <td>{{user.delivery_schedule_date | date:'dd-MM-yyyy'}}</td>
+            </tr>
+            <tr *ngIf="selectedOrder['materials']?.length==0">
+              <td colspan="9">No Record Found!</td>
+            </tr>
+          </table>
+          <table class="table table-border">
+            <tr>
+              <th style="text-align:left">Gross Total</th>
+              <th style="text-align:left">Discount </th>
+              <th style="text-align:left">Tax Total</th>
+              <th style="text-align:left">Other Charges</th>
+              <th style="text-align:left">Shipping & Handling</th>
+              <th style="text-align:left">{{'common.total' | translate}}</th>
+            </tr>
+            <tr>
+              <td style="padding:0px"><input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']"
+                  style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="discount" [(ngModel)]="selectedOrder['discount']" required
+                  style="margin:0px" readonly>
+              </td>
+              <td style="padding:0px"><input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']"
+                  required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="other_charges" [(ngModel)]="selectedOrder['other_charges']"
+                  required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="shipping_handling"
+                  [(ngModel)]="selectedOrder['shipping_handling']" required style="margin:0px" readonly></td>
+              <td style="padding:0px"><input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']"
+                  required style="margin:0px" readonly></td>
+            </tr>
+          </table>
+        </div>
+        <br>
+  
+        <div class="clr-row">
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+            <label>Terms & Conditions:</label>
+            <table class="table table-border">
+              <tr>
+                <th style="text-align: left;">Sr</th>
+                <th style="text-align: left;">Term Heading</th>
+                <th style="text-align: left;">Terms</th>
+              </tr>
+              <tr *ngFor="let term of terms_condition;let i=index">
+                <td style="text-align: left;">{{i+1}}</td>
+                <td style="text-align: left;">{{term.term_heading }}</td>
+                <td style="text-align: left;">{{term.term }}</td>
+              </tr>
+            </table>
+            <br>
+          </div>
+        </div> 
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-danger" (click)="isViewuser = false">{{'common.close' | translate}}</button>
+    </div>
+  </div>   -->
+
+      <!---- Monthly PO Report ---->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Monthly PO Report' && !isViewpo" >
+        <label>Monthly PO Report</label>
+        <clr-dg-column>Sr. No.</clr-dg-column>
+        <clr-dg-column>Po Type</clr-dg-column>
+        <clr-dg-column>Approval Date</clr-dg-column>
+        <clr-dg-column>P.O Date</clr-dg-column>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>Purchase Requisition No</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Gross Total</clr-dg-column>
+        <clr-dg-column>Tax Total</clr-dg-column>
+        <clr-dg-column>Net Total</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of orders; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.indent_no.length > 0 ? user.indent_no :'N/A'}}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gross_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gst_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.final_total }}</clr-dg-cell>
+            <clr-dg-cell [ngStyle]="{'color': user.status && (user.status === 'On Hold' || user.status === 'Approved' || user.status === 'Cancelled') ? 'blue' : ''}">
+            {{ user.status && (user.status === 'On Hold' || user.status === 'Approved' || user.status === 'Cancelled') ? user.status : 'N/A' }}
+          </clr-dg-cell>
+
+          <clr-dg-cell><button class="btn btn-sm btn-info" (click)="viewpo(calculateStartSrNo() + i)">
+              view
+            </button></clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelMonthlyPOReport()"
+          *ngIf="raw_report == 'Monthly PO Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="container-fluid" *ngIf="isViewpo">
+        <div class="card">
+          <div class="card-block">
+            <div class="card-text">
+              <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                <tr>
+                  <td style="
+                      text-align: left;
+                      background-color: rgb(14, 67, 112);
+                      color: white;
+                    " colspan="4">
+                    Supplier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; color: rgb(14, 67, 112)">
+                    Vendor Name
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder?.vendor_name ? selectedOrder?.vendor_name : 'NA' }} </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      color: rgb(14, 67, 112);
+                      width: 20%;
+                    ">
+                    Address:
+                  </td>
+                  <td style="text-align: left; width: 40%">
+                    <!-- {{ selectedOrder["address_factory"] }} -->
+                    {{selectedOrder ?.address_factory ? selectedOrder?.address_factory : 'NA' }}
+                  </td>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    GSTIN:
+                  </td>
+                  <td style="text-align: left">
+                    <!-- {{ selectedOrder["gst_no"] }} -->
+                    {{selectedOrder ?.gst_no ? selectedOrder?.gst_no : 'NA' }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    State:
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    <!-- {{ selectedOrder["state_name"] }} -->
+                    {{selectedOrder ?.state_name ? selectedOrder?.state_name : 'NA' }}
+                  </td>
+                </tr>
+              </table>
+              <div class="clr-row">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Bill To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company<span style="color: red">*</span>
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Ship To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company:<span style="color: red">*</span>
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              <br />
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left; width: 15%">PO No.:</td>
+                  <td style="text-align: left">{{ selectedOrder["po_no"] }}</td>
+                  <td style="text-align: left; width: 15%">PO Date:</td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["entry_date"] | date : "dd-MM-yyyy" }}
+                  </td>
+                  <td style="text-align: left; width: 15%">Transport:</td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length > 0">
+                    {{ selectedOrder["transport"] }}
+                  </td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length == 0">
+                    N/A
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <div>
+              <table class="table table-border">
+                <tr>
+                  <th>Sr.</th>
+                  <th>Material Type</th>
+                  <th>Material Name</th>
+                  <th>Material Code</th>
+                  <th>Qty</th>
+                  <th>Quotation Amt.</th>
+                  <th>Gross Total</th>
+                  <th>Discount</th>
+                  <th>Tax Total</th>
+                  <th>Net Total</th>
+                  <th>Scheduled Dil.Dt</th>
+                </tr>
+                <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ user.material_subtype }}</td>
+                  <td>{{ user.material_name }}</td>
+                  <td>{{ user.material_code }}</td>
+                  <td>{{ user.qty }} {{ user.unit }}</td>
+                  <td>{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                  <td>{{ user.gross_total }}</td>
+                  <td style="text-align: right">{{ user.disc_amt }}</td>
+                  <td>{{ user.tax_total }}</td>
+                  <td>{{ user.net_total }}</td>
+                  <td>
+                    {{ user.delivery_schedule_date | date : "dd-MM-yyyy" }}
+                  </td>
+                </tr>
+                <tr *ngIf="selectedOrder['materials']?.length == 0">
+                  <td colspan="9">No Record Found!</td>
+                </tr>
+              </table>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: left">Gross Total</th>
+                  <th style="text-align: left">Discount</th>
+                  <th style="text-align: left">Tax Total</th>
+                  <th style="text-align: left">Other Charges</th>
+                  <th style="text-align: left">Shipping & Handling</th>
+                  <th style="text-align: left">{{'common.total' | translate}}</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px">
+                    <input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']" style="margin: 0px"
+                      readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="discount" [(ngModel)]="selectedOrder['discount']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="other_charges" [(ngModel)]="selectedOrder['other_charges']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="shipping_handling" [(ngModel)]="selectedOrder['shipping_handling']"
+                      required style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <br />
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <label>Terms & Conditions:</label>
+                <table class="table table-border">
+                  <tr>
+                    <th style="text-align: left">Sr</th>
+                    <th style="text-align: left">Term Heading</th>
+                    <th style="text-align: left">Terms</th>
+                  </tr>
+                  <tr *ngFor="let term of terms_condition; let i = index">
+                    <td style="text-align: left">{{ i + 1 }}</td>
+                    <td style="text-align: left">{{ term.term_heading }}</td>
+                    <td style="text-align: left">{{ term.term }}</td>
+                  </tr>
+                </table>
+                <br />
+              </div>
+            </div>
+            <div class="card-footer">
+              <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Purchase Requisition Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Indend Report' && !isIndView">
+        <label>Purchase Requisition Report</label>
+
+        <clr-dg-column>Sr.</clr-dg-column>
+        <clr-dg-column>{{'common.date' | translate}}</clr-dg-column>
+        <clr-dg-column>Request No</clr-dg-column>
+        <clr-dg-column>No Of Items</clr-dg-column>
+        <clr-dg-column>Entered By</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let indend of indendResults; let i = index" [clrDgItem]="results">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}.</clr-dg-cell>
+          <clr-dg-cell>{{
+            indend.entry_date | date : "dd-MM-yyyy"
+            }}</clr-dg-cell>
+          <clr-dg-cell>{{ indend.request_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ indend.materials.length }}</clr-dg-cell>
+          <clr-dg-cell>{{ indend.entry_by }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewindend(calculateStartSrNo() + i)">
+              View
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelIndendReport()"
+          *ngIf="raw_report == 'Indend Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewindend">
+        <div class="card-header">Purchase Requisition / Requisition of Material Log</div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left;width: 20%;">Purchase Requisition No.:</td>
+                <td style="text-align: left;">{{ selectedResult['request_no'] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;width: 20%;">Purchase Requisition By:</td>
+                <td style="text-align: left;">{{ selectedResult['entry_by'] }}</td>
+              </tr>
+            </table>
+            <h3>Materials:</h3>
+            <table class="table table-border">
+              <tr>
+                <th style="background-color: rgb(14,67,112); color: white;">Material Code</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Material Name</th>
+                <th style="background-color: rgb(14,67,112); color: white;">{{'common.department' | translate}}</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Purchase Requisition Qty</th>
+                <th style="background-color: rgb(14,67,112); color: white;">{{'common.unit' | translate}}</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Order Qty</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Quotation Amount</th>
+                <th style="background-color: rgb(14,67,112); color: white;">TAX %</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Grade</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Gross</th>
+                <th style="background-color: rgb(14,67,112); color: white;">TAX Amt</th>
+                <th style="background-color: rgb(14,67,112); color: white;">Net</th>
+                <th style="background-color: rgb(14,67,112); color: white;">{{'common.status' | translate}}</th>
+              </tr>
+              <tr *ngFor="let material of selectedResult['materials'];let i =index">
+                <td>{{ material.material_code }}</td>
+                <td>{{ material?.material_name }} {{material?.gm_material}}</td>
+                <td>{{ material.department }}</td>
+                <td>{{ material.req_qty }}</td>
+                <td>{{ material.unit }}</td>
+                <td>{{material['order_qty']}} </td>
+                <td>{{material['quotation_amt']}} </td>
+                <td>{{material['gst']}} </td>
+                <td>{{material['grade']}} </td>
+                <td>{{material['gross_total']}} </td>
+                <td>{{material['gst_total']}} </td>
+                <td>{{material['net_total']}} </td>
+                <td>{{material['status']}} </td>
+              </tr>
+            </table>
+
+
+          </div>
+        </div>
+        <div class="card-footer">
+          <!-- <button class="btn btn-primary" (click)="isEdit = true">{{'common.edit' | translate}}</button> -->
+          <button class="btn btn-primary" (click)="downloadPDF()">{{'common.download' | translate}}</button>
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+
+        </div>
+      </div>
+
+
+
+      <!-- On Hold Purchase Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'On Hold Purchase Report'" >
+        <label>On Hold Purchase Report</label>
+        <clr-dg-column>Sr. </clr-dg-column>
+        <clr-dg-column>Po Type</clr-dg-column>
+        <clr-dg-column>Approval Date</clr-dg-column>
+        <clr-dg-column>P.O Date</clr-dg-column>
+        <clr-dg-column>Po No</clr-dg-column>
+        <clr-dg-column>Purchase Requisition No</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>Gross Total</clr-dg-column>
+        <clr-dg-column>Tax Total</clr-dg-column>
+
+        <clr-dg-column>Net Total</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>View</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of orders; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.entry_date | date : "dd-MM-yyyy" }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+          <clr-dg-cell *ngIf="user.indent_no.length > 0">{{user.indent_no}}</clr-dg-cell>
+          <clr-dg-cell *ngIf="user.indent_no.length == 0">N/A</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gross_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.gst_total }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.final_total }}</clr-dg-cell>
+          <clr-dg-cell style="color: red" *ngIf="user.status == 'pending'">{{user.status}}</clr-dg-cell>
+          <clr-dg-cell *ngIf="user.status !== 'pending'">{{ user.status }}</clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-info"
+              (click)="viewhold(calculateStartSrNo() + i)">{{'common.view' | translate}}</button></clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+
+      <!-- <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'On Hold Purchase Report'">
+    <label>On Hold Purchase Report</label>
+    <clr-dg-column>Sr.</clr-dg-column>
+    <clr-dg-column>Po Type</clr-dg-column>
+    <clr-dg-column>Approval Date</clr-dg-column>
+    <clr-dg-column>P.O Date</clr-dg-column>
+    <clr-dg-column>Po No</clr-dg-column>
+    <clr-dg-column>Purchase Requisition No</clr-dg-column>
+    <clr-dg-column>Vendor Name</clr-dg-column>
+    <clr-dg-column>Gross Total</clr-dg-column>
+    <clr-dg-column>Tax Total</clr-dg-column>
+    <clr-dg-column>Net Total</clr-dg-column>
+    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+    <clr-dg-column>View</clr-dg-column>
+
+    <clr-dg-row *clrDgItems="let user of orders; let i = index" [clrDgItem]="user">
+        <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.po_type }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.approval_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.po_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.po_no }}</clr-dg-cell>
+        <clr-dg-cell *ngIf="user.indent_no && user.indent_no.length > 0">{{ user.indent_no }}</clr-dg-cell>
+        <clr-dg-cell *ngIf="!user.indent_no || user.indent_no.length === 0">N/A</clr-dg-cell>
+        <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.gross_total }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.tax_total }}</clr-dg-cell>
+        <clr-dg-cell>{{ user.net_total }}</clr-dg-cell>
+        <clr-dg-cell *ngIf="user.status === 'pending'" style="color: red">{{ user.status }}</clr-dg-cell>
+        <clr-dg-cell *ngIf="user.status !== 'pending'">{{ user.status }}</clr-dg-cell>
+        <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewhold(calculateStartSrNo() + i)">{{'common.view' | translate}}</button>
+        </clr-dg-cell>
+    </clr-dg-row>
+
+    <clr-dg-footer>
+        <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of {{ pagination.totalItems }}
+        </clr-dg-pagination>
+    </clr-dg-footer>
+</clr-datagrid> -->
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelOnHoldPurchaseReport()"
+          *ngIf="raw_report == 'On Hold Purchase Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="container-fluid" *ngIf="isViewhold">
+        <div class="card">
+          <div class="card-block">
+            <div class="card-text">
+              <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                <tr>
+                  <td style="
+                      text-align: left;
+                      background-color: rgb(14, 67, 112);
+                      color: white;
+                    " colspan="4">
+                    Supplier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; color: rgb(14, 67, 112)">
+                    Vendor Name
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["vendor_name"] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      color: rgb(14, 67, 112);
+                      width: 20%;
+                    ">
+                    Address:
+                  </td>
+                  <td style="text-align: left; width: 40%">
+                    {{ selectedOrder["address_factory"] }}
+                  </td>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    GSTIN:
+                  </td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["gst_no"] }}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="
+                      text-align: left;
+                      width: 20%;
+                      color: rgb(14, 67, 112);
+                    ">
+                    State:
+                  </td>
+                  <td style="text-align: left" colspan="3">
+                    {{ selectedOrder["state_name"] }}
+                  </td>
+                </tr>
+              </table>
+              <div class="clr-row">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Bill To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company<span style="color: red">*</span>
+                      </td>
+
+                      <td style="text-align: left">
+                        {{ selectedBill["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedBill["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+                  <table class="table table-border" style="border: solid rgb(14, 67, 112) 1px">
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          background-color: rgb(14, 67, 112);
+                          color: white;
+                        " colspan="4">
+                        Ship To
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Name Of Company:<span style="color: red">*</span>
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["company_name"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: left; color: rgb(14, 67, 112)">
+                        Address:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["address"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Gst No:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["gst_no"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Location:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["area"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        State:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["present_state"] }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="
+                          text-align: left;
+                          width: 20%;
+                          color: rgb(14, 67, 112);
+                        ">
+                        Pin:
+                      </td>
+                      <td style="text-align: left">
+                        {{ selectedShip["pin"] }}
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              <br />
+              <table class="table table-border">
+                <tr>
+                  <td style="text-align: left; width: 15%">PO No.:</td>
+                  <td style="text-align: left">{{ selectedOrder["po_no"] }}</td>
+                  <td style="text-align: left; width: 15%">PO Date:</td>
+                  <td style="text-align: left">
+                    {{ selectedOrder["entry_date"] | date : "dd-MM-yyyy" }}
+                  </td>
+                  <td style="text-align: left; width: 15%">Transport:</td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length > 0">
+                    {{ selectedOrder["transport"] }}
+                  </td>
+                  <td style="text-align: left" *ngIf="selectedOrder['transport'].length == 0">
+                    N/A
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <div>
+              <table class="table table-border">
+                <tr>
+                  <th>Sr.</th>
+                  <th>Material Type</th>
+                  <th>Material Name</th>
+                  <th>Material Code</th>
+                  <th>Qty</th>
+                  <th>Quotation Amt.</th>
+                  <th>Gross Total</th>
+                  <th>Discount</th>
+                  <th>Tax Total</th>
+                  <th>Net Total</th>
+                  <th>Scheduled Dil.Dt</th>
+                </tr>
+                <tr *ngFor="let user of selectedOrder['materials']; let i = index">
+                  <td>{{ i + 1 }}.</td>
+                  <td>{{ user.material_subtype }}</td>
+                  <td>{{ user.material_name }}</td>
+                  <td>{{ user.material_code }}</td>
+                  <td>{{ user.qty }} {{ user.unit }}</td>
+                  <td>{{ user.quotation_amt }} / {{ user.quotation_per }}</td>
+                  <td>{{ user.gross_total }}</td>
+                  <td style="text-align: right">{{ user.disc_amt }}</td>
+                  <td>{{ user.tax_total }}</td>
+                  <td>{{ user.net_total }}</td>
+                  <td>
+                    {{ user.delivery_schedule_date | date : "dd-MM-yyyy" }}
+                  </td>
+                </tr>
+                <tr *ngIf="selectedOrder['materials']?.length == 0">
+                  <td colspan="9">No Record Found!</td>
+                </tr>
+              </table>
+              <table class="table table-border">
+                <tr>
+                  <th style="text-align: left">Gross Total</th>
+                  <th style="text-align: left">Discount</th>
+                  <th style="text-align: left">Tax Total</th>
+                  <th style="text-align: left">Other Charges</th>
+                  <th style="text-align: left">Shipping & Handling</th>
+                  <th style="text-align: left">{{'common.total' | translate}}</th>
+                </tr>
+                <tr>
+                  <td style="padding: 0px">
+                    <input type="text" name="net_total" [(ngModel)]="selectedOrder['gross_total']" style="margin: 0px"
+                      readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="discount" [(ngModel)]="selectedOrder['discount']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="gst_total" [(ngModel)]="selectedOrder['gst_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="other_charges" [(ngModel)]="selectedOrder['other_charges']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="shipping_handling" [(ngModel)]="selectedOrder['shipping_handling']"
+                      required style="margin: 0px" readonly />
+                  </td>
+                  <td style="padding: 0px">
+                    <input type="text" name="final_total" [(ngModel)]="selectedOrder['final_total']" required
+                      style="margin: 0px" readonly />
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <br />
+
+            <div class="clr-row">
+              <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                <label>Terms & Conditions:</label>
+                <table class="table table-border">
+                  <tr>
+                    <th style="text-align: left">Sr</th>
+                    <th style="text-align: left">Term Heading</th>
+                    <th style="text-align: left">Terms</th>
+                  </tr>
+                  <tr *ngFor="let term of terms_condition; let i = index">
+                    <td style="text-align: left">{{ i + 1 }}</td>
+                    <td style="text-align: left">{{ term.term_heading }}</td>
+                    <td style="text-align: left">{{ term.term }}</td>
+                  </tr>
+                </table>
+                <br />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!-- Approved Vendor List -->
+
+      <!-- <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report=='Approved Vendor List'">
+    <label>Approved Vendor List</label>
+    <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+    <clr-dg-column clrDgField="vendor_no">Vendor No.</clr-dg-column>
+    <clr-dg-column clrDgField="vendor_type">Vendor Type</clr-dg-column>
+    <clr-dg-column clrDgField="vendor_name">Vendor Name</clr-dg-column>
+    <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+    <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+  
+  <clr-dg-row *clrDgItems="let user of filteredVendor; let i = index" [clrDgItem]="user">
+    <clr-dg-cell>{{i+1}}</clr-dg-cell>
+    <clr-dg-cell>{{user.vendor_no}}</clr-dg-cell>
+    <clr-dg-cell>{{user.vendor_type}}</clr-dg-cell>
+    <clr-dg-cell>{{user.vendor_name}}</clr-dg-cell>
+    <clr-dg-cell>{{user.status}}</clr-dg-cell> 
+    <clr-dg-cell>
+        <button class="btn btn-sm btn-icon" (click)="viewapprove(i)">{{'common.view' | translate}}</button>
+    </clr-dg-cell>
+  </clr-dg-row>
+  <clr-dg-footer>
+      <clr-dg-pagination #pagination [clrDgPageSize]="10">
+        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users per page</clr-dg-page-size>
+        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+        of {{pagination.totalItems}} users
+      </clr-dg-pagination>
+  </clr-dg-footer>
+</clr-datagrid> -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Approved Vendor List' && !isViewapprovevendor">
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of filteredVendor; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.status }}</clr-dg-cell>
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-icon" (click)="viewapprovevendor(calculateStartSrNo() + i)">
+              view
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelApprovedVendorList()"
+          *ngIf="raw_report == 'Approved Vendor List'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewapprovevendor">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px">
+            <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+              Vendor List
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px">
+              <button class="btn btn-sm" (click)="viewf()" style="background-color: red; color: white">
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left; width: 15%">Vendor Type:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_type"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Vendor Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_name"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Material Type:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["material_type"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Vendor Status:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_status"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Email:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["email"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Mobile No:</td>
+                <td style="text-align: left">
+                  {{ (selectedResult["contact_number"] | canadianPhone) || 'NA'}}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="text-align: left; width: 15%">Contact Person:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["contact_person"] || 'NA'}}
+                </td>
+              </tr>
+
+              <tr>
+                <td colspan="2">
+                  <h6 style="font-size: 18px">Vendor Address</h6>
+                </td>
+                <td colspan="2">
+                  <h6 style="font-size: 18px">Corporate Address</h6>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="text-align: left; width: 15%">Unit Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["unit_name"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Office Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_unit_name"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Address:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["address"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Address:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_address"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Country:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["country"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Country:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_country"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">State:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["state_name"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">State:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_state"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">City:</td>
+                <td style="text-align: left">{{ selectedResult["city"] || 'NA'}}</td>
+                <td style="text-align: left; width: 15%">City:</td>
+                <td style="text-align: left">{{ selectedResult["c_city"] || 'NA'}}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Postal Code:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["pincode"] || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Postal Code:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_pincode"] || 'NA'}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Mobile No:</td>
+                <td style="text-align: left">
+                  {{ (selectedResult["mobile_no"] | canadianPhone) || 'NA'}}
+                </td>
+                <td style="text-align: left; width: 15%">Mobile No:</td>
+                <td style="text-align: left">
+                  {{ (selectedResult["c_mobile_no"] | canadianPhone) || 'NA'}}
+                </td>
+              </tr>
+
+              <!-- <tr>
+            <td style="text-align: left;width: 15%;">GST Applicable:</td>
+            <td style="text-align: left;">{{ selectedResult['gst_applicable'] || 'NA'}}</td>
+            <td style="text-align: left;width: 15%;">GST Applicable:</td>
+            <td style="text-align: left;">{{ selectedResult['c_gst_applicable'] || 'NA'}}</td>
+          </tr> -->
+              <tr>
+                <td style="text-align: left; width: 15%">State Code:</td>
+                <td style="text-align: left">{{ selectedResult["scode"] || 'NA'}}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">GST Number:</td>
+                <td style="text-align: left">{{ selectedResult["gst_no"] || 'NA'}}</td>
+                <td style="text-align: left; width: 15%">GST Number</td>
+                <td style="text-align: left">
+                  {{ selectedResult["c_gst_no"] || 'NA'}}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provisional Approved Vendor -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Provisional Approved Vendor'">
+        <label>Provisional Approved Vendor</label>
+
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor No.</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <clr-dg-column>{{'common.status' | translate}}</clr-dg-column>
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let user of Vendor; let i = index" [clrDgItem]="user">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.vendor_name }}</clr-dg-cell>
+          <clr-dg-cell>{{ user.status }}</clr-dg-cell>
+          <clr-dg-cell><button class="btn btn-sm btn-icon" (click)="viewpro(calculateStartSrNo() + i)">{{'common.view' | translate}}</button></clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-row *ngIf="raw_report === 'Provisional Approved Vendor' && (!Vendor || Vendor.length === 0)">
+          <clr-dg-cell colspan="6" style="text-align: center;">Records Not Found</clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="download19()"
+          *ngIf="raw_report == 'Provisional Approved Vendor'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewpro">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px">
+            <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+              Vendor List
+            </div>
+            <div class="clr-col-lg-3" style="text-align: right; padding-right: 0px; margin-top: -7px">
+              <button class="btn btn-sm" (click)="viewf()" style="background-color: red; color: white">
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <td style="text-align: left; width: 15%">Vendor Type:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_type"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Vendor For:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_for"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Material Type:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["material_type"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Vendor Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_name"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Email:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["email"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Mobile No:</td>
+                <td style="text-align: left">
+                  {{ (selectedResult["mobile_no"] | canadianPhone) }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Tel No.1:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["tel_no1"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Tel No.1 :</td>
+                <td style="text-align: left">
+                  {{ selectedResult["tel_no2"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">FAX:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["fax"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Website :</td>
+                <td style="text-align: left">
+                  {{ selectedResult["website"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">GSR Registered:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["gst_registered"] }}
+                </td>
+                <td style="text-align: left; width: 15%">GST No:</td>
+                <td style="text-align: left; width: 35%">
+                  {{ selectedResult["gst_no"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">State Name:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["state_name"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Mfg Lic:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["mfg_lic"] }}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Contact Person:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["contact_person"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Pan No:</td>
+                <td style="text-align: left">{{ selectedResult["pan_no"] }}</td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 15%">Vendor Status:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["vendor_status"] }}
+                </td>
+                <td style="text-align: left; width: 15%">Address:</td>
+                <td style="text-align: left">
+                  {{ selectedResult["address"] }}
+                </td>
+              </tr>
+            </table>
+            <h3>Attachments:</h3>
+            <table class="table">
+              <tr>
+                <td style="text-align: left; width: 45%">Gst Certificate:</td>
+                <td><button class="btn btn-sm btn-info">View File</button></td>
+              </tr>
+              <tr>
+                <td style="text-align: left; width: 45%">Mfg Licence:</td>
+                <td><button class="btn btn-sm btn-info">View File</button></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn btn-primary" [disabled]="
+              selectedResult['status'] == 'Approved' ||
+              selectedResult['status'] == 'Blacklisted'
+            " (click)="update_vendor_status('Approved')">
+            ACTIVE
+          </button>
+          <button class="btn btn btn-primary" [disabled]="
+              selectedResult['status'] == 'Pending' ||
+              selectedResult['status'] == 'Blacklisted'
+            " style="color: darkgreen; color: white" (click)="update_vendor_status('Pending')">
+            IN ACTIVE
+          </button>
+          <button class="btn btn btn-primary" [disabled]="selectedResult['status'] == 'Blacklisted'"
+            style="color: blue; color: white" (click)="is_password = true">
+            BLACKLIST
+          </button>
+          <button class="btn btn-danger" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+      </div>
+
+      <!-- Material Vendor Mapping Report -->
+
+      <clr-datagrid [clrDgLoading]="loading" *ngIf="raw_report == 'Material Vendor Mapping Report' && !isViewMaterial">
+        <label>Material Vendor Mapping Report</label>
+
+        <clr-dg-column>{{'common.table.srNo' | translate}}</clr-dg-column>
+        <clr-dg-column>Vendor Code</clr-dg-column>
+        <clr-dg-column>Vendor Type</clr-dg-column>
+        <clr-dg-column>Vendor Name</clr-dg-column>
+        <!-- <clr-dg-column>No of Product</clr-dg-column> -->
+        <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+        <clr-dg-row *clrDgItems="let record of results; let i = index" [clrDgItem]="record">
+          <clr-dg-cell>{{ calculateStartSrNo() + i + 1 }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_no }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_type }}</clr-dg-cell>
+          <clr-dg-cell>{{ record.vendor_name }}</clr-dg-cell>
+          <!-- <clr-dg-cell>{{ record.no_of_products }}</clr-dg-cell> -->
+          <clr-dg-cell>
+            <button class="btn btn-sm btn-info" (click)="viewMaterial(calculateStartSrNo() + i)">
+              view
+            </button>
+          </clr-dg-cell>
+        </clr-dg-row>
+        <clr-dg-footer>
+          <!--copy this <clr-dg-footer> complete tag -->
+          <clr-dg-pagination #pagination [(clrDgPageSize)]="pageSize" (clrDgPageChange)="onPageChange($event)">
+            {{ pagination.firstItem + 1 }} - {{ pagination.lastItem + 1 }} of
+            {{ pagination.totalItems }}
+          </clr-dg-pagination>
+        </clr-dg-footer>
+      </clr-datagrid>
+
+      <div class="clr-row">
+        <button style="margin: 10px;" class="btn btn-primary" (click)="exportToExcelMaterialVendorMappingReport()"
+          *ngIf="raw_report == 'Material Vendor Mapping Report'">
+          DOWNLOAD EXCEL
+        </button>
+      </div>
+
+      <div class="card" *ngIf="isViewMaterial">
+        <div class="card-header">Vendor Materials</div>
+        <div class="card-block">
+          <div class="card-text">
+            <table class="table table-border">
+              <tr>
+                <th style="
+                    text-align: center;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Sr.No
+                </th>
+                <th style="text-align: center;background-color: rgb(14, 67, 112);color: white;
+                                  ">
+                  Material Code
+                </th>
+                <th style="
+                    text-align: center;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Vendor Material Code
+                </th>
+                <th style="
+                    text-align: center;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Material Type
+                </th>
+                <th style="
+                    text-align: center;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Sub Type
+                </th>
+                <th style="
+                    text-align: center;
+                    background-color: rgb(14, 67, 112);
+                    color: white;
+                  ">
+                  Material Name
+                </th>
+              </tr>
+              <tr *ngFor="let record of materials; let i = index">
+                <td>{{ i + 1 }}.</td>
+                <td style="text-align: left">{{ record.material_code }}</td>
+                <td style="text-align: left">
+                  {{ record.vendor_material_code }}
+                </td>
+                <td style="text-align: left">{{ record.material_type }}</td>
+                <td style="text-align: left">{{ record.material_subtype }}</td>
+                <td style="text-align: left">{{ record.material_name }}</td>
+              </tr>
+              <tr *ngIf="results?.length == 0">
+                <td colspan="8">{{'common.noRecords' | translate}}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="vapp__footer">
+          <button type="button" class="vapp__btn vapp__btn--close" (click)="viewf()">{{'common.close' | translate}}</button>
+        </div>
+    </div>
+  </div>
+</div>
+</div>

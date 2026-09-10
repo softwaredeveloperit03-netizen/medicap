@@ -1,0 +1,374 @@
+<div class="card compact-card recv-page" *ngIf="!isView">
+  <header class="card-header compact-header mef-panel-header">
+    <h2 class="header-title mef-panel-header__title">Received {{ material_type }} Log</h2>
+    <button type="button" class="btn btn-danger btn-micro mef-panel-header__close" routerLink="/store/raw/receiving">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block compact-body">
+    <div class="card-text">
+      <div class="toolbar-grid">
+        <div class="field-inline">
+          <label>Material Type</label>
+          <select
+            name="material_type"
+            [(ngModel)]="material_type"
+            (change)="getReceivingLog(); onFiltersChanged()"
+          >
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+        </div>
+
+        <div class="field-inline">
+          <label>Search</label>
+          <input
+            type="text"
+            placeholder="Search..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onFiltersChanged()"
+          />
+        </div>
+
+        <div class="field-inline">
+          <label>No. of Rows</label>
+          <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+            <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
+          </select>
+        </div>
+
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-success btn-micro" (click)="exportLogExcel()">
+            Excel
+          </button>
+          <button type="button" class="btn btn-outline btn-micro" routerLink="/store/raw/receiving">
+            Back
+          </button>
+        </div>
+      </div>
+
+      <div class="datagrid-wrapper">
+        <clr-datagrid [clrDgLoading]="loading" aria-label="Receiving log">
+          <clr-dg-column class="sr-no-col">{{'common.table.srNo' | translate}}</clr-dg-column>
+          <clr-dg-column>Receiving No./Dt.</clr-dg-column>
+          <clr-dg-column>Material Type</clr-dg-column>
+          <clr-dg-column>Inward Dt.</clr-dg-column>
+          <clr-dg-column>PO No./Dt.</clr-dg-column>
+          <clr-dg-column>Payment Slip/Dt.</clr-dg-column>
+          <clr-dg-column>Vendor Name</clr-dg-column>
+          <clr-dg-column>Material Name</clr-dg-column>
+          <clr-dg-column>Material Code</clr-dg-column>
+          <clr-dg-column>Received By/Dt.</clr-dg-column>
+          <clr-dg-column>Billing Qty.</clr-dg-column>
+          <clr-dg-column>Short Qty.</clr-dg-column>
+          <clr-dg-column>Damage Qty.</clr-dg-column>
+          <clr-dg-column>Received Qty.</clr-dg-column>
+          <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+          <clr-dg-row *clrDgItems="let result of filteredMaterials; let i = index" [clrDgItem]="result">
+            <clr-dg-cell>{{ getSrNo(i) }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.receiving_no }} / {{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_type }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.inward_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.po_no }} / {{ result.po_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.ch_no }} / {{ result.challan_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.vendor_name }} - {{ result.vendor_no }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_name }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.material_code }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.received_by }} / {{ result.receiving_date | date:'dd-MM-yyyy' }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.qty }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.short_qty || 0 }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.hold_qty || 0 }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>{{ result.received_qty }} {{ result.unit }}</clr-dg-cell>
+            <clr-dg-cell>
+              <button class="btn btn-info btn-micro inline-action" (click)="view(result)">View</button>
+              <button class="btn btn-success btn-micro inline-action" (click)="printLabel(result)">Label Print</button>
+            </clr-dg-cell>
+          </clr-dg-row>
+
+          <clr-dg-footer>
+            <clr-dg-pagination #pagination [(clrDgPage)]="currentPage" [clrDgPageSize]="pageSize">
+              <span class="pagination-label">
+                {{ pagination.totalItems ? (pagination.firstItem + 1) : 0 }} -
+                {{ pagination.totalItems ? (pagination.lastItem + 1) : 0 }} of {{ pagination.totalItems }}
+              </span>
+            </clr-dg-pagination>
+          </clr-dg-footer>
+        </clr-datagrid>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+<div class="card compact-card recv-page" *ngIf="isView">
+  <header class="card-header compact-header mef-panel-header">
+    <h2 class="header-title mef-panel-header__title">Received Material Details</h2>
+    <button type="button" class="btn btn-danger btn-micro mef-panel-header__close" (click)="isView = false">{{'common.close' | translate}}</button>
+  </header>
+  <div class="card-block">
+    <div class="card-text"> 
+      <table class="table table-border unique-table recv-kv-table">
+        <tr>
+          <th>Receiving No.</th>
+          <td>{{ selectedReport['receiving_no'] }}</td>
+          <th>Receiving Dt.</th>
+          <td>{{ selectedReport['receiving_date'] |date: 'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+          <th>Material Name</th>
+          <td>{{ selectedReport['material_name'] }}</td>
+          <th>Material Code</th>
+          <td>{{ selectedReport['material_code'] }}</td>
+        </tr>
+        <tr>
+          <th>Vendor No.</th>
+          <td>{{ selectedReport['vendor_no'] }}</td>
+          <th>Vendor Name</th>
+          <td>{{ selectedReport['vendor_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Payment Slip</th>
+          <td>{{ selectedReport['ch_no'] }}</td>
+          <th>Payment Slip Date</th>
+          <td>{{ selectedReport['challan_date'] |date: 'dd-MM-yyyy'}}</td>
+        </tr>
+        <tr>
+          <th>PO No.</th>
+          <td>{{ selectedReport['po_no'] }}</td>
+          <th>Material Type</th>
+          <td>{{ selectedReport['material_type'] }}</td>
+        </tr>
+        <tr>
+          <th>Material Subtype</th>
+          <td>{{ selectedReport['material_subtype'] }}</td>
+          <th>Qty</th>
+          <td>{{ selectedReport['qty']}} {{selectedReport['unit'] }}</td>
+        </tr>
+      </table>
+
+        <h3>Labeling Details:</h3>
+ 
+        <table class="table table-border unique-table recv-data-table">
+          <thead>
+          <tr>
+            <th>Supplier Batch No</th>
+            <th>Medicap Lot No</th>
+            <th>Batch Qty</th>
+            <th>Pack Size</th>
+            <th>{{'common.unit' | translate}}</th>
+            <th>No Of Containers</th>
+            <th>Mfg Date</th>
+            <th>Exp Date</th>
+            <th>COA Received</th>
+            <th>Upload COA</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let list of selectedReport['batches'] ;let i=index" [class.damage-batch-row]="isDamageBatch(list)">
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.supplier_batch_no}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">
+              {{list.batch_no}}
+              <span *ngIf="isDamageBatch(list)" class="damage-batch-badge">Damage</span>
+            </td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.qty_received}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.pack_size}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.unit}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{ list.total_containers }}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.mfg_date | date: 'dd-MM-yyyy'}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.exp_date | date: 'dd-MM-yyyy'}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">{{list.coa_received}}</td>
+            <td [class.damage-batch-cell]="isDamageBatch(list)">
+              <button class="btn btn-info btn-micro inline-action" [disabled]="list.coa_files === ''" (click)="viewCoafile(list.coa_files)">{{'common.view' | translate}}</button>
+              <button class="btn btn-success btn-micro inline-action" (click)="printLabel(selectedReport, list)">Label Print</button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+
+ 
+
+        <h3>Packing Details:</h3>
+        <table class="table table-border unique-table recv-kv-table">
+          <tr>
+            <th>Container Type</th>
+            <td>{{ selectedReport['container_type'] }}</td>
+            <th>Container Subtype</th>
+            <td>{{ selectedReport['container_subtype'] }}</td>
+           </tr>
+        </table>
+        <h3>Received Quantity Details:</h3>
+        <table class="table table-border unique-table recv-kv-table">
+          <tr>
+            <th>Payment Slip Qty: {{ selectedReport?.unit }}</th>
+            <td>{{ selectedReport?.challan_qty }}</td>
+            <th>Received Qty: {{ selectedReport?.unit }}</th>
+            <td>{{ selectedReport?.received_qty }}</td>
+          </tr>
+          <tr>
+            <th>No. Of Containers</th>
+            <td>{{ selectedReport.containers }}</td>
+            <th>Damage Container Observed</th>
+            <td>{{ getDamageContainerObserved() }}</td>
+          </tr>
+           <tr *ngIf="hasDamageContainers()">
+            <th>Damage Containers Batch</th>
+            <td class="damage-value">{{ getDamageBatchNo() || '-'}}</td>
+            <th>Damage Containers</th>
+            <td>{{ getDamageContainersCount() }}</td>
+          </tr>
+        </table>
+
+        <div *ngIf="hasDamageContainers()" class="damage-details-actions">
+          <button
+            type="button"
+            class="btn btn-warning btn-micro"
+            (click)="toggleDamageDetails()"
+            [disabled]="damageDetailsLoading"
+          >
+            <span *ngIf="damageDetailsLoading">Loading...</span>
+            <span *ngIf="!damageDetailsLoading">{{ showDamageDetails ? 'Hide' : 'View' }} Damage Container Details</span>
+          </button>
+        </div>
+
+        <div *ngIf="hasDamageContainers() && showDamageDetails" class="receiving-checklist-section damage-details-panel">
+        <h3>Damage Container Details:</h3>
+
+        <table class="table table-border unique-table recv-kv-table" style="margin-bottom: 0.75rem;">
+          <tr>
+            <th>Damage Container Observed</th>
+            <td>{{ getDamageContainerObserved() }}</td>
+            <th>Damage Medicap Lot No</th>
+            <td class="damage-value">{{ getDamageBatchNo() || '-' }}</td>
+          </tr>
+          <tr>
+            <th>Damage Containers</th>
+            <td>{{ getDamageContainersCount() }}</td>
+            <th>Hold Quantity</th>
+            <td>{{ getHoldQty() }}</td>
+          </tr>
+        </table>
+
+        <p class="rc-checklist-hint" *ngIf="damageDetailsLoading">Loading damage container checklist...</p>
+        <p class="rc-checklist-hint" *ngIf="!damageDetailsLoading && !damageCheckPointRows?.length">No damage container checklist parameters found for this receiving.</p>
+
+        <table class="receiving-checklist-table damage-checklist-table" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse;" *ngIf="!damageDetailsLoading && damageCheckPointRows?.length">
+          <colgroup>
+            <col style="width: 75%">
+            <col style="width: 25%">
+          </colgroup>
+          <tbody>
+            <ng-container *ngFor="let row of damageCheckPointRows; let i = index; trackBy: trackCheckPointRow">
+              <tr *ngIf="row.type === 'header'" class="rc-section-header damage-section-header">
+                <td colspan="2">
+                  <strong>{{ row.title }}</strong>
+                </td>
+              </tr>
+              <tr *ngIf="row.type === 'footer'" class="rc-footer-note">
+                <td colspan="2"><strong>{{ row.title }}</strong></td>
+              </tr>
+              <tr *ngIf="row.type === 'item'" class="rc-item-row">
+                <td class="rc-desc-cell">{{ row.item.check_point }}</td>
+                <td class="rc-ans-cell">{{ row.item.check || '-' }}</td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+        </div>
+
+        
+
+        <div class="receiving-checklist-section">
+        <h3>Receiving Checklist:</h3>
+        <div class="receiving-checklist-table-wrap">
+        <table class="receiving-checklist-table" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+          <colgroup>
+            <col style="width: 75%">
+            <col style="width: 25%">
+          </colgroup>
+          <tbody>
+            <ng-container *ngFor="let row of checkPointRows; let i = index; trackBy: trackCheckPointRow">
+              <tr *ngIf="row.type === 'header'" class="rc-section-header">
+                <td colspan="2">
+                  <strong>{{ row.title }}</strong>
+                  <span *ngIf="row.showPoNo"> {{ selectedReport['po_no'] || '_________' }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="row.type === 'footer'" class="rc-footer-note">
+                <td colspan="2"><strong>{{ row.title }}</strong></td>
+              </tr>
+              <tr *ngIf="row.type === 'item'" class="rc-item-row">
+                <td class="rc-desc-cell">{{ row.item.check_point }}</td>
+                <td class="rc-ans-cell">{{ row.item.check || '-' }}</td>
+              </tr>
+            </ng-container>
+            <tr *ngIf="checkPointRows?.length && !hasChecklistFooterInRows()" class="rc-footer-note">
+              <td colspan="2"><strong>Contact Purchasing Associate if any of the above items do not meet requirements.</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        </div>
+    
+        <br>
+
+        <h3 *ngIf="uploadedFileNames?.length > 0">Uploaded Documents :</h3>
+        <table class="table table-border unique-table recv-data-table" *ngIf="uploadedFileNames?.length > 0" >
+            <thead>
+            <tr>
+              <th>Document Name</th>
+              <th>Receiving no</th>
+              <th>View</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let inv of uploadedFileNames; let i = index;">
+                <td>{{inv.docName}}</td>
+                <td>{{inv.docNo}}</td>
+                <td>
+                    <button class="btn btn-primary btn-micro inline-action" (click)="viewFile(inv.file)">{{'common.view' | translate}}</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h3>Digital Signature</h3>
+        <div class="signature-grid">
+          <div class="signature-card">
+            <div class="signature-card-header">{{ entrySignature?.roleLabel || 'Entry By' }}</div>
+            <div class="signature-status">
+              <span class="tick-mark" [class.tick-off]="!entrySignature?.isSigned">✓</span>
+              <span class="status-text">
+                {{ entrySignature?.isSigned ? 'Digitally Signed by' : 'Not Signed Yet' }}
+              </span>
+            </div>
+            <div class="signature-row"><span>Name:</span> <strong>{{ entrySignature?.name || '-' }}</strong></div>
+            <div class="signature-row"><span>User ID:</span> <strong>{{ entrySignature?.userId || '-' }}</strong></div>
+            <div class="signature-row"><span>Department:</span> <strong>{{ entrySignature?.department || '-' }}</strong></div>
+            <div class="signature-row"><span>Date & Time:</span> <strong>{{ entrySignature?.signedOn || '-' }}</strong></div>
+          </div>
+
+          <div class="signature-card">
+            <div class="signature-card-header">{{ checkedSignature?.roleLabel || 'Checked By' }}</div>
+            <div class="signature-status">
+              <span class="tick-mark" [class.tick-off]="!checkedSignature?.isSigned">✓</span>
+              <span class="status-text">
+                {{ checkedSignature?.isSigned ? 'Digitally Signed by' : 'Not Signed Yet' }}
+              </span>
+            </div>
+            <div class="signature-row"><span>Name:</span> <strong>{{ checkedSignature?.name || '-' }}</strong></div>
+            <div class="signature-row"><span>User ID:</span> <strong>{{ checkedSignature?.userId || '-' }}</strong></div>
+            <div class="signature-row"><span>Department:</span> <strong>{{ checkedSignature?.department || '-' }}</strong></div>
+            <div class="signature-row"><span>Date & Time:</span> <strong>{{ checkedSignature?.signedOn || '-' }}</strong></div>
+          </div>
+        </div>
+
+    </div>
+  </div>
+  <div class="card-footer compact-footer">
+    <button class="btn btn-success btn-micro" (click)="printLabel()">Label Print</button>
+    <button class="btn btn-danger btn-micro" (click)="isView = false">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+
+
+ 

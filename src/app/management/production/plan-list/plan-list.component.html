@@ -1,0 +1,188 @@
+﻿<div class="card" *ngIf="!isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Approved Batch Plans
+            </div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button *ngIf="plant_type=='Formulation'" class="btn btn-sm btn-success"
+                    routerLink="new-formulation">DIRECT
+                    PLAN</button>
+                <button class="btn btn-sm btn-danger" routerLink="/management/production">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <clr-datagrid [clrDgLoading]="loading">
+                <clr-dg-column>Sr.</clr-dg-column>
+                <clr-dg-column clrDgField="entry_date">{{'common.date' | translate}}</clr-dg-column>
+                <clr-dg-column clrDgField="plan_no">Plan No.</clr-dg-column>
+                <clr-dg-column clrDgField="plan_type">Plan Type</clr-dg-column>
+                <clr-dg-column clrDgField="product_code">Product Code</clr-dg-column>
+                <clr-dg-column clrDgField="product_name">Product Name</clr-dg-column>
+                <clr-dg-column clrDgField="plan_for">Plan For</clr-dg-column>
+                <clr-dg-column clrDgField="plan_based_on">Plan Based On</clr-dg-column>
+                <clr-dg-column clrDgField="total_batches">No Of Batches Planned</clr-dg-column>
+                <clr-dg-column clrDgField="planned_qty">Planned Qty</clr-dg-column>
+                <clr-dg-column clrDgField="status">{{'common.status' | translate}}</clr-dg-column>
+                <clr-dg-column clrDgField="plan_comp_status">Plan Completion (%)</clr-dg-column>
+                <clr-dg-column>{{'common.table.action' | translate}}</clr-dg-column>
+
+                <clr-dg-row *clrDgItems="let res of results; let i = index" [clrDgItem]="res">
+                    <clr-dg-cell>{{i+1}}.</clr-dg-cell>
+                    <clr-dg-cell>{{ res.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.plan_no }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.plan_type }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_code }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.product_name }} {{ res.grade }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.plan_for }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.plan_based_on }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.total_batches }}</clr-dg-cell>
+                    <clr-dg-cell *ngIf="res.plan_based_on=='Proposed Qty'">{{ res.planned_qty }}</clr-dg-cell>
+                    <clr-dg-cell *ngIf="res.plan_based_on !='Proposed Qty'">{{ res.qty_can_planned }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.status }}</clr-dg-cell>
+                    <clr-dg-cell>{{ res.plan_comp_status}} </clr-dg-cell>
+                    <clr-dg-cell style="text-align: center;"><button class="btn btn-sm btn-info"
+                            (click)="view(i)">{{'common.view' | translate}}</button>
+                    </clr-dg-cell>
+                </clr-dg-row>
+                <clr-dg-footer>
+                    <clr-dg-pagination #pagination [clrDgPageSize]="10">
+                        <clr-dg-page-size [clrPageSizeOptions]="[10,20,50,100]">Users Per Page</clr-dg-page-size>
+                        {{pagination.firstItem + 1}} - {{pagination.lastItem + 1}}
+                        of {{pagination.totalItems}} Users
+                    </clr-dg-pagination>
+                </clr-dg-footer>
+            </clr-datagrid>
+        </div>
+    </div>
+    <div class="card-footer">
+        <button class="btn btn-primary" (click)="download()">{{'common.download' | translate}}</button>
+    </div>
+</div>
+
+<div class="card" *ngIf="isView">
+    <div class="card-header" style="text-align: center">
+        <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-lg-4" style="color: aliceblue;margin-top: -2px;text-align: left;">Plan Details</div>
+            <div class="clr-col-lg-8" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm btn-danger" (click)="isView = false">{{'common.close' | translate}}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-block">
+        <div class="card-text">
+            <table class="table table-border">
+                <tr>
+                    <th style="text-align: left;">Plan No.</th>
+                    <th style="text-align: left;">Plan Date</th>
+                    <th style="text-align: left;">Product Name</th>
+                    <th>Planned Qty</th>
+                    <th>No. Of Batches Planned</th>
+                    <th>Material Available For Plan</th>
+
+                    <th>{{'common.status' | translate}}</th>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">{{ selectedResult['plan_no'] }}</td>
+                    <td style="text-align: left;">{{ selectedResult['entry_date'] | date: 'dd-MM-yyyy' }}</td>
+                    <td style="text-align: left;">{{ selectedResult['product_name'] }} {{ selectedResult['grade'] }}
+                    </td>
+                    <td>{{ selectedResult['planned_qty'] }} {{ selectedResult['unit'] }}</td>
+                    <td>{{ selectedResult['total_batches'] }}</td>
+                    <td>{{ selectedResult['no_of_batches_can_planned'] }}</td>
+
+                    <td>{{ selectedResult['status'] }}</td>
+                </tr>
+            </table>
+
+            <h3>Raw Materials:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Material Type</th>
+                    <th>Material Code</th>
+                    <th>Material Name</th>
+                    <th>Unit Qty</th>
+                    <!-- <th>Overages (%)</th>
+            <th>Total Qty</th> -->
+                    <th>Batch Qty(Kg)</th>
+                    <th>Plan Qty</th>
+                    <th>Available Stock</th>
+                    <th>No Of Batches Can Be Planed</th>
+                    <th>Short Qty</th>
+
+                </tr>
+                <tr *ngFor="let comp of raw_materials; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td>{{ comp.material_type }}</td>
+                    <td>{{ comp.material_code }}</td>
+                    <td>{{ comp.material_name }}</td>
+                    <td>{{ comp.qty }} {{ comp.unit }}</td>
+                    <!-- <td>{{ comp.overages }}</td>
+            <td>{{ comp.total_qty }}</td> -->
+                    <td>{{ comp.batch_qty }}</td>
+                    <td>{{ comp.plan_qty }}</td>
+                    <td>{{ comp.avbl_stock }}</td>
+                    <td>{{ comp.batches_can_plan }}</td>
+                    <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                        comp.shortage_qty }}</td>
+                    <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.shortage_qty
+                        }}</td>
+
+                </tr>
+                <tr *ngIf="raw_materials?.length == 0">
+                    <td colspan="8">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+
+
+
+            <h3 style="margin-top: 5px;">Packing Materials:</h3>
+            <table class="table">
+                <tr>
+                    <th>Sr.</th>
+                    <th>Material Type</th>
+                    <th>Material Code</th>
+                    <th>Material Name</th>
+                    <th>Unit Qty</th>
+                    <th>Overages (%)</th>
+                    <th>Total Qty</th>
+                    <th>Batch Qty(Kg)</th>
+                    <th>Plan Qty</th>
+                    <th>Available Stock</th>
+                    <th>No Of Batches Can Be Planed</th>
+                    <th>Short Qty</th>
+
+                </tr>
+                <tr *ngFor="let comp of packing_materials; let i = index">
+                    <td>{{ i + 1 }}.</td>
+                    <td>{{ comp.material_subtype }}</td>
+                    <td>{{ comp.material_code }}</td>
+                    <td>{{ comp.material_name }}</td>
+                    <td>{{ comp.qty }} {{ comp.unit }}</td>
+                    <td>{{ comp.overages }}</td>
+                    <td>{{ comp.total_qty }}</td>
+                    <td>{{ comp.batch_qty }}</td>
+                    <td>{{ comp.plan_qty }}</td>
+                    <td>{{ comp.avbl_stock }}</td>
+                    <!-- <td>{{ comp.avbl_stock }}</td> -->
+
+                    <td>{{ comp.batches_can_plan }}</td>
+                    <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+                        comp.avbl_stock-comp.plan_qty }}</td>
+                    <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.avbl_stock-comp.plan_qty
+                        }}</td>
+                    <!-- <td *ngIf="comp.avbl_stock-comp.plan_qty >=0" style="color:green">{{
+              comp.short_qt }}</td>
+            <td *ngIf="comp.avbl_stock-comp.plan_qty <0" style="color:red">{{ comp.short_qt
+              }}</td> -->
+
+                </tr>
+                <tr *ngIf="raw_materials?.length == 0">
+                    <td colspan="8">{{'common.noRecords' | translate}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>

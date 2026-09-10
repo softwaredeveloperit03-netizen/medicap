@@ -1,0 +1,667 @@
+<div class="container-fluid" *ngIf="!isNew">
+    <div class="card">
+        <div class="card-header" style="text-align: center">
+            <div class="clr-row" style="margin-bottom: -10px;">
+              <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">{{ retestMode ? activityListTitle : (material_type + ' Sampling Activity') }}</div>
+              <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                <button class="btn btn-sm" [routerLink]="listCloseRoute" style="background-color: red;color: white;">
+                  CLOSE.
+                </button>
+              </div>
+            </div>
+          </div>
+        <div class="card-block">
+            <div class="card-text">
+                <div class="clr-row">
+                    <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" *ngIf="!retestMode">
+                        <label>Material Type :</label>
+                        <select name="material_type" [(ngModel)]="material_type" (change)="getPendingSamplingForm()">
+                            <option></option>
+                            <option>Raw Material</option>
+                            <option>Packing Material</option>
+                        </select>
+                    </div>
+                    <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="retestMode">
+                        <label>Search :</label>
+                        <input type="text" placeholder="Search..." [(ngModel)]="searchQuery" (keyup)="applyListFilter()">
+                    </div>
+                </div>
+                <table class="table table-border">
+                    <tr>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sr.No</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Receiving No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Sampling No.</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Code</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Material Name</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Medicap Lot No</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Total Containers</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Containers To Be Sampled</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Grade</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Date</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;" *ngIf="retestMode">Retest Date</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Allocated Person</th>
+                        <th style="text-align: left; background-color: rgb(14, 67, 112); color: white;">Action</th>
+                    </tr>
+                    <tr *ngFor="let result of results; let i = index"  [ngClass]="{'highlight-row': isCurrentDate(result.allocation_date)}">
+                        <td style="text-align: left;">{{ i + 1 }}</td>
+                        <td style="text-align: left;">{{ result.grn_no }}</td>
+                        <td style="text-align: left;">{{ result.sampling_no }}</td>
+                        <td style="text-align: left;">{{ result.material_code }}</td>
+                        <td style="text-align: left;">{{ result.material_name }}</td>
+                        <td style="text-align: left;">{{ result.batch_no }}</td>
+                        <td style="text-align: left;">{{ result.containers }}</td>
+                        <td style="text-align: left;">{{ result.sampling_containers || containersToBeSampled(result) }}</td>
+                        <td style="text-align: left;">{{ result.grn_grade || 'NA'}}</td>
+                        <td style="text-align: left;">{{ result.grn_date | date: 'dd-MM-yyyy'}}</td>
+                        <td style="text-align: left;" *ngIf="retestMode">{{ result.retest_date | date: 'dd-MM-yyyy' }}</td>
+                        <td style="text-align: left;">{{ result.sampling_person }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" (click)="view(i)">PROCEED</button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="results?.length == 0">
+                        <td [attr.colspan]="retestMode ? 13 : 12">No Records Found!</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid" *ngIf="isNew">
+    <div class="card">
+        <div class="card-header">
+            <div class="clr-row" style="margin-bottom: -10px;">
+                <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">{{ retestMode ? formTitle : (material_type + ' Sampling Form') }}</div>
+                <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+                  <button class="btn btn-sm" (click)="isNew = false" style="background-color: red;color: white;">
+                    CLOSE
+                  </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-block">
+            <div class="card-text">
+                <form #infoForm="ngForm">
+
+                    <h3>Material Details:</h3>
+                    <table class="table table1">
+                        <tr>
+                            <td style="text-align: left;width: 15%;"><b>Name of Materials::</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['material_name'] }}</td>
+                            <td style="text-align: left;width: 15%;"><b>Quantity Sampled</b></td>
+                            <td style="text-align: left;">
+                              {{ selectedSampling['sample_qty'] || undertest_qty || totalsample_qty || selectedSampling['sampleForTesting'] || selectedSampling['qty_received'] || '' }}
+                              {{ sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] || selectedSampling['unit'] || '' }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 15%;"><b>Analyst Name:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['entry_by'] }}</td>
+                            <td style="text-align: left;width: 15%;"><b>Sampled by / Date:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['sampling_person']}} {{ selectedSampling['sampling_person']| date: 'dd-MM-yyyy'}}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left;width: 15%;"><b>Receiving no:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['grn_no'] }}</td>
+                            <td style="text-align: left;width: 15%;"><b>Grade:</b></td>
+                            <td style="text-align: left;">{{ selectedSampling['grn_grade'] || selectedSampling['grade'] || 'NA' }}</td>
+                         </tr>
+                    </table>
+ 
+                    <h3>Sampling Checklist:</h3>
+
+                    <table class="table chkPoint" cellspacing="2">
+                    <tr >
+                        <th style="background-color:#144196;color:white;font-size:15px">Sr.</th>
+                        <th style="background-color:#144196;color:white;font-size:15px;text-align:left;">Parameters</th>
+                        <th style="background-color:#144196;color:white;font-size:15px">Remarks</th>
+                    </tr>
+                    <tr *ngFor="let hr of checkPointData;let i = index" style="margin: 0px;">
+                        <td >{{i+1.}}</td>
+                        <td style="text-align:left;">{{hr.check_point}}</td>
+                        <td style="padding: 0;margin: 0;">
+
+                        <div *ngIf="hr.evl_pr=='1'">
+                            <input  type="text" min="0" name="check" [(ngModel)]="hr.check"
+                            required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            </div>
+
+
+                        <div *ngIf="hr.evl_pr=='2'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Yes</option>
+                            <option>No</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='3'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>OK</option>
+                            <option>Not Ok</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='4'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Satisfactory</option>
+                            <option>Not Satisfactory</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='5'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Applicable</option>
+                            <option>Not Applicable</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='6'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Cleaned</option>
+                            <option>Not Cleaned</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='7'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Sealed </option>
+                            <option>Unsealed</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='8'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>verified</option>
+                            <option>Not Verfied</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+                        <div *ngIf="hr.evl_pr=='9'">
+                        <select  name="check" [(ngModel)]="hr.check" required
+                            style="width:50%  !important; height: 25px !important;padding: auto !important;box-sizing: border-box !important; margin:auto !important">
+                            <option>Covered</option>
+                            <option>Uncovered</option>
+                            <option>NA</option>
+                        </select>
+                        </div>
+
+
+
+                        </td>
+                    </tr>
+                    <!-- <button class="btn btn-primary" (click)="save(checkList)">Save</button> -->
+
+                    </table>
+
+                    <h3>Physical Observations:</h3>
+                    <div class="clr-row">
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Physical Observation :</label>
+                            <input type="text" name="physicalObservation" [(ngModel)]="physicalObservation" placeholder="Enter physical observation">
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Appearance :</label>
+                            <input type="text" name="appearance" [(ngModel)]="appearance" placeholder="Enter appearance">
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
+                            <label>Presence of Foreign Particles :</label>
+                            <select name="presenceOfForeignParticles" [(ngModel)]="presenceOfForeignParticles">
+                                <option value=""></option>
+                                <option>Present</option>
+                                <option>Absent</option>
+                                <option>NA</option>
+                            </select>
+                        </div>
+                        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12" *ngIf="selectedSampling['material_subtype']?.includes('Perfume')">
+                            <label>Perfume / Odor Verification :</label>
+                            <input type="text" name="perfumeOderVerification" [(ngModel)]="perfumeOderVerification" placeholder="Enter verification">
+                        </div>
+                        <div class="clr-col-lg-8 clr-col-md-8 clr-col-sm-12 clr-col-xs-12">
+                            <label>Sampling Remark : <span style="color:red">*</span></label>
+                            <input type="text" name="samplingRemark" [(ngModel)]="samplingRemark" required placeholder="Enter sampling remark">
+                        </div>
+                    </div>
+
+                    <div class="clr-row"> 
+                    <div class="clr-col-3">
+                        <label for="inspectionComment">
+                        Inspection Report Comments:
+                        </label>
+                    </div>
+
+                    <div class="clr-col-9">
+                        <textarea
+                        id="inspectionComment"  
+                        class="form-control"
+                        rows="3"
+                        [(ngModel)]="inspectionReportComment"
+                        name="inspectionReportComment"
+                        placeholder="Enter comments"
+                        ></textarea>
+                    </div>
+                    </div>
+
+
+
+<br>                <div class="clr-row">
+                    <table class="table table-bordered sign-table">
+                    <tr>
+                        <td class="label-cell">Sampled By Sign / Date :</td>
+                        <td class="value-cell">
+                        {{ selectedSampling?.sampling_person || 'NA' }}
+                        </td>
+
+                        <td class="label-cell">Review By QCD Designee Sign / Date :</td>
+                        <td class="value-cell">
+                        {{ selectedSampling?.review_qcd_sign_date || 'NA' }}
+                        </td>
+                    </tr>
+                    </table>
+                    </div>
+
+<br>
+
+
+                    <div *ngIf="isStart">
+                        <div class="clr-row">
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                <span>Note: All Sample qty unit is {{ sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] || selectedSampling['unit'] }}.</span>
+                            </div>
+                            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" style="margin: 6px 0 10px;">
+                                <b>Sampling formula:</b>
+                                <label style="margin-left: 10px;">
+                                    <input type="radio" name="Sampling_criteria" [(ngModel)]="Sampling_criteria" value="100%" (change)="recalculateAll()">
+                                    100%
+                                </label>
+                                <label style="margin-left: 10px;">
+                                    <input type="radio" name="Sampling_criteria" [(ngModel)]="Sampling_criteria" value="√n +1" (change)="recalculateAll()">
+                                    √N + 1
+                                </label>
+                                <span style="margin-left: 14px;">
+                                    <b>Containers received:</b> {{ selectedSampling['containers'] }} |
+                                    <b>Containers sampled:</b> {{ selectedSampling['sampling_containers'] }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card ksm-card">
+                            <div class="card-header ksm-header">
+                                <b>Sampling Plan for Key Starting Material (KSM)</b>
+                            </div>
+                            <div class="card-block ksm-card-block">
+                                <table class="table table-bordered ksm-table">
+                                    <tbody>
+                                        <tr *ngIf="!retestMode">
+                                            <td class="ksm-label"><b>* For Identification:</b></td>
+                                            <td class="ksm-col">
+                                                <input type="number" min="0" step="any" name="indentification_qty" [(ngModel)]="indentification_qty" (input)="calculatesample()" placeholder="Qty" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">Qty in {{ sample_unit }}</span>
+                                            </td>
+                                            <td class="ksm-col">
+                                                <input type="text" [value]="selectedSampling['sampling_containers']" readonly tabindex="-1" class="ksm-input ksm-input-readonly">
+                                                <span class="text-muted ksm-hint">Number of Drum/Container</span>
+                                            </td>
+                                            <td class="ksm-col">
+                                                <input type="text" [value]="identification_total_qty" readonly tabindex="-1" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }} Total Quantity</span>
+                                            </td>
+                                        </tr>
+                                        <tr *ngIf="!retestMode">
+                                            <td class="ksm-label"><b>* For Complete Analysis:</b></td>
+                                            <td class="ksm-col">
+                                                <input type="number" min="0" step="any" name="Complete_Analysis" [(ngModel)]="Complete_Analysis" (input)="calculatesample()" placeholder="Qty" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">Qty in {{ sample_unit }} (Composite)</span>
+                                            </td>
+                                            <td class="ksm-col">
+                                                <input type="text" [value]="Complete_Analysis" readonly tabindex="-1" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }} Quantity</span>
+                                            </td>
+                                            <td class="ksm-col"></td>
+                                        </tr>
+                                        <tr *ngIf="!retestMode">
+                                            <td class="ksm-label"><b>* For Micro analysis:</b></td>
+                                            <td class="ksm-col">
+                                                <input type="number" min="0" step="any" name="micro_qty" [(ngModel)]="micro_qty" (input)="calculatesample()" placeholder="Qty" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">Qty in {{ sample_unit }} (Micro)</span>
+                                            </td>
+                                            <td class="ksm-col">
+                                                <input type="text" [value]="micro_qty" readonly tabindex="-1" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }} Quantity</span>
+                                            </td>
+                                            <td class="ksm-col"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ksm-label"><b>* For Retest:</b></td>
+                                            <td class="ksm-col">
+                                                <input *ngIf="!retestMode" type="number" min="0" step="any" name="retest_qty" [(ngModel)]="retest_qty" (input)="calculatesample()" placeholder="0" class="ksm-input ksm-input-edit">
+                                                <input *ngIf="retestMode" type="text" name="retest_qty" [ngModel]="retest_qty" readonly tabindex="-1" class="ksm-input ksm-input-readonly">
+                                                <span class="text-muted ksm-hint">Qty in {{ sample_unit }} (Composite)</span>
+                                            </td>
+                                            <td class="ksm-col">
+                                                <input type="text" [value]="retest_qty" readonly tabindex="-1" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }} Total Quantity</span>
+                                            </td>
+                                            <td class="ksm-col"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ksm-label"><b>* Additional Quantity:</b></td>
+                                            <td colspan="2" class="ksm-col">
+                                                <input type="number" min="0" step="any" name="additional_qty" [(ngModel)]="additional_qty" (input)="calculatesample()" placeholder="0" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }}</span>
+                                            </td>
+                                            <td class="ksm-col"></td>
+                                        </tr>
+                                        <tr *ngIf="!retestMode">
+                                            <td class="ksm-label"><b>* Control sample:</b></td>
+                                            <td colspan="2" class="ksm-col">
+                                                <input type="number" min="0" step="any" name="reserve_composite" [(ngModel)]="reserve_composite" (input)="calculatesample()" placeholder="0" class="ksm-input ksm-input-edit">
+                                                <span class="text-muted ksm-hint">{{ sample_unit }}</span>
+                                            </td>
+                                            <td class="ksm-col"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="clr-row" style="margin-top: 14px;">
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <div class="card">
+                                    <div class="card-block">
+                                        <div class="card-title">Actual Sampling Qty</div>
+                                        <div class="card-text">
+                                            <label>Total Sample (Comp + Control + Addl.)</label>
+                                            <input type="text" name="totalsample_qty" [ngModel]="totalsample_qty" readonly tabindex="-1" style="width: 100%; background-color: rgb(248, 200, 208);">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                <div class="card">
+                                    <div class="card-block">
+                                        <div class="card-title">Sample Withdrawal Qty (From Every Container)</div>
+                                        <div class="card-text">
+                                            <label>(Comp + Control + Addl.) / no. of containers</label>
+                                            <input type="text" name="withdrawal_composite" [ngModel]="withdrawal_composite" readonly tabindex="-1" style="width: 100%; background-color: rgb(248, 200, 208);">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                       <br>
+         
+
+                        <table class="table table-border">
+                            <tr >
+                                <th style="background-color:#144196;color:white;font-weight: bold;">No. of Containers Received</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">No. of containers Sampled</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Sample Qty withdrawal from Every Container</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Unit</th>
+                            </tr>
+                            <tr >
+                                <td>{{ selectedSampling['containers'] }}</td>
+                                <td>{{ selectedSampling['sampling_containers'] }}</td>
+                                <td>{{ withdrawal_composite}}</td>
+                                <td>{{ sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] || selectedSampling['unit'] }}</td>
+                            </tr>
+                        </table>
+                        <table class="table table-border" >
+                            <tr>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Container No.</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Identification Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Composite Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Total Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">UOM</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Remark/Physical Observation</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Action</th>
+
+                            </tr>
+                            <tr style="background-color: #ffeaed;" *ngFor="let container of selectedSampling['container_details']; let i = index">
+                                <td style="margin: 0;padding: 0;">
+                                    <input type="text" name="container_no" [(ngModel)]="container.container_no" (input)="checkUnit($event.target.value,i)"  required style="width: 50%;" >
+                                </td>
+
+                                <td>{{ container.identication_qty }}</td>
+                                <td>{{ container.withdrawal_composite }}</td>
+                                 <td>{{ container.total_qty }}</td>
+                                <td>{{ container.unit || sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] }}</td>
+                                <td style="padding: 0px;">
+                                    <input type="text" name="Remark" [(ngModel)]="container.remark"  required  style="margin: 0px; height: 33px;">
+                                </td>
+                                <td *ngIf="container.status =='pending'">
+                                    <button class="btn btn-sm btn-info" (click)="updateContainer('one',i)">Done</button> </td>
+                                <td *ngIf="container.status !=='pending'" style="font-weight: bold;color: green;">Done</td>
+
+                            </tr>
+
+                        </table>
+                        <br>
+
+                        <table class="table table-border"  >
+                            <tr >
+                                <th  colspan="5"><b>Composite Sample</b> ( Prepare Composite From Individual Sample Withdrawn
+                                    <input type="checkbox" name="godLogic" [(ngModel)]="godLogic" (change)="calculatesample()"  style="padding: 0px;margin: 0;" >
+                                     )</th>
+                            </tr>
+                            <tr>
+                                <th *ngIf="!godLogic" style="background-color:#144196;color:white;font-weight: bold;">Container No.</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Sample Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">UOM</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Remark</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Action</th>
+
+                            </tr>
+                            <tr style="background-color: #ffeaed;" *ngFor="let container of composite_sample_data; let i = index">
+                                <td *ngIf="!godLogic" style="padding: 0px;margin: 0;">
+                                    <input type="text" name="ccontainer_no" [(ngModel)]="container.ccontainer_no"  style="margin: 0px; height: 33px;" >
+                                </td>
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="sample_qty" [(ngModel)]="container.sample_qty" (keyup)="calculatesample()"   style="margin: 0px; height: 33px;" >
+                                </td>
+                                 <td>{{ container.unit || sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] }}</td>
+
+                                 <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="Remark" [(ngModel)]="container.remark"  required  style="margin: 0px; height: 33px;">
+                                </td>
+                                <td *ngIf="container.status =='pending'">
+                                    <button class="btn btn-sm btn-info" (click)="updateContainer('two',i)">Done</button> </td>
+                                <td *ngIf="container.status !=='pending'" style="font-weight: bold;color: green;">Done</td>
+                            </tr>
+
+                        </table>
+                        <table class="table table-border" >
+                            <tr>
+                                <th colspan="5"><b>Micro analysis sample</b></th>
+                            </tr>
+                            <tr>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Container No.</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Sample Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">UOM</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Remark</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Action</th>
+                            </tr>
+                            <tr style="background-color: #ffeaed;" *ngFor="let container of micro_sample_data; let i = index">
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="mcontainer_no" [(ngModel)]="container.mcontainer_no" style="margin: 0px; height: 33px;">
+                                </td>
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="micro_sample_qty" [(ngModel)]="container.sample_qty" (keyup)="calculatesample()" style="margin: 0px; height: 33px;">
+                                </td>
+                                <td>{{ container.unit || sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] }}</td>
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="micro_remark" [(ngModel)]="container.remark" required style="margin: 0px; height: 33px;">
+                                </td>
+                                <td *ngIf="container.status =='pending'">
+                                    <button class="btn btn-sm btn-info" (click)="updateContainer('four',i)">Done</button>
+                                </td>
+                                <td *ngIf="container.status !=='pending'" style="font-weight: bold;color: green;">Done</td>
+                            </tr>
+                        </table>
+                        <table class="table table-border" >
+                            <tr>
+                                <th colspan="5">Additional Sample</th>
+                            </tr>
+                            <tr>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Container No.</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Sample Qty</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">UOM</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Remark</th>
+                                <th style="background-color:#144196;color:white;font-weight: bold;">Action</th>
+
+                            </tr>
+                            <tr style="background-color: #ffeaed;" *ngFor="let container of retenation_sample_data; let i = index">
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="rcontainer_no" [(ngModel)]="container.rcontainer_no"   style="margin: 0px; height: 33px;" >
+                                </td>
+                                <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="sample_qty" [(ngModel)]="container.sample_qty" (keyup)="calculatesample()"   style="margin: 0px; height: 33px;" >
+                                </td>
+                                 <td>{{ container.unit || sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] }}</td>
+                                 <td style="padding: 0px;margin: 0;">
+                                    <input type="text" name="Remark" [(ngModel)]="container.remark"  required  style="margin: 0px; height: 33px;">
+                                </td>
+                                <td *ngIf="container.status =='pending'">
+                                    <button class="btn btn-sm btn-info" (click)="updateContainer('three',i)">Done</button> </td>
+                                <td *ngIf="container.status !=='pending'" style="font-weight: bold;color: green;">Done</td>
+
+                            </tr>
+
+                        </table>
+                        <br>
+                        <!-- <table class="table">
+                            <tr>
+                                <td style="background-color:#12ee42;color:black;"><b>Total Qty :  {{undertest_qty}} {{ sample_unit || selectedSampling['sample_unit'] || selectedSampling['samplingUnit'] || selectedSampling['baseUnit'] }}  </b> => <b> Total Qty In Kg :  {{undertest_qty_kg}} KG</b></td>
+                             </tr>
+                        </table> -->
+
+               <br>
+
+                        <div>
+                            <div class="clr-row" *ngIf="isStart">
+
+
+                                <div class="clr-col-3">
+                                    <label>Any Discrepancy </label>
+                                    <select name="any_discripancy"  [(ngModel)] ="any_discripancy"  required>
+                                        <option>YES</option>
+                                        <option>NO</option>
+                                    </select>
+                                </div>
+                                <div *ngIf="any_discripancy == 'YES'"  class="clr-col-3">
+                                    <label>Discrepancy Remark</label>
+                                    <input type="text" name="dicripancy_remark" [(ngModel)]="dicripancy_remark">
+                                </div>
+                                <div *ngIf="any_discripancy == 'YES'" class="clr-col-3">
+                                    <label>Incident/ Deviation</label>
+                                    <select name="which_one"  [(ngModel)] ="which_one"  required>
+                                        <option >Incident</option>
+                                        <option >Deviation</option>
+                                    </select>
+                                </div>
+                                <div *ngIf="any_discripancy == 'YES'" class="clr-col-3">
+                                    <br>
+                                    <button *ngIf="which_one == 'Incident'" class="btn btn-danger">Incident</button>
+                                    <button *ngIf="which_one == 'Deviation'"  class="btn btn-danger">Deviation</button>
+                                </div>
+
+
+                                <!-- <div class="clr-col-3">
+                                    <label>LAF Action</label>
+                                    <select name="lafOtion"  [(ngModel)] ="lafOtion" >
+                                        <option [ngValue]="1"> Stop LAF</option>
+                                        <option [ngValue]="2"> Keep LAF Running</option>
+
+                                    </select>
+                                </div> -->
+
+                                <div class="clr-col-3" *ngIf="lafOtion==1">
+                                       <br>
+                                    <button   class="btn btn-danger" (click)="updateSamplingTime('stoplaf')" > STOP LAF</button>
+
+                                </div>
+                                <div class="clr-col-3">
+                                    <label>Sampling Equipment</label>
+                                    <select name="samplerId" [(ngModel)]="samplerId" required>
+                                        <option value=""></option>
+                                        <option *ngFor="let eq of equipments" [value]="eq.equipment_code">{{eq.equipment_name}} ( {{eq.equipment_code}} )</option>
+                                    </select>
+                                </div>
+                                <div class="clr-col-3">
+                                    <br>
+                                    <button class="btn btn-danger" (click)="updateSamplingTime('stop')" >STOP SAMPLING</button>
+                                </div>
+                            </div>
+                            <div class="clr-row">
+                                <div style="background-color:#144196;color:white;font-weight: bold;" class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+                                    <label><b>Activity Log</b></label>
+                                </div>
+                                <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="areaCleaningAgents.length" style="margin-top:8px;">
+                                    <table class="table table-border">
+                                        <tr>
+                                            <th colspan="4" style="text-align:left; background-color: rgb(14, 67, 112); color: white;">Cleaning Agent Used</th>
+                                        </tr>
+                                        <tr>
+                                            <th style="background-color: rgb(14, 67, 112); color: white;">Sr.</th>
+                                            <th style="background-color: rgb(14, 67, 112); color: white; text-align:left;">Cleaning Agent</th>
+                                            <th style="background-color: rgb(14, 67, 112); color: white; text-align:left;">Material Code</th>
+                                            <th style="background-color: rgb(14, 67, 112); color: white;">Qty Used</th>
+                                        </tr>
+                                        <tr *ngFor="let agent of areaCleaningAgents; let i = index">
+                                            <td>{{ i + 1 }}</td>
+                                            <td style="text-align:left;">{{ agent.material_name || '-' }}</td>
+                                            <td style="text-align:left;">{{ agent.material_code || '-' }}</td>
+                                            <td>{{ agent.qty_used || '-' }} {{ agent.unit || '' }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                            <label>Sampling Start Time:</label>
+                                            <input type="text" name="start_time" [ngModel]="start_date" readonly tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                            <label>Sampling End Time:</label>
+                                            <input type="text" name="stop_date" [ngModel]="stop_date" readonly tabindex="-1">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+
+                                    <div class="clr-row">
+                                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                            <label>LAF Start Time:</label>
+                                            <input type="text" name="laf_start_date" [ngModel]="start_date" readonly tabindex="-1">
+                                        </div>
+                                        <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                                            <label>LAF End Time:</label>
+                                            <input type="text" name="laf_stop_date" [ngModel]="laf_stop_date" readonly tabindex="-1">
+                                        </div>
+                                    </div>
+                                </div> -->
+
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary" *ngIf="isStart" (click)="saveSamplingInfo(infoForm,checkListForm)">SUBMIT</button>
+            <button *ngIf="!isStart" class="btn btn-success" (click)="updateSamplingTime('start')">START</button>
+            <button class="btn btn-danger" (click)="isNew = false">CLOSE</button>
+        </div>
+    </div>
+</div>

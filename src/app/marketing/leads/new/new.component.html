@@ -1,0 +1,700 @@
+﻿<div class="card" >
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue;margin-top: -2px;text-align: left;">New Lead</div>
+      <div class="clr-col-lg-3" style="text-align: right;padding-right: 0px;margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/marketing/leads/firstRes" >
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-block lead-form-block">
+    <div class="card-text">
+      <form #clientform="ngForm" class="lead-form">
+        <div class="form-section">
+          <h3 class="section-heading">1. Client Information</h3>
+          <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Clients Name: <span style="color: red;">*</span></strong></label>
+            <select name="client_code" ngModel required (ngModelChange)="onClientSelected($event)">
+              <option disabled></option>
+              <option *ngFor="let client of clients" [value]="client.client_code">{{ client.LglNm }} - ( {{ client.client_code }} )</option>
+            </select>
+          </div>
+
+          <ng-container *ngIf="selectedClient">
+            <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12">
+              <div class="client-preview-panel">
+                <h4 class="service-category-title">Selected Client Details</h4>
+                <div class="clr-row">
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Brand Name :</strong></label>
+                    <input type="text" [value]="selectedClient.TrdNm || '-'" readonly>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>State / Province :</strong></label>
+                    <input type="text" [value]="selectedClient.state || '-'" readonly>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>Postal Code :</strong></label>
+                    <input type="text" [value]="selectedClient.pincode || '-'" readonly>
+                  </div>
+                  <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label><strong>GST / VAT / Tax ID :</strong></label>
+                    <input type="text" [value]="selectedClient.gst_no || '-'" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-heading">2. Service Category</h3>
+          <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Service Category : <span style="color: red;">*</span></strong></label>
+            <p-multiSelect
+              name="serviceCategorySelect"
+              class="form-dropdown-field"
+              [options]="serviceCategories"
+              [(ngModel)]="selectedServiceCategories"
+              placeholder="Select Service Category"
+              selectedItemsLabel="{0} categories selected"
+              [maxSelectedLabels]="2"
+              (onChange)="onServiceCategoriesChange()"
+              [style]="{ width: '100%' }"
+              [panelStyle]="{ 'min-width': '280px' }"
+              appendTo="body"
+            ></p-multiSelect>
+          </div>
+
+          <div
+            class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12"
+            *ngFor="let category of selectedServiceCategories"
+          >
+            <div class="service-description-panel">
+              <h4 class="service-category-title">{{ category }}</h4>
+
+              <div class="clr-row" *ngIf="isProductDevelopmentCategory(category)">
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label><strong>Select Finished Product(s) : <span style="color: red;">*</span></strong></label>
+                  <p-multiSelect
+                    [name]="'finishedProducts_' + category"
+                    class="form-dropdown-field"
+                    [options]="finishedProducts"
+                    [ngModel]="getCategoryDraftProducts(category)"
+                    (ngModelChange)="setCategoryDraftProducts(category, $event)"
+                    optionLabel="displayLabel"
+                    dataKey="product_code"
+                    placeholder="Select finished products from master"
+                    selectedItemsLabel="{0} products selected"
+                    [maxSelectedLabels]="2"
+                    [style]="{ width: '100%' }"
+                    [panelStyle]="{ 'min-width': '320px' }"
+                    appendTo="body"
+                    [filter]="true"
+                    filterPlaceHolder="Search product"
+                  ></p-multiSelect>
+                </div>
+              </div>
+
+              <label><strong>Select Description :</strong></label>
+              <div class="service-description-boxes">
+                <button
+                  type="button"
+                  class="service-description-box"
+                  *ngFor="let item of getDescriptionItems(category)"
+                  [class.selected]="isDescriptionItemSelected(category, item)"
+                  (click)="toggleDescriptionItem(category, item)"
+                >
+                  {{ item }}
+                </button>
+              </div>
+
+              <div
+                class="description-detail-row"
+                *ngFor="let entry of getSelectedDescriptionEntries(category)"
+              >
+                <div class="description-detail-label">{{ entry.label }}</div>
+                <input
+                  type="text"
+                  [name]="'serviceDetail_' + category + '_' + entry.label"
+                  [(ngModel)]="entry.details"
+                  (ngModelChange)="onDescriptionDetailsChange(category, entry.label, $event)"
+                  placeholder="Add details for this description"
+                />
+              </div>
+
+              <label class="manual-description-label"><strong>Or add manually :</strong></label>
+              <input
+                type="text"
+                [name]="'manualServiceDescription_' + category"
+                [(ngModel)]="categoryManualText[category]"
+                (ngModelChange)="onCategoryManualChange(category)"
+                placeholder="Type description manually if not selected above"
+              />
+
+              <div class="service-category-actions">
+                <button type="button" class="btn btn-sm btn-success" (click)="addServiceCategoryEntry(category)">
+                  ADD
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12" *ngIf="savedServiceEntries.length">
+            <div class="saved-service-panel">
+              <h4 class="service-category-title">Added Service Details</h4>
+              <div class="table-responsive saved-service-wrap">
+                <table class="table table-bordered saved-service-table has-action-column">
+                  <thead>
+                    <tr>
+                      <th class="cell-sno">S.No</th>
+                      <th class="cell-category">Service Category</th>
+                      <th class="cell-products">Products</th>
+                      <th class="cell-descriptions">Descriptions</th>
+                      <th class="cell-action">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let entry of savedServiceEntries; let i = index">
+                      <td class="cell-sno">{{ i + 1 }}</td>
+                      <td class="cell-category">{{ entry.category }}</td>
+                      <td class="cell-products">
+                        <ul class="service-cell-list" *ngIf="entry.products?.length; else noProductsCell">
+                          <li *ngFor="let product of entry.products">
+                            {{ product.displayLabel || getProductLabel(product) }}
+                          </li>
+                        </ul>
+                        <ng-template #noProductsCell>N/A</ng-template>
+                      </td>
+                      <td class="cell-descriptions">
+                        <ul class="service-cell-list">
+                          <li *ngFor="let line of getDescriptionLinesForEntry(entry)">{{ line }}</li>
+                        </ul>
+                      </td>
+                      <td class="cell-action">
+                        <button type="button" class="btn btn-sm btn-danger" (click)="removeSavedServiceEntry(i)">
+                          DELETE
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12 service-save-row" *ngIf="selectedServiceCategories.length">
+            <button type="button" class="btn btn-primary" (click)="saveAllServiceDetails()">
+              SAVE SERVICE DETAILS
+            </button>
+            <span class="service-save-status" *ngIf="serviceDetailsSaved">Service details saved</span>
+          </div>
+
+          <input type="hidden" name="serviceCategory" [(ngModel)]="serviceCategory" />
+          <input type="hidden" name="serviceDescription" [(ngModel)]="serviceDescription" />
+          <input type="hidden" name="serviceDescriptionData" [(ngModel)]="serviceDescriptionData" />
+          <input type="hidden" name="selectedProductCodes" [(ngModel)]="selectedProductCodes" />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-heading">3. Enquiry Details</h3>
+          <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Enquiry Generated Through <span style="color: red;"> *</span>  </strong> </label>
+            <select name="enqGeneratedThrough" ngModel required>
+              <option disabled>--None--</option>
+              <option value="Email">{{'common.email' | translate}}</option>
+              <option value="Phone">{{'common.phone' | translate}}</option>
+              <option value="Web Portal">Web Portal</option>
+              <option value="Personal Meeting">Personal Meeting</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Reference By <span style="color: red;">*</span></strong></label>
+            <input type="text" name="reference" ngModel required />
+          </div>
+
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Sample Required</strong></label>
+            <select name="sample_required" [(ngModel)]="sample_required">
+              <option value=""></option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+          
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap remove-side-arrow-container" *ngIf="sample_required=='Yes'">
+            <label><strong>Sample Qty. (NOS)</strong></label>
+            <input type="number" name="sample_qty" ngModel />
+          </div>
+
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Reference sample</strong></label>
+            <select name="reference_sample" [(ngModel)]="Reference_sample">
+              <option value=""></option>
+              <option>Provided</option>
+              <option>Not Provided</option>
+            </select>
+          </div>
+ 
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap remove-side-arrow-container" *ngIf="Reference_sample=='Provided'">
+            <label><strong>No of Units</strong></label>
+            <input type="number" name="refNoOfunits" ngModel />
+          </div>
+           
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Req. For Country <span style="color: red;">*</span></strong></label>
+            <select name="country" ngModel required>
+              <option value=""></option>
+              <option *ngFor="let country of countries" [value]="country">{{ country }}</option>
+            </select>
+          </div>
+
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Upload Doc. If Any</strong></label>
+            <input type="file" name="other_req" (change)="onFileChanged($event)" ngModel>
+          </div>
+
+          <div class="clr-col-lg-12 clr-col-md-12 clr-col-sm-12 clr-col-xs-12 field-wrap">
+            <label><strong>Details</strong></label>
+            <textarea rows="3" name="details" ngModel></textarea>
+          </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="form-section product-section">
+        <h3 class="section-heading">
+          <span>4. Product Details</span>
+          <button type="button" class="btn btn-sm btn-info" (click)="isAddProduct = true">Add New Product</button>
+        </h3>
+
+        <div class="table-responsive product-table-wrap">
+          <table class="table table-border product-table">
+            <thead>
+              <tr>
+                <th>Sr No</th>
+                <th>Tentative Launch Dt.</th>
+                <th>Product Name</th>
+                <th>{{'common.table.action' | translate}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!productList.length">
+                <td colspan="4" class="empty-row">No products added yet.</td>
+              </tr>
+              <tr *ngFor="let product of productList; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td>{{ product.tentative_launch_dt | date:'dd-MM-yyyy' }}</td>
+                <td>{{ product.product_name }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info" (click)="view(product)">{{'common.view' | translate}}</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer">
+    <button class="btn btn-primary" type="button" [disabled]="isSubmitting" (click)="submit(clientform)">
+      {{ isSubmitting ? 'Saving...' : ('common.submit' | translate) }}
+    </button>
+    <button class="btn btn-danger" routerLink="/marketing/leads/firstRes">{{'common.close' | translate}}</button>
+  </div>
+</div>
+
+ 
+
+<clr-modal [(clrModalOpen)]="isProductView" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> View Product Details </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+        
+              <div class="clr-row">
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Tentative Launch Dt. <span style="color: red">*</span></label>
+                  <input type="date" name="tentative_launch_dt" [(ngModel)]="selectedProduct['tentative_launch_dt']" readonly required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product Name <span style="color: red">*</span></label>
+                  <input type="text" name="product_name" [(ngModel)]="selectedProduct['product_name']" readonly required>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Fill Volume of the Pack</label>
+                  <input type="text" name="suggestive_fill_volume" [(ngModel)]="selectedProduct['suggestive_fill_volume']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Demography</label>
+                  <input type="text" name="demography" [(ngModel)]="selectedProduct['demography']" readonly>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume Qty in Nos</label>
+                  <input type="text" name="projected_volume" [(ngModel)]="selectedProduct['projected_volume']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume For </label>
+                  <input type="text" name="projected_volume_for" [(ngModel)]="selectedProduct['projected_volume_for']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>FG Benchmark Product</label>
+                  <input type="text" name="fg_benchmark_product" [(ngModel)]="selectedProduct['fg_benchmark_product']" readonly >
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Fragrance Reference</label>
+                  <input  type="text" name="fragrance_reference" [(ngModel)]="selectedProduct['fragrance_reference']" readonly >
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Pack Size</label>
+                  <input type="text" name="pack_size" [(ngModel)]="selectedProduct['pack_size']" readonly >
+                </div>
+          
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Target Price</label>
+                  <input type="number" name="target_price" [(ngModel)]="selectedProduct['target_price']" readonly>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>MRP</label>
+                  <input type="number" name="mrp" [(ngModel)]="selectedProduct['mrp']" readonly >
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Other Description</label>
+                  <input type="text" name="otherDescription" [(ngModel)]="selectedProduct['otherDescription']" readonly>
+                </div>
+            
+              </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-danger" (click)="isProductView = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+ 
+
+<clr-modal [(clrModalOpen)]="isAddProduct" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> Add Product Details </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+        
+            <form #productForm="ngForm">
+              <div class="clr-row">
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Tentative Launch Dt. <span style="color: red">*</span></label>
+                  <input type="date" name="tentative_launch_dt" ngModel required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product Name <span style="color: red">*</span></label>
+                  <input type="text" name="product_name" ngModel required>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Fill Volume of the Pack</label>
+                  <input type="text" name="suggestive_fill_volume" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Demography</label>
+                  <select name="demography" ngModel>
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Unisex">Unisex</option>
+                  </select>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume Qty in Nos</label>
+                  <input type="text" name="projected_volume" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume For </label>
+                  <select name="projected_volume_for" ngModel>
+                    <option value="">Select</option>
+                    <option value="Monthly ">Monthly </option>
+                    <option value="Quaterly ">Quaterly </option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Category : <span style="color: red">*</span></label>
+                    <select name="category"  [(ngModel)]="category"  (change)="getProductByCategory()" required >
+                        <option></option>
+                        <option>Pharma</option>
+                        <option>Cosmetics</option>
+                        <option>Herbal/Ayurvedic</option>
+                    </select>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>FG Benchmark Product : <span style="color: red">*</span></label>
+                    <select name="fg_benchmark_product" ngModel  (change)="getProductCode($event.target.selectedIndex)" required  >
+                        <option value="">Select</option>
+                        <option>NA</option>
+                        <option *ngFor="let cli of products;" >{{ cli.product_name }}</option>
+                    </select>
+                </div>
+                
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                    <label>Fragrance Reference :</label>
+                    <select name="fragrance_reference" [(ngModel)]="fregrence"   (change)="checkFregrence($event.target.value)" required>
+                        <option></option>
+                        <option *ngFor="let freg of fregrences">{{ freg.fregrenceName }}</option>
+                        <option style="color: red" >OTHER</option>
+                    </select>
+                </div>
+
+                <!-- <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12" >
+                    <label>Pack Size :<span style="color: red">*</span></label>
+                    <select name="pack_size" ngModel required >
+                        <option></option>
+                        <option *ngFor="let data of packSizes" >{{ data.pack_size }} {{ data.unit }}</option>
+                    </select>
+                </div> -->
+  
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Pack Size :<span style="color: red">*</span></label>
+                  <input type="text" name="pack_size" ngModel required>
+                </div>
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Target Price</label>
+                  <input type="number" name="target_price" ngModel step="0.01">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>MRP</label>
+                  <input type="number" name="mrp" ngModel step="0.01">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Other Description</label>
+                  <input type="text" name="otherDescription" ngModel>
+                </div>
+   
+              </div>
+            </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" (click)="addProductToList(productForm)">{{'common.submit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isAddProduct = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal>
+
+  
+
+ 
+ <!-- <clr-modal [(clrModalOpen)]="isAddProduct" clrModalSize="xl"  [clrModalClosable]="true">
+  <h3 class="modal-title"> Add Product Details </h3>
+  <div class="modal-body">
+    <div class="card">
+      <div class="card-block">
+        <div class="card-text">
+        
+            <form #productForm="ngForm">
+              <div class="clr-row">
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Tentative Launch Dt. <span style="color: red">*</span></label>
+                  <input type="date" name="tentative_launch_dt" ngModel required>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product Name <span style="color: red">*</span></label>
+                  <input type="text" name="product_name" ngModel required>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Fill Volume of the Pack</label>
+                  <input type="text" name="suggestive_fill_volume" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Demography</label>
+                  <select name="demography" ngModel>
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Unisex">Unisex</option>
+                  </select>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume Qty in Nos</label>
+                  <input type="text" name="projected_volume" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Projected Volume For </label>
+                  <select name="projected_volume_for" ngModel>
+                    <option value="">Select</option>
+                    <option value="Monthly ">Monthly </option>
+                    <option value="Quaterly ">Quaterly </option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Primary Packaging Type</label>
+                  <textarea name="primary_packaging_type" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Suggestive Secondary Packaging Type</label>
+                  <textarea name="secondary_packaging_type" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Primary Claims</label>
+                  <textarea name="primary_claims" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Secondary Claim</label>
+                  <textarea name="secondary_claim" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Product / Material Certification for Technical Procurement</label>
+                  <textarea name="product_certification" ngModel rows="2"></textarea>
+                </div>
+              
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Colour Match Reference</label>
+                  <textarea name="colour_match_reference" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Textures / Appearance reference</label>
+                  <textarea name="textures_appearance_reference" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>FG Benchmark Product</label>
+                  <textarea name="fg_benchmark_product" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Performance Expectation</label>
+                  <textarea name="performance_expectation" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Ref. Product / Benchmark Prod. Ingredient List - Only for Ref.</label>
+                  <textarea name="benchmark_ingredient_list" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Fragrance Reference</label>
+                  <textarea name="fragrance_reference" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Phase of development</label>
+                  <textarea name="phase_of_development" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Export Requirement - Certification</label>
+                  <textarea name="export_certification" ngModel rows="2"></textarea>
+                </div>
+            
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Shelf Life as per customer</label>
+                  <textarea name="shelf_life" ngModel rows="2"></textarea>
+                </div>
+
+                <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12 clr-col-xs-12">
+                  <label>Mandatory Tests Reports</label>
+                  <textarea name="mandatory_tests_reports" ngModel rows="2"></textarea>
+                </div>
+            
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Target Price</label>
+                  <input type="number" name="target_price" ngModel step="0.01">
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>MRP</label>
+                  <input type="number" name="mrp" ngModel step="0.01">
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Timeline of the sample</label>
+                  <input type="text" name="sample_timeline" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Formula Number</label>
+                  <input type="text" name="formula_number" ngModel>
+                </div>
+              
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Date of Submission</label>
+                  <input type="date" name="submission_date" ngModel>
+                </div>
+
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Revision Required</label>
+                  <select name="revision_required" ngModel>
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+            
+                <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12 clr-col-xs-12">
+                  <label>Second Sample Submission</label>
+                  <select name="second_sample_submission" ngModel>
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" (click)="addProductToList(productForm)">{{'common.submit' | translate}}</button>
+    <button class="btn btn-danger" (click)="isAddProduct = false">{{'common.close' | translate}}</button>
+  </div>
+</clr-modal> -->

@@ -1,0 +1,454 @@
+<div class="card rcd-form">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        <span *ngIf="isLog && !isView">In-House APQR / APR Log (SOP-QA-027)</span>
+        <span *ngIf="!isLog && !isView">Annual Product Review — In-House Manufactured Products</span>
+        <span *ngIf="isView">View APQR Report</span>
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm btn-success" *ngIf="isLog && !isView" routerLink="/qa/annual-product-quality-review/inhouse/new" style="margin-right: 0.35rem">New Report</button>
+        <button class="btn btn-sm btn-secondary" *ngIf="!isLog || isView" routerLink="/qa/annual-product-quality-review/inhouse/log" style="margin-right: 0.35rem">Back to Log</button>
+        <button class="btn btn-sm" routerLink="/qa/annual-product-quality-review" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <!-- LOG -->
+    <ng-container *ngIf="isLog && !isView">
+      <div class="clr-row rcd-form__filters">
+        <div class="clr-col-lg-3 clr-col-md-4">
+          <label>From</label>
+          <input type="date" class="rcd-form__input" [(ngModel)]="fromDate" [max]="maxDate" />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-4">
+          <label>To</label>
+          <input type="date" class="rcd-form__input" [(ngModel)]="toDate" [max]="maxDate" />
+        </div>
+        <div class="clr-col-lg-3 clr-col-md-4" style="padding-top: 1.2rem">
+          <button class="btn btn-sm btn-primary" (click)="getLog()">Search</button>
+        </div>
+      </div>
+      <div class="rcd-form__scroll-wrap">
+        <table class="table table-compact rcd-form__log-table">
+          <thead>
+            <tr>
+              <th>Sr.</th>
+              <th>Product</th>
+              <th>Grade</th>
+              <th>Regulatory #</th>
+              <th>Reporting Period</th>
+              <th>Rating</th>
+              <th>Status</th>
+              <th>Prepared</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of results; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ r.product_name }}</td>
+              <td>{{ r.grade }}</td>
+              <td>{{ r.regulatory_ref }}</td>
+              <td>{{ r.reporting_from | date: 'dd-MM-yyyy' }} — {{ r.reporting_to | date: 'dd-MM-yyyy' }}</td>
+              <td>{{ r.overall_rating }}</td>
+              <td><span class="label" [ngClass]="statusClass(r.status)">{{ r.status }}</span></td>
+              <td>{{ r.prepared_by }}</td>
+              <td>
+                <button class="btn btn-sm btn-info" (click)="viewRecord(r)">View</button>
+                <button class="btn btn-sm btn-secondary" *ngIf="r.status === 'Draft'" (click)="editRecord(r)">Edit</button>
+                <button class="btn btn-sm btn-warning" (click)="downloadPdf(r)">PDF</button>
+              </td>
+            </tr>
+            <tr *ngIf="!results?.length">
+              <td colspan="9" style="text-align: center">No APQR reports found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- FORM -->
+    <form #apqrForm="ngForm" *ngIf="!isLog || isView">
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">FORM NO.:</td>
+          <td class="rcd-form__value-cell">{{ formNo }}</td>
+          <td class="rcd-form__label-cell">REF:</td>
+          <td class="rcd-form__value-cell">{{ sopRef }}</td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">REVISION NO.:</td>
+          <td class="rcd-form__value-cell">{{ revisionNo }}</td>
+          <td class="rcd-form__label-cell">EFFECTIVE DATE:</td>
+          <td class="rcd-form__value-cell">{{ effectiveDate }}</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="rcd-form__title-cell">ANNUAL PRODUCT QUALITY REVIEW / ANNUAL PRODUCT REVIEW</td>
+        </tr>
+      </table>
+
+      <div class="rcd-form__section-title">Cover Page</div>
+      <table class="rcd-form__sheet-table">
+        <tr>
+          <td class="rcd-form__label-cell">Report Title</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <input class="rcd-form__input" name="reportTitle" [(ngModel)]="reportTitle" required [readonly]="isView" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product Source</td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <label *ngIf="!isView"><input type="radio" name="productMode" value="master" [(ngModel)]="productSelectMode" /> Product Master</label>
+            <label *ngIf="!isView" style="margin-left: 1rem"><input type="radio" name="productMode" value="manual" [(ngModel)]="productSelectMode" /> Manual Entry</label>
+            <span *ngIf="isView">{{ productSelectMode === 'manual' ? 'Manual Entry' : 'Product Master' }}</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Product <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select *ngIf="!isView && productSelectMode === 'master'" class="rcd-form__select" name="productCode" [(ngModel)]="productCode" required (change)="onProductChange()">
+              <option value="">-- Select Product --</option>
+              <option *ngFor="let p of products" [value]="p.product_code">{{ p.product_name }} — {{ p.grade }}</option>
+            </select>
+            <input *ngIf="!isView && productSelectMode === 'manual'" class="rcd-form__input" name="productNameManual" [(ngModel)]="productName" required placeholder="Product description" />
+            <span *ngIf="isView">{{ productName }} <span *ngIf="grade">({{ grade }})</span></span>
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Generic Name</td>
+          <td class="rcd-form__value-cell">{{ genericName || '—' }}</td>
+          <td class="rcd-form__label-cell">NDA / ANDA Ref.</td>
+          <td class="rcd-form__value-cell">
+            <input class="rcd-form__input" name="regulatoryRef" [(ngModel)]="regulatoryRef" [readonly]="isView" />
+          </td>
+        </tr>
+        <tr>
+          <td class="rcd-form__label-cell">Reporting Period From <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <input type="date" class="rcd-form__input" name="reportingFrom" [(ngModel)]="reportingFrom" required [readonly]="isView" />
+          </td>
+          <td class="rcd-form__label-cell">Reporting Period To <span class="rcd-form__required">*</span></td>
+          <td class="rcd-form__value-cell">
+            <input type="date" class="rcd-form__input" name="reportingTo" [(ngModel)]="reportingTo" required [readonly]="isView" />
+          </td>
+        </tr>
+        <tr *ngIf="isView">
+          <td class="rcd-form__label-cell">Status</td>
+          <td class="rcd-form__value-cell"><span class="label" [ngClass]="statusClass(status)">{{ status }}</span></td>
+          <td class="rcd-form__label-cell">Prepared By</td>
+          <td class="rcd-form__value-cell">{{ selectedRecord?.prepared_by }}</td>
+        </tr>
+        <tr *ngIf="!isView || reportData.overall_rating">
+          <td class="rcd-form__label-cell">Overall Review Rating <span class="rcd-form__required" *ngIf="!isView">*</span></td>
+          <td class="rcd-form__value-cell" colspan="3">
+            <select class="rcd-form__select" name="overall_rating_cover" [(ngModel)]="reportData.overall_rating" [disabled]="isView">
+              <option value="">-- Select --</option>
+              <option *ngFor="let o of ratingOptions" [value]="o">{{ o }}</option>
+            </select>
+            <p class="rcd-form__note" *ngIf="!isView">
+              Required before submit (SOP-QA-027 §3.1.15). Final conclusion for the APQR committee:
+              <strong>Acceptable</strong> or <strong>Acceptable with conditions</strong> (risk assessment required).
+            </p>
+            <p class="rcd-form__note" *ngIf="reportData.overall_rating === 'Acceptable with conditions'">A risk assessment must be performed per SOP.</p>
+          </td>
+        </tr>
+      </table>
+
+      <p class="rcd-form__note" *ngIf="!isView">
+        Data sources: Product from master; batches from BMR; complaints from complaint module; recalls from product recall;
+        returns from return merchandise (SOP-QA-023); change controls from change control register.
+      </p>
+      <button type="button" class="btn btn-sm btn-info" *ngIf="!isView" (click)="loadSourceData()" [disabled]="loadingSource">
+        {{ loadingSource ? 'Loading…' : 'Load Source Data for Period' }}
+      </button>
+
+      <div class="rcd-form__tabs" *ngIf="!isView || isView">
+        <button type="button" class="rcd-form__tab" *ngFor="let s of sections" [class.is-active]="activeSection === s.key" (click)="setSection(s.key)">
+          {{ s.label }}
+        </button>
+      </div>
+
+      <!-- Executive Summary -->
+      <div *ngIf="activeSection === 'executive_summary'">
+        <div class="rcd-form__section-title">Executive Summary</div>
+        <textarea class="rcd-form__textarea" rows="6" name="executive_summary" [(ngModel)]="reportData.executive_summary" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Introduction -->
+      <div *ngIf="activeSection === 'introduction'">
+        <div class="rcd-form__section-title">Introduction</div>
+        <textarea class="rcd-form__textarea" rows="6" name="introduction" [(ngModel)]="reportData.introduction" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Manufacturing -->
+      <div *ngIf="activeSection === 'manufacturing'">
+        <div class="rcd-form__section-title">Master Processing Evaluation</div>
+        <label>Manufacturing History</label>
+        <textarea class="rcd-form__textarea" rows="3" name="manufacturing_history_notes" [(ngModel)]="reportData.manufacturing_history_notes" [readonly]="isView"></textarea>
+        <label>Master Formula Review</label>
+        <textarea class="rcd-form__textarea" rows="3" name="master_formula_review" [(ngModel)]="reportData.master_formula_review" [readonly]="isView"></textarea>
+        <label>Manufacturing Batches (from BMR / production)</label>
+        <div class="rcd-form__scroll-wrap">
+          <table class="rcd-form__sheet-table">
+            <thead>
+              <tr>
+                <th>Medicap Lot No</th>
+                <th>Mfg Date</th>
+                <th>Exp Date</th>
+                <th>Batch Size</th>
+                <th>Qty Produced</th>
+                <th>Yield %</th>
+                <th>Status</th>
+                <th>Remarks</th>
+                <th *ngIf="!isView"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of reportData.manufacturing_batches; let i = index">
+                <td><input class="rcd-form__input" [(ngModel)]="row.batch_no" [name]="'batch_no_' + i" [readonly]="isView" /></td>
+                <td><input type="date" class="rcd-form__input" [(ngModel)]="row.mfg_date" [name]="'mfg_' + i" [readonly]="isView" /></td>
+                <td><input type="date" class="rcd-form__input" [(ngModel)]="row.exp_date" [name]="'exp_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.batch_size" [name]="'bs_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.qty_produced" [name]="'qty_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.yield_percent" [name]="'yield_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.status" [name]="'st_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.remarks" [name]="'rm_' + i" [readonly]="isView" /></td>
+                <td *ngIf="!isView"><button type="button" class="btn btn-sm btn-danger" (click)="removeBatchRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" *ngIf="!isView" (click)="addBatchRow()">Add Batch Row</button>
+        <label>Manufacturing Yield Evaluation</label>
+        <textarea class="rcd-form__textarea" rows="3" name="manufacturing_yield_notes" [(ngModel)]="reportData.manufacturing_yield_notes" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Packaging -->
+      <div *ngIf="activeSection === 'packaging'">
+        <div class="rcd-form__section-title">Packaging Summary</div>
+        <label>Packaging Components</label>
+        <textarea class="rcd-form__textarea" rows="3" name="packaging_components" [(ngModel)]="reportData.packaging_components" [readonly]="isView"></textarea>
+        <label>Master Packaging Record Review</label>
+        <textarea class="rcd-form__textarea" rows="3" name="master_packaging_review" [(ngModel)]="reportData.master_packaging_review" [readonly]="isView"></textarea>
+        <label>Packaging Summary (Product &amp; Strength)</label>
+        <textarea class="rcd-form__textarea" rows="3" name="packaging_summary" [(ngModel)]="reportData.packaging_summary" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Equipment -->
+      <div *ngIf="activeSection === 'equipment'">
+        <div class="rcd-form__section-title">Equipment and System Qualification</div>
+        <textarea class="rcd-form__textarea" rows="8" name="equipment_qualification" [(ngModel)]="reportData.equipment_qualification" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Complaints -->
+      <div *ngIf="activeSection === 'complaints'">
+        <div class="rcd-form__section-title">Product Complaints</div>
+        <label>Product Quality Complaints Summary (from complaint module)</label>
+        <textarea class="rcd-form__textarea" rows="4" name="quality_complaints_summary" [(ngModel)]="reportData.quality_complaints_summary" [readonly]="isView"></textarea>
+        <label>Adverse Drug Events (ADEs)</label>
+        <textarea class="rcd-form__textarea" rows="3" name="adverse_drug_events" [(ngModel)]="reportData.adverse_drug_events" [readonly]="isView"></textarea>
+        <label>Trends &amp; CAPA Recommendations</label>
+        <textarea class="rcd-form__textarea" rows="3" name="complaint_trends" [(ngModel)]="reportData.complaint_trends" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Investigations -->
+      <div *ngIf="activeSection === 'investigations'">
+        <div class="rcd-form__section-title">Investigations — NCR / LIR</div>
+        <div class="rcd-form__scroll-wrap">
+          <table class="rcd-form__sheet-table">
+            <thead>
+              <tr>
+                <th>NCR / LIR #</th>
+                <th>Lot Numbers</th>
+                <th>Investigation</th>
+                <th>Root Cause</th>
+                <th>CAPA</th>
+                <th>Status</th>
+                <th *ngIf="!isView"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of reportData.investigations; let i = index">
+                <td><input class="rcd-form__input" [(ngModel)]="row.ref_no" [name]="'inv_ref_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.lot_numbers" [name]="'inv_lot_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.investigation" [name]="'inv_desc_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.root_cause" [name]="'inv_rc_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.capa" [name]="'inv_capa_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.status" [name]="'inv_st_' + i" [readonly]="isView" /></td>
+                <td *ngIf="!isView"><button type="button" class="btn btn-sm btn-danger" (click)="removeInvestigationRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" *ngIf="!isView" (click)="addInvestigationRow()">Add Row</button>
+        <label>Effectiveness Check of CAPA</label>
+        <textarea class="rcd-form__textarea" rows="3" name="investigation_effectiveness" [(ngModel)]="reportData.investigation_effectiveness" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Recall -->
+      <div *ngIf="activeSection === 'recall'">
+        <div class="rcd-form__section-title">Product Recall (from recall module)</div>
+        <div class="rcd-form__scroll-wrap">
+          <table class="rcd-form__sheet-table">
+            <thead>
+              <tr>
+                <th>Classification</th>
+                <th>Lot Numbers</th>
+                <th>Reason</th>
+                <th>Units Distributed</th>
+                <th>% Returned</th>
+                <th>Disposition</th>
+                <th>NCR Ref</th>
+                <th *ngIf="!isView"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of reportData.recalls; let i = index">
+                <td><input class="rcd-form__input" [(ngModel)]="row.classification" [name]="'rec_cls_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.lot_numbers" [name]="'rec_lot_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.reason" [name]="'rec_rsn_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.units_distributed" [name]="'rec_ud_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.percent_returned" [name]="'rec_pr_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.disposition" [name]="'rec_disp_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.ncr_ref" [name]="'rec_ncr_' + i" [readonly]="isView" /></td>
+                <td *ngIf="!isView"><button type="button" class="btn btn-sm btn-danger" (click)="removeRecallRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" *ngIf="!isView" (click)="addRecallRow()">Add Row</button>
+      </div>
+
+      <!-- Returns -->
+      <div *ngIf="activeSection === 'returns'">
+        <div class="rcd-form__section-title">Returned or Salvaged Products (SOP-QA-023)</div>
+        <div class="rcd-form__scroll-wrap">
+          <table class="rcd-form__sheet-table">
+            <thead>
+              <tr>
+                <th>Return #</th>
+                <th>Lot #</th>
+                <th>Investigation</th>
+                <th>Result</th>
+                <th>Disposition</th>
+                <th *ngIf="!isView"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of reportData.returns; let i = index">
+                <td><input class="rcd-form__input" [(ngModel)]="row.return_no" [name]="'ret_no_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.lot_number" [name]="'ret_lot_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.investigation" [name]="'ret_inv_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.result" [name]="'ret_res_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.disposition" [name]="'ret_disp_' + i" [readonly]="isView" /></td>
+                <td *ngIf="!isView"><button type="button" class="btn btn-sm btn-danger" (click)="removeReturnRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" *ngIf="!isView" (click)="addReturnRow()">Add Row</button>
+      </div>
+
+      <!-- Change Control -->
+      <div *ngIf="activeSection === 'change_control'">
+        <div class="rcd-form__section-title">Change Control</div>
+        <div class="rcd-form__scroll-wrap">
+          <table class="rcd-form__sheet-table">
+            <thead>
+              <tr>
+                <th>CC #</th>
+                <th>Title</th>
+                <th>Related To</th>
+                <th>Status</th>
+                <th>Remarks</th>
+                <th *ngIf="!isView"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of reportData.change_controls; let i = index">
+                <td><input class="rcd-form__input" [(ngModel)]="row.ctrl_no" [name]="'cc_no_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.change_title" [name]="'cc_title_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.change_related" [name]="'cc_rel_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.status" [name]="'cc_st_' + i" [readonly]="isView" /></td>
+                <td><input class="rcd-form__input" [(ngModel)]="row.remarks" [name]="'cc_rm_' + i" [readonly]="isView" /></td>
+                <td *ngIf="!isView"><button type="button" class="btn btn-sm btn-danger" (click)="removeChangeControlRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" *ngIf="!isView" (click)="addChangeControlRow()">Add Row</button>
+      </div>
+
+      <!-- Testing -->
+      <div *ngIf="activeSection === 'testing'">
+        <div class="rcd-form__section-title">Testing Commitments</div>
+        <label>In-Process Physical Testing</label>
+        <textarea class="rcd-form__textarea" rows="3" name="inprocess_physical_testing" [(ngModel)]="reportData.inprocess_physical_testing" [readonly]="isView"></textarea>
+        <label>In-Process / Finished Product Chemical Testing</label>
+        <textarea class="rcd-form__textarea" rows="3" name="inprocess_chemical_testing" [(ngModel)]="reportData.inprocess_chemical_testing" [readonly]="isView"></textarea>
+        <label>Statistical Analysis (dissolution, impurities, weight)</label>
+        <textarea class="rcd-form__textarea" rows="3" name="testing_statistical_analysis" [(ngModel)]="reportData.testing_statistical_analysis" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Stability -->
+      <div *ngIf="activeSection === 'stability'">
+        <div class="rcd-form__section-title">Stability Data</div>
+        <textarea class="rcd-form__textarea" rows="8" name="stability_summary" [(ngModel)]="reportData.stability_summary" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Validation -->
+      <div *ngIf="activeSection === 'validation'">
+        <div class="rcd-form__section-title">Validation</div>
+        <textarea class="rcd-form__textarea" rows="8" name="validation_summary" [(ngModel)]="reportData.validation_summary" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Agreements -->
+      <div *ngIf="activeSection === 'agreements'">
+        <div class="rcd-form__section-title">Quality Agreements</div>
+        <textarea class="rcd-form__textarea" rows="8" name="agreements_review" [(ngModel)]="reportData.agreements_review" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Retained Samples -->
+      <div *ngIf="activeSection === 'retained_samples'">
+        <div class="rcd-form__section-title">Retained Samples</div>
+        <textarea class="rcd-form__textarea" rows="8" name="retained_samples_evaluation" [(ngModel)]="reportData.retained_samples_evaluation" [readonly]="isView"></textarea>
+      </div>
+
+      <!-- Recommendations -->
+      <div *ngIf="activeSection === 'recommendations'">
+        <div class="rcd-form__section-title">Recommendations</div>
+        <label>Actions from Previous APQR — Effectiveness / Completion</label>
+        <textarea class="rcd-form__textarea" rows="3" name="previous_report_actions" [(ngModel)]="reportData.previous_report_actions" [readonly]="isView"></textarea>
+        <label>Overall Review Rating</label>
+        <p class="rcd-form__value-cell" style="padding: 0.35rem 0;">
+          <strong>{{ reportData.overall_rating || '— Not selected —' }}</strong>
+        </p>
+        <p class="rcd-form__note">Set on the cover page before submitting for committee review (SOP §3.1.15).</p>
+        <label>Summary &amp; Recommendations</label>
+        <textarea class="rcd-form__textarea" rows="5" name="recommendations" [(ngModel)]="reportData.recommendations" [readonly]="isView"></textarea>
+        <label>Proposed CAPA / Revalidation Completion Dates</label>
+        <textarea class="rcd-form__textarea" rows="3" name="capa_completion_dates" [(ngModel)]="reportData.capa_completion_dates" [readonly]="isView"></textarea>
+      </div>
+
+      <p class="rcd-form__confidential">Confidential Information: Do Not Disclose Without Authorization</p>
+
+      <div style="margin-top: 0.75rem" *ngIf="!isView">
+        <button type="button" class="btn btn-sm btn-secondary" (click)="saveDraft(apqrForm)">Save Draft</button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="submitForReview(apqrForm)" style="margin-left: 0.35rem">Submit for Committee Review</button>
+      </div>
+      <div style="margin-top: 0.75rem" *ngIf="isView && selectedRecord?.status === 'Pending Review'">
+        <button type="button" class="btn btn-sm btn-success" (click)="approveRecord()">Approve Final Report</button>
+        <button type="button" class="btn btn-sm btn-warning" (click)="downloadPdf(selectedRecord)" style="margin-left: 0.35rem">Download PDF</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="closeView()" style="margin-left: 0.35rem">Close</button>
+      </div>
+      <div style="margin-top: 0.75rem" *ngIf="isView && selectedRecord?.status !== 'Pending Review'">
+        <button type="button" class="btn btn-sm btn-warning" (click)="downloadPdf(selectedRecord)">Download PDF</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="closeView()" style="margin-left: 0.35rem">Close</button>
+      </div>
+    </form>
+  </div>
+</div>

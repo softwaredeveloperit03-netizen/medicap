@@ -1,0 +1,435 @@
+<div class="fh-wrap">
+  <div class="fh-toolbar">
+    <div class="fh-toolbar-title">
+      <i class="fas" [ngClass]="isPacking ? 'fa-box' : 'fa-industry'"></i> {{ docShortLabel }}
+      <span class="eb-hint">{{ docCodeLabel }} · {{ contextLabel }} · HTML / PDF · page header &amp; footer · read-only</span>
+    </div>
+    <button type="button" class="eb-btn eb-btn-solid" (click)="printDoc()">
+      <i class="fas fa-print"></i> Print / PDF — {{ docCodeLabel }}
+    </button>
+  </div>
+
+  <div class="fh-sheet" #docRoot [attr.id]="isPacking ? 'fh-master-doc-bpr' : 'fh-master-doc-bmr'" *ngIf="doc">
+    <!-- ===================== COVER / INDEX PAGE ===================== -->
+    <section class="fh-page">
+      <ng-container *ngTemplateOutlet="pageHeader; context: { page: 1, section: 'Document Control' }"></ng-container>
+
+      <div class="fh-letterhead">
+        <div>
+          <div class="fh-co">CYCLONE GMP</div>
+          <div class="fh-co-sub">Electronic Batch Record · {{ contextLabel }} · {{ docCodeLabel }}</div>
+        </div>
+        <div class="fh-doc-title">{{ docTitle }}</div>
+        <div class="fh-doc-sub">Final HTML {{ contextLabel }} {{ docCodeLabel }} (Controlled Copy)</div>
+      </div>
+
+      <h2 class="fh-h2">Product / Document Summary</h2>
+      <table class="fh-kv">
+        <tr>
+          <td>Product Code</td><td>{{ header.product_code || '—' }}</td>
+          <td>Product Name</td><td>{{ header.product_name || '—' }}</td>
+        </tr>
+        <tr>
+          <td>Generic Name</td><td>{{ header.generic_name || '—' }}</td>
+          <td>BMR No.</td><td>{{ header.bmr_no || '—' }}</td>
+        </tr>
+        <tr>
+          <td>Version No.</td><td>{{ versionNo }}</td>
+          <td>Dosage Form</td><td>{{ doc.dosage_form || '—' }}</td>
+        </tr>
+        <tr>
+          <td>Medicap Lot No</td><td [class.fh-blocked]="batchNoBlocked">{{ batchNoDisplay }}</td>
+          <td>Batch Size</td><td>{{ header.batch_size || '—' }} {{ header.batch_size_uom || '' }}</td>
+        </tr>
+        <tr>
+          <td>Commencement Date</td><td [class.fh-blocked]="commencementBlocked">{{ commencementDisplay }}</td>
+          <td>Completion Date</td><td [class.fh-blocked]="completionBlocked">{{ completionDisplay }}</td>
+        </tr>
+      </table>
+
+      <h2 class="fh-h2">Document Index</h2>
+      <table class="fh-table">
+        <thead>
+          <tr><th>Sr</th><th>Section</th><th>Details</th><th>Page</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>0</td>
+            <td>Document Control / Index</td>
+            <td>Cover &amp; summary</td>
+            <td>1</td>
+            <td>Configured</td>
+          </tr>
+          <tr *ngFor="let sp of staticPages; let i = index">
+            <td>S{{ i + 1 }}</td>
+            <td>{{ sp.label }}</td>
+            <td>Static page</td>
+            <td>{{ staticPageNo(i) }}</td>
+            <td>{{ staticStatus(sp.key) }}</td>
+          </tr>
+          <ng-container *ngFor="let stage of stages; let si = index">
+            <tr *ngFor="let step of stageSteps(stage); let ti = index">
+              <td>{{ si + 1 }}.{{ ti + 1 }}</td>
+              <td>{{ stage.stage_name }}</td>
+              <td>{{ step.step_name }} · {{ stepDetails(step) }}</td>
+              <td>{{ stagePageNo(si) }}</td>
+              <td>{{ stepStatus(step) }}</td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="!stages.length">
+            <td colspan="5" class="fh-empty">No process stages configured yet.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-container *ngTemplateOutlet="pageFooter; context: { page: 1 }"></ng-container>
+    </section>
+
+    <!-- ===================== STATIC PAGES (after index) ===================== -->
+    <section class="fh-page" *ngFor="let sp of staticPages; let i = index">
+      <ng-container
+        *ngTemplateOutlet="pageHeader; context: { page: staticPageNo(i), section: sp.label }"
+      ></ng-container>
+
+      <h2 class="fh-h2">{{ sp.label }}</h2>
+
+      <!-- Product Approval -->
+      <ng-container *ngIf="sp.key === 'product_approval'">
+        <app-product-approval-page [page]="productApprovalPage()" mode="view"></app-product-approval-page>
+        <p class="fh-empty" *ngIf="!staticHasContent('product_approval')">No product approval content configured.</p>
+      </ng-container>
+
+      <!-- General Instructions -->
+      <ng-container *ngIf="sp.key === 'general_instructions'">
+        <app-general-instructions-page [content]="generalInstructionsContent()" [editable]="false"></app-general-instructions-page>
+        <p class="fh-empty" *ngIf="!staticHasContent('general_instructions')">No general instructions configured.</p>
+      </ng-container>
+
+      <!-- Safety -->
+      <ng-container *ngIf="sp.key === 'safety'">
+        <app-safety-precautions [content]="safetyContent()" [editable]="false"></app-safety-precautions>
+        <p class="fh-empty" *ngIf="!staticHasContent('safety')">No safety &amp; precautions content configured.</p>
+      </ng-container>
+
+      <!-- Equipment Selection -->
+      <ng-container *ngIf="sp.key === 'equipment_selection'">
+        <table class="fh-table">
+          <thead>
+            <tr><th>Sr</th><th>Equipment</th><th>ID / No.</th><th>Capacity</th><th>UOM</th><th>Purpose / Location</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of equipmentSelection(); let ri = index">
+              <td>{{ ri + 1 }}</td>
+              <td>{{ r.name || '—' }}</td>
+              <td>{{ r.id_no || r.equipment_code || '—' }}</td>
+              <td>{{ r.capacity || '—' }}</td>
+              <td>{{ r.uom || '—' }}</td>
+              <td>{{ r.purpose || r.location || '—' }}</td>
+            </tr>
+            <tr *ngIf="!equipmentSelection().length"><td colspan="6" class="fh-empty">No equipment selected.</td></tr>
+          </tbody>
+        </table>
+      </ng-container>
+
+      <!-- Unit Formula -->
+      <ng-container *ngIf="sp.key === 'unit_formula'">
+        <p class="fh-meta" *ngIf="staticBag.unit_formula_meta">
+          MFR {{ staticBag.unit_formula_meta.mfr_no || '—' }}
+          · {{ staticBag.unit_formula_meta.product_code || header.product_code || '—' }}
+        </p>
+        <table class="fh-table">
+          <thead>
+            <tr><th>Sr</th><th>Material</th><th>Code</th><th>Qty</th><th>UOM</th><th>Function</th><th>Stage</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of unitFormulaRows(); let ri = index">
+              <td>{{ ri + 1 }}</td>
+              <td>{{ r.material || r.material_name || '—' }}</td>
+              <td>{{ r.material_code || r.code || '—' }}</td>
+              <td>{{ r.qty || r.quantity || '—' }}</td>
+              <td>{{ r.uom || '—' }}</td>
+              <td>{{ r.function || r.role || '—' }}</td>
+              <td>{{ r.stage || r.process_stage || '—' }}</td>
+            </tr>
+            <tr *ngIf="!unitFormulaRows().length"><td colspan="7" class="fh-empty">No unit formula lines.</td></tr>
+          </tbody>
+        </table>
+      </ng-container>
+
+      <!-- Product Specification -->
+      <ng-container *ngIf="sp.key === 'product_spec'">
+        <p class="fh-meta" *ngIf="staticBag.product_spec_meta">
+          Spec {{ staticBag.product_spec_meta.specification_no || '—' }}
+          · Ver {{ staticBag.product_spec_meta.version_no || '—' }}
+          · {{ staticBag.product_spec_meta.product_code || header.product_code || '—' }}
+        </p>
+        <table class="fh-table">
+          <thead>
+            <tr><th>Sr</th><th>Test / Parameter</th><th>Specification</th><th>Method</th><th>Stage</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of productSpecRows(); let ri = index">
+              <td>{{ ri + 1 }}</td>
+              <td>{{ r.test || r.parameter || r.test_name || '—' }}</td>
+              <td>{{ productSpecText(r) }}</td>
+              <td>{{ r.method || r.moa || '—' }}</td>
+              <td>{{ r.stage || '—' }}</td>
+            </tr>
+            <tr *ngIf="!productSpecRows().length"><td colspan="5" class="fh-empty">No product specification lines.</td></tr>
+          </tbody>
+        </table>
+      </ng-container>
+
+      <!-- Dispensing in Production -->
+      <ng-container *ngIf="sp.key === 'dispensing'">
+        <div *ngIf="dispensingMaterials().length" class="fh-block">
+          <div class="fh-block-title">Materials (from Unit Formula — Dispensing)</div>
+          <table class="fh-table">
+            <thead><tr><th>Sr</th><th>Material</th><th>Code</th><th>Std Qty</th><th>UOM</th><th>Stage</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let row of dispensingMaterials(); let ri = index">
+                <td>{{ ri + 1 }}</td>
+                <td>{{ row.material || row.material_name || '—' }}</td>
+                <td>{{ row.material_code || row.code || '—' }}</td>
+                <td>{{ row.qty || row.quantity || '—' }}</td>
+                <td>{{ row.uom || '—' }}</td>
+                <td>{{ row.stage || 'Dispensing in Production' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngFor="let section of dispensingPage().sections" class="fh-block">
+          <div class="fh-block-title">{{ section.heading }}</div>
+          <table class="fh-table">
+            <thead>
+              <tr>
+                <th>Sr</th>
+                <th>{{ isGeneralInstructionSection(section) ? 'Instruction' : 'Checkpoint' }}</th>
+                <th *ngIf="!isGeneralInstructionSection(section)">Description</th>
+                <th *ngIf="!isGeneralInstructionSection(section)">Evaluation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of section.rows; let ri = index">
+                <td>{{ ri + 1 }}</td>
+                <td>{{ row.check_point || row.text || '—' }}</td>
+                <td *ngIf="!isGeneralInstructionSection(section)">{{ row.description || '—' }}</td>
+                <td *ngIf="!isGeneralInstructionSection(section)">{{ dispensingEvalLabel(row.evaluation_parameter) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fh-empty" *ngIf="!dispensingMaterials().length && !dispensingPage().sections?.length">
+          No dispensing materials or checklist configured.
+        </p>
+      </ng-container>
+
+      <ng-container *ngTemplateOutlet="pageFooter; context: { page: staticPageNo(i) }"></ng-container>
+    </section>
+
+    <!-- ===================== ONE PAGE PER PROCESS STAGE ===================== -->
+    <section class="fh-page" *ngFor="let stage of stages; let si = index">
+      <ng-container
+        *ngTemplateOutlet="pageHeader; context: { page: stagePageNo(si), section: 'Stage ' + (si + 1) + ' — ' + stage.stage_name }"
+      ></ng-container>
+
+      <h2 class="fh-h2">Stage {{ si + 1 }}: {{ stage.stage_name }}</h2>
+      <p class="fh-instr" *ngIf="stage.config?.instructions">
+        <b>Stage instructions:</b> {{ stage.config.instructions }}
+      </p>
+      <p class="fh-meta" *ngIf="stage.frozen">
+        <b>Stage Frozen</b>
+        <span *ngIf="stage.frozen_by"> · {{ stage.frozen_by }}</span>
+        <span *ngIf="stage.frozen_at"> · {{ stage.frozen_at }}</span>
+      </p>
+
+      <div class="fh-step" *ngFor="let step of stageSteps(stage); let ti = index">
+        <div class="fh-step-head">
+          <span class="fh-step-no">{{ si + 1 }}.{{ ti + 1 }}</span>
+          <span class="fh-step-name">{{ step.step_name }}</span>
+          <span class="fh-badge">{{ stepStatus(step) }}</span>
+        </div>
+
+        <div class="fh-forms" *ngIf="enabledForms(step).length">
+          <span class="fh-chip" *ngFor="let f of enabledForms(step)">{{ formLabel(f) }}</span>
+        </div>
+
+        <div class="fh-block" *ngIf="step.config?.procedure">
+          <div class="fh-block-title">Procedure</div>
+          <div class="fh-rich" [innerHTML]="step.config.procedure"></div>
+        </div>
+
+        <table class="fh-table" *ngIf="checkpointRows(step, 'line_clearance').length">
+          <thead><tr><th colspan="2">Line Clearance</th></tr><tr><th>Checkpoint</th><th>Response (execution)</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of checkpointRows(step, 'line_clearance')">
+              <td>{{ c.text || c.name || '—' }}</td>
+              <td class="fh-blocked">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="fh-table" *ngIf="checkpointRows(step, 'inprocess_checks').length">
+          <thead>
+            <tr><th colspan="4">In-Process Checks</th></tr>
+            <tr><th>Check</th><th>Limit</th><th>Role</th><th>Frequency</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of checkpointRows(step, 'inprocess_checks')">
+              <td>{{ c.name }}</td>
+              <td>{{ c.limit || '—' }}</td>
+              <td>{{ c.role || 'Production' }}</td>
+              <td>{{ c.frequency || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="fh-table" *ngIf="checkpointRows(step, 'dept_checks').length">
+          <thead><tr><th colspan="2">Department Checks</th></tr><tr><th>Checkpoint</th><th>Response (execution)</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of checkpointRows(step, 'dept_checks')">
+              <td>{{ c.text || c.name || '—' }}</td>
+              <td class="fh-blocked">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="fh-table" *ngIf="checkpointRows(step, 'qa_checks').length">
+          <thead><tr><th colspan="2">QA Checks</th></tr><tr><th>Checkpoint</th><th>Response (execution)</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let c of checkpointRows(step, 'qa_checks')">
+              <td>{{ c.text || c.name || '—' }}</td>
+              <td class="fh-blocked">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="fh-table" *ngIf="equipmentRows(step).length">
+          <thead>
+            <tr><th colspan="5">Equipment</th></tr>
+            <tr><th>Name</th><th>ID</th><th>Capacity</th><th>Calibration</th><th>Make</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of equipmentRows(step)">
+              <td>{{ e.name }}</td>
+              <td>{{ e.id_no || e.equipment_code || '—' }}</td>
+              <td>{{ e.capacity || '—' }}{{ e.uom ? ' ' + e.uom : '' }}</td>
+              <td>{{ e.calibration_applicable || e.calibration_required || '—' }}</td>
+              <td>{{ e.make || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="fh-table" *ngIf="step.config?.step_timestamp?.enabled">
+          <thead>
+            <tr><th colspan="3">Step Time Stamp</th></tr>
+            <tr><th>Date</th><th>Start Time</th><th>End Time</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fh-blocked">BLOCKED — execution</td>
+              <td class="fh-blocked">BLOCKED — execution</td>
+              <td class="fh-blocked">BLOCKED — execution</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="fh-sign-title">Step Digital Signatures — Preparation</div>
+        <table class="fh-sign-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Name</th>
+              <th>Emp ID</th>
+              <th>Designation</th>
+              <th>Department</th>
+              <th>Date / Time</th>
+              <th>Token</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of stepSigners(step)">
+              <td>{{ s.role }}</td>
+              <td>{{ s.signed ? s.name : '—' }}</td>
+              <td>{{ s.signed ? s.empId : '—' }}</td>
+              <td>{{ s.signed ? (s.designation || '—') : '—' }}</td>
+              <td>{{ s.signed ? (s.department || '—') : '—' }}</td>
+              <td>{{ s.signed ? (s.dateTime || '—') : '—' }}</td>
+              <td class="fh-token">{{ s.signed ? (s.hashToken || '—') : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-container *ngTemplateOutlet="pageFooter; context: { page: stagePageNo(si) }"></ng-container>
+    </section>
+  </div>
+</div>
+
+<!-- PAGE HEADER (every page) -->
+<ng-template #pageHeader let-page="page" let-section="section">
+  <div class="fh-page-header">
+    <table class="fh-hdr-table">
+      <tr>
+        <td class="fh-hdr-brand">
+          <div class="fh-hdr-co">CYCLONE · {{ contextLabel }} {{ docCodeLabel }}</div>
+          <div class="fh-hdr-sec">{{ section }}</div>
+        </td>
+        <td>
+          <table class="fh-hdr-meta">
+            <tr>
+              <td>Product Name</td><td>{{ header.product_name || '—' }}</td>
+              <td>Product Code</td><td>{{ header.product_code || '—' }}</td>
+            </tr>
+            <tr>
+              <td>Generic Name</td><td>{{ header.generic_name || '—' }}</td>
+              <td>BMR No.</td><td>{{ header.bmr_no || '—' }}</td>
+            </tr>
+            <tr>
+              <td>Version No.</td><td>{{ versionNo }}</td>
+              <td>Medicap Lot No</td><td [class.fh-blocked]="batchNoBlocked">{{ batchNoBlocked ? 'BLOCKED' : batchNoDisplay }}</td>
+            </tr>
+            <tr>
+              <td>Commencement Date</td><td [class.fh-blocked]="commencementBlocked">{{ commencementBlocked ? 'BLOCKED' : commencementDisplay }}</td>
+              <td>Completion Date</td><td [class.fh-blocked]="completionBlocked">{{ completionBlocked ? 'BLOCKED' : completionDisplay }}</td>
+            </tr>
+          </table>
+        </td>
+        <td class="fh-hdr-page">Page {{ page }}</td>
+      </tr>
+    </table>
+  </div>
+</ng-template>
+
+<!-- PAGE FOOTER — Master Authorisation -->
+<ng-template #pageFooter let-page="page">
+  <div class="fh-page-footer">
+    <div class="fh-foot-title">{{ contextLabel }} {{ docCodeLabel }} Authorisation — Digital Signature Table</div>
+    <table class="fh-auth-table">
+      <thead>
+        <tr>
+          <th>Prepared By</th>
+          <th>Checked By</th>
+          <th>Reviewed By</th>
+          <th>Approved By</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td *ngFor="let s of masterAuthSigners()">
+            <div class="fh-auth-name">{{ s.signed ? s.name : '—' }}</div>
+            <div class="fh-auth-meta" *ngIf="s.signed">{{ s.empId }} · {{ s.designation || '—' }}</div>
+            <div class="fh-auth-meta" *ngIf="s.signed">{{ s.dateTime || '—' }}</div>
+            <div class="fh-auth-token" *ngIf="s.signed && s.hashToken">{{ s.hashToken }}</div>
+            <div class="fh-auth-empty" *ngIf="!s.signed">Pending digital signature</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="fh-foot-note">
+      Page {{ page }} ·
+      <span *ngIf="!isExecutionDoc">Medicap Lot No / Commencement / Completion remain blocked on master and are captured during batch execution.</span>
+      <span *ngIf="isExecutionDoc">Execution {{ docCodeLabel }} controlled copy — Batch {{ batchNoDisplay }}.</span>
+    </div>
+  </div>
+</ng-template>
