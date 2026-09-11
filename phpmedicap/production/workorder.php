@@ -52,17 +52,57 @@ if($result->num_rows > 0){
         $length = 4;
         $number = substr(str_repeat(0, $length).$last_id, - $length);
         $work_order_no =  "WO".$number;
+
+        $reuseId = 0;
+        $existSql = "SELECT id, work_order_no FROM mfg_work_order_hdr
+                     WHERE plant_id = '".$conn->real_escape_string($_GET["plant_id"])."'
+                       AND batch_plan_id = '".$conn->real_escape_string($input["batch_plan_id"])."'
+                       AND material_type = '".$conn->real_escape_string($input["material_type"] ?? 'RM')."'
+                     ORDER BY id DESC LIMIT 1";
+        $existRes = $conn->query($existSql);
+        if ($existRes && $existRes->num_rows > 0) {
+            $ex = $existRes->fetch_assoc();
+            $reuseId = intval($ex['id'] ?? 0);
+            if (trim((string)($ex['work_order_no'] ?? '')) !== '') {
+                $work_order_no = $ex['work_order_no'];
+            }
+        }
+
+        $savedOk = false;
+        if ($reuseId > 0) {
+            $sql = "UPDATE mfg_work_order_hdr SET
+                    batch_id='".$conn->real_escape_string($input["selected_batch_index"])."',
+                    lod_status='".$conn->real_escape_string($input["lod_criteria"])."',
+                    assay_status='".$conn->real_escape_string($input["assay_criteria"])."',
+                    batch_overages='".$conn->real_escape_string($input["batch_overages"])."',
+                    overages_percent='".$conn->real_escape_string($input["overages_percent"])."',
+                    ebmr_status='".$conn->real_escape_string($input["ebmr_status"])."',
+                    calculation_type='".$conn->real_escape_string($input["calculation_type"])."',
+                    no_of_lots='".$conn->real_escape_string($input["no_of_lots"])."',
+                    entry_by='".$conn->real_escape_string($_GET["emp_id"])."',
+                    material_type='".$conn->real_escape_string($input["material_type"])."',
+                    status='pending'
+                    WHERE id='".$reuseId."'";
+            $savedOk = $conn->query($sql);
+            if ($savedOk) {
+                $last_id = $reuseId;
+                $conn->query("DELETE FROM mfg_work_order_dtl WHERE work_order_id='".$last_id."'");
+                $conn->query("DELETE FROM work_order_batch_lots WHERE work_order_id='".$last_id."'");
+            }
+        } else {
+            $sql = "INSERT INTO mfg_work_order_hdr (plant_id,batch_plan_id,batch_id,work_order_no,lod_status,assay_status,
+            batch_overages,overages_percent,ebmr_status,calculation_type,no_of_lots,entry_by,material_type)
+            values('".$_GET["plant_id"]."','".$input["batch_plan_id"]."','".$input["selected_batch_index"]."','".$work_order_no."','".$input["lod_criteria"]."',
+                   '".$input["assay_criteria"]."','".$input["batch_overages"]."','".$input["overages_percent"]."',
+                   '".$input["ebmr_status"]."','".$input["calculation_type"]."','".$input["no_of_lots"]."','".$_GET["emp_id"]."',
+                   '".$input["material_type"]."')";
+            $savedOk = $conn->query($sql);
+            if ($savedOk) {
+                $last_id = $conn->insert_id;
+            }
+        }
         
-       
-        
-        $sql = "INSERT INTO mfg_work_order_hdr (plant_id,batch_plan_id,batch_id,work_order_no,lod_status,assay_status,
-        batch_overages,overages_percent,ebmr_status,calculation_type,no_of_lots,entry_by,material_type)
-        values('".$_GET["plant_id"]."','".$input["batch_plan_id"]."','".$input["selected_batch_index"]."','".$work_order_no."','".$input["lod_criteria"]."',
-               '".$input["assay_criteria"]."','".$input["batch_overages"]."','".$input["overages_percent"]."',
-               '".$input["ebmr_status"]."','".$input["calculation_type"]."','".$input["no_of_lots"]."','".$_GET["emp_id"]."',
-               '".$input["material_type"]."')";
-        if ($conn->query($sql)) {
-            $last_id = $conn->insert_id;
+        if ($savedOk) {
             $r_materials = $input["raw_materials"];
             for ($i = 0; $i <count($r_materials); $i++) {
                 $material = $r_materials[$i];
@@ -563,7 +603,10 @@ $date->modify('+1 day');
                             b.product_code
                     END
                 ) = p.product_code AND a.plant_id = p.plant_id
-                WHERE a.plant_id = '".$_GET["plant_id"]."' AND batch_number IS not NULL 
+                WHERE a.plant_id = '".$_GET["plant_id"]."'
+                AND a.status = 'approved'
+                AND TRIM(IFNULL(a.qa_person, '')) != ''
+                AND TRIM(IFNULL(a.batch_number, '')) NOT IN ('', ' ')
                 ORDER BY a.id DESC "; 
             
              

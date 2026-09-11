@@ -30,6 +30,58 @@ ini_set('display_errors', 1);
     $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "'.$_GET["type"].'", "actiontime": "'.$entry_date.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'"}';
     $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
 
+    if (!function_exists('bpFillPlanMaterialDisplay')) {
+        function bpFillPlanMaterialDisplay(&$mat) {
+            if (!is_array($mat)) {
+                return;
+            }
+            $qty = $mat['qty'] ?? ($mat['unit_qty'] ?? '');
+            $batchQty = $mat['batch_qty'] ?? $qty;
+            if (!isset($mat['overages']) || $mat['overages'] === null || $mat['overages'] === '') {
+                $mat['overages'] = '0';
+            }
+            if (!isset($mat['batch_overages']) || $mat['batch_overages'] === null || $mat['batch_overages'] === '') {
+                $mat['batch_overages'] = '0';
+            }
+            if (!isset($mat['total_qty']) || $mat['total_qty'] === null || $mat['total_qty'] === '') {
+                $mat['total_qty'] = $qty;
+            }
+            if (!isset($mat['total_unit_qty']) || $mat['total_unit_qty'] === null || $mat['total_unit_qty'] === '') {
+                $mat['total_unit_qty'] = $mat['total_qty'];
+            }
+            if (!isset($mat['total_final_qty']) || $mat['total_final_qty'] === null || $mat['total_final_qty'] === '') {
+                $mat['total_final_qty'] = $batchQty;
+            }
+            if (!isset($mat['total_batch_qty']) || $mat['total_batch_qty'] === null || $mat['total_batch_qty'] === '') {
+                $mat['total_batch_qty'] = $mat['total_final_qty'];
+            }
+            if (!isset($mat['lod_status']) || $mat['lod_status'] === null || trim((string)$mat['lod_status']) === '') {
+                $mat['lod_status'] = 'No';
+            }
+            if (!isset($mat['assay_status']) || $mat['assay_status'] === null || trim((string)$mat['assay_status']) === '') {
+                $mat['assay_status'] = 'No';
+            }
+            if (!isset($mat['stage']) || $mat['stage'] === null || trim((string)$mat['stage']) === '') {
+                $mat['stage'] = 'General';
+            }
+        }
+    }
+    if (!function_exists('bpPlanCompletionPct')) {
+        function bpPlanCompletionPct($conn, $planId, $plantId, $totalBatches) {
+            $totalBatches = max(1, intval($totalBatches));
+            $prepared = 0;
+            $sql = "SELECT COUNT(*) AS c FROM mfg_work_order_hdr
+                    WHERE batch_plan_id = '".intval($planId)."'
+                      AND plant_id = '".$conn->real_escape_string((string)$plantId)."'
+                      AND TRIM(IFNULL(lod_status,'')) <> ''";
+            $res = @$conn->query($sql);
+            if ($res && ($row = $res->fetch_assoc())) {
+                $prepared = intval($row['c'] ?? 0);
+            }
+            return strval((int)round(100 * $prepared / $totalBatches, 0));
+        }
+    }
+
     if ($_GET["type"] == "getProducts") {
         $output = array();
         //$sql = "SELECT b.product_code, p.product_name, p.grade FROM unitformula b LEFT JOIN product p ON b.product_code=p.product_code WHERE p.product_type='".$_GET["product_type"]."'  AND b.bom_type='".$_GET["bom_type"]."'  GROUP BY b.product_code";
@@ -184,6 +236,13 @@ ini_set('display_errors', 1);
     
     else if ($_GET["type"] == "getPlans") {
         $output = array();
+        $bpHelper = dirname(__DIR__) . '/marketing/can_planned_wo_helpers.php';
+        if (is_file($bpHelper)) {
+            require_once $bpHelper;
+        }
+        if (function_exists('stp_backfill_line_approved_batch_plans')) {
+            stp_backfill_line_approved_batch_plans($conn, $_GET['plant_id'] ?? '', $_GET['emp_id'] ?? '');
+        }
           $sql = "SELECT b.*, b.id,count(b.plan_no) as no_of_batches,uf.id as u_id, b.plan_no,b.plan_type,b.plan_type,b.plan_for,
           b.product_code,count(planned_qty) as min_output_qty,count(qty_can_planned) as max_output_qty,bf.rm_batch_size_unit as batch_size_unit, bf.rm_batch_size_unit,
           b.pack_unit as unit,b.status,b.entry_by,b.entry_date,p.product_name,cl.TrdNm as company,bf.batch_formula_weight as planned_batch_size
@@ -199,29 +258,30 @@ ini_set('display_errors', 1);
           ORDER By b.entry_date desc";
        
         $result = $conn->query($sql);
-        if ($result->num_rows > 0) {
+        if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 
                 $output1 = array();
                
-                   $sql1 ="SELECT a.*,c.role,c.split_into_lots,b.qty as avbl_stock,material_name, material_subtype from batch_planning_materials a left join(SELECT mt.material_code,mt.material_name,grade as m_grade,
+                   $sql1 ="SELECT a.*,c.role,c.split_into_lots,b.qty as avbl_stock,b.m_grade,material_name, material_subtype from batch_planning_materials a left join(SELECT mt.material_code,mt.material_name,grade as m_grade,
                 sum(sb.qty) as qty,mt.material_subtype FROM material mt left join stock_book sb on mt.material_code = sb.material_code group by mt.material_code,mt.grade,
                 mt.material_name,mt.material_subtype)b on a.material_code = b.material_code left join batch_materials c on a.bfr_no = c.bfr_no and a.material_code = c.material_code where a.material_type='Raw Material' and  a.batch_plan_id='".$row["id"]."'";
                 
                 
                
                 $result1 = $conn->query($sql1);
-               if ($result1->num_rows > 0) {
+               if ($result1 && $result1->num_rows > 0) {
                     while ($row1 = $result1->fetch_assoc()) {
-                         $q= "SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('". $row1['m_grade']."')";
+                         $mGrade = $row1['m_grade'] ?? ($row1['grade'] ?? '');
+                         $q= "SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('". mysqli_real_escape_string($conn, (string)$mGrade) ."')";
              $resQ = $conn->query($q);
-              $prodLatest = $resQ->fetch_assoc(); 
+              $prodLatest = ($resQ) ? $resQ->fetch_assoc() : null; 
          
-          $row1['gradeName'] = $prodLatest['gradeName']; 
+          $row1['gradeName'] = is_array($prodLatest) ? ($prodLatest['gradeName'] ?? '') : ''; 
           
           
-          $cleaned_material_code = mysqli_real_escape_string($conn, $row1['material_code']);
-$cleaned_plan_no = mysqli_real_escape_string($conn, $row['plan_no']);
+          $cleaned_material_code = mysqli_real_escape_string($conn, $row1['material_code'] ?? '');
+$cleaned_plan_no = mysqli_real_escape_string($conn, $row['plan_no'] ?? '');
 
 
 
@@ -232,22 +292,26 @@ $sql5 = "SELECT raw_materials FROM unitformula  a LEFT JOIN batch_planning b ON 
  
                              
                 $resQ1 = $conn->query($sql5);
-                $prodLatest1 = $resQ1->fetch_assoc(); 
+                $prodLatest1 = ($resQ1) ? $resQ1->fetch_assoc() : null; 
          
-            $matCode = $row1['material_code'];
+            $matCode = $row1['material_code'] ?? '';
                 
-                $json_obj1 = $prodLatest1['raw_materials'];
+                $json_obj1 = is_array($prodLatest1) ? ($prodLatest1['raw_materials'] ?? null) : null;
 $rmMaty = json_decode($json_obj1, true);
 
-if (json_last_error() === JSON_ERROR_NONE && isset($rmMaty)) {       
+if (json_last_error() === JSON_ERROR_NONE && is_array($rmMaty)) {       
         foreach ($rmMaty as $itm) {
-            
-             if($itm['material_Code'] == $matCode){
-                 $row1['percent_qty'] = $itm['percent_qty']; 
+            if (!is_array($itm)) {
+                continue;
+            }
+            $itmCode = $itm['material_Code'] ?? ($itm['material_code'] ?? '');
+             if($itmCode == $matCode){
+                 $row1['percent_qty'] = $itm['percent_qty'] ?? ''; 
              }
         }  
 }
                 
+                bpFillPlanMaterialDisplay($row1);
                 $output1[] = $row1;
                             
                             
@@ -271,7 +335,7 @@ if (json_last_error() === JSON_ERROR_NONE && isset($rmMaty)) {
                 pack_size,batch_size,unit from unitformula_pm_dtl where unit_formula_id ='".$row["u_id"]."' ";
                
                 $result1 = $conn->query($sql1);
-                if ($result1->num_rows > 0) {
+                if ($result1 && $result1->num_rows > 0) {
                     while ($row1 = $result1->fetch_assoc()) {
                         
                         $output2 = Array();
@@ -280,12 +344,12 @@ if (json_last_error() === JSON_ERROR_NONE && isset($rmMaty)) {
                     //   echo  $sql2 = "SELECT * from unitformula_packing_materials where unit_formula_dtl_id ='".$row1["id"]."' ";
                         
                         $result2 = $conn->query($sql2);
-                        if ($result2->num_rows > 0) {
+                        if ($result2 && $result2->num_rows > 0) {
                             while ($row2 = $result2->fetch_assoc()) {
                                 
                                 $sqlite = "select sum(qty) as avbl_stock from  stock_book where material_code = '".$row2['material_code']."'";
                                  $result3 = $conn->query($sqlite);
-                            if ($result3->num_rows > 0) {
+                            if ($result3 && $result3->num_rows > 0) {
                             while ($row66 = $result3->fetch_assoc()) {
                             
                                 $row2['avbl_stock'] = $row66['avbl_stock'];
@@ -305,6 +369,12 @@ if (json_last_error() === JSON_ERROR_NONE && isset($rmMaty)) {
                     
                 }
                 $row['packing_configuration'] =$output1;
+                $row['plan_comp_status'] = bpPlanCompletionPct(
+                    $conn,
+                    $row['id'] ?? 0,
+                    $_GET['plant_id'] ?? '',
+                    $row['total_batches'] ?? 1
+                );
                 $output[] = $row;
             }
         }
@@ -905,32 +975,29 @@ WHERE JSON_SEARCH(raw_materials, 'one', '".$row1['material_code']."') IS NOT NUL
     }
     
      else if ($_GET["type"] == "get_batch_plan_details") {
+        $output = array();
         $sql="SELECT a.id,a.batch_id,a.entry_date as plan_date, b.batch_size,b.bfr_no,b.mfr_no,a.status,a.qa_person ,
-        a.qa_date FROM  mfg_work_order_hdr a
+        a.qa_date, a.lod_status, a.assay_status, a.overages_percent, a.work_order_no, a.no_of_lots FROM  mfg_work_order_hdr a
               join batch_planning b on a.batch_plan_id = b.id and a.plant_id = b.plant_id
               where a.plant_id ='".$_GET["plant_id"]."' and a.batch_plan_id='".$_GET["batch_plan_id"]."'
               AND a.material_type = '".$_GET["material_type"]."' ";
            
         $result = $conn->query($sql);
-        if ($result->num_rows > 0) {
+        if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                  $output1 = Array();
                   $sql2="select a.*,b.avbl_stock from (SELECT a.*,b.material_type,b.material_subtype,b.material_name
                  FROM mfg_work_order_dtl a left join mfg_work_order_hdr c on a.work_order_id = c.id left join material b
-                 on a.material_code = b.material_code and c.plant_id = b.plant_id where a.work_order_id = '".$row["id"]."') as a join
+                 on a.material_code = b.material_code and c.plant_id = b.plant_id where a.work_order_id = '".$row["id"]."') as a left join
                  (SELECT material_code,sum(qty) as avbl_stock FROM stock_book
                  WHERE material_code in(SELECT material_code from mfg_work_order_dtl where work_order_id ='".$row["id"]."') 
                  GROUP by material_code) as b on a.material_code = b.material_code ";
                  
                  
                  $result1 = $conn->query($sql2);
-                 if ($result1->num_rows > 0) {
+                 if ($result1 && $result1->num_rows > 0) {
                     while ($row1 = $result1->fetch_assoc()) {
-                        
-                        
-                        
-                        
-                        
+                        bpFillPlanMaterialDisplay($row1);
                             $output1[]=$row1;   
                     }
                      

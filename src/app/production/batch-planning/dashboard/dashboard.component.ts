@@ -123,6 +123,7 @@ export class DashboardComponent implements OnInit {
         this.no_of_batches = Number(this.selectedResult['total_batches']);
         let batches = this.no_of_batches - this.batch_results.length;
         for (let j = 0; j < this.batch_results.length; j++) {
+          this.hydrateMaterialQtyFields(this.batch_results[j]['materials']);
           this.batches_list.push(this.batch_results[j]);
         }
         for (let i = 0; i < batches; i++) {
@@ -136,10 +137,64 @@ export class DashboardComponent implements OnInit {
             status: 'Pending',
             qa_person: '',
             qa_date: '',
+            lod_status: '',
+            assay_status: '',
           };
           this.batches_list.push(obj);
         }
       });
+  }
+
+  isIncompleteMfgWorkOrder(comp: any): boolean {
+    if (!comp || !(Number(comp.id || 0) > 0)) {
+      return true;
+    }
+    const lod = String(comp.lod_status || '').trim().toLowerCase();
+    const lots = String(comp.no_of_lots ?? '').trim();
+    const preparedLod =
+      lod === 'as such basis' || lod === 'lod basis' || lod === 'assay basis';
+    return !preparedLod && (lots === '' || lots === '0');
+  }
+
+  canPrepareMfgWorkOrder(comp: any): boolean {
+    return true;
+  }
+
+  hydrateMaterialQtyFields(list: any): void {
+    if (!Array.isArray(list)) {
+      return;
+    }
+    for (const m of list) {
+      const qty = m.qty ?? m.unit_qty ?? '';
+      const batchQty = m.batch_qty ?? qty;
+      if (m.overages === null || m.overages === undefined || m.overages === '') {
+        m.overages = 0;
+      }
+      if (m.batch_overages === null || m.batch_overages === undefined || m.batch_overages === '') {
+        m.batch_overages = 0;
+      }
+      if (m.total_qty === null || m.total_qty === undefined || m.total_qty === '') {
+        m.total_qty = qty;
+      }
+      if (m.total_unit_qty === null || m.total_unit_qty === undefined || m.total_unit_qty === '') {
+        m.total_unit_qty = m.total_qty ?? qty;
+      }
+      if (m.total_final_qty === null || m.total_final_qty === undefined || m.total_final_qty === '') {
+        m.total_final_qty = batchQty;
+      }
+      if (m.total_batch_qty === null || m.total_batch_qty === undefined || m.total_batch_qty === '') {
+        m.total_batch_qty = m.total_final_qty ?? batchQty;
+      }
+      if (!m.lod_status) {
+        m.lod_status = 'No';
+      }
+      if (!m.assay_status) {
+        m.assay_status = 'No';
+      }
+      if (!m.stage) {
+        m.stage = 'General';
+      }
+    }
   }
   groupedMaterials = [];
   view(index) {
@@ -152,9 +207,11 @@ export class DashboardComponent implements OnInit {
     this.isView = true;
     this.get_batch_plan_details();
     this.packing_materials = this.selectedResult['packing_material'];
-    this.raw_materials = this.selectedResult['raw_materials'];
-    this.work_order_raw_materials = this.selectedResult['raw_materials'];
+    this.raw_materials = this.selectedResult['raw_materials'] || [];
+    this.hydrateMaterialQtyFields(this.raw_materials);
+    this.work_order_raw_materials = this.raw_materials;
     this.work_order_packing_materials = this.selectedResult['packing_material'];
+    this.hydrateMaterialQtyFields(this.work_order_packing_materials);
 
     this.groupedMaterials = this.work_order_raw_materials.reduce(
       (group, material) => {
@@ -186,11 +243,15 @@ export class DashboardComponent implements OnInit {
     this.is_view_batches = true;
     this.is_prepare_work_order = false;
   }
-  prepareWorkOrder() {
+  prepareWorkOrder(comp: any = null) {
     this.has_coated_batches = 'No';
+    if (comp && Number(comp.batch_id || 0) > 0) {
+      this.selected_batch_index = Number(comp.batch_id);
+    }
     this.packing_materials = this.selectedResult['packing_material'];
-    this.raw_materials = this.selectedResult['raw_materials'];
-    this.work_order_raw_materials = this.selectedResult['raw_materials'];
+    this.raw_materials = this.selectedResult['raw_materials'] || [];
+    this.hydrateMaterialQtyFields(this.raw_materials);
+    this.work_order_raw_materials = this.raw_materials;
     for (let i = 0; i < this.work_order_raw_materials.length; i++) {
       if (this.work_order_raw_materials[i]['role'] == 'Coated') {
         this.has_coated_batches = 'Yes';
@@ -198,31 +259,50 @@ export class DashboardComponent implements OnInit {
     }
 
     this.work_order_packing_materials =
-      this.selectedResult['packing_configuration'][0]['packing_materials'];
+      (this.selectedResult['packing_configuration'] &&
+        this.selectedResult['packing_configuration'][0] &&
+        this.selectedResult['packing_configuration'][0]['packing_materials']) ||
+      [];
+    this.hydrateMaterialQtyFields(this.work_order_packing_materials);
     this.isView = false;
     this.is_view_batches = false;
     this.is_view_shortages = false;
     this.is_prepare_work_order = true;
-    console.log(this.work_order_packing_materials);
+    this.groupedMaterials = this.work_order_raw_materials.reduce(
+      (group, material) => {
+        const { stage } = material;
+        group[stage] = group[stage] ?? [];
+        group[stage].push(material);
+        return group;
+      },
+      {}
+    );
   }
 
   viewWorkOrder(idx) {
     this.work_order_raw_materials = [];
     this.work_order_packing_materials = [];
-    for (let i = 0; i < this.batch_results[idx]['materials'].length; i++) {
+    const materials =
+      this.batch_results && this.batch_results[idx]
+        ? this.batch_results[idx]['materials'] || []
+        : [];
+    for (let i = 0; i < materials.length; i++) {
       if (
-        this.batch_results[idx]['materials'][i]['material_type'] ==
+        materials[i]['material_type'] ==
         'Raw Material'
       ) {
-        this.work_order_raw_materials.push(
-          this.batch_results[idx]['materials'][i]
-        );
+        this.work_order_raw_materials.push(materials[i]);
       } else {
-        this.work_order_packing_materials.push(
-          this.batch_results[idx]['materials'][i]
-        );
+        this.work_order_packing_materials.push(materials[i]);
       }
     }
+    if (this.work_order_raw_materials.length === 0) {
+      this.work_order_raw_materials = [
+        ...(this.selectedResult['raw_materials'] || []),
+      ];
+    }
+    this.hydrateMaterialQtyFields(this.work_order_raw_materials);
+    this.hydrateMaterialQtyFields(this.work_order_packing_materials);
     this.isView = false;
     this.is_view_batches = false;
     this.is_view_shortages = false;

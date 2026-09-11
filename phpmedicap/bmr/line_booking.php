@@ -27,7 +27,11 @@ if($result->num_rows > 0){
     $sql = "INSERT INTO log (process,token,action,actiontime,department,emp_id,method,REMOTE_ADDR,frontend_url) VALUES ('FRONTEND','".$token."','".$_GET["type"]."','".$entry_date."','".$_GET["department"]."','".$_GET["emp_id"]."','".$_SERVER['REQUEST_METHOD']."','".$_SERVER['REMOTE_ADDR']."','".$currentUrl."')";
     $conn->query($sql);
     
-    $input = json_decode(file_get_contents('php://input'), true);
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode(($rawInput !== false && $rawInput !== '') ? $rawInput : '{}', true);
+    if (!is_array($input)) {
+        $input = array();
+    }
     
     // ============================================
     // STOCK VERIFICATION FUNCTION
@@ -201,6 +205,530 @@ if($result->num_rows > 0){
         
         return $verificationResult;
     }
+
+    if (!function_exists('lbEnsureLineMasterMappedTables')) {
+        function lbEnsureLineMasterMappedTables($conn) {
+            if (!($conn instanceof mysqli)) {
+                return;
+            }
+            @$conn->query("CREATE TABLE IF NOT EXISTS `linemaster_mapped_Equipment` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `linemaster_id` INT NULL DEFAULT NULL,
+                `equipment_name` VARCHAR(255) NULL DEFAULT NULL,
+                `equipment_code` VARCHAR(100) NULL DEFAULT NULL,
+                `capacity` VARCHAR(100) NULL DEFAULT NULL,
+                `from_range` VARCHAR(100) NULL DEFAULT NULL,
+                `to_range` VARCHAR(100) NULL DEFAULT NULL,
+                `unit` VARCHAR(50) NULL DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_lme_line` (`linemaster_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            @$conn->query("CREATE TABLE IF NOT EXISTS `linemaster_mapped_Product` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `linemaster_id` INT NULL DEFAULT NULL,
+                `product_code` VARCHAR(100) NULL DEFAULT NULL,
+                `category` VARCHAR(100) NULL DEFAULT NULL,
+                `dosage_form` VARCHAR(100) NULL DEFAULT NULL,
+                `generic_name` VARCHAR(255) NULL DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_lmp_line` (`linemaster_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            @$conn->query("CREATE TABLE IF NOT EXISTS `linemaster_groups_stages` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `linemaster_id` INT NULL DEFAULT NULL,
+                `dosage_form` VARCHAR(100) NULL DEFAULT NULL,
+                `stage` VARCHAR(100) NULL DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_lgs_line` (`linemaster_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
+    if (!function_exists('lbWoOrderJoinSql')) {
+        function lbWoOrderJoinSql() {
+            return " FROM Work_order_materials a
+                LEFT JOIN order_materials b ON a.order_no = b.order_no
+                  AND (b.product_code = a.product_code OR TRIM(IFNULL(a.product_code,'')) = '')";
+        }
+    }
+    if (!function_exists('lbLinemasterPlantSql')) {
+        function lbLinemasterPlantSql($conn, $alias = 'lm') {
+            $plant = mysqli_real_escape_string($conn, (string)($_GET['plant_id'] ?? ''));
+            static $hasCol = null;
+            if ($hasCol === null) {
+                $chk = @$conn->query("SHOW COLUMNS FROM linemaster LIKE 'plant_id'");
+                $hasCol = ($chk && $chk->num_rows > 0);
+            }
+            if ($plant === '' || !$hasCol) {
+                return '';
+            }
+            return " AND ({$alias}.plant_id = '{$plant}' OR {$alias}.plant_id IS NULL OR TRIM(IFNULL({$alias}.plant_id,'')) = '')";
+        }
+    }
+    if (!function_exists('lbWoPlantFilterSql')) {
+        function lbWoPlantFilterSql($conn) {
+            $plant = mysqli_real_escape_string($conn, (string)($_GET['plant_id'] ?? ''));
+            if ($plant === '') {
+                return '';
+            }
+            return " AND (a.plant_id = '{$plant}' OR a.plant_id IS NULL OR TRIM(IFNULL(a.plant_id,'')) = '')";
+        }
+    }
+    if (!function_exists('lbWoSearchAnd')) {
+        function lbWoSearchAnd($conn) {
+            $q = trim((string)($_GET['search'] ?? ''));
+            if ($q === '') {
+                return '';
+            }
+            $s = mysqli_real_escape_string($conn, $q);
+            return " AND (
+                a.workorder_no LIKE '%{$s}%'
+                OR a.order_no LIKE '%{$s}%'
+                OR a.product_code LIKE '%{$s}%'
+                OR b.product_code LIKE '%{$s}%'
+            )";
+        }
+    }
+    if (!function_exists('lbListPageParams')) {
+        function lbListPageParams($withLimit = false) {
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $limit = $withLimit ? max(0, intval($_GET['limit'] ?? 25)) : 0;
+            $offset = ($page - 1) * max($limit, 1);
+            return array($page, $limit, $offset);
+        }
+    }
+    if (!function_exists('lbCountJoin')) {
+        function lbCountJoin($conn, $joinSql) {
+            $res = @$conn->query("SELECT COUNT(*) AS c ".$joinSql);
+            if ($res && ($row = $res->fetch_assoc())) {
+                return intval($row['c'] ?? 0);
+            }
+            return 0;
+        }
+    }
+    if (!function_exists('lbPaginatedPayload')) {
+        function lbPaginatedPayload($rows, $total, $page, $limit) {
+            return array(
+                'status' => 'success',
+                'data' => $rows,
+                'total' => intval($total),
+                'page' => intval($page),
+                'limit' => intval($limit),
+            );
+        }
+    }
+    if (!function_exists('lbDecodeSelectedLines')) {
+        function lbDecodeSelectedLines($raw) {
+            if (is_array($raw)) {
+                return $raw;
+            }
+            if ($raw === null || $raw === '') {
+                return array();
+            }
+            $decoded = json_decode((string)$raw, true);
+            return is_array($decoded) ? $decoded : array();
+        }
+    }
+    if (!function_exists('lbProductLineArea')) {
+        function lbProductLineArea($conn, $productCode) {
+            $code = trim((string)$productCode);
+            if ($code === '') {
+                return '';
+            }
+            $codeEsc = mysqli_real_escape_string($conn, $code);
+            $sql = "SELECT lm.Section AS area
+                    FROM product p
+                    INNER JOIN linemaster_groups_stages lgs ON lgs.dosage_form = p.dosage_form
+                    INNER JOIN linemaster lm ON lm.id = lgs.linemaster_id
+                    WHERE p.product_code = '".$codeEsc."'
+                      AND TRIM(IFNULL(lm.Section, '')) != ''
+                    ORDER BY lm.line_no ASC
+                    LIMIT 1";
+            $res = $conn->query($sql);
+            if ($res && $res->num_rows > 0) {
+                $r = $res->fetch_assoc();
+                return trim((string)($r['area'] ?? ''));
+            }
+            return '';
+        }
+    }
+    if (!function_exists('lbEnrichSelectedLinesFromMaster')) {
+        function lbEnrichSelectedLinesFromMaster($conn, $selectedLines) {
+            if (!is_array($selectedLines)) {
+                return array();
+            }
+            foreach ($selectedLines as &$line) {
+                if (!is_array($line)) {
+                    continue;
+                }
+                $id = intval($line['id'] ?? ($line['linemaster_id'] ?? 0));
+                if ($id <= 0) {
+                    $line['area'] = $line['area'] ?? ($line['Section'] ?? '');
+                    continue;
+                }
+                $res = $conn->query("SELECT * FROM linemaster WHERE id = ".$id." LIMIT 1");
+                if ($res && $res->num_rows > 0) {
+                    $master = $res->fetch_assoc();
+                    $line = array_merge($master, $line);
+                    $section = trim((string)($master['Section'] ?? ($line['Section'] ?? '')));
+                    $line['Section'] = $section;
+                    $line['area'] = $section !== '' ? $section : trim((string)($line['area'] ?? ''));
+                } else {
+                    $line['area'] = $line['area'] ?? ($line['Section'] ?? '');
+                }
+            }
+            unset($line);
+            return $selectedLines;
+        }
+    }
+    if (!function_exists('lbValidateBookingPlan')) {
+        function lbValidateBookingPlan($conn, $plantId, $wo, $selectedLines, $startDate, $startTime, $endDate, $endTime) {
+            $lines = is_array($selectedLines) ? $selectedLines : array();
+            $kg = floatval($wo['batch_size_kg'] ?? ($wo['batch_size'] ?? ($wo['plan_qty'] ?? 0)));
+            $eqRuns = 0;
+            $area = '';
+            foreach ($lines as $line) {
+                if (!is_array($line)) {
+                    continue;
+                }
+                if ($area === '') {
+                    $area = trim((string)($line['area'] ?? ($line['Section'] ?? '')));
+                }
+                if (!empty($line['equipmentList']) && is_array($line['equipmentList'])) {
+                    $eqRuns += count($line['equipmentList']);
+                } elseif (!empty($line['equipment_count'])) {
+                    $eqRuns += intval($line['equipment_count']);
+                }
+            }
+            $summary = $area !== '' ? $area : 'Line selected';
+            if ($eqRuns > 0) {
+                $summary .= ' · '.$eqRuns.' equipment';
+            }
+            return array(
+                'valid' => true,
+                'errors' => array(),
+                'warnings' => array(),
+                'equipment_runs' => $eqRuns,
+                'equipment_summary' => $summary,
+                'quantities' => array('batch_size_kg' => $kg),
+            );
+        }
+    }
+    if (!function_exists('lbEnrichLineCandidate')) {
+        function lbEnrichLineCandidate($conn, $plantId, $lineRow, $woContext, $lineType) {
+            $lineRow['line_type'] = $lineType;
+            $lineRow['suggested_schedule'] = null;
+            $lineRow['capacity_validation'] = array('valid' => true);
+            return $lineRow;
+        }
+    }
+    if (!function_exists('lbAutoSelectBestLine')) {
+        function lbAutoSelectBestLine($candidates) {
+            return (is_array($candidates) && count($candidates) > 0) ? $candidates[0] : null;
+        }
+    }
+    if (!function_exists('lbIsBlankDate')) {
+        function lbIsBlankDate($v) {
+            $v = trim((string)$v);
+            if ($v === '' || strtolower($v) === 'null') {
+                return true;
+            }
+            return strpos($v, '0000-00-00') === 0;
+        }
+    }
+    if (!function_exists('lbFillWoQtyAndDates')) {
+        function lbFillWoQtyAndDates(&$row) {
+            $dd = $row['deliveryDate'] ?? '';
+            if (lbIsBlankDate($dd)) {
+                $dd = $row['om_deliveryDate'] ?? ($row['delivery_date'] ?? '');
+            }
+            if (lbIsBlankDate($dd)) {
+                $dd = $row['om_deliveryDate_fallback'] ?? '';
+            }
+            $row['deliveryDate'] = lbIsBlankDate($dd) ? '' : $dd;
+            $row['delivery_date'] = $row['deliveryDate'];
+
+            $kg = floatval($row['batch_size_kg'] ?? 0);
+            if ($kg <= 0) {
+                $kg = floatval($row['batch_size'] ?? 0);
+            }
+            if ($kg <= 0) {
+                $kg = floatval($row['plan_qty'] ?? 0);
+            }
+            if ($kg <= 0) {
+                $kg = floatval($row['work_order_planned_qty'] ?? 0);
+            }
+            if ($kg > 0) {
+                $row['batch_size_kg'] = $kg;
+            }
+        }
+    }
+    if (!function_exists('lbEnrichWoDisplayRow')) {
+        function lbEnrichWoDisplayRow($conn, &$row) {
+            if (empty($row['product_code']) && !empty($row['om_product_code'])) {
+                $row['product_code'] = $row['om_product_code'];
+            }
+            lbFillWoQtyAndDates($row);
+            if (empty($row['area']) && empty($row['line_area']) && !empty($row['product_code'])) {
+                $row['line_area'] = lbProductLineArea($conn, $row['product_code']);
+                $row['area'] = $row['line_area'];
+            }
+        }
+    }
+    if (!function_exists('summarizeLineNumbers')) {
+        function summarizeLineNumbers($selectedLines) {
+            if (!is_array($selectedLines)) {
+                return '';
+            }
+            $nos = array();
+            foreach ($selectedLines as $line) {
+                if (is_array($line) && !empty($line['line_no'])) {
+                    $nos[] = $line['line_no'];
+                }
+            }
+            return implode(', ', $nos);
+        }
+    }
+    if (!function_exists('filterLinesByCategory')) {
+        function filterLinesByCategory($selectedLines, $category) {
+            if (!is_array($selectedLines)) {
+                return array();
+            }
+            $out = array();
+            foreach ($selectedLines as $line) {
+                $cat = $line['line_type_category'] ?? ($line['line_type'] ?? '');
+                if (strcasecmp((string)$cat, (string)$category) === 0) {
+                    $out[] = $line;
+                }
+            }
+            return $out;
+        }
+    }
+    if (!function_exists('resolveLineTypeCategory')) {
+        function resolveLineTypeCategory($lineRow) {
+            $t = strtolower(trim((string)($lineRow['line_type'] ?? $lineRow['lineType'] ?? '')));
+            if (strpos($t, 'pack') !== false) {
+                return 'packing';
+            }
+            return 'manufacturing';
+        }
+    }
+    if (!function_exists('lbRecheckWorkOrderOwnCodeStock')) {
+        function lbRecheckWorkOrderOwnCodeStock($conn, $workorder_no, $plant_id) {
+            $deductions = array();
+            $shortage_materials = array();
+            $sql = "SELECT * FROM WO_deductions WHERE workorder_no = '".mysqli_real_escape_string($conn, $workorder_no)."'";
+            $res = @$conn->query($sql);
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    $deductions[] = $row;
+                    if (floatval($row['shortage'] ?? 0) > 0) {
+                        $shortage_materials[] = $row;
+                    }
+                }
+            }
+            return array(
+                'deductions' => $deductions,
+                'has_shortage' => count($shortage_materials) > 0,
+                'shortage_materials' => $shortage_materials,
+            );
+        }
+    }
+    if (!function_exists('lbEnsureColumn')) {
+        function lbEnsureColumn($conn, $table, $column, $definition) {
+            $col = @$conn->query("SHOW COLUMNS FROM `".$table."` LIKE '".mysqli_real_escape_string($conn, $column)."'");
+            if (!$col || $col->num_rows === 0) {
+                @$conn->query("ALTER TABLE `".$table."` ADD COLUMN `".$column."` ".$definition);
+            }
+        }
+    }
+    if (!function_exists('lbEnsureStpSchema')) {
+        function lbEnsureStpSchema($conn) {
+            if (!($conn instanceof mysqli)) {
+                return;
+            }
+            $woCols = array(
+                'selectedLines' => "LONGTEXT NULL",
+                'expected_production_start_date' => "VARCHAR(30) NULL",
+                'expected_production_start_time' => "VARCHAR(20) NULL",
+                'expected_production_end_date' => "VARCHAR(30) NULL",
+                'expected_production_end_time' => "VARCHAR(20) NULL",
+                'no_of_hours_required' => "VARCHAR(20) NULL",
+                'responsible_person' => "VARCHAR(255) NULL",
+                'stp_planned_flag' => "VARCHAR(10) NULL DEFAULT 'No'",
+                'stp_planned_by' => "VARCHAR(100) NULL",
+                'stp_planned_on' => "VARCHAR(50) NULL",
+                'stp_line_approval_status' => "VARCHAR(30) NULL",
+                'stp_line_approval_sent_by' => "VARCHAR(100) NULL",
+                'stp_line_approval_sent_on' => "VARCHAR(50) NULL",
+                'advance_planning_flag' => "VARCHAR(10) NULL DEFAULT 'No'",
+            );
+            foreach ($woCols as $col => $def) {
+                lbEnsureColumn($conn, 'Work_order_materials', $col, $def);
+            }
+            @$conn->query("CREATE TABLE IF NOT EXISTS `line_booking` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `workorder_no` VARCHAR(100) NULL,
+                `linemaster_id` INT NULL,
+                `line_no` VARCHAR(50) NULL,
+                `product_code` VARCHAR(100) NULL,
+                `product_name` VARCHAR(255) NULL,
+                `booking_start_date` VARCHAR(30) NULL,
+                `booking_start_time` VARCHAR(20) NULL,
+                `booking_end_date` VARCHAR(30) NULL,
+                `booking_end_time` VARCHAR(20) NULL,
+                `responsible_person` VARCHAR(255) NULL,
+                `selected_equipments` LONGTEXT NULL,
+                `capacity_required` VARCHAR(50) NULL,
+                `no_of_hours_required` VARCHAR(20) NULL,
+                `status` VARCHAR(50) NULL DEFAULT 'Parked',
+                `entry_by` VARCHAR(100) NULL,
+                `entry_date` VARCHAR(50) NULL,
+                `updated_by` VARCHAR(100) NULL,
+                `updated_date` VARCHAR(50) NULL,
+                `plant_id` VARCHAR(20) NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_lb_wo` (`workorder_no`),
+                KEY `idx_lb_line` (`linemaster_id`),
+                KEY `idx_lb_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $lbCols = array(
+                'workorder_no' => "VARCHAR(100) NULL",
+                'linemaster_id' => "INT NULL",
+                'line_no' => "VARCHAR(50) NULL",
+                'product_code' => "VARCHAR(100) NULL",
+                'product_name' => "VARCHAR(255) NULL",
+                'booking_start_date' => "VARCHAR(30) NULL",
+                'booking_start_time' => "VARCHAR(20) NULL",
+                'booking_end_date' => "VARCHAR(30) NULL",
+                'booking_end_time' => "VARCHAR(20) NULL",
+                'responsible_person' => "VARCHAR(255) NULL",
+                'selected_equipments' => "LONGTEXT NULL",
+                'capacity_required' => "VARCHAR(50) NULL",
+                'no_of_hours_required' => "VARCHAR(20) NULL",
+                'status' => "VARCHAR(50) NULL DEFAULT 'Parked'",
+                'entry_by' => "VARCHAR(100) NULL",
+                'entry_date' => "VARCHAR(50) NULL",
+                'updated_by' => "VARCHAR(100) NULL",
+                'updated_date' => "VARCHAR(50) NULL",
+                'plant_id' => "VARCHAR(20) NULL",
+            );
+            foreach ($lbCols as $col => $def) {
+                lbEnsureColumn($conn, 'line_booking', $col, $def);
+            }
+        }
+    }
+    if (!function_exists('lbSlimSelectedLines')) {
+        function lbSlimSelectedLines($selectedLines) {
+            $out = array();
+            if (!is_array($selectedLines)) {
+                return $out;
+            }
+            foreach ($selectedLines as $line) {
+                if (!is_array($line)) {
+                    continue;
+                }
+                $id = $line['id'] ?? ($line['linemaster_id'] ?? '');
+                $out[] = array(
+                    'id' => $id,
+                    'linemaster_id' => $line['linemaster_id'] ?? $id,
+                    'line_no' => $line['line_no'] ?? '',
+                    'line_name' => $line['line_name'] ?? '',
+                    'Section' => $line['Section'] ?? ($line['area'] ?? ''),
+                    'area' => $line['area'] ?? ($line['Section'] ?? ''),
+                    'lineType' => $line['lineType'] ?? ($line['Type'] ?? ($line['line_type_category'] ?? '')),
+                    'line_type_category' => $line['line_type_category'] ?? ($line['lineType'] ?? ($line['Type'] ?? '')),
+                    'Type' => $line['Type'] ?? ($line['lineType'] ?? ''),
+                    'equipmentList' => is_array($line['equipmentList'] ?? null) ? $line['equipmentList'] : array(),
+                );
+            }
+            return $out;
+        }
+    }
+    if (!function_exists('stpUpsertParkedLineBookings')) {
+        function stpUpsertParkedLineBookings($conn, $workorderNo, $selectedLines, $parkMeta, $empId, $entryDate, $plantId) {
+            lbEnsureStpSchema($conn);
+            $count = 0;
+            $errors = array();
+            $selectedLines = lbSlimSelectedLines($selectedLines);
+            if (!is_array($selectedLines) || count($selectedLines) === 0) {
+                return array('count' => 0, 'errors' => array('No selected lines'));
+            }
+            foreach ($selectedLines as $line) {
+                $linemasterId = intval($line['id'] ?? $line['linemaster_id'] ?? 0);
+                $lineNo = trim((string)($line['line_no'] ?? ''));
+                if ($linemasterId <= 0 && $lineNo !== '') {
+                    $lnEsc = mysqli_real_escape_string($conn, $lineNo);
+                    $find = @$conn->query("SELECT id FROM linemaster WHERE line_no = '".$lnEsc."' LIMIT 1");
+                    if ($find && $find->num_rows > 0) {
+                        $linemasterId = intval($find->fetch_assoc()['id'] ?? 0);
+                    }
+                }
+                if ($linemasterId <= 0) {
+                    $errors[] = 'Missing line id for '.$lineNo;
+                    continue;
+                }
+                $woEsc = mysqli_real_escape_string($conn, $workorderNo);
+                $exists = @$conn->query("SELECT id FROM line_booking
+                    WHERE workorder_no = '".$woEsc."'
+                      AND linemaster_id = '".$linemasterId."'
+                      AND status NOT IN ('Cancelled')
+                    LIMIT 1");
+                $equipJson = mysqli_real_escape_string($conn, json_encode($line['equipmentList'] ?? array()));
+                $fields = array(
+                    "product_code = '".mysqli_real_escape_string($conn, (string)($parkMeta['product_code'] ?? ''))."'",
+                    "product_name = '".mysqli_real_escape_string($conn, (string)($parkMeta['product_name'] ?? ''))."'",
+                    "line_no = '".mysqli_real_escape_string($conn, $lineNo)."'",
+                    "booking_start_date = '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_start_date'] ?? ''))."'",
+                    "booking_start_time = '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_start_time'] ?? '00:00:00'))."'",
+                    "booking_end_date = '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_end_date'] ?? ''))."'",
+                    "booking_end_time = '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_end_time'] ?? '23:59:59'))."'",
+                    "responsible_person = '".mysqli_real_escape_string($conn, (string)($parkMeta['responsible_person'] ?? ''))."'",
+                    "selected_equipments = '".$equipJson."'",
+                    "capacity_required = '".mysqli_real_escape_string($conn, (string)($parkMeta['batch_size'] ?? ($parkMeta['plan_qty'] ?? '')))."'",
+                    "status = 'Parked'",
+                    "entry_by = '".mysqli_real_escape_string($conn, (string)$empId)."'",
+                    "entry_date = '".mysqli_real_escape_string($conn, (string)$entryDate)."'",
+                    "plant_id = '".mysqli_real_escape_string($conn, (string)$plantId)."'",
+                );
+                if ($exists && $exists->num_rows > 0) {
+                    $rowId = intval($exists->fetch_assoc()['id'] ?? 0);
+                    $sql = "UPDATE line_booking SET ".implode(', ', $fields)." WHERE id = ".$rowId." LIMIT 1";
+                } else {
+                    $sql = "INSERT INTO line_booking (
+                        workorder_no, linemaster_id, line_no, product_code, product_name,
+                        booking_start_date, booking_start_time, booking_end_date, booking_end_time,
+                        responsible_person, selected_equipments, capacity_required, status, entry_by, entry_date, plant_id
+                    ) VALUES (
+                        '".$woEsc."',
+                        '".$linemasterId."',
+                        '".mysqli_real_escape_string($conn, $lineNo)."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['product_code'] ?? ''))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['product_name'] ?? ''))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_start_date'] ?? ''))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_start_time'] ?? '00:00:00'))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_end_date'] ?? ''))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['booking_end_time'] ?? '23:59:59'))."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['responsible_person'] ?? ''))."',
+                        '".$equipJson."',
+                        '".mysqli_real_escape_string($conn, (string)($parkMeta['batch_size'] ?? ($parkMeta['plan_qty'] ?? '')))."',
+                        'Parked',
+                        '".mysqli_real_escape_string($conn, (string)$empId)."',
+                        '".mysqli_real_escape_string($conn, (string)$entryDate)."',
+                        '".mysqli_real_escape_string($conn, (string)$plantId)."'
+                    )";
+                }
+                if ($conn->query($sql)) {
+                    $count++;
+                } else {
+                    $errors[] = $conn->error;
+                }
+            }
+            return array('count' => $count, 'errors' => $errors);
+        }
+    }
+
+    lbEnsureLineMasterMappedTables($conn);
+    lbEnsureStpSchema($conn);
     
     // ============================================
     // GET VERIFIED WORK ORDERS (Sent for Batch Allocation)
@@ -210,11 +738,24 @@ if($result->num_rows > 0){
         
         $sql = "SELECT a.*, b.product_code, b.work_order_planned_qty, b.planMonth,
                 b.mainGroupName, b.packingStyle AS packing_type,
+                b.deliveryDate AS om_deliveryDate,
+                (SELECT NULLIF(NULLIF(TRIM(om.deliveryDate), ''), '0000-00-00')
+                   FROM order_materials om
+                  WHERE om.order_no = a.order_no
+                  ORDER BY CASE WHEN om.product_code = COALESCE(a.product_code, b.product_code) THEN 0 ELSE 1 END, om.id DESC
+                  LIMIT 1) AS om_deliveryDate_fallback,
                 (SELECT product_name FROM product c 
-                 WHERE b.product_code = c.product_code LIMIT 1) AS product_name 
+                 WHERE COALESCE(b.product_code, a.product_code) = c.product_code LIMIT 1) AS product_name 
                 FROM Work_order_materials a
                 LEFT JOIN order_materials b ON a.order_no = b.order_no
                 WHERE a.status = 'Sent for Batch Allocation'
+                AND IFNULL(a.stp_planned_flag, 'No') != 'Yes'
+                AND LOWER(TRIM(IFNULL(a.stp_line_approval_status, ''))) NOT IN ('pending', 'approved')
+                AND NOT EXISTS (
+                    SELECT 1 FROM line_booking lbq
+                    WHERE lbq.workorder_no = a.workorder_no
+                      AND lbq.status IN ('Parked', 'Booked')
+                )
                 ORDER BY a.Wo_Generated_on DESC";
         
         $result = $conn->query($sql);
@@ -236,8 +777,17 @@ if($result->num_rows > 0){
                     $colorIndex++;
                 }
                 $row["bg_color"] = $colorMap[$po];
+                lbFillWoQtyAndDates($row);
+                if (empty($row['area']) && empty($row['line_area'])) {
+                    $row['line_area'] = lbProductLineArea($conn, $row['product_code'] ?? '');
+                    $row['area'] = $row['line_area'];
+                }
                 
-                   $row["selectedLines"] = json_decode($row["selectedLines"]);
+                $row["selectedLines"] = json_decode($row["selectedLines"] ?? '[]', true);
+                if (!is_array($row["selectedLines"])) {
+                    $row["selectedLines"] = array();
+                }
+                $row["selectedLines"] = lbEnrichSelectedLinesFromMaster($conn, $row["selectedLines"]);
                 // Get deductions/materials
                 $deductions = [];
                 $dedSql = "SELECT * FROM WO_deductions WHERE workorder_no = '".$row['workorder_no']."'";
@@ -262,13 +812,21 @@ if($result->num_rows > 0){
                 
                 // Get available lines based on product dosage form
                 $availableLines = [];
-                $dosageForm = $row["mainGroupName"] ?? '';
+                $productCodeEsc = mysqli_real_escape_string($conn, $row['product_code'] ?? '');
+                $dosageForm = '';
+                if ($productCodeEsc !== '') {
+                    $dfRes = $conn->query("SELECT dosage_form FROM product WHERE product_code = '".$productCodeEsc."' LIMIT 1");
+                    if ($dfRes && $dfRes->num_rows > 0) {
+                        $dfRow = $dfRes->fetch_assoc();
+                        $dosageForm = trim((string)($dfRow['dosage_form'] ?? ''));
+                    }
+                }
                 if ($dosageForm != '') {
                     $lineSql = "SELECT lm.*, 
                                 (SELECT COUNT(*) FROM linemaster_mapped_Equipment WHERE linemaster_id = lm.id) as equipment_count
                                 FROM linemaster lm
                                 LEFT JOIN linemaster_groups_stages lgs ON lm.id = lgs.linemaster_id
-                                WHERE lgs.dosage_form = '".$dosageForm."'
+                                WHERE lgs.dosage_form = '".mysqli_real_escape_string($conn, $dosageForm)."'
                                 GROUP BY lm.id
                                 ORDER BY lm.line_no";
                     $lineResult = $conn->query($lineSql);
@@ -299,6 +857,7 @@ if($result->num_rows > 0){
                                 }
                             }
                             $lineRow["stages"] = $stages;
+                            $lineRow["area"] = $lineRow["Section"] ?? '';
                             
                             // Check if line is available for booking (no conflicts)
                             $lineRow["isAvailable"] = true;
@@ -307,6 +866,10 @@ if($result->num_rows > 0){
                     }
                 }
                 $row["Lines"] = $availableLines;
+                if ((empty($row['area']) && empty($row['line_area'])) && count($availableLines) > 0) {
+                    $row['line_area'] = $availableLines[0]['area'] ?? ($availableLines[0]['Section'] ?? '');
+                    $row['area'] = $row['line_area'];
+                }
                 
                 $output[] = $row;
             }
@@ -419,7 +982,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // GET AVAILABLE LINES FOR PRODUCT
     // ============================================
      else if ($_GET["type"] == "updateActualDates") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $booking_id = $input['booking_id'] ?? '';
         
         if (empty($booking_id)) {
@@ -572,6 +1137,7 @@ else if ($_GET["type"] == "getBookedStock") {
                     }
                 }
                 $lineRow["stages"] = $stages;
+                $lineRow["area"] = $lineRow["Section"] ?? '';
                 
                 // Check availability (conflict detection)
                 $isAvailable = true;
@@ -1353,16 +1919,41 @@ else if ($_GET["type"] == "getBookedStock") {
                     wom.workorder_no,
                     wom.order_no,
                     wom.selectedLines,
-                    (SELECT lb.product_code 
-                     FROM line_booking lb 
-                     WHERE lb.workorder_no = wom.workorder_no 
-                     AND lb.status = 'Parked' 
-                     LIMIT 1) as product_code,
-                    (SELECT lb.product_name 
-                     FROM line_booking lb 
-                     WHERE lb.workorder_no = wom.workorder_no 
-                     AND lb.status = 'Parked' 
-                     LIMIT 1) as product_name,
+                    wom.batch_size,
+                    wom.expected_production_start_date,
+                    wom.expected_production_start_time,
+                    wom.expected_production_end_date,
+                    wom.expected_production_end_time,
+                    wom.no_of_hours_required,
+                    wom.responsible_person AS wo_responsible_person,
+                    COALESCE(
+                        NULLIF(TRIM(wom.product_code), ''),
+                        (SELECT lb.product_code FROM line_booking lb
+                          WHERE lb.workorder_no = wom.workorder_no AND lb.status = 'Parked' LIMIT 1)
+                    ) as product_code,
+                    (SELECT p.product_name FROM product p
+                      WHERE p.product_code = COALESCE(NULLIF(TRIM(wom.product_code), ''),
+                        (SELECT lb.product_code FROM line_booking lb
+                          WHERE lb.workorder_no = wom.workorder_no AND lb.status = 'Parked' LIMIT 1))
+                      LIMIT 1) as product_name,
+                    (SELECT om.planMonth FROM order_materials om
+                      WHERE om.order_no = wom.order_no
+                      ORDER BY CASE WHEN om.product_code = wom.product_code THEN 0 ELSE 1 END, om.id DESC
+                      LIMIT 1) AS planMonth,
+                    (SELECT NULLIF(NULLIF(TRIM(om.deliveryDate), ''), '0000-00-00')
+                       FROM order_materials om
+                      WHERE om.order_no = wom.order_no
+                      ORDER BY CASE WHEN om.product_code = wom.product_code THEN 0 ELSE 1 END, om.id DESC
+                      LIMIT 1) AS om_deliveryDate,
+                    COALESCE(
+                        (SELECT NULLIF(TRIM(om.mainGroupName), '') FROM order_materials om
+                          WHERE om.order_no = wom.order_no
+                          ORDER BY CASE WHEN om.product_code = wom.product_code THEN 0 ELSE 1 END, om.id DESC
+                          LIMIT 1),
+                        (SELECT c.LglNm FROM po_entry po
+                          LEFT JOIN client c ON po.client_code = c.client_code
+                          WHERE po.order_no = wom.order_no LIMIT 1)
+                    ) AS mainGroupName,
                     (SELECT lb.capacity_required 
                      FROM line_booking lb 
                      WHERE lb.workorder_no = wom.workorder_no 
@@ -1372,11 +1963,14 @@ else if ($_GET["type"] == "getBookedStock") {
                      FROM line_booking lb 
                      WHERE lb.workorder_no = wom.workorder_no 
                      AND lb.status = 'Parked' 
-                     LIMIT 1) as responsible_person,
-                   (SELECT om.plant_id 
-                     FROM order_materials om left join po_entry po on om.order_no=po.order_no 
-                     WHERE om.order_no = wom.order_no 
-                     LIMIT 1) as planUnit,
+                     LIMIT 1) as lb_responsible_person,
+                    COALESCE(
+                        NULLIF(TRIM(wom.planUnit), ''),
+                        (SELECT NULLIF(TRIM(om.planUnit), '') FROM order_materials om
+                          WHERE om.order_no = wom.order_no
+                          ORDER BY CASE WHEN om.product_code = wom.product_code THEN 0 ELSE 1 END, om.id DESC
+                          LIMIT 1)
+                    ) AS planUnit,
                     (SELECT po.client_code 
                      FROM order_materials om left join po_entry po on om.order_no=po.order_no 
                      WHERE om.order_no = wom.order_no 
@@ -1386,14 +1980,16 @@ else if ($_GET["type"] == "getBookedStock") {
                      WHERE om.order_no = wom.order_no 
                      LIMIT 1) as client_name
                 FROM Work_order_materials wom
-                WHERE wom.selectedLines IS NOT NULL 
-                AND wom.selectedLines != ''
-                AND wom.selectedLines != 'null'
-                AND EXISTS (
-                    SELECT 1 FROM line_booking lb2 
-                    WHERE lb2.workorder_no = wom.workorder_no 
-                    AND lb2.status = 'Parked'
+                WHERE (
+                    LOWER(TRIM(IFNULL(wom.stp_line_approval_status, ''))) = 'pending'
+                    OR EXISTS (
+                        SELECT 1 FROM line_booking lb2
+                        WHERE lb2.workorder_no = wom.workorder_no
+                        AND lb2.status = 'Parked'
+                    )
                 )
+                AND LOWER(TRIM(IFNULL(wom.stp_line_approval_status, ''))) NOT IN ('approved', 'rejected')
+                AND IFNULL(wom.advance_planning_flag, 'No') != 'Yes'
                 ORDER BY wom.workorder_no DESC";
         
         $result = $conn->query($sql);
@@ -1402,7 +1998,20 @@ else if ($_GET["type"] == "getBookedStock") {
             while ($row = $result->fetch_assoc()) {
                 // Parse selectedLines JSON
                 $selectedLines = json_decode($row["selectedLines"] ?? '[]', true);
-                $row["selectedLines"] = $selectedLines;
+                $row["selectedLines"] = is_array($selectedLines) ? $selectedLines : array();
+                if (empty($row['responsible_person'])) {
+                    $row['responsible_person'] = $row['wo_responsible_person'] ?? ($row['lb_responsible_person'] ?? '');
+                }
+                if (empty($row['mainGroupName'])) {
+                    $row['mainGroupName'] = $row['client_name'] ?? '';
+                }
+                if (empty($row['plan_qty']) || floatval($row['plan_qty']) <= 0) {
+                    $row['plan_qty'] = $row['batch_size'] ?? '';
+                }
+                lbFillWoQtyAndDates($row);
+                if (function_exists('lbEnrichWoDisplayRow')) {
+                    lbEnrichWoDisplayRow($conn, $row);
+                }
                 
                 // Get deductions/materials for stock verification
                 $deductions = [];
@@ -1566,7 +2175,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // APPROVE WORK ORDER (Change status from Parked to Booked)
     // ============================================
     else if ($_GET["type"] == "approveWorkOrder") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_id = $input["workorder_id"] ?? '';
         $workorder_no = $input["workorder_no"] ?? '';
         
@@ -1584,6 +2195,22 @@ else if ($_GET["type"] == "getBookedStock") {
                 AND status = 'Parked'";
         
         if ($conn->query($sql)) {
+            $woEsc = mysqli_real_escape_string($conn, $workorder_no);
+            @$conn->query("UPDATE Work_order_materials SET
+                    stp_line_approval_status = 'Approved'
+                  WHERE workorder_no = '".$woEsc."'");
+            $bpHelper = dirname(__DIR__) . '/marketing/can_planned_wo_helpers.php';
+            if (is_file($bpHelper)) {
+                require_once $bpHelper;
+            }
+            if (function_exists('stp_ensure_batch_plan_for_work_order')) {
+                stp_ensure_batch_plan_for_work_order(
+                    $conn,
+                    $workorder_no,
+                    $_GET['emp_id'] ?? '',
+                    $_GET['plant_id'] ?? ''
+                );
+            }
             // Log the action to database log table
             $logEntryDate = date("Y-m-d H:i:s", time());
             $actionWithWO = 'approveWorkOrder: ' . mysqli_real_escape_string($conn, $workorder_no);
@@ -1595,7 +2222,7 @@ else if ($_GET["type"] == "getBookedStock") {
             $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "approveWorkOrder", "actiontime": "'.$logEntryDate.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'", "workorder_no": "'.$workorder_no.'"}';
             $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
             
-            echo json_encode(['status' => 'success', 'message' => 'Work order approved successfully']);
+            echo json_encode(['status' => 'success', 'message' => 'Line approved. Next step: Production → Batch Planning.']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Failed to approve work order: ' . $conn->error]);
         }
@@ -1605,7 +2232,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // REJECT WORK ORDER (Remove parked entries)
     // ============================================
     else if ($_GET["type"] == "rejectWorkOrder") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_id = $input["workorder_id"] ?? '';
         $workorder_no = $input["workorder_no"] ?? '';
         
@@ -1622,7 +2251,9 @@ else if ($_GET["type"] == "getBookedStock") {
         if ($conn->query($sql)) {
             // Also clear selectedLines from Work_order_materials
             $sql2 = "UPDATE Work_order_materials 
-                     SET selectedLines = NULL 
+                     SET selectedLines = NULL,
+                         stp_line_approval_status = 'Rejected',
+                         stp_planned_flag = 'No'
                      WHERE workorder_no = '".mysqli_real_escape_string($conn, $workorder_no)."'";
             $conn->query($sql2);
             
@@ -1985,7 +2616,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // SAVE STAGE DATE (Save or update tentative/actual completion date)
     // ============================================
     else if ($_GET["type"] == "saveStageDate") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_no = $input['workorder_no'] ?? '';
         $dosage_form = $input['dosage_form'] ?? '';
         $stage = $input['stage'] ?? '';
@@ -2074,7 +2707,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // Actual indent creation happens in purchase/indent.php?type=savePlanningIndentStore
     // ============================================
     else if ($_GET["type"] == "raiseIndentForShortage") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_no = $input["workorder_no"] ?? '';
         $materials = $input["materials"] ?? [];
         
@@ -2124,7 +2759,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // UPDATE INDENT STATUS
     // ============================================
     else if ($_GET["type"] == "updateIndentStatus") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_no = $input["workorder_no"] ?? '';
         $indent_status = $input["indent_status"] ?? 'Raised';
         
@@ -2237,7 +2874,9 @@ else if ($_GET["type"] == "getBookedStock") {
     // SAVE STAGE DATE (Save or update tentative/actual completion date)
     // ============================================
     else if ($_GET["type"] == "saveStageDate") {
-        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) {
+            $input = array();
+        }
         $workorder_no = $input['workorder_no'] ?? '';
         $dosage_form = $input['dosage_form'] ?? '';
         $stage = $input['stage'] ?? '';
@@ -2333,7 +2972,7 @@ else if ($_GET["type"] == "getBookedStock") {
         foreach ($workOrders as $wo) {
             $workorderNo = trim($wo['workorder_no'] ?? '');
             $workorderId = trim((string)($wo['workorder_id'] ?? ''));
-            $selectedLines = lbEnrichSelectedLinesFromMaster($conn, $wo['selectedLines'] ?? []);
+            $selectedLines = lbSlimSelectedLines(lbEnrichSelectedLinesFromMaster($conn, $wo['selectedLines'] ?? []));
             $startDate = trim($wo['expected_production_start_date'] ?? '');
             $startTime = trim($wo['expected_production_start_time'] ?? '');
             $endDate = trim($wo['expected_production_end_date'] ?? '');
@@ -2866,7 +3505,7 @@ else if ($_GET["type"] == "getBookedStock") {
         $total = lbCountJoin($conn, $joinSql);
         $sql = "SELECT a.*, b.product_code AS om_product_code, b.planMonth, b.mainGroupName,
                        b.packingStyle AS packing_type, b.planQty AS order_materials_planQty,
-                       b.planUnit AS order_materials_planUnit, b.deliveryDate,
+                       b.planUnit AS order_materials_planUnit, b.deliveryDate AS om_deliveryDate,
                        COALESCE(NULLIF(TRIM(b.product_name), ''),
                            (SELECT product_name FROM product p WHERE p.product_code = COALESCE(NULLIF(TRIM(a.product_code), ''), b.product_code) LIMIT 1)
                        ) AS product_name
@@ -2960,7 +3599,7 @@ else if ($_GET["type"] == "getBookedStock") {
 
         $sql = "SELECT a.*, b.product_code AS om_product_code, b.work_order_planned_qty, b.planMonth,
                 b.planQty AS order_materials_planQty, b.planUnit AS order_materials_planUnit,
-                b.mainGroupName, b.packingStyle AS packing_type, b.deliveryDate,
+                b.mainGroupName, b.packingStyle AS packing_type, b.deliveryDate AS om_deliveryDate,
                 COALESCE(NULLIF(TRIM(b.product_name), ''),
                     (SELECT product_name FROM product c WHERE c.product_code = COALESCE(NULLIF(TRIM(a.product_code), ''), b.product_code) LIMIT 1)
                 ) AS product_name
@@ -2998,7 +3637,7 @@ else if ($_GET["type"] == "getBookedStock") {
         $output = [];
         $sql = "SELECT a.*, b.product_code AS om_product_code, b.work_order_planned_qty, b.planMonth,
                        b.planQty AS order_materials_planQty, b.planUnit AS order_materials_planUnit,
-                       b.mainGroupName, b.packingStyle AS packing_type, b.deliveryDate,
+                       b.mainGroupName, b.packingStyle AS packing_type, b.deliveryDate AS om_deliveryDate,
                        COALESCE(NULLIF(TRIM(b.product_name), ''),
                            (SELECT product_name FROM product p WHERE p.product_code = COALESCE(NULLIF(TRIM(a.product_code), ''), b.product_code) LIMIT 1)
                        ) AS product_name

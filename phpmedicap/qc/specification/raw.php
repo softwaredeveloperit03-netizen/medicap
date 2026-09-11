@@ -21,12 +21,15 @@
     $timestamp = time();
     $entry_date = date("Y-m-d h:i:s", $timestamp);
     $input = json_decode(file_get_contents('php://input'),true);
+    if (!is_array($input)) {
+        $input = array();
+    }
     $counter = 1;
     $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
     $result = $conn->query($sql);
     $_GET["emp_id"] = "";
     $_GET["department"] = "";
-    if($result->num_rows > 0){
+    if($result && $result->num_rows > 0){
     while($row = $result->fetch_assoc()){
 	    $string = decrypt('decrypt',$_GET["token"],$row["key1"],$row["key2"]);
 	    $string = explode("$",$string);
@@ -555,46 +558,86 @@
         }
     }
     else if ($_GET["type"] == "saveSpecificationRevisionRequest") {
-        $refDocNo = isset($input["specification_no"]) ? trim($input["specification_no"]) : '';
-        $refDocId = isset($input["specification_id"]) ? trim($input["specification_id"]) : '';
-        $refDocName = isset($input["specification_name"]) ? trim($input["specification_name"]) : '';
-        $reason = isset($input["reason"]) ? trim($input["reason"]) : '';
-        $remarks = isset($input["remarks"]) ? trim($input["remarks"]) : '';
-
-        if ($refDocNo == '' || $reason == '') {
-            echo "{\"status\":\"failed\",\"message\":\"Missing required fields\"}";
-        } else {
-            $comment = $reason;
-            if ($remarks != '') {
-                $comment .= " | Remarks: ".$remarks;
-            }
-
-            $sqlCheck = "SELECT id FROM revisionRequest 
-                         WHERE plant_id = '".$_GET["plant_id"]."' 
-                         AND reqFor = 'Specification Revision Request' 
-                         AND refDocNo = '".$conn->real_escape_string($refDocNo)."' 
-                         AND status = 'Pending' 
-                         ORDER BY id DESC LIMIT 1";
-            $resultCheck = $conn->query($sqlCheck);
-            if ($resultCheck && $resultCheck->num_rows > 0) {
-                echo "{\"status\":\"exists\"}";
-            } else {
-                $sql = "INSERT INTO revisionRequest (plant_id, refDocNo, refDocId, refDocName, revisionComment, reqFor, entryBy, entryOn, status)
-                        VALUES ('".$_GET["plant_id"]."',
-                                '".$conn->real_escape_string($refDocNo)."',
-                                '".$conn->real_escape_string($refDocId)."',
-                                '".$conn->real_escape_string($refDocName)."',
-                                '".$conn->real_escape_string($comment)."',
-                                'Specification Revision Request',
-                                '".$_GET["emp_id"]."',
-                                '".$entry_date."',
-                                'Pending')";
-                if ($conn->query($sql)) {
-                    echo "{\"status\":\"success\"}";
-                } else {
-                    echo "{\"status\":\"".$conn->error."\"}";
+        if (function_exists('mysqli_report')) {
+            @mysqli_report(MYSQLI_REPORT_OFF);
+        }
+        $plantId = isset($_GET["plant_id"]) ? $_GET["plant_id"] : '';
+        $empId = isset($_GET["emp_id"]) ? $_GET["emp_id"] : '';
+        try {
+            @$conn->query("CREATE TABLE IF NOT EXISTS `revisionRequest` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `plant_id` VARCHAR(50) NULL,
+                `refDocNo` VARCHAR(150) NULL,
+                `refDocId` VARCHAR(80) NULL,
+                `refDocName` VARCHAR(255) NULL,
+                `revisionComment` LONGTEXT NULL,
+                `reqFor` VARCHAR(150) NULL,
+                `entryBy` VARCHAR(100) NULL,
+                `entryOn` VARCHAR(50) NULL,
+                `status` VARCHAR(50) NULL DEFAULT 'Pending',
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $rrCols = array(
+                'plant_id' => "VARCHAR(50) NULL",
+                'refDocNo' => "VARCHAR(150) NULL",
+                'refDocId' => "VARCHAR(80) NULL",
+                'refDocName' => "VARCHAR(255) NULL",
+                'revisionComment' => "LONGTEXT NULL",
+                'reqFor' => "VARCHAR(150) NULL",
+                'entryBy' => "VARCHAR(100) NULL",
+                'entryOn' => "VARCHAR(50) NULL",
+                'status' => "VARCHAR(50) NULL DEFAULT 'Pending'",
+            );
+            foreach ($rrCols as $col => $def) {
+                $colCheck = @$conn->query("SHOW COLUMNS FROM `revisionRequest` LIKE '".$conn->real_escape_string($col)."'");
+                if (!($colCheck && $colCheck->num_rows > 0)) {
+                    @$conn->query("ALTER TABLE `revisionRequest` ADD COLUMN `".$col."` ".$def);
                 }
             }
+
+            $refDocNo = isset($input["specification_no"]) ? trim((string)$input["specification_no"]) : '';
+            $refDocId = isset($input["specification_id"]) ? trim((string)$input["specification_id"]) : '';
+            $refDocName = isset($input["specification_name"]) ? trim((string)$input["specification_name"]) : '';
+            $reason = isset($input["reason"]) ? trim((string)$input["reason"]) : '';
+            $remarks = isset($input["remarks"]) ? trim((string)$input["remarks"]) : '';
+
+            if ($refDocNo == '' || $reason == '') {
+                echo "{\"status\":\"failed\",\"message\":\"Missing required fields\"}";
+            } else {
+                $comment = $reason;
+                if ($remarks != '') {
+                    $comment .= " | Remarks: ".$remarks;
+                }
+
+                $sqlCheck = "SELECT id FROM revisionRequest 
+                             WHERE plant_id = '".$conn->real_escape_string($plantId)."' 
+                             AND reqFor = 'Specification Revision Request' 
+                             AND refDocNo = '".$conn->real_escape_string($refDocNo)."' 
+                             AND status = 'Pending' 
+                             ORDER BY id DESC LIMIT 1";
+                $resultCheck = $conn->query($sqlCheck);
+                if ($resultCheck && $resultCheck->num_rows > 0) {
+                    echo "{\"status\":\"exists\"}";
+                } else {
+                    $sql = "INSERT INTO revisionRequest (plant_id, refDocNo, refDocId, refDocName, revisionComment, reqFor, entryBy, entryOn, status)
+                            VALUES ('".$conn->real_escape_string($plantId)."',
+                                    '".$conn->real_escape_string($refDocNo)."',
+                                    '".$conn->real_escape_string($refDocId)."',
+                                    '".$conn->real_escape_string($refDocName)."',
+                                    '".$conn->real_escape_string($comment)."',
+                                    'Specification Revision Request',
+                                    '".$conn->real_escape_string($empId)."',
+                                    '".$entry_date."',
+                                    'Pending')";
+                    if ($conn->query($sql)) {
+                        echo "{\"status\":\"success\"}";
+                    } else {
+                        echo json_encode(array("status" => "failed", "message" => $conn->error));
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            echo json_encode(array("status" => "failed", "message" => $e->getMessage()));
         }
     }
     else if ($_GET["type"] == "getChangeControlStatusForSpecifications") {

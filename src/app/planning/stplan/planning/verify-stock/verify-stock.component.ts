@@ -167,7 +167,7 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
   }
 
   formatDeliveryDate(value: unknown): string {
-    if (value == null || value === '') {
+    if (value == null || value === '' || value === '0000-00-00' || value === '0000-00-00 00:00:00') {
       return '—';
     }
     const d = new Date(String(value));
@@ -179,6 +179,16 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
       });
     }
     return String(value);
+  }
+
+  woDeliveryDate(wo: any): string {
+    return this.formatDeliveryDate(wo?.deliveryDate || wo?.delivery_date || '');
+  }
+
+  woGeneratedDate(wo: any): string {
+    return this.formatDeliveryDate(
+      wo?.Wo_Generated_on || wo?.entryOn || wo?.wo_generated_by_digi_sign_date || ''
+    );
   }
 
   getOrderQty(wo: any): string {
@@ -362,7 +372,14 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
             alertify.success(`Stock verification completed. All materials available for work order: ${wo.workorder_no}`);
           }
         } else {
-          alertify.error(response.message || 'Failed to verify stock');
+          const msg = response?.message || 'Failed to verify stock';
+          if (/already sent for batch allocation/i.test(msg)) {
+            alertify.warning(msg);
+          } else if (/already verified/i.test(msg)) {
+            alertify.success(msg);
+          } else {
+            alertify.error(msg);
+          }
         }
       },
       error: (err) => {
@@ -428,8 +445,7 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
       this.isVerified(wo) &&
       !this.hasShortages(wo) &&
       !this.isRejected(wo) &&
-      !this.isSentForAllocation(wo) &&
-      (wo?.stock_booked === true || this.verificationResults[wo?.workorder_no]?.stockBooked === true)
+      !this.isSentForAllocation(wo)
     );
   }
 
@@ -451,7 +467,15 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
     }
 
     if (!this.canSendForBatchAllocation(wo)) {
-      alertify.error('Stock must be verified and booked before batch allocation');
+      if (!this.isVerified(wo)) {
+        alertify.error('Click Verify Stock first. After it succeeds, Send for Batch Allocation will enable.');
+        return;
+      }
+      if (this.hasShortages(wo)) {
+        alertify.error('This work order has a shortage. Resolve stock, then verify again.');
+        return;
+      }
+      alertify.error('Stock must be verified before batch allocation');
       return;
     }
 
@@ -524,6 +548,10 @@ export class VerifyStockComponent implements OnInit, OnDestroy {
   isVerified(wo: any): boolean {
     if (!wo?.workorder_no) {
       return false;
+    }
+    const st = String(wo.status || '').trim();
+    if (st === 'Verified - Ready for Batch Allocation' || st === 'Sent for Batch Allocation') {
+      return true;
     }
     return (
       !!this.verificationResults[wo.workorder_no]?.verified ||

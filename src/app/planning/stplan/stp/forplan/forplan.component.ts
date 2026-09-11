@@ -129,19 +129,26 @@ export class ForplanComponent implements OnInit, OnDestroy {
   }
 
   getSelectedLineArea(wo: any): string {
-    const lines = this.getLinesForMode(wo);
-    if (!lines.length) {
-      return '—';
-    }
-    return lines[0].area || lines[0].Section || '—';
+    const line = this.resolveSelectedLine(wo);
+    const area = line?.area || line?.Section
+      || wo?.area || wo?.line_area || wo?.Section || '';
+    return area ? String(area) : '—';
   }
 
   getBomBatchSize(wo: any): string {
-    const kg = Number(wo?.batch_size_kg);
+    const kg = Number(wo?.batch_size_kg || wo?.batch_size || wo?.plan_qty || 0);
     if (!kg || kg <= 0) {
       return '—';
     }
     return kg.toLocaleString(undefined, { maximumFractionDigits: 3 }) + ' KGS';
+  }
+
+  woDeliveryDate(wo: any): string {
+    const raw = wo?.deliveryDate || wo?.delivery_date || '';
+    if (!raw || raw === '0000-00-00' || raw === '0000-00-00 00:00:00') {
+      return '';
+    }
+    return String(raw);
   }
 
   getValidationLabel(wo: any): string {
@@ -149,7 +156,7 @@ export class ForplanComponent implements OnInit, OnDestroy {
       return 'Checking…';
     }
     if (!wo?._bookingValidation || wo._bookingValidation.valid === null) {
-      return '—';
+      return this.resolveSelectedLine(wo) ? 'OK' : '—';
     }
     if (wo._bookingValidation.valid) {
       const runs = Number(wo._bookingValidation.equipment_runs || 0);
@@ -191,7 +198,7 @@ export class ForplanComponent implements OnInit, OnDestroy {
       return 'lb-val-neutral';
     }
     if (!wo?._bookingValidation || wo._bookingValidation.valid === null) {
-      return 'lb-val-neutral';
+      return this.resolveSelectedLine(wo) ? 'lb-val-ok' : 'lb-val-neutral';
     }
     return wo._bookingValidation.valid ? 'lb-val-ok' : 'lb-val-error';
   }
@@ -200,6 +207,7 @@ export class ForplanComponent implements OnInit, OnDestroy {
     this.service.get('bmr/process.php?type=stageLinemasterLog').subscribe({
       next: (response: any) => {
         this.lineMasterData = Array.isArray(response) ? response : [];
+        this.hydrateQueueLineFields();
       },
       error: () => {
         if (!Array.isArray(this.lineMasterData)) {
@@ -207,6 +215,72 @@ export class ForplanComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  private findLineMasterById(lineId: string): any {
+    if (!lineId) {
+      return null;
+    }
+    const fromOptions = this.getLineMasterOptions().find((line: any) => String(line.id) === String(lineId));
+    if (fromOptions) {
+      return fromOptions;
+    }
+    return (this.lineMasterData || []).find((line: any) => String(line.id) === String(lineId)) || null;
+  }
+
+  private resolveSelectedLine(wo: any): any {
+    const fromMode = this.getLinesForMode(wo);
+    let line = fromMode.length ? fromMode[0] : (wo?.selectedLines || [])[0];
+    const lineId = wo?._selectedLineId || line?.id || line?.linemaster_id || '';
+    const master = this.findLineMasterById(String(lineId || ''));
+    if (master) {
+      return {
+        ...master,
+        ...(line || {}),
+        area: master.area || master.Section || line?.area || line?.Section || '',
+        Section: master.Section || master.area || line?.Section || line?.area || ''
+      };
+    }
+    return line || null;
+  }
+
+  private hydrateQueueLineFields() {
+    (this.pendingpo || []).forEach((wo: any) => {
+      const id = wo._selectedLineId || this.getSelectedLineIdForMode(wo);
+      if (id) {
+        wo._selectedLineId = String(id);
+      }
+    });
+  }
+
+  private slimLineForSave(line: any): any {
+    const master = this.findLineMasterById(String(line?.id || line?.linemaster_id || ''));
+    const src = { ...(master || {}), ...(line || {}) };
+    return {
+      id: src.id || src.linemaster_id,
+      linemaster_id: src.linemaster_id || src.id,
+      line_no: src.line_no || '',
+      line_name: src.line_name || '',
+      Section: src.Section || src.area || '',
+      area: src.area || src.Section || '',
+      lineType: src.lineType || src.Type || src.line_type_category || '',
+      line_type_category: src.line_type_category || src.lineType || src.Type || '',
+      Type: src.Type || src.lineType || '',
+      equipmentList: Array.isArray(src.equipmentList) ? src.equipmentList : []
+    };
+  }
+
+  private ensureLineAttached(wo: any): any[] {
+    let lines = this.getLinesForMode(wo);
+    if ((!lines || !lines.length) && wo?._selectedLineId) {
+      const selected = this.findLineMasterById(String(wo._selectedLineId));
+      if (selected) {
+        const enriched = this.slimLineForSave(selected);
+        wo.selectedLines = this.mergeLinesForCategory(wo.selectedLines || [], [enriched], this.bookingLineMode);
+        lines = this.getLinesForMode(wo);
+      }
+    }
+    return lines || [];
   }
 
   loadLineCandidatesForWo(wo: any, done?: () => void) {
@@ -262,15 +336,15 @@ export class ForplanComponent implements OnInit, OnDestroy {
     const candidates = this.getLineCandidates(wo);
     let selected = candidates.find((line: any) => String(line.id) === String(lineId));
     if (!selected) {
-      selected = (this.lineMasterData || []).find((line: any) => String(line.id) === String(lineId));
+      selected = this.findLineMasterById(String(lineId));
     }
     if (!selected) {
+      wo._selectedLineId = String(lineId);
       return;
     }
     const enriched = {
-      ...selected,
-      area: selected.area || selected.Section || '',
-      Section: selected.Section || selected.area || ''
+      ...this.slimLineForSave(selected),
+      suggested_schedule: selected.suggested_schedule || null
     };
     wo._selectedLineId = String(lineId);
     wo.selectedLines = this.mergeLinesForCategory(wo.selectedLines || [], [enriched], this.bookingLineMode);
@@ -1686,6 +1760,7 @@ getSelectedDateDisplay(): string {
     }
 
     this.normalizeWorkOrderPlanningFields(wo);
+    this.ensureLineAttached(wo);
     const validation = this.validateWorkOrderForParking(wo);
     if (!validation.valid) {
       alert(validation.message);
@@ -1695,25 +1770,8 @@ getSelectedDateDisplay(): string {
       alert('Please select a line number before saving');
       return;
     }
-    if (wo._bookingValidation?.pending) {
-      alert('Line validation is still running. Please wait a moment and try again.');
-      return;
-    }
-    if (
-      wo._bookingValidation &&
-      wo._bookingValidation.valid === false &&
-      !this.isValidationUnavailable(wo._bookingValidation)
-    ) {
-      alert('Line booking validation failed: ' + (wo._bookingValidation.errors || []).join('; '));
-      return;
-    }
 
-    const selectedLines = this.getLinesForMode(wo).map((line: any) => {
-      const master = (this.lineMasterData || []).find(
-        (m: any) => String(m.id) === String(line.id),
-      );
-      return master ? { ...master, ...line } : line;
-    });
+    const selectedLines = this.getLinesForMode(wo).map((line: any) => this.slimLineForSave(line));
 
     const payload = {
       work_orders: [
@@ -1727,7 +1785,8 @@ getSelectedDateDisplay(): string {
           expected_production_end_time: wo.expected_production_end_time || '',
           responsible_person: wo.responsible_person || '',
           no_of_hours_required: wo.no_of_hours_required || '',
-          plan_qty: wo.plan_qty || '',
+          plan_qty: wo.plan_qty || wo.batch_size || '',
+          batch_size: wo.batch_size || wo.plan_qty || '',
           planUnit: wo.planUnit || '',
           product_code: wo.product_code || '',
           product_name: wo.product_name || '',
@@ -1753,7 +1812,7 @@ getSelectedDateDisplay(): string {
         if (failedCount > 0) {
           alert(`Planned ${successCount} work order(s). ${failedCount} failed.\n${failedDetails}`);
         } else {
-          alert(`Planned ${successCount} work order(s) in STP. Line is now shown as Occupied on Live Board. Open Calendar to Send for Line Approval.`);
+          alert(`Planned ${successCount} work order(s). It is now on Line Approval.`);
         }
         this.getPendingWOs();
         this.getLogData();
@@ -1794,6 +1853,7 @@ getSelectedDateDisplay(): string {
         this.pendingpo.forEach((wo: any) => {
           wo._selectedLineId = this.getSelectedLineIdForMode(wo);
         });
+        this.hydrateQueueLineFields();
         this.pendingpoBackup = this.pendingpo;
         if (this.pendingpo.length === 0 && this.currentPage > 1 && this.totalRecords > 0) {
           this.currentPage -= 1;
@@ -2202,6 +2262,7 @@ parkLinesForMfg() {
     }
 
     this.normalizeWorkOrderPlanningFields(wo);
+    this.ensureLineAttached(wo);
     const validation = this.validateWorkOrderForParking(wo);
     if (!validation.valid) {
       alert(validation.message);
@@ -2213,13 +2274,15 @@ parkLinesForMfg() {
         {
           workorder_no: wo.workorder_no,
           workorder_id: wo.id,
-          selectedLines: wo.selectedLines || [],
+          selectedLines: this.getLinesForMode(wo).map((line: any) => this.slimLineForSave(line)),
           expected_production_start_date: wo.expected_production_start_date || '',
           expected_production_start_time: wo.expected_production_start_time || '',
           expected_production_end_date: wo.expected_production_end_date || '',
           expected_production_end_time: wo.expected_production_end_time || '',
           responsible_person: wo.responsible_person || '',
-          plan_qty: wo.plan_qty || '',
+          no_of_hours_required: wo.no_of_hours_required || '',
+          plan_qty: wo.plan_qty || wo.batch_size || '',
+          batch_size: wo.batch_size || wo.plan_qty || '',
           planUnit: wo.planUnit || '',
           product_code: wo.product_code || '',
           product_name: wo.product_name || '',
@@ -2230,7 +2293,7 @@ parkLinesForMfg() {
 
     this.service.post(
       `bmr/line_booking.php?type=saveStpPlan`,
-      JSON.stringify(payload)
+      payload
     ).subscribe((response: any) => {
       if (response?.status === 'success') {
         const successCount = response?.planned_count || 1;
@@ -2257,6 +2320,7 @@ parkLinesForMfg() {
 
   // Validate all required fields before parking
   validateWorkOrderForParking(wo: any): { valid: boolean; message: string } {
+    this.ensureLineAttached(wo);
     if (!wo.selectedLines || wo.selectedLines.length === 0) {
       return { valid: false, message: 'No lines selected for this work order' };
     }

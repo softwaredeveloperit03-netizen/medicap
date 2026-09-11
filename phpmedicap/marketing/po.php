@@ -7847,8 +7847,10 @@ $html .= '
     
     else if ($_GET["type"] == "sendForBatchAllocation") {
     // Send work order for Batch No Allocation - insert into batch_planning, batch_planning_materials, mfg_work_order_hdr and mfg_work_order_dtl
-    $input = json_decode(file_get_contents('php://input'), true);
-    $workorder_no = $input['workorder_no'] ?? '';
+    if (!is_array($input)) {
+        $input = array();
+    }
+    $workorder_no = trim((string)($input['workorder_no'] ?? ''));
     $order_no = $input['order_no'] ?? '';
     $product_code = $input['product_code'] ?? '';
     $product_name = $input['product_name'] ?? '';
@@ -7863,6 +7865,35 @@ $html .= '
     if (empty($workorder_no)) {
         echo json_encode(['status' => 'error', 'message' => 'Work order number is required']);
         exit;
+    }
+
+    $woLive = $conn->query("SELECT * FROM Work_order_materials WHERE workorder_no = '".$conn->real_escape_string($workorder_no)."' ORDER BY id DESC LIMIT 1");
+    $woLiveRow = ($woLive && $woLive->num_rows > 0) ? $woLive->fetch_assoc() : null;
+    if ($woLiveRow) {
+        if ($order_no === '') {
+            $order_no = $woLiveRow['order_no'] ?? '';
+        }
+        if ($product_code === '') {
+            $product_code = $woLiveRow['product_code'] ?? '';
+        }
+        if ($batch_size <= 0) {
+            $batch_size = floatval($woLiveRow['batch_size'] ?? 0);
+        }
+        if ($batch_unit === '') {
+            $batch_unit = $woLiveRow['planUnit'] ?? '';
+        }
+        if ($packing_type === '') {
+            $packing_type = $woLiveRow['packingStyle'] ?? ($woLiveRow['packing_type'] ?? '');
+        }
+        if ($work_order_planned_qty <= 0) {
+            $work_order_planned_qty = floatval($woLiveRow['plan_qty'] ?? $woLiveRow['planQty'] ?? $batch_size);
+        }
+        if ($planMonth === '') {
+            $planMonth = $woLiveRow['planMonth'] ?? '';
+        }
+        if ($mainGroupName === '') {
+            $mainGroupName = $woLiveRow['mainGroupName'] ?? '';
+        }
     }
     
     if (empty($product_code)) {
@@ -7928,29 +7959,52 @@ $html .= '
         $mfrRow = $mfrResult->fetch_assoc();
         $mfr_no = $mfrRow['mfr_no'] ?? null;
     }
+    if (!$mfr_no) {
+        $mfrSql2 = "SELECT mfr_no FROM unitformula WHERE product_code = '".$conn->real_escape_string($product_code)."' ORDER BY id DESC LIMIT 1";
+        $mfrResult2 = $conn->query($mfrSql2);
+        if ($mfrResult2 && $mfrResult2->num_rows > 0) {
+            $mfr_no = $mfrResult2->fetch_assoc()['mfr_no'] ?? null;
+        }
+    }
+
+    medicap_require_helper('can_planned_wo_helpers.php');
+    if (function_exists('stp_ensure_batch_planning_schema')) {
+        stp_ensure_batch_planning_schema($conn);
+    }
+    $resolvedBfr = '';
+    if (function_exists('gw_resolve_bfr_for_work_order')) {
+        $resolvedBfr = gw_resolve_bfr_for_work_order($conn, $product_code, $batch_size, $batch_unit);
+    }
     
-    if (!$mfr_no || $batch_size <= 0 || empty($batch_unit)) {
+    if ($batch_size <= 0) {
         echo json_encode(['status' => 'error', 'message' => 'Cannot find MFR or batch formula for product: ' . $product_code]);
         exit;
     }
     
     // Get bfr_no from batch_formula_info
-    $bfrSql = "SELECT bfr_no FROM batch_formula_info 
+    $bfr_no = $resolvedBfr;
+    if ($bfr_no === '' && $mfr_no) {
+        $bfrSql = "SELECT bfr_no FROM batch_formula_info 
               WHERE mfr_no = '".$conn->real_escape_string($mfr_no)."' 
               AND batch_formula_weight = '".$conn->real_escape_string($batch_size)."'
               AND rm_batch_size_unit = '".$conn->real_escape_string($batch_unit)."'
               AND status = 'Approve'
               LIMIT 1";
-    $bfrResult = $conn->query($bfrSql);
-    $bfr_no = null;
-    if ($bfrResult && $bfrResult->num_rows > 0) {
-        $bfrRow = $bfrResult->fetch_assoc();
-        $bfr_no = $bfrRow['bfr_no'] ?? null;
+        $bfrResult = $conn->query($bfrSql);
+        if ($bfrResult && $bfrResult->num_rows > 0) {
+            $bfr_no = $bfrResult->fetch_assoc()['bfr_no'] ?? '';
+        }
     }
     
     if (!$bfr_no) {
         echo json_encode(['status' => 'error', 'message' => 'Cannot find batch formula record (bfr_no)']);
         exit;
+    }
+    if (!$mfr_no) {
+        $mfrFromBfr = $conn->query("SELECT mfr_no FROM batch_formula_info WHERE bfr_no = '".$conn->real_escape_string($bfr_no)."' LIMIT 1");
+        if ($mfrFromBfr && $mfrFromBfr->num_rows > 0) {
+            $mfr_no = $mfrFromBfr->fetch_assoc()['mfr_no'] ?? '';
+        }
     }
     
     $entry_date = date('Y-m-d H:i:s');
@@ -7969,7 +8023,7 @@ $html .= '
             product_type, product_code, product_name, grade, bfr_no, mfr_no,
             batch_size, pack_size, pack_unit, total_batches, planned_qty,
             qty_can_planned, no_of_batches_can_planned, status, entry_by, entry_date,
-            planned_for_year, planned_for_month, start_date
+            planned_for_year, planned_for_month, start_date, plan_no
         ) VALUES (
             '".$conn->real_escape_string($_GET["plant_id"])."',
             'RM',
@@ -8001,7 +8055,8 @@ $html .= '
             '".$entry_date."',
             '".$planned_for_year."',
             '".$planned_for_month."',
-            '".$entry_date."'
+            '".$entry_date."',
+            '".$conn->real_escape_string($workorder_no)."'
         )";
         
         if (!$conn->query($batchPlanSql)) {
@@ -8009,6 +8064,10 @@ $html .= '
         }
         
         $batch_plan_id = $conn->insert_id;
+        @$conn->query("UPDATE batch_planning SET
+                plan_no = IF(TRIM(IFNULL(plan_no,''))='', '".$conn->real_escape_string($workorder_no)."', plan_no),
+                workorder_no = '".$conn->real_escape_string($workorder_no)."'
+            WHERE id = ".intval($batch_plan_id)." LIMIT 1");
         
         // 2. Insert materials into batch_planning_materials
         $allMaterialsForDetail = [];
@@ -8158,74 +8217,115 @@ $html .= '
                 }
             }
         }
-        
-        // 3. Insert into mfg_work_order_hdr
-        $insertHdrSql = "INSERT INTO mfg_work_order_hdr (
-            material_type, plant_id, batch_plan_id, work_order_no, status, entry_by, entry_date
-        ) VALUES (
-            'RM', 
-            '".$conn->real_escape_string($_GET["plant_id"])."', 
-            '".$batch_plan_id."', 
-            '".$conn->real_escape_string($workorder_no)."', 
-            'pending', 
-            '".$conn->real_escape_string($_GET["emp_id"])."', 
-            '".$entry_date."'
-        )";
-        
-        if (!$conn->query($insertHdrSql)) {
-            throw new Exception('Failed to insert mfg_work_order_hdr: ' . $conn->error);
-        }
-        
-        $work_order_id = $conn->insert_id;
-        
-        // 4. Insert all materials into mfg_work_order_dtl
-        if (!empty($allMaterialsForDetail) && $work_order_id) {
-            $insertedCount = 0;
-            
-            foreach ($allMaterialsForDetail as $mat) {
-                $unit_qty_total = floatval($mat['required_qty']);
-                $batch_qty_per_batch = floatval($mat['batch_qty']);
-                
-                $insertDtlSql = "INSERT INTO mfg_work_order_dtl (
-                    work_order_id, pack_size_id, material_code, grade, unit_qty, batch_qty, unit, 
-                    status, entry_date, despensing_status
-                ) VALUES (
-                    '".$work_order_id."', 
-                    '0',
-                    '".$conn->real_escape_string($mat['material_code'])."', 
-                    '".$conn->real_escape_string($mat['grade'] ?? '1')."',
-                    '".$unit_qty_total."',
-                    '".$batch_qty_per_batch."',
-                    '".$conn->real_escape_string($mat['unit'])."', 
-                    'pending', 
-                    '".$entry_date."',
-                    'pending'
-                )";
-                
-                if ($conn->query($insertDtlSql)) {
-                    $insertedCount++;
-                } else {
-                    throw new Exception('Failed to insert mfg_work_order_dtl: ' . $conn->error);
+
+        if (count($allMaterialsForDetail) === 0) {
+            $fallbackRows = [];
+            $woDedSql = "SELECT d.material_code, d.mat_type, d.plan_qty, d.unit,
+                    COALESCE(
+                        (SELECT material_name FROM material WHERE material_code = d.material_code LIMIT 1),
+                        (SELECT bulkName FROM bulkMaster WHERE bulkCode = d.material_code LIMIT 1),
+                        d.material_code
+                    ) AS material_name
+                FROM WO_deductions d
+                WHERE d.workorder_no = '".$conn->real_escape_string($workorder_no)."'
+                  AND TRIM(IFNULL(d.material_code,'')) NOT IN ('', '-', 'N/A')";
+            $woDedRes = $conn->query($woDedSql);
+            if ($woDedRes && $woDedRes->num_rows > 0) {
+                while ($d = $woDedRes->fetch_assoc()) {
+                    $fallbackRows[] = $d;
                 }
             }
-            
-            // Update work order status in Work_order_materials
-            $updateStatusSql = "UPDATE Work_order_materials SET status = 'Sent for Batch Allocation' 
-                               WHERE workorder_no = '".$conn->real_escape_string($workorder_no)."'";
-            $conn->query($updateStatusSql);
-            
-            // Commit transaction
-            $conn->commit();
-            
-            echo json_encode([
-                'status' => 'success', 
-                'message' => 'Work order sent for Batch No Allocation successfully. ' . $insertedCount . ' materials inserted.',
-                'work_order_id' => $work_order_id,
-                'batch_plan_id' => $batch_plan_id
-            ]);
-        } else {
-            throw new Exception('No materials found to insert');
+            if (count($fallbackRows) === 0 && function_exists('gw_gwo_collect_bfr_deduction_lines')) {
+                foreach (gw_gwo_collect_bfr_deduction_lines($conn, $bfr_no, $woLiveRow ?: []) as $line) {
+                    $fallbackRows[] = [
+                        'material_code' => $line['material_code'] ?? '',
+                        'mat_type' => $line['mat_type'] ?? 'RM',
+                        'plan_qty' => $line['plan_qty'] ?? 0,
+                        'unit' => $line['unit'] ?? $batch_unit,
+                        'material_name' => $line['material_name'] ?? ($line['material_code'] ?? ''),
+                    ];
+                }
+            }
+            if (count($fallbackRows) === 0 && is_array($deductions)) {
+                foreach ($deductions as $d) {
+                    $fallbackRows[] = [
+                        'material_code' => $d['material_code'] ?? '',
+                        'mat_type' => $d['mat_type'] ?? ($d['type'] ?? 'RM'),
+                        'plan_qty' => $d['plan_qty'] ?? ($d['requiredQty'] ?? 0),
+                        'unit' => $d['unit'] ?? $batch_unit,
+                        'material_name' => $d['material_name'] ?? ($d['material_code'] ?? ''),
+                    ];
+                }
+            }
+            foreach ($fallbackRows as $fb) {
+                $material_code = trim((string)($fb['material_code'] ?? ''));
+                $required_qty = floatval($fb['plan_qty'] ?? 0);
+                if ($material_code === '' || $required_qty <= 0) {
+                    continue;
+                }
+                $qty_per_batch = $number_of_batches > 0 ? round($required_qty / $number_of_batches, 4) : $required_qty;
+                $matTypeLabel = (stripos((string)($fb['mat_type'] ?? ''), 'P') === 0) ? 'Packing Material' : 'Raw Material';
+                $unit = $fb['unit'] ?? $batch_unit;
+                $batchPlanMatSql = "INSERT INTO batch_planning_materials (
+                        plant_id, batch_plan_id, material_type, pack_size, pack_unit,
+                        mf_batch_size, bfr_no, material_code, overages, qty, unit, grade,
+                        batch_qty, total_qty, plan_qty, batches_can_plan, shortage_qty, disp_id, dispensing_status
+                    ) VALUES (
+                        '".$conn->real_escape_string($_GET["plant_id"])."',
+                        '".$batch_plan_id."',
+                        '".$conn->real_escape_string($matTypeLabel)."',
+                        '".$conn->real_escape_string($packing_type)."',
+                        '".$conn->real_escape_string($batch_unit)."',
+                        '".$conn->real_escape_string($batch_size)."',
+                        '".$conn->real_escape_string($bfr_no)."',
+                        '".$conn->real_escape_string($material_code)."',
+                        '0',
+                        '".$qty_per_batch."',
+                        '".$conn->real_escape_string($unit)."',
+                        '1',
+                        '".$qty_per_batch."',
+                        '".$required_qty."',
+                        '".$required_qty."',
+                        '".$number_of_batches."',
+                        '0',
+                        '0',
+                        ' '
+                    )";
+                if (!$conn->query($batchPlanMatSql)) {
+                    throw new Exception('Failed to insert batch_planning_materials (WO deductions): ' . $conn->error);
+                }
+                $allMaterialsForDetail[] = [
+                    'material_code' => $material_code,
+                    'material_name' => $fb['material_name'] ?? $material_code,
+                    'mat_type' => $fb['mat_type'] ?? 'RM',
+                    'required_qty' => $required_qty,
+                    'batch_qty' => $qty_per_batch,
+                    'unit' => $unit,
+                    'grade' => '1'
+                ];
+            }
         }
+        
+        if (count($allMaterialsForDetail) === 0) {
+            throw new Exception('No materials found to insert. Check WO deductions / BFR for '.$workorder_no);
+        }
+
+        // Manufacturing WO header is created later in Production → Batch Planning
+        // (Prepare Work Order). Inserting it here skipped that stage and landed
+        // the batch on QA Approved Batches.
+        $updateStatusSql = "UPDATE Work_order_materials SET status = 'Sent for Batch Allocation'
+                           WHERE workorder_no = '".$conn->real_escape_string($workorder_no)."'";
+        if (!$conn->query($updateStatusSql)) {
+            throw new Exception('Failed to update work order status: ' . $conn->error);
+        }
+
+        $conn->commit();
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Work order sent for line booking. After line approval, continue at Production → Batch Planning.',
+            'batch_plan_id' => $batch_plan_id
+        ]);
         
     } catch (Exception $e) {
         // Rollback transaction on error
@@ -8298,8 +8398,22 @@ SELECT
     a.*,
     b.product_code,
     b.work_order_planned_qty,
-    a.wo_generated_by_digi_sign_date AS Wo_Generated_on,
-    b.packingStyle AS packing_type,
+    COALESCE(
+        NULLIF(TRIM(a.entryOn), ''),
+        NULLIF(TRIM(a.Wo_Generated_on), ''),
+        NULLIF(TRIM(a.wo_generated_by_digi_sign_date), '')
+    ) AS Wo_Generated_on,
+    COALESCE(
+        NULLIF(TRIM(a.deliveryDate), ''),
+        NULLIF(TRIM(b.deliveryDate), ''),
+        (SELECT NULLIF(TRIM(om.deliveryDate), '') FROM order_materials om
+          WHERE om.order_no = a.order_no
+          ORDER BY CASE
+            WHEN om.product_code = COALESCE(a.product_code, b.product_code) THEN 0
+            ELSE 1 END, om.id DESC
+          LIMIT 1)
+    ) AS deliveryDate,
+    COALESCE(NULLIF(TRIM(b.packingStyle), ''), NULLIF(TRIM(a.packingStyle), '')) AS packing_type,
 
     (SELECT LglNm 
         FROM client cl 
@@ -8310,13 +8424,14 @@ SELECT
 
     (SELECT product_name 
         FROM product c 
-        WHERE c.product_code = b.product_code 
+        WHERE c.product_code = COALESCE(b.product_code, a.product_code) 
         LIMIT 1
     ) AS product_name
 
 FROM Work_order_materials a
 LEFT JOIN order_materials b 
     ON a.order_no = b.order_no
+   AND (b.product_code = a.product_code OR TRIM(IFNULL(a.product_code,'')) = '')
 WHERE a.status IN ('Pending Verification', 'Verified - Ready for Batch Allocation')
 ORDER BY a.workorder_no DESC
 ";
@@ -8345,6 +8460,13 @@ if ($result && $result->num_rows > 0) {
         }
 
         $row['bg_color'] = $colorMap[$po];
+
+        if (empty($row['Wo_Generated_on'])) {
+            $row['Wo_Generated_on'] = $row['entryOn'] ?? ($row['wo_generated_by_digi_sign_date'] ?? '');
+        }
+        if (empty($row['deliveryDate'])) {
+            $row['deliveryDate'] = $row['delivery_date'] ?? '';
+        }
 
         /* ---------------- DEDUCTIONS + AVAILABLE STOCK ---------------- */
         $deductionsSql = "
@@ -8431,30 +8553,66 @@ echo json_encode([
 
 // Verify stock for a work order - Enhanced with real-time stock calculation
 else if ($_GET["type"] == "verifyStockForWO") {
-    $input = json_decode(file_get_contents('php://input'), true);
-    $workorder_no = $input['workorder_no'] ?? '';
-    
-    if (empty($workorder_no)) {
-        echo json_encode(['status' => 'error', 'message' => 'Work order number is required']);
+    if (!is_array($input)) {
+        $input = array();
+    }
+    $workorder_no = trim((string)($input['workorder_no'] ?? $input['workOrderNo'] ?? ''));
+    if ($workorder_no === '') {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Work order number is missing. Close this popup, open View again, and click Verify Stock.'
+        ]);
         exit;
+    }
+
+    medicap_require_helper('mrp_wo_schema_helpers.php');
+    if (function_exists('ensureWoVerificationColumns')) {
+        ensureWoVerificationColumns($conn);
     }
     
     $entry_date = date('Y-m-d H:i:s');
     
     // Get work order details
-    $woSql = "SELECT a.*, b.product_code, b.work_order_planned_qty 
+    $woSql = "SELECT a.*, COALESCE(b.product_code, a.product_code) AS product_code, b.work_order_planned_qty 
               FROM Work_order_materials a
               LEFT JOIN order_materials b ON a.order_no = b.order_no
-              WHERE a.workorder_no = '".$conn->real_escape_string($workorder_no)."' 
-              AND a.status = 'Pending Verification' LIMIT 1";
+                AND (b.product_code = a.product_code OR TRIM(IFNULL(a.product_code,'')) = '')
+              WHERE a.workorder_no = '".$conn->real_escape_string($workorder_no)."'
+              ORDER BY a.id DESC
+              LIMIT 1";
     $woResult = $conn->query($woSql);
     
     if (!$woResult || $woResult->num_rows == 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Work order not found or not in Pending Verification status']);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Work order '.$workorder_no.' was not found. Refresh Verify Stock and try again.'
+        ]);
         exit;
     }
     
     $woRow = $woResult->fetch_assoc();
+    $currentStatus = trim((string)($woRow['status'] ?? ''));
+    if ($currentStatus === 'Sent for Batch Allocation') {
+        echo json_encode([
+            'status' => 'error',
+            'message' => $workorder_no.' is already sent for batch allocation. Open Line Booking / For Plan to continue.'
+        ]);
+        exit;
+    }
+    if ($currentStatus === 'Rejected' || $currentStatus === 'Cancel' || $currentStatus === 'Hold') {
+        echo json_encode([
+            'status' => 'error',
+            'message' => $workorder_no.' is '.$currentStatus.'. It cannot be verified. Return to Process Plan if it must be planned again.'
+        ]);
+        exit;
+    }
+    if ($currentStatus !== '' && $currentStatus !== 'Pending Verification' && $currentStatus !== 'Verified - Ready for Batch Allocation') {
+        echo json_encode([
+            'status' => 'error',
+            'message' => $workorder_no.' is in status "'.$currentStatus.'". Send it from Process Plan using Send for Verification first, then click Verify Stock.'
+        ]);
+        exit;
+    }
     $batch_size = floatval($woRow['batch_size'] ?? 0);
     $batch_unit = $woRow['planUnit'] ?? '';
     $product_code = $woRow['product_code'] ?? '';
@@ -8463,6 +8621,44 @@ else if ($_GET["type"] == "verifyStockForWO") {
     
     // Calculate number of batches
     $number_of_batches = ($batch_size > 0 && $work_order_planned_qty > 0) ? ($work_order_planned_qty / $batch_size) : 1;
+
+    if ($currentStatus === 'Verified - Ready for Batch Allocation') {
+        $deductions = [];
+        $dedRes = $conn->query(
+            "SELECT d.*, COALESCE(
+                (SELECT material_name FROM material WHERE material_code = d.material_code LIMIT 1),
+                (SELECT bulkName FROM bulkMaster WHERE bulkCode = d.material_code LIMIT 1),
+                d.material_code
+            ) AS material_name
+            FROM WO_deductions d
+            WHERE d.workorder_no = '".$conn->real_escape_string($workorder_no)."'
+            ORDER BY d.id ASC"
+        );
+        if ($dedRes) {
+            while ($ded = $dedRes->fetch_assoc()) {
+                $deductions[] = $ded;
+            }
+        }
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Stock already verified for '.$workorder_no.'. Click Send for Batch Allocation.',
+            'has_shortage' => false,
+            'stock_booked' => true,
+            'verification_status' => 'Verified',
+            'shortage_count' => 0,
+            'shortage_info' => [],
+            'deductions' => $deductions,
+            'work_order_details' => [
+                'workorder_no' => $workorder_no,
+                'product_code' => $product_code,
+                'batch_size' => $batch_size,
+                'batch_unit' => $batch_unit,
+                'work_order_planned_qty' => $work_order_planned_qty,
+                'number_of_batches' => round($number_of_batches, 2)
+            ]
+        ]);
+        exit;
+    }
     
     // Get mfr_no and bfr_no
     $mfrSql = "SELECT mfr_no FROM unitformula WHERE product_code = '".$conn->real_escape_string($product_code)."' AND status = 'Approve' ORDER BY id DESC LIMIT 1";
@@ -8791,10 +8987,16 @@ else if ($_GET["type"] == "verifyStockForWO") {
         
         $updateSql = "UPDATE Work_order_materials 
                      SET status = '".$status."',
-                         verified_by = '".$conn->real_escape_string($_GET["emp_id"])."',
-                         verified_date = '".$entry_date."'
+                         stock_verified_by = '".$conn->real_escape_string($_GET["emp_id"])."',
+                         stock_verified_on = '".$entry_date."'
                      WHERE workorder_no = '".$conn->real_escape_string($workorder_no)."'";
-        $conn->query($updateSql);
+        if (!$conn->query($updateSql)) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Stock checked but failed to update work order: ' . $conn->error
+            ]);
+            exit;
+        }
     }
     
     // Audit trail: snapshot every material verified for this WO (required vs on-day
@@ -8841,6 +9043,8 @@ else if ($_GET["type"] == "verifyStockForWO") {
         'status' => 'success',
         'message' => $message,
         'has_shortage' => $hasShortage,
+        'stock_booked' => !$hasShortage,
+        'verification_status' => $hasShortage ? 'Verified - Shortage' : 'Verified',
         'shortage_count' => count($shortageInfo),
         'shortage_info' => $shortageInfo,
         'deductions' => $deductions,
@@ -10982,6 +11186,15 @@ else if ($_GET["type"] == "getReconciliationHub") {
 
     $sql = "SELECT a.*, b.product_code AS om_product_code, b.work_order_planned_qty, b.planMonth,
             b.mainGroupName, b.packingStyle AS packing_type,
+            COALESCE(
+                NULLIF(TRIM(a.entryOn), ''),
+                NULLIF(TRIM(a.Wo_Generated_on), ''),
+                NULLIF(TRIM(a.wo_generated_by_digi_sign_date), '')
+            ) AS Wo_Generated_on,
+            COALESCE(
+                NULLIF(TRIM(a.deliveryDate), ''),
+                NULLIF(TRIM(b.deliveryDate), '')
+            ) AS deliveryDate,
             COALESCE(NULLIF(TRIM(b.product_name), ''), (SELECT product_name FROM product c
                 WHERE c.product_code = a.product_code LIMIT 1)) AS product_name"
             . po_wo_planner_client_select_sql('a', 'b') . "

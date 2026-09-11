@@ -27,7 +27,37 @@ if($result->num_rows > 0){
     }
    $sql = "INSERT INTO log (process,token,action,actiontime,department,emp_id,method,REMOTE_ADDR,frontend_url) VALUES ('FRONTEND','".$token."','".$_GET["type"]."','".$entry_date."','".$_GET["department"]."','".$_GET["emp_id"]."','".$_SERVER['REQUEST_METHOD']."','".$_SERVER['REMOTE_ADDR']."','".$currentUrl."')";
     $conn->query($sql);
-    
+
+    @$conn->query("CREATE TABLE IF NOT EXISTS `linemaster_mapped_Equipment` (
+        `id` INT NOT NULL AUTO_INCREMENT,
+        `linemaster_id` INT NULL DEFAULT NULL,
+        `equipment_name` VARCHAR(255) NULL DEFAULT NULL,
+        `equipment_code` VARCHAR(100) NULL DEFAULT NULL,
+        `capacity` VARCHAR(100) NULL DEFAULT NULL,
+        `from_range` VARCHAR(100) NULL DEFAULT NULL,
+        `to_range` VARCHAR(100) NULL DEFAULT NULL,
+        `unit` VARCHAR(50) NULL DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        KEY `idx_lme_line` (`linemaster_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    @$conn->query("CREATE TABLE IF NOT EXISTS `linemaster_mapped_Product` (
+        `id` INT NOT NULL AUTO_INCREMENT,
+        `linemaster_id` INT NULL DEFAULT NULL,
+        `product_code` VARCHAR(100) NULL DEFAULT NULL,
+        `category` VARCHAR(100) NULL DEFAULT NULL,
+        `dosage_form` VARCHAR(100) NULL DEFAULT NULL,
+        `generic_name` VARCHAR(255) NULL DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        KEY `idx_lmp_line` (`linemaster_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Line Master workflow status (Pending → Checked → Approved)
+    $lmStatusCol = @$conn->query("SHOW COLUMNS FROM linemaster LIKE 'status'");
+    if (!$lmStatusCol || $lmStatusCol->num_rows == 0) {
+        @$conn->query("ALTER TABLE linemaster ADD COLUMN `status` VARCHAR(50) NULL DEFAULT 'Pending'");
+        @$conn->query("UPDATE linemaster SET status='Approved' WHERE status IS NULL OR TRIM(IFNULL(status,'')) = ''");
+    }
+
     if ($_GET["type"] == "getProcesses") {
         
         
@@ -1977,7 +2007,8 @@ foreach ($array as $values) {
             Stage,
             enrty_by,
             plant_id,
-            lineType
+            lineType,
+            status
         ) VALUES (
             '$line_no',
             '$line_name',
@@ -1994,7 +2025,8 @@ foreach ($array as $values) {
             '$stage',
             '".$_GET["emp_id"]."',
             '".$_GET["plant_id"]."',
-            '$lineType'
+            '$lineType',
+            'Pending'
         )
     ";
 
@@ -2250,6 +2282,54 @@ if ($status1) {
 
     echo json_encode($output);
 }
+
+    else if ($_GET["type"] == "getLinemasterForChecking" || $_GET["type"] == "getLinemasterForApproval") {
+        $output = [];
+        $wantStatus = ($_GET["type"] == "getLinemasterForChecking") ? "Pending" : "Checked";
+        $sql = "SELECT * FROM linemaster WHERE status = '".mysqli_real_escape_string($conn, $wantStatus)."' ORDER BY id DESC";
+        $result = $conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $id = $row['id'];
+                $equipmentList = [];
+                $sqlEq = "SELECT * FROM linemaster_mapped_Equipment WHERE linemaster_id = '".$id."'";
+                $resEq = $conn->query($sqlEq);
+                if ($resEq && $resEq->num_rows > 0) {
+                    while ($rowEq = $resEq->fetch_assoc()) {
+                        $equipmentList[] = $rowEq;
+                    }
+                }
+                $stages = [];
+                $sqlSt = "SELECT dosage_form, stage FROM linemaster_groups_stages WHERE linemaster_id = '".$id."' ORDER BY dosage_form, stage";
+                $resSt = $conn->query($sqlSt);
+                if ($resSt && $resSt->num_rows > 0) {
+                    while ($rowSt = $resSt->fetch_assoc()) {
+                        $stages[] = $rowSt;
+                    }
+                }
+                $row["equipmentList"] = $equipmentList;
+                $row["stages"] = $stages;
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    }
+
+    else if ($_GET["type"] == "updateLinemasterStatus") {
+        $id = intval($_GET["id"] ?? 0);
+        $status = mysqli_real_escape_string($conn, $_GET["status"] ?? '');
+        $allowed = array("Pending", "Checked", "Approved", "Rejected");
+        if ($id <= 0 || !in_array($status, $allowed, true)) {
+            echo "{\"status\":\"invalid\"}";
+        } else {
+            $sql = "UPDATE linemaster SET status = '".$status."' WHERE id = '".$id."'";
+            if ($conn->query($sql)) {
+                echo "{\"status\":\"success\"}";
+            } else {
+                echo "{\"status\":\"".$conn->error."\"}";
+            }
+        }
+    }
 
     else if ($_GET["type"] == "GET_disp_chek") {
         	$output = Array();

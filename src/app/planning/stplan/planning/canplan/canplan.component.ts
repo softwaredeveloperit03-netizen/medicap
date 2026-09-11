@@ -366,6 +366,31 @@ export class CanplanComponent implements OnInit, OnDestroy {
       });
   }
 
+  formatDeductionStatus(mat: any): string {
+    const shortage = Number(mat?.shortage || 0);
+    if (shortage > 0) {
+      return 'Shortage';
+    }
+    const raw = String(mat?.status || mat?.qty_status || mat?.status1 || '').trim();
+    if (!raw || raw === '-' || raw === '—') {
+      return 'Can Plan';
+    }
+    const key = raw.toUpperCase();
+    if (key === 'CAN_PLAN') {
+      return 'Can Plan';
+    }
+    if (key === 'CAN_PLAN_MC_QTY_USED') {
+      return 'Can Plan (MC)';
+    }
+    if (key === 'SHORTAGE' || key === 'CANNOT_PLAN') {
+      return 'Shortage';
+    }
+    if (key === 'PENDING' || key === 'OK') {
+      return 'Can Plan';
+    }
+    return raw.replace(/_/g, ' ');
+  }
+
   View(wo: any): void {
     this.isView = true;
     this.selectedWo = wo;
@@ -374,6 +399,9 @@ export class CanplanComponent implements OnInit, OnDestroy {
       mat.requiredQty =
         Number(mat.requiredQty ?? mat.plan_qty ?? 0) ||
         Number(mat.deducted_from_RM || 0) + Number(mat.deducted_from_Bulk || 0) + Number(mat.shortage || 0);
+      if (!mat.status) {
+        mat.status = Number(mat.shortage || 0) > 0 ? 'SHORTAGE' : 'CAN_PLAN';
+      }
     }
   }
 

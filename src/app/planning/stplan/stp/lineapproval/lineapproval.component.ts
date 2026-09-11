@@ -40,11 +40,19 @@ export class LineapprovalComponent implements OnInit {
   }
 
   getBomBatchSize(wo: any): string {
-    const kg = Number(wo?.batch_size_kg);
+    const kg = Number(wo?.batch_size_kg || wo?.batch_size || wo?.plan_qty || 0);
     if (!kg || kg <= 0) {
       return '—';
     }
     return kg.toLocaleString(undefined, { maximumFractionDigits: 3 }) + ' KGS';
+  }
+
+  woDeliveryDate(wo: any): string {
+    const raw = wo?.deliveryDate || wo?.delivery_date || '';
+    if (!raw || raw === '0000-00-00' || raw === '0000-00-00 00:00:00') {
+      return '';
+    }
+    return String(raw);
   }
 
   calculateStartSrNo(): number {
@@ -495,13 +503,13 @@ export class LineapprovalComponent implements OnInit {
   
   // Approve work order
   approveWorkOrder(wo: any) {
-    if (confirm('Are you sure you want to approve this work order? After approval it will appear in production (MFG Lines).')) {
+    if (confirm('Approve this line booking? The work order will go to Production → Batch Planning next.')) {
       this.service.post(
         `bmr/line_booking.php?type=approveWorkOrder`,
         JSON.stringify({ workorder_id: wo.id, workorder_no: wo.workorder_no })
       ).subscribe((response: any) => {
         if (response.status === 'success') {
-          alert(response.message || 'Work order approved and released to production (MFG Lines).');
+          alert(response.message || 'Line approved. Next: Production → Batch Planning.');
           this.getParkedWorkOrders();
         } else {
           alert('Error approving work order: ' + (response.message || response.status));

@@ -12,7 +12,10 @@ interface LogFilter {
 @Component({
   selector: 'app-specification-revision-log',
   templateUrl: './specification-revision-log.component.html',
-  styleUrls: ['./specification-revision-log.component.css']
+  styleUrls: [
+    '../specification-logs/specification-logs.component.css',
+    './specification-revision-log.component.css'
+  ]
 })
 export class SpecificationRevisionLogComponent implements OnInit {
   constructor(private service: DataAccessService, private router: Router) {}

@@ -8,6 +8,9 @@
     $timestamp = time();
     $entry_date = date("Y-m-d h:i:s", $timestamp);
     $input = json_decode(file_get_contents('php://input'),true);
+    if (!is_array($input)) {
+        $input = array();
+    }
 
     $sql = "SELECT * FROM token WHERE token='".$_GET["token"]."'";
     $result = $conn->query($sql);
@@ -55,48 +58,75 @@
     }
 
     if($_GET["type"]=="saveSpecification") {
+        $waterCols = array(
+            'water_type' => "VARCHAR(255) NULL",
+            'spec_type' => "VARCHAR(100) NULL",
+            'micro_qty' => "VARCHAR(50) NULL",
+            'review_in_months' => "VARCHAR(20) NULL",
+            'storage' => "VARCHAR(255) NULL",
+            'user_no' => "VARCHAR(50) NULL",
+        );
+        foreach ($waterCols as $col => $def) {
+            $colCheck = @$conn->query("SHOW COLUMNS FROM `specification` LIKE '".$conn->real_escape_string($col)."'");
+            if (!($colCheck && $colCheck->num_rows > 0)) {
+                @$conn->query("ALTER TABLE `specification` ADD COLUMN `".$col."` ".$def);
+            }
+        }
+
         $id = 0;
     	$sql = "SELECT MAX(id) as id FROM specification";
     	$result = $conn->query($sql);
-    	if ($result->num_rows > 0) {
+    	if ($result && $result->num_rows > 0) {
     	    while ($row = $result->fetch_assoc()) {
-    	        $id = $row["id"];
+    	        $id = intval($row["id"] ?? 0);
     	    }
     	}
     	$id++;
     	$spec_no = "WS-0".$id;
+        $userNo = $conn->real_escape_string($_GET["user_no"] ?? ($_GET["emp_id"] ?? ''));
+        $plantId = $conn->real_escape_string($_GET["plant_id"] ?? '');
+        $empId = $conn->real_escape_string($_GET["emp_id"] ?? '');
+        $waterType = $conn->real_escape_string($input["water_type"] ?? '');
+        $versionNo = $conn->real_escape_string($input["version_no"] ?? '00');
+        $supersedeNo = $conn->real_escape_string($input["supersede_no"] ?? '');
+        $storage = $conn->real_escape_string($input["storage"] ?? '');
+        $reviewDate = $conn->real_escape_string($input["review_date"] ?? '');
+        $sampleQty = $conn->real_escape_string($input["sample_qty"] ?? '');
+        $microQty = $conn->real_escape_string($input["micro_qty"] ?? '');
+        $unit = $conn->real_escape_string($input["unit"] ?? ($input["sample_unit"] ?? ''));
+        $reviewMonths = $conn->real_escape_string($input["next_review_date"] ?? ($input["review_in_months"] ?? ''));
     	
      	$sql = "INSERT INTO specification (plant_id,user_no, specification_no, water_type,spec_type, version_no, supersede_no, storage,
-    	review_date, sample_qty,micro_qty, unit, review_in_months,entry_by, entry_date, status) VALUES ('".$_GET["plant_id"]."','".$_GET["user_no"]."','$spec_no',
-    	'".$input["water_type"]."','Water Specification', '".$input["version_no"]."', '".$input["supersede_no"]."', '".$input["storage"]."',
-    	'".$input["review_date"]."', '".$input["sample_qty"]."', '".$input["micro_qty"]."', '".$input["unit"]."',
-    	'".$input["next_review_date"]."','".$_GET["emp_id"]."',
+    	review_date, sample_qty,micro_qty, unit, review_in_months,entry_by, entry_date, status) VALUES ('".$plantId."','".$userNo."','$spec_no',
+    	'".$waterType."','Water Specification', '".$versionNo."', '".$supersedeNo."', '".$storage."',
+    	'".$reviewDate."', '".$sampleQty."', '".$microQty."', '".$unit."',
+    	'".$reviewMonths."','".$empId."',
     	'$entry_date', 'checking')";
      
         if ($conn->query($sql)) {
-            $experience_company = $input["tests"];
+            $experience_company = isset($input["tests"]) && is_array($input["tests"]) ? $input["tests"] : array();
     		$len = count($experience_company);
     		for($i = 0; $i<$len; $i++) {
-    			$data = $experience_company[$i];
+    			$data = is_array($experience_company[$i]) ? $experience_company[$i] : array();
     	  
      			$sql="INSERT INTO spec_tests (plant_id,user_no, specification_no,test_type, test, subtest,description,limit_type,lower_limit,upper_limit, 
-    			unit, sample_qty,limits) VALUES ('".$_GET["plant_id"]."','".$_GET["user_no"]."','".$spec_no."','".$data["test_type"]."','".$data["test"]."','".$data["subtest"]."','".$data["descr"]."',
-    			'".$data["limit"]."','".$data["lower_limit"]."','".$data["upper_limit"]."','".$data["unit"]."', '".$data["sample_qty"]."','".$data["limits"]."')";
+    			unit, sample_qty,limits) VALUES ('".$plantId."','".$userNo."','".$spec_no."','".$conn->real_escape_string($data["test_type"] ?? '')."','".$conn->real_escape_string($data["test"] ?? '')."','".$conn->real_escape_string($data["subtest"] ?? '')."','".$conn->real_escape_string($data["descr"] ?? ($data["description"] ?? ''))."',
+    			'".$conn->real_escape_string($data["limit"] ?? ($data["limit_type"] ?? ''))."','".$conn->real_escape_string($data["lower_limit"] ?? '')."','".$conn->real_escape_string($data["upper_limit"] ?? '')."','".$conn->real_escape_string($data["unit"] ?? '')."', '".$conn->real_escape_string($data["sample_qty"] ?? '')."','".$conn->real_escape_string($data["limits"] ?? '')."')";
     			$conn->query($sql);
     	    } 
-    	    $len = count($input["revisionHistory"]);
-    	    $revisionHistory = $input["revisionHistory"];
+    	    $revisionHistory = isset($input["revisionHistory"]) && is_array($input["revisionHistory"]) ? $input["revisionHistory"] : array();
+    	    $len = count($revisionHistory);
     	    for ($i =0; $i < $len; $i++) {
-    	        $data = $revisionHistory[$i];
+    	        $data = is_array($revisionHistory[$i]) ? $revisionHistory[$i] : array();
     	        $sql = "INSERT INTO spec_revision (user_no, spec_no, specification_no, version_no, change_mode, reason, effective_date) VALUES 
-    	        ('".$_GET["user_no"]."','".$spec_no."','".$data["spec_no"]."','".$data["ver_no"]."','".$data["change_mode"]."','".$data["change_reason"]."', 
-    	        '".$data["effective_date"]."')";
+    	        ('".$userNo."','".$spec_no."','".$conn->real_escape_string($data["spec_no"] ?? '')."','".$conn->real_escape_string($data["ver_no"] ?? ($data["version_no"] ?? ''))."','".$conn->real_escape_string($data["change_mode"] ?? '')."','".$conn->real_escape_string($data["change_reason"] ?? ($data["reason"] ?? ''))."', 
+    	        '".$conn->real_escape_string($data["effective_date"] ?? '')."')";
     	        $conn->query($sql);
     	    }
     	    
             echo "{\"status\":\"success\"}";
         } else {
-            echo "{\"status\":\"failed\"}";
+            echo json_encode(array('status' => 'failed', 'message' => $conn->error));
         }
     } else if ($_GET["type"] == "getPendingSpecifications") {
         $plantEsc = $conn->real_escape_string($_GET["plant_id"] ?? '');
@@ -205,7 +235,7 @@
         $pdf->writeHTML($html, true, false, true, false, '');
         $pdf->Output('SpecificationLog.pdf', 'I');
         exit;
-    else if($_GET['type'] == 'downloadSpecificationsRecord') { 
+    } else if($_GET['type'] == 'downloadSpecificationsRecord') { 
     
         $_GET['filename'] = 'Identification of Training Needs'; 
         $_GET['pdftype'] = 'onlyheader';  include("../../pdfimp2.php");

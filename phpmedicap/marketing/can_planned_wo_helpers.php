@@ -109,6 +109,22 @@ if (!function_exists('gw_fetch_wo_deductions_grouped')) {
                 continue;
             }
             $code = $ded['material_code'] ?? '';
+            $shortage = floatval($ded['shortage'] ?? 0);
+            $rawStatus = trim((string)($ded['status'] ?? $ded['qty_status'] ?? ''));
+            if ($rawStatus === '') {
+                $rawStatus = $shortage > 0 ? 'SHORTAGE' : 'CAN_PLAN';
+            }
+            $stock = 0.0;
+            $booked = 0.0;
+            if ($code !== '' && function_exists('gw_get_shortages_stock_fields')) {
+                $sf = gw_get_shortages_stock_fields($conn, $code);
+                $stock = floatval($sf['available_qty'] ?? 0);
+                $booked = floatval($sf['booked_qty'] ?? 0);
+            }
+            if ($stock <= 0 && $code !== '' && function_exists('gw_gwo_resolve_available_qty')) {
+                $stock = floatval(gw_gwo_resolve_available_qty($conn, $code));
+            }
+            $net = max(0, $stock - $booked);
             $grouped[$woId][] = [
                 'material_code' => $code,
                 'material_name' => $nameMap[$code] ?? $code,
@@ -117,8 +133,13 @@ if (!function_exists('gw_fetch_wo_deductions_grouped')) {
                 'plan_qty' => floatval($ded['plan_qty'] ?? 0),
                 'deducted_from_RM' => floatval($ded['deducted_from_RM'] ?? 0),
                 'deducted_from_MC' => floatval($ded['deducted_from_MC'] ?? 0),
-                'shortage' => floatval($ded['shortage'] ?? 0),
+                'shortage' => $shortage,
                 'unit' => $ded['unit'] ?? '',
+                'status' => $rawStatus,
+                'qty_status' => $ded['qty_status'] ?? '',
+                'rm_gross_available' => $stock,
+                'rm_booked_qty' => $booked,
+                'rm_net_available' => $net,
             ];
         }
 
@@ -871,5 +892,296 @@ if (!function_exists('gw_send_can_plan_batches')) {
             'sent' => $sent,
             'skipped' => $skipped,
         ];
+    }
+}
+
+if (!function_exists('stp_bp_ensure_column')) {
+    function stp_bp_ensure_column($conn, $table, $column, $definition)
+    {
+        if (!($conn instanceof mysqli)) {
+            return;
+        }
+        $tableEsc = str_replace('`', '', (string)$table);
+        $columnEsc = $conn->real_escape_string($column);
+        $col = @$conn->query("SHOW COLUMNS FROM `".$tableEsc."` LIKE '".$columnEsc."'");
+        if (!$col || $col->num_rows === 0) {
+            @$conn->query("ALTER TABLE `".$tableEsc."` ADD COLUMN `".$column."` ".$definition);
+        }
+    }
+}
+
+if (!function_exists('stp_ensure_batch_planning_schema')) {
+    function stp_ensure_batch_planning_schema($conn)
+    {
+        stp_bp_ensure_column($conn, 'batch_planning', 'workorder_no', "VARCHAR(100) NULL");
+        stp_bp_ensure_column($conn, 'batch_planning', 'plan_no', "VARCHAR(100) NULL");
+    }
+}
+
+if (!function_exists('stp_batch_planning_has_column')) {
+    function stp_batch_planning_has_column($conn, $column)
+    {
+        $col = @$conn->query("SHOW COLUMNS FROM `batch_planning` LIKE '".$conn->real_escape_string($column)."'");
+        return $col && $col->num_rows > 0;
+    }
+}
+
+if (!function_exists('stp_copy_wo_materials_to_batch_plan')) {
+    function stp_copy_wo_materials_to_batch_plan($conn, $batchPlanId, $workorderNo, $plantId, $bfrNo, $batchSize, $batchUnit, $numberOfBatches)
+    {
+        $batchPlanId = intval($batchPlanId);
+        if ($batchPlanId <= 0) {
+            return;
+        }
+        $exists = @$conn->query("SELECT id FROM batch_planning_materials WHERE batch_plan_id = ".$batchPlanId." LIMIT 1");
+        if ($exists && $exists->num_rows > 0) {
+            return;
+        }
+        $woEsc = $conn->real_escape_string($workorderNo);
+        $plantEsc = $conn->real_escape_string($plantId);
+        $bfrEsc = $conn->real_escape_string($bfrNo);
+        $sizeEsc = $conn->real_escape_string($batchSize);
+        $unitEsc = $conn->real_escape_string($batchUnit);
+        $nBatches = max(1, intval($numberOfBatches));
+
+        $rows = [];
+        $woDed = @$conn->query("SELECT d.material_code, d.mat_type, d.plan_qty, d.unit
+            FROM WO_deductions d
+            WHERE d.workorder_no = '".$woEsc."'
+              AND TRIM(IFNULL(d.material_code,'')) NOT IN ('', '-', 'N/A')");
+        if ($woDed && $woDed->num_rows > 0) {
+            while ($d = $woDed->fetch_assoc()) {
+                $rows[] = $d;
+            }
+        }
+        foreach ($rows as $fb) {
+            $materialCode = trim((string)($fb['material_code'] ?? ''));
+            $requiredQty = floatval($fb['plan_qty'] ?? 0);
+            if ($materialCode === '' || $requiredQty <= 0) {
+                continue;
+            }
+            $qtyPerBatch = $nBatches > 0 ? round($requiredQty / $nBatches, 4) : $requiredQty;
+            $matTypeLabel = (stripos((string)($fb['mat_type'] ?? ''), 'P') === 0) ? 'Packing Material' : 'Raw Material';
+            $unit = $fb['unit'] ?? $batchUnit;
+            @$conn->query("INSERT INTO batch_planning_materials (
+                    plant_id, batch_plan_id, material_type, pack_size, pack_unit,
+                    mf_batch_size, bfr_no, material_code, overages, qty, unit, grade,
+                    batch_qty, total_qty, plan_qty, batches_can_plan, shortage_qty, disp_id, dispensing_status
+                ) VALUES (
+                    '".$plantEsc."',
+                    '".$batchPlanId."',
+                    '".$conn->real_escape_string($matTypeLabel)."',
+                    '',
+                    '".$unitEsc."',
+                    '".$sizeEsc."',
+                    '".$bfrEsc."',
+                    '".$conn->real_escape_string($materialCode)."',
+                    '0',
+                    '".$qtyPerBatch."',
+                    '".$conn->real_escape_string($unit)."',
+                    '1',
+                    '".$qtyPerBatch."',
+                    '".$requiredQty."',
+                    '".$requiredQty."',
+                    '".$nBatches."',
+                    '0',
+                    '0',
+                    ' '
+                )");
+        }
+    }
+}
+
+if (!function_exists('stp_ensure_batch_plan_for_work_order')) {
+    /**
+     * After Line Approval, Production → Batch Planning lists batch_planning.plan_no.
+     * Reuse an existing row (including empty plan_no from Send for Batch Allocation)
+     * and set plan_no = work order number so BO002 etc. appear on the grid.
+     */
+    function stp_ensure_batch_plan_for_work_order($conn, $workorderNo, $empId = '', $plantId = '')
+    {
+        $workorderNo = trim((string)$workorderNo);
+        if ($workorderNo === '' || !($conn instanceof mysqli)) {
+            return array('ok' => false, 'message' => 'Work order number is required');
+        }
+        stp_ensure_batch_planning_schema($conn);
+
+        $woEsc = $conn->real_escape_string($workorderNo);
+        $woRes = @$conn->query("SELECT * FROM Work_order_materials WHERE workorder_no = '".$woEsc."' ORDER BY id DESC LIMIT 1");
+        if (!$woRes || $woRes->num_rows === 0) {
+            return array('ok' => false, 'message' => 'Work order not found');
+        }
+        $wo = $woRes->fetch_assoc();
+        $plant = trim((string)$plantId);
+        if ($plant === '') {
+            $plant = trim((string)($wo['plant_id'] ?? ''));
+        }
+        $plantEsc = $conn->real_escape_string($plant);
+        $productCode = trim((string)($wo['product_code'] ?? ''));
+        $productEsc = $conn->real_escape_string($productCode);
+        $hasWoCol = stp_batch_planning_has_column($conn, 'workorder_no');
+
+        $planId = 0;
+        $findSql = "SELECT id FROM batch_planning WHERE plan_no = '".$woEsc."'";
+        if ($hasWoCol) {
+            $findSql .= " OR workorder_no = '".$woEsc."'";
+        }
+        $findSql .= " ORDER BY id DESC LIMIT 1";
+        $ex = @$conn->query($findSql);
+        if ($ex && $ex->num_rows > 0) {
+            $planId = intval($ex->fetch_assoc()['id'] ?? 0);
+        }
+        if ($planId <= 0 && $productEsc !== '') {
+            $match = @$conn->query("SELECT id FROM batch_planning
+                WHERE (plant_id = '".$plantEsc."' OR TRIM(IFNULL(plant_id,'')) = '')
+                  AND product_code = '".$productEsc."'
+                  AND TRIM(IFNULL(plan_no,'')) = ''
+                ORDER BY id DESC LIMIT 1");
+            if ($match && $match->num_rows > 0) {
+                $planId = intval($match->fetch_assoc()['id'] ?? 0);
+            }
+        }
+
+        $productName = trim((string)($wo['product_name'] ?? ''));
+        if ($productName === '' && $productEsc !== '') {
+            $pn = @$conn->query("SELECT product_name FROM product WHERE product_code = '".$productEsc."' LIMIT 1");
+            if ($pn && $pn->num_rows > 0) {
+                $productName = trim((string)($pn->fetch_assoc()['product_name'] ?? ''));
+            }
+        }
+        $batchSize = trim((string)($wo['batch_size'] ?? ''));
+        if ($batchSize === '' || floatval($batchSize) <= 0) {
+            $batchSize = trim((string)($wo['plan_qty'] ?? '0'));
+        }
+        $batchUnit = trim((string)($wo['planUnit'] ?? 'Kg'));
+        $plannedQty = floatval($wo['plan_qty'] ?? $wo['work_order_planned_qty'] ?? $batchSize);
+        if ($plannedQty <= 0) {
+            $plannedQty = floatval($batchSize);
+        }
+        $numberOfBatches = (floatval($batchSize) > 0 && $plannedQty > 0) ? intval(ceil($plannedQty / floatval($batchSize))) : 1;
+        if ($numberOfBatches < 1) {
+            $numberOfBatches = 1;
+        }
+        $bfrNo = '';
+        if (function_exists('gw_resolve_bfr_for_work_order')) {
+            $bfrNo = gw_resolve_bfr_for_work_order($conn, $productCode, $batchSize, $batchUnit);
+        }
+        $mfrNo = '';
+        if ($bfrNo !== '') {
+            $mfrRes = @$conn->query("SELECT mfr_no FROM batch_formula_info WHERE bfr_no = '".$conn->real_escape_string($bfrNo)."' LIMIT 1");
+            if ($mfrRes && $mfrRes->num_rows > 0) {
+                $mfrNo = trim((string)($mfrRes->fetch_assoc()['mfr_no'] ?? ''));
+            }
+        }
+        if ($mfrNo === '' && $productEsc !== '') {
+            $mfrRes = @$conn->query("SELECT mfr_no FROM unitformula WHERE product_code = '".$productEsc."' ORDER BY id DESC LIMIT 1");
+            if ($mfrRes && $mfrRes->num_rows > 0) {
+                $mfrNo = trim((string)($mfrRes->fetch_assoc()['mfr_no'] ?? ''));
+            }
+        }
+        $empEsc = $conn->real_escape_string($empId);
+        $nameEsc = $conn->real_escape_string($productName);
+        $entryDate = date('Y-m-d H:i:s');
+
+        if ($planId > 0) {
+            $sets = array(
+                "plan_no = IF(TRIM(IFNULL(plan_no,''))='', '".$woEsc."', plan_no)",
+                "product_code = IF(TRIM(IFNULL(product_code,''))='', '".$productEsc."', product_code)",
+                "product_name = IF(TRIM(IFNULL(product_name,''))='', '".$nameEsc."', product_name)",
+                "status = IF(TRIM(IFNULL(status,''))='', 'pending', status)",
+            );
+            if ($plantEsc !== '') {
+                $sets[] = "plant_id = IF(TRIM(IFNULL(plant_id,''))='', '".$plantEsc."', plant_id)";
+            }
+            if ($hasWoCol) {
+                $sets[] = "workorder_no = '".$woEsc."'";
+            }
+            if ($bfrNo !== '') {
+                $sets[] = "bfr_no = IF(TRIM(IFNULL(bfr_no,''))='', '".$conn->real_escape_string($bfrNo)."', bfr_no)";
+            }
+            if ($mfrNo !== '') {
+                $sets[] = "mfr_no = IF(TRIM(IFNULL(mfr_no,''))='', '".$conn->real_escape_string($mfrNo)."', mfr_no)";
+            }
+            @$conn->query("UPDATE batch_planning SET ".implode(', ', $sets)." WHERE id = ".$planId." LIMIT 1");
+            stp_copy_wo_materials_to_batch_plan($conn, $planId, $workorderNo, $plant, $bfrNo, $batchSize, $batchUnit, $numberOfBatches);
+            return array('ok' => true, 'batch_plan_id' => $planId, 'created' => false);
+        }
+
+        $planMonth = trim((string)($wo['planMonth'] ?? ''));
+        $plannedYear = date('Y');
+        $plannedMonth = $planMonth !== '' ? $planMonth : date('m');
+        $sql = "INSERT INTO batch_planning (
+                plant_id, material_type, plan_for, plan_based_on, plan_type,
+                product_code, product_name, bfr_no, mfr_no,
+                batch_size, pack_unit, total_batches, planned_qty,
+                qty_can_planned, no_of_batches_can_planned, status, entry_by, entry_date,
+                planned_for_year, planned_for_month, start_date, plan_no";
+        if ($hasWoCol) {
+            $sql .= ", workorder_no";
+        }
+        $sql .= ") VALUES (
+                '".$plantEsc."',
+                'RM',
+                'Total Qty Wise',
+                'Proposed Qty',
+                'Total Qty Wise',
+                '".$productEsc."',
+                '".$nameEsc."',
+                '".$conn->real_escape_string($bfrNo)."',
+                '".$conn->real_escape_string($mfrNo)."',
+                '".$conn->real_escape_string($batchSize)."',
+                '".$conn->real_escape_string($batchUnit)."',
+                '".$numberOfBatches."',
+                '".$plannedQty."',
+                '".$plannedQty."',
+                '".$numberOfBatches."',
+                'pending',
+                '".$empEsc."',
+                '".$entryDate."',
+                '".$conn->real_escape_string($plannedYear)."',
+                '".$conn->real_escape_string($plannedMonth)."',
+                '".$entryDate."',
+                '".$woEsc."'";
+        if ($hasWoCol) {
+            $sql .= ", '".$woEsc."'";
+        }
+        $sql .= ")";
+        if (!$conn->query($sql)) {
+            return array('ok' => false, 'message' => 'Failed to create batch plan: '.$conn->error);
+        }
+        $planId = intval($conn->insert_id);
+        stp_copy_wo_materials_to_batch_plan($conn, $planId, $workorderNo, $plant, $bfrNo, $batchSize, $batchUnit, $numberOfBatches);
+        return array('ok' => true, 'batch_plan_id' => $planId, 'created' => true);
+    }
+}
+
+if (!function_exists('stp_backfill_line_approved_batch_plans')) {
+    function stp_backfill_line_approved_batch_plans($conn, $plantId = '', $empId = '')
+    {
+        if (!($conn instanceof mysqli)) {
+            return;
+        }
+        stp_ensure_batch_planning_schema($conn);
+        $plantEsc = $conn->real_escape_string(trim((string)$plantId));
+        $plantFilter = $plantEsc !== ''
+            ? " AND (plant_id = '".$plantEsc."' OR TRIM(IFNULL(plant_id,'')) = '')"
+            : '';
+        $sql = "SELECT workorder_no FROM Work_order_materials
+                WHERE TRIM(IFNULL(workorder_no,'')) <> ''
+                  AND LOWER(TRIM(IFNULL(stp_line_approval_status,''))) = 'approved'
+                  ".$plantFilter."
+                ORDER BY id DESC
+                LIMIT 100";
+        $res = @$conn->query($sql);
+        if (!$res || $res->num_rows === 0) {
+            return;
+        }
+        while ($row = $res->fetch_assoc()) {
+            $woNo = trim((string)($row['workorder_no'] ?? ''));
+            if ($woNo === '') {
+                continue;
+            }
+            stp_ensure_batch_plan_for_work_order($conn, $woNo, $empId, $plantId);
+        }
     }
 }
