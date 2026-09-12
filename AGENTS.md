@@ -15,6 +15,13 @@ Always-on rules also live in [`.cursor/rules/`](.cursor/rules/).
 - Plant `1126`, client `GMP22052`.
 - Cyclone = dashboards/themes; Zuma = login/session reauth.
 
+## GitHub
+
+- Repo: https://github.com/softwaredeveloperit03-netizen/medicap  
+- Remote: https://github.com/softwaredeveloperit03-netizen/medicap.git (`main`)  
+- **Push/pull = update only** — never force-push or re-upload the whole codebase unless the user explicitly commands it.  
+- Full rule: [`.cursor/rules/medicap-github.mdc`](.cursor/rules/medicap-github.mdc)
+
 ## Shared cross-dept modules
 
 One URL for all departments; data scoped by `localStorage.department` — do not copy per dept.
