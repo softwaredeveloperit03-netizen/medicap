@@ -1,0 +1,201 @@
+<div class="wof" *ngIf="!isView">
+  <div class="wof__card">
+    <header class="wof__header">
+      <h1 class="wof__title">Work Performed — Engineering and Maintenance</h1>
+      <a class="wof__btn wof__btn--close" routerLink="/equipment-work-order">Close</a>
+    </header>
+    <div class="wof__body">
+      <div class="wof__table-wrap">
+        <table class="wof__table">
+          <thead>
+            <tr>
+              <th>Sr</th>
+              <th>Work Order #</th>
+              <th>Department</th>
+              <th>Type</th>
+              <th>Name</th>
+              <th>QA Required</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of results; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ item.work_order_no }}</td>
+              <td>{{ item.initiating_department }}</td>
+              <td>{{ item.asset_type || 'Equipment' }}</td>
+              <td>{{ item.equipment_name }}</td>
+              <td>{{ item.qa_approval_required }}</td>
+              <td><button type="button" class="wof__btn wof__btn--primary" (click)="view(item)">Complete</button></td>
+            </tr>
+            <tr *ngIf="!results?.length"><td colspan="7">No work orders pending</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wof" *ngIf="isView">
+  <div class="wof__card">
+    <header class="wof__header">
+      <h1 class="wof__title">{{ selected?.work_order_no }} — Work Performed</h1>
+      <button type="button" class="wof__btn wof__btn--secondary" (click)="isView = false">Back</button>
+    </header>
+    <div class="wof__body">
+      <div class="wof__grid" style="margin-bottom: 12px;">
+        <div class="wof__field"><label class="wof__label">Type</label><div class="wof__readonly">{{ selected.asset_type || 'Equipment' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Department</label><div class="wof__readonly">{{ selected.initiating_department }}</div></div>
+        <div class="wof__field wof__field--span2"><label class="wof__label">Name</label><div class="wof__readonly">{{ selected.equipment_name }}</div></div>
+      </div>
+
+      <!-- Area only: Interior / Exterior checklist -->
+      <ng-container *ngIf="isArea">
+        <div class="wof__subheader"><h2 class="wof__subtitle">Facility Checklist (Area)</h2></div>
+        <div class="wof__grid">
+          <div class="wof__field wof__field--span2">
+            <label class="wof__label">Checklist type <span class="wof__asterisk">*</span></label>
+            <select
+              class="wof__input"
+              [(ngModel)]="checklistType"
+              name="checklistType"
+              (ngModelChange)="onChecklistTypeChange()"
+              required
+            >
+              <option value="">— Select —</option>
+              <option value="Interior">Facility Interior Checklist (FEN-001-01-C)</option>
+              <option value="Exterior">Facility Exterior Checklist (FEN-001-01-D)</option>
+            </select>
+          </div>
+        </div>
+
+        <ng-container *ngIf="checklistType">
+          <p class="wof__meta">{{ checklistTitle }} — Form No: {{ checklistFormNo }}</p>
+          <div class="wof__grid">
+            <div class="wof__field wof__field--span2" *ngIf="checklistType === 'Interior'">
+              <label class="wof__label">Area / Department</label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.area_department" name="area_department" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Date <span class="wof__asterisk">*</span></label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.checklist_date" name="checklist_date" />
+            </div>
+          </div>
+
+          <div class="wof__table-wrap" style="margin-top: 10px;">
+            <table class="wof__table">
+              <thead>
+                <tr>
+                  <th style="width: 56px;">Sr. No.</th>
+                  <th>Check point</th>
+                  <th style="width: 22%;">Observation</th>
+                  <th style="width: 22%;">Action taken</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of checklistItems; let i = index">
+                  <td>{{ row.sr }}</td>
+                  <td>{{ row.checkpoint }}</td>
+                  <td>
+                    <textarea class="wof__input" rows="2" [(ngModel)]="row.observation" [name]="'obs_' + i"></textarea>
+                  </td>
+                  <td>
+                    <textarea class="wof__input" rows="2" [(ngModel)]="row.action_taken" [name]="'act_' + i"></textarea>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="wof__subheader"><h2 class="wof__subtitle">Checklist sign-off</h2></div>
+          <div class="wof__grid">
+            <div class="wof__field">
+              <label class="wof__label">Performed by <span class="wof__asterisk">*</span></label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.performed_by" name="cl_performed_by" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Performed Date <span class="wof__asterisk">*</span></label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.performed_date" name="cl_performed_date" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Action taken by</label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.action_taken_by" name="cl_action_taken_by" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Action taken Date</label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.action_taken_date" name="cl_action_taken_date" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Admin. / Dept. Head</label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.admin_dept_head" name="cl_admin" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Admin. Date</label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.admin_dept_head_date" name="cl_admin_date" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Verified by</label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.verified_by" name="cl_verified_by" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">Verified Date</label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.verified_date" name="cl_verified_date" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">QA</label>
+              <input class="wof__input" type="text" [(ngModel)]="checklistMeta.qa_by" name="cl_qa_by" />
+            </div>
+            <div class="wof__field">
+              <label class="wof__label">QA Date</label>
+              <input class="wof__input" type="date" [(ngModel)]="checklistMeta.qa_date" name="cl_qa_date" />
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <div class="wof__subheader"><h2 class="wof__subtitle">Work Performed</h2></div>
+      <form #partB="ngForm">
+        <div class="wof__grid">
+          <div class="wof__field wof__field--full">
+            <label class="wof__label">Work Performed <span class="wof__asterisk">*</span></label>
+            <textarea class="wof__input" name="work_performed" [(ngModel)]="form.work_performed" required></textarea>
+          </div>
+          <div class="wof__field wof__field--full">
+            <label class="wof__label">Parts Used</label>
+            <textarea class="wof__input" name="parts_used" [(ngModel)]="form.parts_used"></textarea>
+          </div>
+          <div class="wof__field wof__field--span2">
+            <label class="wof__label">Re-qualification required? <span class="wof__asterisk">*</span></label>
+            <div class="wof__check-row">
+              <label class="wof__check"><input type="radio" name="require_requalification" value="Yes" [(ngModel)]="form.require_requalification" required /> Yes</label>
+              <label class="wof__check"><input type="radio" name="require_requalification" value="No" [(ngModel)]="form.require_requalification" required /> No</label>
+            </div>
+          </div>
+          <div class="wof__field wof__field--span2">
+            <label class="wof__label">Calibration required after work? <span class="wof__asterisk">*</span></label>
+            <div class="wof__check-row">
+              <label class="wof__check"><input type="radio" name="require_calibration" value="Yes" [(ngModel)]="form.require_calibration" required /> Yes</label>
+              <label class="wof__check"><input type="radio" name="require_calibration" value="No" [(ngModel)]="form.require_calibration" required /> No</label>
+            </div>
+          </div>
+          <div class="wof__field wof__field--span2">
+            <label class="wof__label">Re-qualification / calibration date</label>
+            <input class="wof__input" type="date" name="requal_calib_date" [(ngModel)]="form.requal_calib_date" />
+          </div>
+          <div class="wof__field">
+            <label class="wof__label">Performed by <span class="wof__asterisk">*</span></label>
+            <input class="wof__input" type="text" name="performed_by" [(ngModel)]="form.performed_by" required />
+          </div>
+          <div class="wof__field">
+            <label class="wof__label">Date <span class="wof__asterisk">*</span></label>
+            <input class="wof__input" type="date" name="performed_date" [(ngModel)]="form.performed_date" required />
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="wof__footer">
+      <button type="button" class="wof__btn wof__btn--success" (click)="save(partB)">Save Work Performed</button>
+      <button type="button" class="wof__btn wof__btn--close" (click)="isView = false">Close</button>
+    </div>
+  </div>
+</div>

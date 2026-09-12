@@ -10,9 +10,10 @@ import { QcModuleDashboardModule } from './qc-module-dashboard/qc-module-dashboa
 import { RouterModule } from '@angular/router';
 import { CfrSignatureBlockComponent } from './cfr-signature-block/cfr-signature-block.component';
 import { DeptCalibrationSidebarLinkComponent } from './dept-calibration/dept-calibration-sidebar-link.component';
+import { EquipmentWorkOrderSidebarLinkComponent } from './equipment-work-order-sidebar-link.component';
 
 @NgModule({
-  declarations: [NumberDirective, CanadianPhoneDirective, CanadianPhonePipe, CfrSignatureBlockComponent, DeptCalibrationSidebarLinkComponent],
+  declarations: [NumberDirective, CanadianPhoneDirective, CanadianPhonePipe, CfrSignatureBlockComponent, DeptCalibrationSidebarLinkComponent, EquipmentWorkOrderSidebarLinkComponent],
   imports: [TranslateModule, CommonModule, FilterPipeModule, QcModuleDashboardModule, RouterModule],
   exports: [
     NumberDirective,
@@ -22,6 +23,7 @@ import { DeptCalibrationSidebarLinkComponent } from './dept-calibration/dept-cal
     QcModuleDashboardModule,
     CfrSignatureBlockComponent,
     DeptCalibrationSidebarLinkComponent,
+    EquipmentWorkOrderSidebarLinkComponent,
   ],
   providers: [DashboardBaseService],
 })

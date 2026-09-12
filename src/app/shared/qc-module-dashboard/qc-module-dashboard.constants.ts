@@ -29,6 +29,7 @@ export const QC_DEPT_TOOLBAR_LINKS: QcDeptToolbarLink[] = [
   { id: 'calibration', label: 'Calibration', labelKey: 'qc.links.calibration', route: '/calibration', icon: 'fa-ruler-combined', showWhen: 'always' },
   { id: 'training', label: 'Training', labelKey: 'qc.links.training', route: '/training', icon: 'fa-chalkboard-teacher', showWhen: 'training' },
   { id: 'pm', label: 'PM Intimation', labelKey: 'qc.links.pmIntimation', route: '/preventiveimain', icon: 'fa-wrench', showWhen: 'always' },
+  { id: 'work-order', label: 'Work Order', labelKey: 'qc.links.workOrder', route: '/equipment-work-order', icon: 'fa-clipboard-list', showWhen: 'always' },
   { id: 'dept-head', label: 'Dept Head', labelKey: 'qc.links.deptHead', route: '/hrfordepthead', icon: 'fa-user-tie', showWhen: 'dept_head' },
   { id: 'indent', label: 'Indent', labelKey: 'qc.links.indent', route: '/indend/raw', icon: 'fa-file-alt', showWhen: 'always' },
   { id: 'qms', label: 'QMS', labelKey: 'qc.links.qms', route: '/qa/qms', icon: 'fa-shield-alt', showWhen: 'always' },

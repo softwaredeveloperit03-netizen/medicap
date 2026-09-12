@@ -395,6 +395,14 @@ const routes: Routes = [
     data: { preload: false },
   },
   {
+    path: 'equipment-work-order',
+    loadChildren: () =>
+      import('./equipment-work-order/equipment-work-order.module').then(
+        (m) => m.EquipmentWorkOrderModule
+      ),
+    data: { preload: false },
+  },
+  {
     path: 'qhead',
     loadChildren: () =>
       import('./qhead/qhead.module').then((m) => m.QheadModule),

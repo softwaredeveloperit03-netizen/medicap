@@ -1,0 +1,115 @@
+---
+description: Equipment & Facility Work Order (FEN-001) — shared module; UI = app forms; PDF = paper FEN-001-01-B/A
+globs: src/app/equipment-work-order/**,phpmedicap/engineering/equipment_work_order.php,src/app/shared/equipment-work-order-sidebar-link.component.ts,phpmedicap/logos/medicap-logo*
+alwaysApply: false
+---
+
+# Equipment & Facility Work Order (shared module)
+
+Paper forms (for **PDF download only**):
+
+| Form | Code | Use |
+|------|------|-----|
+| Equipment & Facility Work Order | **FEN-001-01-B** | Download PDF from log |
+| Work Order Issuance Log | **FEN-001-01-A** | Engineering issuance log PDF |
+| Facility Interior Maintenance Monthly Checklist | **FEN-001-01-C** | Engineering — Area WOs only |
+| Facility Exterior Maintenance Monthly Checklist | **FEN-001-01-D** | Engineering — Area WOs only |
+
+WI: **WI-EN-001-01**. Effective date on PDF header: **MAY 06 2025**. Revision: **00**.
+
+**One module for all departments** (`/equipment-work-order`). Do **not** copy under `qa/`, `purchase/`, etc.
+
+## Critical: UI vs PDF
+
+| Surface | Look |
+|---------|------|
+| **On-screen forms / logs** | Normal Medicap `wof` tables — **do not** restyle screens to look like scanned paper |
+| **Download Issuance Log** PDF | Exact paper **FEN-001-01-A** (logo, control header, 5 columns) |
+| **Download Form B** PDF | Exact paper **FEN-001-01-B** |
+
+Logo for PDF: `phpmedicap/logos/medicap-logo.png`.
+
+## Screens (no “Part A/B/C” in UI titles)
+
+| Route | Name | Who |
+|-------|------|-----|
+| `/equipment-work-order` | Hub | All |
+| `.../new` | **New Work Order** | Any dept |
+| `.../engg-review` | **Engineering Review** | Engineering |
+| `.../work-performed` | **Work Performed** | Engineering — Area WOs: Interior/Exterior checklist dropdown here |
+| `.../verification` | **Work Order Verification** | Initiating dept |
+| `.../qa-approval` | **QA Approval** | QA if required |
+| `.../log` | **Work Order Log** | That dept — normal `wof` app table |
+| `.../issuance-log` | **Issuance Log (Final)** | Engineering — normal `wof` table; **Download Issuance Log** opens paper FEN-001-01-A PDF |
+
+## New Work Order form rules (on-screen)
+
+1. First choose **Equipment** or **Area**.
+2. Equipment: `engineering/maintenance.php?type=getEquipmentForBreakdownByDepartment`; fallback `getEquipmentByDepartment`.
+3. Area: `getAreasByDepartment` / location / section; manual name if empty.
+4. Do **not** show Equipment/Area ID # on the screen form.
+5. **Sub-Component ID#** auto-filled readonly.
+6. Use `wof` theme — not a paper/scanned document layout.
+
+## PDF format (FEN-001-01-A Issuance Log) — agents must keep
+
+When editing `downloadIssuanceLogPdf` (Engineering **Issuance Log (Final)** print):
+
+1. **Landscape A4** (paper is landscape)  
+2. Medicap logo top-left (`phpmedicap/logos/medicap-logo.png`); `Ref: WI-EN-001-01` top-right  
+3. Control header: TITLE **WORK ORDER ISSUANCE LOG FORM** | FORM NO. **FEN-001-01-A** | DEPT/QA APPROVAL (SIGNATURE/DATE) | REV **00** | EFFECTIVE **MAY 06 2025** | PAGE **1 OF 1**  
+4. Data columns exactly: Work Order # | Date of Initiation | Initiated By & Date | Brief Description of Problem | Closed By & Date  
+5. Pad blank rows like paper; confidential footer right-aligned  
+6. Draw with TCPDF cells (not a loose HTML mock) so print matches paper  
+
+**Engineering Issuance Log screen:** shows WOs after department verification (`status=ISSUANCE` → `CLOSED` + `TO_QA`), all departments. **Download Issuance Log** = Form A PDF above.
+
+**Department Work Order Log:** that dept only; Form A/B downloads as documented.
+
+## PDF format (FEN-001-01-B) — agents must keep
+
+When editing `downloadWorkOrderPdf` only:
+
+1. Logo (Medicap Laboratories) top-left  
+2. Ref: WI-EN-001-01 top-right  
+3. Control header: TITLE / FORM NO. FEN-001-01-B / DEPT & QA APPROVAL / REV 00 / EFFECTIVE DATE / PAGE  
+4. Work Order #  
+5. **Part A-The Initiator:** with Name, ID #, Sub-Component ID#, Is this, availability, problem, NCR, Submitted By/Date  
+6. Footer: Submit to Engineering… completion of Part A  
+
+## Status flow
+
+```text
+Equipment:
+  TO_ENGG_REVIEW → TO_PART_B → TO_VERIFY → (TO_QA?) → CLOSED
+
+Area:
+  TO_ENGG_REVIEW → TO_PART_B (Work Performed + Interior/Exterior checklist dropdown) → TO_VERIFY → (TO_QA?) → CLOSED
+```
+
+After initiating-dept **Verification**: record appears on Engineering **Issuance Log** (CLOSED immediately, or TO_QA until QA closes).
+
+**Area on Work Performed:** choose **Interior (FEN-001-01-C)** or **Exterior (FEN-001-01-D)** from dropdown, fill checklist + work performed, then save.
+
+**Issuance Log:** **View** shows full WO (initiator → review → checklist → work performed → verify → QA).
+
+## Department scoping
+
+- Dept log / new / verification: initiating dept only  
+- Engineering Review / Work Performed: `scope=all`  
+- Issuance Log: `scope=all&status=ISSUANCE` (CLOSED + TO_QA) + PDF FEN-001-01-A  
+- Never hardcode department names  
+
+## UI theme
+
+- `src/app/equipment-work-order/work-order-form.theme.css` (`wof__*`)  
+- Header `--app-primary`, Close red, actions blue/green  
+- Sidebar Work Order icon blue like Calibration — never orange  
+
+## Developer do / don’t
+
+1. Never restyle on-screen WO forms to match paper; paper = PDF only.  
+2. Never duplicate module per department.  
+3. Never use “Part A/B/C” in screen/hub titles (PDF body may use Part A label).  
+4. Deploy PHP + `logos/medicap-logo.png` when changing PDF layout.  
+5. Same pattern as `/preventiveimain`.

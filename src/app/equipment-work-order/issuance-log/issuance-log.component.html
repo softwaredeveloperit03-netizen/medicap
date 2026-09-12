@@ -1,0 +1,191 @@
+<div class="wof" *ngIf="!isView">
+  <div class="wof__card">
+    <header class="wof__header">
+      <h1 class="wof__title">Work Order Issuance Log (FEN-001-01-A)</h1>
+      <div class="wof__header-actions">
+        <a class="wof__btn wof__btn--close" routerLink="/equipment-work-order">Close</a>
+      </div>
+    </header>
+    <div class="wof__body">
+      <div class="wof__toolbar">
+        <p class="wof__meta">
+          Form No: FEN-001-01-A &nbsp;|&nbsp; Ref: WI-EN-001-01 &nbsp;|&nbsp;
+          After department verification (Closed + Pending QA) — all departments
+        </p>
+        <div class="wof__toolbar-actions">
+          <input class="wof__input" type="text" [(ngModel)]="searchQuery" placeholder="Search" />
+          <button type="button" class="wof__btn wof__btn--success" (click)="downloadIssuanceLog()">
+            Download Form A (Issuance Log)
+          </button>
+        </div>
+      </div>
+
+      <div class="wof__table-wrap">
+        <table class="wof__table">
+          <thead>
+            <tr>
+              <th class="wof__col-wo">Work Order #</th>
+              <th class="wof__col-date">Date of Initiation</th>
+              <th class="wof__col-init">Initiated By &amp; Date</th>
+              <th class="wof__col-desc">Brief Description of Problem</th>
+              <th class="wof__col-closed">Closed By &amp; Date</th>
+              <th class="wof__col-action">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filtered">
+              <td class="wof__col-wo">{{ item.work_order_no }}</td>
+              <td class="wof__col-date">{{ item.submitted_date }}</td>
+              <td class="wof__col-init">{{ item.submitted_by }} / {{ item.submitted_date }}</td>
+              <td class="wof__col-desc">{{ item.problem_description }}</td>
+              <td class="wof__col-closed">{{ closedDisplay(item) }}</td>
+              <td class="wof__col-action">
+                <div class="wof__actions">
+                  <button type="button" class="wof__btn wof__btn--secondary" (click)="openView(item)">View</button>
+                  <button type="button" class="wof__btn wof__btn--primary" (click)="downloadFormA(item)">
+                    Download
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="!filtered?.length">
+              <td colspan="6">No verified / closed work orders yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wof" *ngIf="isView && selected">
+  <div class="wof__card">
+    <header class="wof__header">
+      <h1 class="wof__title">{{ selected.work_order_no }} — Full View</h1>
+      <button type="button" class="wof__btn wof__btn--secondary" (click)="closeView()">Back</button>
+    </header>
+    <div class="wof__body">
+      <div class="wof__subheader"><h2 class="wof__subtitle">1. Initiator (Part A)</h2></div>
+      <div class="wof__grid">
+        <div class="wof__field"><label class="wof__label">Department</label><div class="wof__readonly">{{ selected.initiating_department }}</div></div>
+        <div class="wof__field"><label class="wof__label">Type</label><div class="wof__readonly">{{ selected.asset_type || 'Equipment' }}</div></div>
+        <div class="wof__field wof__field--span2"><label class="wof__label">Equipment / Area</label><div class="wof__readonly">{{ selected.equipment_name }}</div></div>
+        <div class="wof__field"><label class="wof__label">Sub-Component</label><div class="wof__readonly">{{ selected.sub_component_id || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Priority</label><div class="wof__readonly">{{ selected.priority }}</div></div>
+        <div class="wof__field"><label class="wof__label">Breakdown</label><div class="wof__readonly">{{ selected.is_breakdown }}</div></div>
+        <div class="wof__field"><label class="wof__label">Repair</label><div class="wof__readonly">{{ selected.is_repair }}</div></div>
+        <div class="wof__field wof__field--full"><label class="wof__label">Problem</label><div class="wof__readonly">{{ selected.problem_description }}</div></div>
+        <div class="wof__field"><label class="wof__label">Ref NCR #</label><div class="wof__readonly">{{ selected.ref_ncr_no || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Submitted By / Date</label><div class="wof__readonly">{{ selected.submitted_by }} / {{ selected.submitted_date }}</div></div>
+      </div>
+
+      <div class="wof__subheader"><h2 class="wof__subtitle">2. Engineering Review</h2></div>
+      <div class="wof__grid">
+        <div class="wof__field"><label class="wof__label">GMP Impact</label><div class="wof__readonly">{{ selected.gmp_impact }}</div></div>
+        <div class="wof__field"><label class="wof__label">Historical Impact</label><div class="wof__readonly">{{ selected.historical_impact }}</div></div>
+        <div class="wof__field"><label class="wof__label">QA Approval Required</label><div class="wof__readonly">{{ selected.qa_approval_required }}</div></div>
+        <div class="wof__field"><label class="wof__label">Reviewed By / Date</label><div class="wof__readonly">{{ selected.reviewed_by }} / {{ selected.reviewed_date }}</div></div>
+      </div>
+
+      <ng-container *ngIf="interiorChecklist">
+        <div class="wof__subheader"><h2 class="wof__subtitle">3. Facility Interior Checklist (FEN-001-01-C)</h2></div>
+        <div class="wof__grid">
+          <div class="wof__field wof__field--span2"><label class="wof__label">Area / Department</label><div class="wof__readonly">{{ interiorChecklist.area_department || '—' }}</div></div>
+          <div class="wof__field"><label class="wof__label">Date</label><div class="wof__readonly">{{ interiorChecklist.checklist_date || '—' }}</div></div>
+        </div>
+        <div class="wof__table-wrap" *ngIf="interiorChecklist.items?.length">
+          <table class="wof__table">
+            <thead>
+              <tr>
+                <th>Sr</th>
+                <th>Check point</th>
+                <th>Observation</th>
+                <th>Action taken</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of interiorChecklist.items">
+                <td>{{ row.sr }}</td>
+                <td>{{ row.checkpoint }}</td>
+                <td>{{ row.observation }}</td>
+                <td>{{ row.action_taken }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="wof__grid">
+          <div class="wof__field"><label class="wof__label">Performed by</label><div class="wof__readonly">{{ interiorChecklist.performed_by }} / {{ interiorChecklist.performed_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Action taken by</label><div class="wof__readonly">{{ interiorChecklist.action_taken_by }} / {{ interiorChecklist.action_taken_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Admin. / Dept. Head</label><div class="wof__readonly">{{ interiorChecklist.admin_dept_head }} / {{ interiorChecklist.admin_dept_head_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Verified by</label><div class="wof__readonly">{{ interiorChecklist.verified_by }} / {{ interiorChecklist.verified_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">QA</label><div class="wof__readonly">{{ interiorChecklist.qa_by }} / {{ interiorChecklist.qa_date }}</div></div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="exteriorChecklist">
+        <div class="wof__subheader"><h2 class="wof__subtitle">3. Facility Exterior Checklist (FEN-001-01-D)</h2></div>
+        <div class="wof__grid">
+          <div class="wof__field"><label class="wof__label">Date</label><div class="wof__readonly">{{ exteriorChecklist.checklist_date || '—' }}</div></div>
+        </div>
+        <div class="wof__table-wrap" *ngIf="exteriorChecklist.items?.length">
+          <table class="wof__table">
+            <thead>
+              <tr>
+                <th>Sr</th>
+                <th>Check point</th>
+                <th>Observation</th>
+                <th>Action taken</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of exteriorChecklist.items">
+                <td>{{ row.sr }}</td>
+                <td>{{ row.checkpoint }}</td>
+                <td>{{ row.observation }}</td>
+                <td>{{ row.action_taken }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="wof__grid">
+          <div class="wof__field"><label class="wof__label">Performed by</label><div class="wof__readonly">{{ exteriorChecklist.performed_by }} / {{ exteriorChecklist.performed_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Action taken by</label><div class="wof__readonly">{{ exteriorChecklist.action_taken_by }} / {{ exteriorChecklist.action_taken_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Admin. / Dept. Head</label><div class="wof__readonly">{{ exteriorChecklist.admin_dept_head }} / {{ exteriorChecklist.admin_dept_head_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">Verified by</label><div class="wof__readonly">{{ exteriorChecklist.verified_by }} / {{ exteriorChecklist.verified_date }}</div></div>
+          <div class="wof__field"><label class="wof__label">QA</label><div class="wof__readonly">{{ exteriorChecklist.qa_by }} / {{ exteriorChecklist.qa_date }}</div></div>
+        </div>
+      </ng-container>
+
+      <div class="wof__subheader"><h2 class="wof__subtitle">4. Work Performed</h2></div>
+      <div class="wof__grid">
+        <div class="wof__field wof__field--full"><label class="wof__label">Work Performed</label><div class="wof__readonly">{{ selected.work_performed }}</div></div>
+        <div class="wof__field wof__field--full"><label class="wof__label">Parts Used</label><div class="wof__readonly">{{ selected.parts_used || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Re-qualification</label><div class="wof__readonly">{{ selected.require_requalification }}</div></div>
+        <div class="wof__field"><label class="wof__label">Calibration</label><div class="wof__readonly">{{ selected.require_calibration }}</div></div>
+        <div class="wof__field"><label class="wof__label">Requal / Calib Date</label><div class="wof__readonly">{{ selected.requal_calib_date || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Performed By / Date</label><div class="wof__readonly">{{ selected.performed_by }} / {{ selected.performed_date }}</div></div>
+      </div>
+
+      <div class="wof__subheader"><h2 class="wof__subtitle">5. Verification</h2></div>
+      <div class="wof__grid">
+        <div class="wof__field"><label class="wof__label">Verified By / Date</label><div class="wof__readonly">{{ selected.verified_by }} / {{ selected.verified_date }}</div></div>
+      </div>
+
+      <div class="wof__subheader"><h2 class="wof__subtitle">6. QA Approval</h2></div>
+      <div class="wof__grid">
+        <div class="wof__field"><label class="wof__label">Reinstate</label><div class="wof__readonly">{{ selected.qa_reinstate || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Approved By / Date</label><div class="wof__readonly">{{ selected.qa_approved_by || '—' }} / {{ selected.qa_approved_date || '—' }}</div></div>
+        <div class="wof__field"><label class="wof__label">Status</label><div class="wof__readonly">{{ selected.status }}</div></div>
+        <div class="wof__field"><label class="wof__label">Closed By / Date</label><div class="wof__readonly">{{ closedDisplay(selected) || '—' }}</div></div>
+      </div>
+    </div>
+    <div class="wof__footer">
+      <div class="wof__actions">
+        <button type="button" class="wof__btn wof__btn--primary" (click)="downloadFormA(selected)">
+          Download
+        </button>
+        <button type="button" class="wof__btn wof__btn--close" (click)="closeView()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

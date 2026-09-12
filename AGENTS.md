@@ -14,3 +14,10 @@ Always-on rules also live in [`.cursor/rules/`](.cursor/rules/).
 - Use `scripts/ftp_upload_medicap.py` for deploy (frontend + backend accounts differ).
 - Plant `1126`, client `GMP22052`.
 - Cyclone = dashboards/themes; Zuma = login/session reauth.
+
+## Shared cross-dept modules
+
+One URL for all departments; data scoped by `localStorage.department` — do not copy per dept.
+
+- PM Intimation → `/preventiveimain` — [`.cursor/rules/medicap-dept-shared-modules.mdc`](.cursor/rules/medicap-dept-shared-modules.mdc)
+- Equipment & Facility Work Order (FEN-001) → `/equipment-work-order` — [`.cursor/rules/medicap-equipment-work-order.mdc`](.cursor/rules/medicap-equipment-work-order.mdc)
