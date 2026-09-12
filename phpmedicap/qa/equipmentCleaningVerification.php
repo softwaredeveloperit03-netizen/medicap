@@ -64,9 +64,84 @@ if ($result && $result->num_rows > 0) {
         return $conn->real_escape_string($value ?? '');
     }
 
-    ensureEquipmentCleaningVerificationTable($conn);
+    function equipmentCleaningEmployeeStamp($conn, $empId)
+    {
+        $empName = $empId;
+        $nameSql = "SELECT firstname, lastname FROM employee
+                    WHERE emp_id='" . esc($conn, $empId) . "' LIMIT 1";
+        $nameResult = $conn->query($nameSql);
+        if ($nameResult && $nameResult->num_rows > 0) {
+            $empRow = $nameResult->fetch_assoc();
+            $fullName = trim(($empRow['firstname'] ?? '') . ' ' . ($empRow['lastname'] ?? ''));
+            if ($fullName !== '') {
+                $empName = $fullName;
+            }
+        }
+        return $empName . ' (' . $empId . ') - ' . date('d-m-Y H:i');
+    }
 
-    if ($_GET['type'] == 'saveEquipmentCleaningVerification') {
+    function ensureEquipmentCleaningApprovalTable($conn)
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS equipment_cleaning_approval (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            plant_id VARCHAR(50) NOT NULL,
+            verification_id INT(11) DEFAULT NULL,
+            form_no VARCHAR(50) DEFAULT 'WI-QA-002-02',
+            equipment_name VARCHAR(255) DEFAULT NULL,
+            equipment_id VARCHAR(100) DEFAULT NULL,
+            previous_product_name VARCHAR(255) DEFAULT NULL,
+            product_code VARCHAR(100) DEFAULT NULL,
+            qc_lab_sample_no VARCHAR(100) DEFAULT NULL,
+            lot_no VARCHAR(100) DEFAULT NULL,
+            cleaning_date DATE DEFAULT NULL,
+            sample_type VARCHAR(100) DEFAULT NULL,
+            visual_inspection VARCHAR(20) DEFAULT NULL,
+            production_by_date VARCHAR(255) DEFAULT NULL,
+            ph_result VARCHAR(100) DEFAULT NULL,
+            toc_result VARCHAR(100) DEFAULT NULL,
+            residue_result VARCHAR(255) DEFAULT NULL,
+            microbial_result VARCHAR(255) DEFAULT NULL,
+            qc_meets_spec VARCHAR(20) DEFAULT NULL,
+            qc_by_date VARCHAR(255) DEFAULT NULL,
+            qa_meets_criteria VARCHAR(20) DEFAULT NULL,
+            approved_for_production VARCHAR(20) DEFAULT NULL,
+            qa_by_date VARCHAR(255) DEFAULT NULL,
+            comments TEXT DEFAULT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
+            entry_by VARCHAR(100) DEFAULT NULL,
+            entry_date DATETIME DEFAULT NULL,
+            PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        return $conn->query($sql);
+    }
+
+    function equipmentCleaningApprovalStatus($input)
+    {
+        $approved = $input['approved_for_production'] ?? '';
+        $visual = $input['visual_inspection'] ?? '';
+        $qcMeet = $input['qc_meets_spec'] ?? '';
+        if ($approved === 'Yes' && $visual === 'Yes' && $qcMeet === 'Yes') {
+            return 'approved';
+        }
+        if ($approved === 'No') {
+            return 'not_approved';
+        }
+        if ($qcMeet !== '') {
+            return 'pending_qa';
+        }
+        return 'pending_qc';
+    }
+
+    ensureEquipmentCleaningVerificationTable($conn);
+    ensureEquipmentCleaningApprovalTable($conn);
+
+    if ($_GET['type'] == 'getEquipmentCleaningStamp') {
+        echo json_encode([
+            'stamp' => equipmentCleaningEmployeeStamp($conn, $_GET['emp_id']),
+            'date' => date('Y-m-d'),
+            'time' => date('H:i'),
+        ]);
+    } else if ($_GET['type'] == 'saveEquipmentCleaningVerification') {
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) {
             echo json_encode(['status' => 'Invalid request']);
@@ -75,6 +150,21 @@ if ($result && $result->num_rows > 0) {
 
         $cleaningDate = !empty($input['cleaning_date']) ? $input['cleaning_date'] : date('Y-m-d');
         $expiryDate = !empty($input['expiry_date']) ? $input['expiry_date'] : date('Y-m-d', strtotime($cleaningDate . ' +30 days'));
+        $sampleTakenDate = !empty($input['sample_taken_date']) ? $input['sample_taken_date'] : date('Y-m-d');
+        $sampleTakenTime = !empty($input['sample_taken_time']) ? $input['sample_taken_time'] : date('H:i');
+        $stamp = equipmentCleaningEmployeeStamp($conn, $_GET['emp_id']);
+        $sampledByDate = $stamp;
+        $checkedByDate = $stamp;
+
+        $durationFlush = trim((string)($input['duration_flush'] ?? ''));
+        $sampleType = $input['sample_type'] ?? '';
+        $isSwab = ($sampleType === 'Product Residue' || $sampleType === 'Microbial Swab');
+        if ($isSwab) {
+            $durationFlush = '';
+        } else if ($durationFlush === '' || !is_numeric($durationFlush) || $durationFlush < 0) {
+            echo json_encode(['status' => 'Duration of Flush must be a number']);
+            exit;
+        }
 
         $sampleRows = isset($input['sample_rows']) ? json_encode($input['sample_rows']) : '[]';
 
@@ -95,17 +185,17 @@ if ($result && $result->num_rows > 0) {
             '" . esc($conn, $input['product_code']) . "',
             '" . esc($conn, $input['qc_lab_sample_no']) . "',
             '" . esc($conn, $input['lot_no']) . "',
-            '" . esc($conn, $input['sample_type']) . "',
+            '" . esc($conn, $sampleType) . "',
             '" . esc($conn, $input['sample_type_specify']) . "',
             '" . esc($conn, $sampleRows) . "',
             '" . esc($conn, $input['water_temp']) . "',
-            '" . esc($conn, $input['duration_flush']) . "',
+            '" . esc($conn, $durationFlush) . "',
             '" . esc($conn, $input['volume_30ml']) . "',
             '" . esc($conn, $input['volume_50ml']) . "',
-            '" . esc($conn, $input['sample_taken_time']) . "',
-            '" . esc($conn, $input['sample_taken_date']) . "',
-            '" . esc($conn, $input['sampled_by_date']) . "',
-            '" . esc($conn, $input['checked_by_date']) . "',
+            '" . esc($conn, $sampleTakenTime) . "',
+            '" . esc($conn, $sampleTakenDate) . "',
+            '" . esc($conn, $sampledByDate) . "',
+            '" . esc($conn, $checkedByDate) . "',
             '" . esc($conn, $expiryDate) . "',
             '" . esc($conn, $input['comments']) . "',
             '" . esc($conn, $_GET['emp_id']) . "',
@@ -143,19 +233,7 @@ if ($result && $result->num_rows > 0) {
             exit;
         }
 
-        $empName = $_GET['emp_id'];
-        $nameSql = "SELECT firstname, lastname FROM employee
-                    WHERE emp_id='" . esc($conn, $_GET['emp_id']) . "' LIMIT 1";
-        $nameResult = $conn->query($nameSql);
-        if ($nameResult && $nameResult->num_rows > 0) {
-            $empRow = $nameResult->fetch_assoc();
-            $fullName = trim(($empRow['firstname'] ?? '') . ' ' . ($empRow['lastname'] ?? ''));
-            if ($fullName !== '') {
-                $empName = $fullName;
-            }
-        }
-
-        $checkedByDate = $empName . ' (' . $_GET['emp_id'] . ') - ' . date('d-m-Y H:i');
+        $checkedByDate = equipmentCleaningEmployeeStamp($conn, $_GET['emp_id']);
         $updateSql = "UPDATE equipment_cleaning_verification
                       SET checked_by_date='" . esc($conn, $checkedByDate) . "'
                       WHERE id='$id' AND plant_id='" . esc($conn, $_GET['plant_id']) . "'";
@@ -336,7 +414,7 @@ if ($result && $result->num_rows > 0) {
 
             $sampleParams = [
                 ['label' => '1. Water Temp', 'value' => htmlspecialchars($row['water_temp'])],
-                ['label' => '2. Duration of Flush', 'value' => htmlspecialchars($row['duration_flush']) . '<br><small>5 minutes (N/A for swab sample)</small>'],
+                ['label' => '2. Duration of Flush', 'value' => htmlspecialchars($row['duration_flush']) . (is_numeric($row['duration_flush']) ? ' minutes' : '') . '<br><small>5 minutes (N/A for swab sample)</small>'],
                 ['label' => '3. Volume of Final Rinse', 'value' => htmlspecialchars($volumeText) . '<br><small>(N/A for swab sample)</small>'],
                 ['label' => '4. Sample Taken', 'value' => 'Time: ' . htmlspecialchars($row['sample_taken_time']) . ' Date: ' . (!empty($row['sample_taken_date']) ? date('d-m-Y', strtotime($row['sample_taken_date'])) : '')],
                 ['label' => '&nbsp;', 'value' => '&nbsp;'],
@@ -375,6 +453,284 @@ if ($result && $result->num_rows > 0) {
 
             $pdf->writeHTML($html, true, false, false, false, '');
             $pdf->Output('Equipment_Cleaning_Verification_Form.pdf', 'I');
+        }
+    } else if ($_GET['type'] == 'getPendingVerificationForApproval') {
+        $output = [];
+        $sql = "SELECT v.* FROM equipment_cleaning_verification v
+                WHERE v.plant_id='" . esc($conn, $_GET['plant_id']) . "'
+                AND v.status='active'
+                AND v.id NOT IN (
+                    SELECT verification_id FROM equipment_cleaning_approval
+                    WHERE plant_id='" . esc($conn, $_GET['plant_id']) . "'
+                    AND verification_id IS NOT NULL
+                )
+                ORDER BY v.id DESC";
+        $result = $conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $row['sample_rows'] = json_decode($row['sample_rows'], true);
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET['type'] == 'saveEquipmentCleaningApproval') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input) || empty($input['verification_id'])) {
+            echo json_encode(['status' => 'Select a sample collection record']);
+            exit;
+        }
+        if (empty($input['visual_inspection'])) {
+            echo json_encode(['status' => 'Visual inspection is required']);
+            exit;
+        }
+
+        $verificationId = esc($conn, $input['verification_id']);
+        $existsSql = "SELECT id FROM equipment_cleaning_approval
+                      WHERE verification_id='$verificationId'
+                      AND plant_id='" . esc($conn, $_GET['plant_id']) . "' LIMIT 1";
+        $existsResult = $conn->query($existsSql);
+        if ($existsResult && $existsResult->num_rows > 0) {
+            echo json_encode(['status' => 'Approval already exists for this sample collection']);
+            exit;
+        }
+
+        $stamp = equipmentCleaningEmployeeStamp($conn, $_GET['emp_id']);
+        $qcFilled = trim((string)($input['ph_result'] ?? '')) !== ''
+            || trim((string)($input['toc_result'] ?? '')) !== ''
+            || trim((string)($input['residue_result'] ?? '')) !== ''
+            || trim((string)($input['qc_meets_spec'] ?? '')) !== '';
+        $qaFilled = trim((string)($input['approved_for_production'] ?? '')) !== '';
+        $qcBy = $qcFilled ? $stamp : '';
+        $qaBy = $qaFilled ? $stamp : '';
+        $status = equipmentCleaningApprovalStatus($input);
+
+        if (($input['approved_for_production'] ?? '') === 'Yes') {
+            if (($input['visual_inspection'] ?? '') !== 'Yes' || ($input['qc_meets_spec'] ?? '') !== 'Yes') {
+                echo json_encode(['status' => 'Cannot approve production until visual inspection and QC results meet specifications']);
+                exit;
+            }
+        }
+
+        $sql = "INSERT INTO equipment_cleaning_approval (
+            plant_id, verification_id, form_no, equipment_name, equipment_id, previous_product_name,
+            product_code, qc_lab_sample_no, lot_no, cleaning_date, sample_type, visual_inspection,
+            production_by_date, ph_result, toc_result, residue_result, microbial_result, qc_meets_spec,
+            qc_by_date, qa_meets_criteria, approved_for_production, qa_by_date, comments, status,
+            entry_by, entry_date
+        ) VALUES (
+            '" . esc($conn, $_GET['plant_id']) . "',
+            '$verificationId',
+            '" . esc($conn, $input['form_no'] ?? 'WI-QA-002-02') . "',
+            '" . esc($conn, $input['equipment_name']) . "',
+            '" . esc($conn, $input['equipment_id']) . "',
+            '" . esc($conn, $input['previous_product_name']) . "',
+            '" . esc($conn, $input['product_code']) . "',
+            '" . esc($conn, $input['qc_lab_sample_no']) . "',
+            '" . esc($conn, $input['lot_no']) . "',
+            '" . esc($conn, $input['cleaning_date']) . "',
+            '" . esc($conn, $input['sample_type']) . "',
+            '" . esc($conn, $input['visual_inspection']) . "',
+            '" . esc($conn, $stamp) . "',
+            '" . esc($conn, $input['ph_result']) . "',
+            '" . esc($conn, $input['toc_result']) . "',
+            '" . esc($conn, $input['residue_result']) . "',
+            '" . esc($conn, $input['microbial_result']) . "',
+            '" . esc($conn, $input['qc_meets_spec']) . "',
+            '" . esc($conn, $qcBy) . "',
+            '" . esc($conn, $input['qa_meets_criteria']) . "',
+            '" . esc($conn, $input['approved_for_production']) . "',
+            '" . esc($conn, $qaBy) . "',
+            '" . esc($conn, $input['comments']) . "',
+            '" . esc($conn, $status) . "',
+            '" . esc($conn, $_GET['emp_id']) . "',
+            '$entry_date'
+        )";
+
+        if ($conn->query($sql)) {
+            echo json_encode(['status' => 'success', 'id' => $conn->insert_id, 'approval_status' => $status]);
+        } else {
+            echo json_encode(['status' => $conn->error]);
+        }
+    } else if ($_GET['type'] == 'getEquipmentCleaningApprovalLog') {
+        $output = [];
+        $fromDate = esc($conn, $_GET['from_date'] ?? '');
+        $toDate = esc($conn, $_GET['to_date'] ?? '');
+        $dateFilter = '';
+        if ($fromDate !== '' && $toDate !== '') {
+            $dateFilter = " AND DATE(entry_date) BETWEEN '$fromDate' AND '$toDate'";
+        }
+        $sql = "SELECT * FROM equipment_cleaning_approval
+                WHERE plant_id='" . esc($conn, $_GET['plant_id']) . "' $dateFilter
+                ORDER BY id DESC";
+        $result = $conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $output[] = $row;
+            }
+        }
+        echo json_encode($output);
+    } else if ($_GET['type'] == 'updateEquipmentCleaningApprovalQa') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input) || empty($input['id'])) {
+            echo json_encode(['status' => 'Invalid request']);
+            exit;
+        }
+        $id = esc($conn, $input['id']);
+        $checkSql = "SELECT * FROM equipment_cleaning_approval
+                     WHERE id='$id' AND plant_id='" . esc($conn, $_GET['plant_id']) . "' LIMIT 1";
+        $checkResult = $conn->query($checkSql);
+        if (!$checkResult || $checkResult->num_rows === 0) {
+            echo json_encode(['status' => 'Record not found']);
+            exit;
+        }
+        $existing = $checkResult->fetch_assoc();
+        if (!empty($existing['qa_by_date'])) {
+            echo json_encode(['status' => 'already_approved', 'qa_by_date' => $existing['qa_by_date']]);
+            exit;
+        }
+        $approved = $input['approved_for_production'] ?? '';
+        $qaMeet = $input['qa_meets_criteria'] ?? '';
+        if ($approved === 'Yes' && ($existing['visual_inspection'] !== 'Yes' || $existing['qc_meets_spec'] !== 'Yes')) {
+            echo json_encode(['status' => 'Cannot approve production until visual inspection and QC results meet specifications']);
+            exit;
+        }
+        $stamp = equipmentCleaningEmployeeStamp($conn, $_GET['emp_id']);
+        $merged = array_merge($existing, [
+            'approved_for_production' => $approved,
+            'qa_meets_criteria' => $qaMeet,
+        ]);
+        $status = equipmentCleaningApprovalStatus($merged);
+        $updateSql = "UPDATE equipment_cleaning_approval SET
+                        qa_meets_criteria='" . esc($conn, $qaMeet) . "',
+                        approved_for_production='" . esc($conn, $approved) . "',
+                        qa_by_date='" . esc($conn, $stamp) . "',
+                        comments='" . esc($conn, $input['comments'] ?? $existing['comments']) . "',
+                        status='" . esc($conn, $status) . "'
+                      WHERE id='$id' AND plant_id='" . esc($conn, $_GET['plant_id']) . "'";
+        if ($conn->query($updateSql)) {
+            echo json_encode(['status' => 'success', 'qa_by_date' => $stamp, 'approval_status' => $status]);
+        } else {
+            echo json_encode(['status' => $conn->error]);
+        }
+    } else if ($_GET['type'] == 'downloadEquipmentCleaningApprovalLog') {
+        $_GET['filename'] = 'Equipment Cleaning Approval Log';
+        $_GET['pdftype'] = 'onlyheader';
+        include('../pdfimp2.php');
+
+        $fromDate = esc($conn, $_GET['from_date'] ?? '');
+        $toDate = esc($conn, $_GET['to_date'] ?? '');
+        $dateFilter = '';
+        if ($fromDate !== '' && $toDate !== '') {
+            $dateFilter = " AND DATE(entry_date) BETWEEN '$fromDate' AND '$toDate'";
+        }
+
+        $html = '<h3 style="text-align:center;">Approval of Equipment Cleaning Before Start of Production</h3>
+        <table border="1" cellpadding="5">
+            <tr style="background-color:#DDDAD9;font-weight:bold;text-align:center;">
+                <td style="width:5%;">Sr.</td>
+                <td style="width:12%;">Date</td>
+                <td style="width:16%;">Equipment</td>
+                <td style="width:10%;">Equipment ID</td>
+                <td style="width:10%;">Lot</td>
+                <td style="width:10%;">Visual</td>
+                <td style="width:10%;">QC Meet Spec</td>
+                <td style="width:12%;">Approved</td>
+                <td style="width:15%;">Status</td>
+            </tr>';
+
+        $sql = "SELECT * FROM equipment_cleaning_approval
+                WHERE plant_id='" . esc($conn, $_GET['plant_id']) . "' $dateFilter
+                ORDER BY id DESC";
+        $result = $conn->query($sql);
+        $i = 1;
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $html .= '<tr nobr="true">
+                    <td style="text-align:center;">' . $i++ . '</td>
+                    <td style="text-align:center;">' . date('d-m-Y', strtotime($row['entry_date'])) . '</td>
+                    <td>' . htmlspecialchars($row['equipment_name']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['equipment_id']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['lot_no']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['visual_inspection']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['qc_meets_spec']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['approved_for_production']) . '</td>
+                    <td style="text-align:center;">' . htmlspecialchars($row['status']) . '</td>
+                </tr>';
+            }
+        }
+        $html .= '</table>';
+        $pdf->writeHTML($html, true, false, false, false, '');
+        $pdf->Output('Equipment_Cleaning_Approval_Log.pdf', 'I');
+    } else if ($_GET['type'] == 'downloadEquipmentCleaningApprovalForm') {
+        $_GET['filename'] = 'Equipment Cleaning Approval Form';
+        $_GET['pdftype'] = 'onlyheader';
+        include('../pdfimp2.php');
+
+        $sql = "SELECT * FROM equipment_cleaning_approval
+                WHERE id='" . esc($conn, $_GET['id']) . "'
+                AND plant_id='" . esc($conn, $_GET['plant_id']) . "' LIMIT 1";
+        $result = $conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $html = '
+            <table border="1" cellpadding="4" cellspacing="0" style="width:100%;">
+                <tr>
+                    <td style="width:20%;"><b>TITLE:</b></td>
+                    <td style="width:80%; text-align:center;"><b>APPROVAL OF EQUIPMENT CLEANING BEFORE THE START OF PRODUCTION ACTIVITIES</b></td>
+                </tr>
+                <tr>
+                    <td><b>DOCUMENT CODE:</b></td>
+                    <td>' . htmlspecialchars($row['form_no']) . '</td>
+                </tr>
+                <tr>
+                    <td><b>REVISION NO.:</b></td>
+                    <td>00</td>
+                </tr>
+                <tr>
+                    <td><b>EFFECTIVE DATE:</b></td>
+                    <td>APR 01 2025</td>
+                </tr>
+            </table>
+            <br>
+            <table border="1" cellpadding="4" cellspacing="0" style="width:100%;">
+                <tr>
+                    <td style="width:50%;"><b>Equipment Name</b><br>' . htmlspecialchars($row['equipment_name']) . '</td>
+                    <td style="width:50%;"><b>Equipment ID#</b><br>' . htmlspecialchars($row['equipment_id']) . '</td>
+                </tr>
+                <tr>
+                    <td><b>Previous Product Name</b><br>' . htmlspecialchars($row['previous_product_name']) . '</td>
+                    <td><b>Date of Cleaning</b><br>' . (!empty($row['cleaning_date']) ? date('d-m-Y', strtotime($row['cleaning_date'])) : '') . '</td>
+                </tr>
+                <tr>
+                    <td><b>Product Code</b><br>' . htmlspecialchars($row['product_code']) . '</td>
+                    <td><b>QC Lab Sample #</b><br>' . htmlspecialchars($row['qc_lab_sample_no']) . '</td>
+                </tr>
+                <tr>
+                    <td><b>Lot</b><br>' . htmlspecialchars($row['lot_no']) . '</td>
+                    <td><b>Sample Type</b><br>' . htmlspecialchars($row['sample_type']) . '</td>
+                </tr>
+            </table>
+            <br>
+            <table border="1" cellpadding="4" cellspacing="0" style="width:100%;">
+                <tr style="background-color:#DDDAD9;"><td colspan="2"><b>A. Production — Visual Inspection</b></td></tr>
+                <tr><td style="width:40%;">Visual inspection satisfactory</td><td>' . htmlspecialchars($row['visual_inspection']) . '</td></tr>
+                <tr><td>Production Supervisor &amp; Date</td><td>' . htmlspecialchars($row['production_by_date']) . '</td></tr>
+                <tr style="background-color:#DDDAD9;"><td colspan="2"><b>B. Quality Control — Test Results</b></td></tr>
+                <tr><td>pH</td><td>' . htmlspecialchars($row['ph_result']) . '</td></tr>
+                <tr><td>TOC</td><td>' . htmlspecialchars($row['toc_result']) . '</td></tr>
+                <tr><td>Product Residue</td><td>' . htmlspecialchars($row['residue_result']) . '</td></tr>
+                <tr><td>Microbial</td><td>' . htmlspecialchars($row['microbial_result']) . '</td></tr>
+                <tr><td>Results meet specifications</td><td>' . htmlspecialchars($row['qc_meets_spec']) . '</td></tr>
+                <tr><td>QC Analyst &amp; Date</td><td>' . htmlspecialchars($row['qc_by_date']) . '</td></tr>
+                <tr style="background-color:#DDDAD9;"><td colspan="2"><b>C. Quality Assurance — Approval</b></td></tr>
+                <tr><td>Results meet acceptance criteria</td><td>' . htmlspecialchars($row['qa_meets_criteria']) . '</td></tr>
+                <tr><td>Approved to start production</td><td>' . htmlspecialchars($row['approved_for_production']) . '</td></tr>
+                <tr><td>QA &amp; Date</td><td>' . htmlspecialchars($row['qa_by_date']) . '</td></tr>
+                <tr><td>Status</td><td>' . htmlspecialchars($row['status']) . '</td></tr>
+                <tr><td>Comments</td><td>' . nl2br(htmlspecialchars($row['comments'])) . '</td></tr>
+            </table>';
+            $pdf->writeHTML($html, true, false, false, false, '');
+            $pdf->Output('Equipment_Cleaning_Approval_Form.pdf', 'I');
         }
     }
 }

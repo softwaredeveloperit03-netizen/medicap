@@ -188,6 +188,16 @@ export class DashboardComponent implements OnInit {
       categoryId: 'qms',
     },
     {
+      id: 'cleaning-validation',
+      title: 'Cleaning Validation and Routine Cleaning of Equipment',
+      description: 'SOP-QA-002 · sample collection · approval before production',
+      route: '/qc/cleaning-validation',
+      icon: 'fa-clipboard-check',
+      category: 'QMS',
+      gradient: G.steel,
+      categoryId: 'qms',
+    },
+    {
       id: 'oos',
       title: 'OOS',
       description: 'Out of specification logs',

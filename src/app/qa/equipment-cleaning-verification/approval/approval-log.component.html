@@ -1,0 +1,265 @@
+<div class="card" *ngIf="!isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Approval of Equipment Cleaning Log (WI-QA-002-02)
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" [routerLink]="hubPath" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="clr-row ecv-log__filters">
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>From Date</label>
+        <input type="date" class="ecv-log__readonly" [(ngModel)]="fromDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12">
+        <label>To Date</label>
+        <input type="date" class="ecv-log__readonly" [(ngModel)]="toDate" [max]="maxDate" />
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-3 clr-col-sm-12" style="display:flex; align-items:flex-end;">
+        <button class="btn btn-primary" (click)="getLog()">{{ 'common.search' | translate }}</button>
+      </div>
+    </div>
+
+    <clr-datagrid>
+      <clr-dg-column>Sr.</clr-dg-column>
+      <clr-dg-column>{{ 'common.date' | translate }}</clr-dg-column>
+      <clr-dg-column>Equipment</clr-dg-column>
+      <clr-dg-column>Equipment ID</clr-dg-column>
+      <clr-dg-column>Lot</clr-dg-column>
+      <clr-dg-column>Visual</clr-dg-column>
+      <clr-dg-column>QC Meet Spec</clr-dg-column>
+      <clr-dg-column>Approved</clr-dg-column>
+      <clr-dg-column>Status</clr-dg-column>
+      <clr-dg-column>{{ 'common.table.action' | translate }}</clr-dg-column>
+
+      <clr-dg-row *clrDgItems="let row of results; let i = index" [clrDgItem]="row">
+        <clr-dg-cell>{{ i + 1 }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.entry_date | date: 'dd-MM-yyyy' }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.equipment_name }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.equipment_id }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.lot_no }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.visual_inspection }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.qc_meets_spec }}</clr-dg-cell>
+        <clr-dg-cell>{{ row.approved_for_production }}</clr-dg-cell>
+        <clr-dg-cell>{{ statusLabel(row.status) }}</clr-dg-cell>
+        <clr-dg-cell>
+          <button class="btn btn-sm btn-info" (click)="view(row)">{{ 'common.view' | translate }}</button>
+          <button class="btn btn-sm btn-primary" (click)="downloadForm(row.id)">{{ 'common.download' | translate }}</button>
+        </clr-dg-cell>
+      </clr-dg-row>
+    </clr-datagrid>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadLog()">{{ 'common.download' | translate }} Log</button>
+  </div>
+</div>
+
+<div class="card ecv-form" *ngIf="isView">
+  <div class="card-header" style="text-align: center">
+    <div class="clr-row" style="margin-bottom: -10px">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left">
+        Approval of Equipment Cleaning View
+      </div>
+      <div class="clr-col-lg-3" style="text-align: right; padding-right: 0; margin-top: -7px">
+        <button class="btn btn-sm" (click)="isView = false" style="background-color: red; color: white">
+          <clr-icon shape="window-close" class="is-solid"></clr-icon> CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="ecv-form__section">
+      <div class="ecv-form__section-head">Document &amp; Equipment Details</div>
+      <div class="ecv-form__section-body">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Document</label>
+              <div class="ecv-view__value">{{ selectedRecord?.form_no || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Status</label>
+              <div class="ecv-view__value">{{ statusLabel(selectedRecord?.status) }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Equipment Name</label>
+              <div class="ecv-view__value">{{ selectedRecord?.equipment_name || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Equipment ID#</label>
+              <div class="ecv-view__value">{{ selectedRecord?.equipment_id || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Previous Product</label>
+              <div class="ecv-view__value">{{ selectedRecord?.previous_product_name || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Date of Cleaning</label>
+              <div class="ecv-view__value">{{ selectedRecord?.cleaning_date ? (selectedRecord?.cleaning_date | date: 'dd-MM-yyyy') : '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Product Code</label>
+              <div class="ecv-view__value">{{ selectedRecord?.product_code || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>QC Lab Sample #</label>
+              <div class="ecv-view__value">{{ selectedRecord?.qc_lab_sample_no || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Lot</label>
+              <div class="ecv-view__value">{{ selectedRecord?.lot_no || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Sample Type</label>
+              <div class="ecv-view__value">{{ selectedRecord?.sample_type || '—' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ecv-form__section">
+      <div class="ecv-form__section-head">A. Production — Visual Inspection</div>
+      <div class="ecv-form__section-body">
+        <div class="clr-row">
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Visual inspection satisfactory</label>
+              <div class="ecv-view__value">{{ selectedRecord?.visual_inspection || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Production Supervisor &amp; Date</label>
+              <div class="ecv-view__value">{{ selectedRecord?.production_by_date || '—' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ecv-form__section">
+      <div class="ecv-form__section-head">B. Quality Control — Test Results</div>
+      <div class="ecv-form__section-body">
+        <div class="clr-row">
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>pH</label>
+              <div class="ecv-view__value">{{ selectedRecord?.ph_result || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>TOC</label>
+              <div class="ecv-view__value">{{ selectedRecord?.toc_result || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Product Residue</label>
+              <div class="ecv-view__value">{{ selectedRecord?.residue_result || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-3 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Microbial</label>
+              <div class="ecv-view__value">{{ selectedRecord?.microbial_result || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Results meet specifications</label>
+              <div class="ecv-view__value">{{ selectedRecord?.qc_meets_spec || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-6 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>QC Analyst &amp; Date</label>
+              <div class="ecv-view__value">{{ selectedRecord?.qc_by_date || '—' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ecv-form__section">
+      <div class="ecv-form__section-head">C. Quality Assurance — Approval to Start Production</div>
+      <div class="ecv-form__section-body">
+        <div class="clr-row">
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Results meet acceptance criteria</label>
+              <div class="ecv-view__value">{{ selectedRecord?.qa_meets_criteria || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>Approved to start production</label>
+              <div class="ecv-view__value">{{ selectedRecord?.approved_for_production || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-lg-4 clr-col-md-6 clr-col-sm-12">
+            <div class="ecv-form__field">
+              <label>QA &amp; Date</label>
+              <div class="ecv-view__value">{{ selectedRecord?.qa_by_date || '—' }}</div>
+            </div>
+          </div>
+          <div class="clr-col-12">
+            <div class="ecv-form__field">
+              <label>Comments</label>
+              <div class="ecv-view__value">{{ selectedRecord?.comments || '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="canQaApprove(selectedRecord)" class="ecv-form__param-card" style="margin-top: 8px">
+          <label>QA decision</label>
+          <div class="ecv-form__checks" style="margin: 0.35rem 0">
+            <label><input type="radio" name="qa_decision" value="Yes" [(ngModel)]="qaDecision" /> Approve</label>
+            <label><input type="radio" name="qa_decision" value="No" [(ngModel)]="qaDecision" /> Not Approve</label>
+          </div>
+          <textarea class="ecv-form__textarea" rows="2" [(ngModel)]="qaComments" placeholder="QA comments"></textarea>
+          <button
+            class="btn btn-sm btn-success"
+            style="margin-top: 0.5rem"
+            [disabled]="approvingId === selectedRecord?.id"
+            (click)="approveQa(selectedRecord)"
+          >
+            Save QA Approval
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="downloadForm(selectedRecord?.id)">{{ 'common.download' | translate }}</button>
+  </div>
+</div>

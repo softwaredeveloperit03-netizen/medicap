@@ -314,6 +314,16 @@ export class DashboardComponent implements OnInit {
       categoryId: 'activities',
     },
     {
+      id: 'equipment-cleaning-verification',
+      title: 'Cleaning Validation and Routine Cleaning of Equipment',
+      description: 'SOP-QA-002 · sample collection · approval before production',
+      route: '/qa/equipment-cleaning-verification',
+      icon: 'fa-vial',
+      category: 'QA Activities',
+      gradient: G.steel,
+      categoryId: 'activities',
+    },
+    {
       id: 'label',
       title: 'Label Request',
       description: 'Label change requests',

@@ -1,54 +1,58 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
 import { DataAccessService } from 'src/app/data-access.service';
 declare let alertify;
-
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+  styleUrls: ['./dashboard.component.css'],
 })
 export class DashboardComponent implements OnInit {
-
- 
-  constructor(private service: DataAccessService,private router : Router) {  }
-
-  ngOnInit(): void {
-    this.getPendingRevisionRequest();
-    this.department = localStorage.getItem('department');
-    this.getDepartments();
-  }
-
-  department = localStorage.getItem('department');
-
-  result;
+  result: any[] = [];
   logResults: any[] = [];
+  pendingSearch = '';
   logSearch = '';
   logStatus = 'All';
   logReqFor = 'All';
+  activeTab: 'pending' | 'log' = 'pending';
   isView = false;
-  isLog = false;
-  isRevision = false;
-  selectedResult =[];
+  selectedResult: any = null;
+  loading = false;
 
-  getPendingRevisionRequest() {
-    this.service.get('revision.php?type=getPendingRevisionRequest').subscribe((response: any) => {
-      this.result = response;
-     });
+  constructor(private service: DataAccessService) {}
+
+  ngOnInit(): void {
+    this.getPendingRevisionRequest();
+  }
+
+  getPendingRevisionRequest(): void {
+    this.loading = true;
+    this.service.get('revision.php?type=getPendingRevisionRequest').subscribe(
+      (response: any) => {
+        this.result = Array.isArray(response) ? response : [];
+        this.loading = false;
+      },
+      () => {
+        this.result = [];
+        this.loading = false;
+      }
+    );
+  }
+
+  openPending(): void {
+    this.activeTab = 'pending';
+    this.isView = false;
+    this.getPendingRevisionRequest();
   }
 
   openLog(): void {
-    this.isLog = true;
+    this.activeTab = 'log';
     this.isView = false;
     this.getRevisionRequestLog();
   }
 
-  closeLog(): void {
-    this.isLog = false;
-  }
-
-  getRevisionRequestLog() {
+  getRevisionRequestLog(): void {
+    this.loading = true;
     this.service
       .get(
         'revision.php?type=getRevisionRequestLog&status=' +
@@ -56,9 +60,26 @@ export class DashboardComponent implements OnInit {
           '&req_for=' +
           encodeURIComponent(this.logReqFor)
       )
-      .subscribe((response: any) => {
-        this.logResults = Array.isArray(response) ? response : [];
-      });
+      .subscribe(
+        (response: any) => {
+          this.logResults = Array.isArray(response) ? response : [];
+          this.loading = false;
+        },
+        () => {
+          this.logResults = [];
+          this.loading = false;
+        }
+      );
+  }
+
+  get filteredPending(): any[] {
+    const q = (this.pendingSearch || '').trim().toLowerCase();
+    if (!q) {
+      return this.result;
+    }
+    return this.result.filter((row: any) =>
+      Object.keys(row || {}).some((k) => row[k] != null && String(row[k]).toLowerCase().includes(q))
+    );
   }
 
   get filteredLogResults(): any[] {
@@ -71,53 +92,50 @@ export class DashboardComponent implements OnInit {
     );
   }
 
-  view(i){
-    const source = this.isLog ? this.filteredLogResults : this.result;
-    this.selectedResult = source[i];
+  view(item: any): void {
+    this.selectedResult = item;
     this.isView = true;
   }
-  revisionComment = '';
 
-  revision(i){
-    this.selectedResult = this.result[i];
-    this.isRevision = true;
-    this.revisionComment = '';
+  closeView(): void {
+    this.isView = false;
+    this.selectedResult = null;
   }
 
-  departments;
-
-  getDepartments() {
-    this.service.get('sops.php?type=getDepartments').subscribe(response => {
-      this.departments = response;
-    });
-  }
-
-
-  viewFile(url) {
-    url = this.service.url + '../../upload/Sops/' + url+'?v=1';
-   window.open(url, '_blank');
- }
-
-
-
- approveReq(){
-
-    let temp = this.selectedResult;
-
-      this.service.post('revision.php?type=approveRevisionRequest&id='+this.selectedResult['id'], JSON.stringify(temp)).subscribe(
-        (response) => {
-          if (response['status'] === 'success') {
-            alert('Reviewed Successfully !!!!!!');
-            this.getPendingRevisionRequest();
+  approveReq(): void {
+    if (!this.selectedResult || !this.selectedResult.id) {
+      return;
+    }
+    this.service
+      .post(
+        'revision.php?type=approveRevisionRequest&id=' + this.selectedResult.id,
+        JSON.stringify(this.selectedResult)
+      )
+      .subscribe((response: any) => {
+        if (response && response['status'] === 'success') {
+          alertify.success('Reviewed successfully');
+          this.closeView();
+          this.getPendingRevisionRequest();
+          if (this.activeTab === 'log') {
             this.getRevisionRequestLog();
-            this.isView = false;
-            
-          } else {
-            alert('Failed: An error occurred, please try again!');
           }
+        } else {
+          alertify.error('Failed: An error occurred, please try again!');
         }
-      );
+      });
+  }
 
- }
- 
+  statusClass(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') {
+      return 'status-pill status-pill--pending';
+    }
+    if (s === 'accepted') {
+      return 'status-pill status-pill--accepted';
+    }
+    if (s === 'rejected') {
+      return 'status-pill status-pill--rejected';
+    }
+    return 'status-pill';
+  }
 }

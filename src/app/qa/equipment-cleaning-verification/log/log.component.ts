@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { DataAccessService } from 'src/app/data-access.service';
+import { ecvHubPath } from '../ecv.utils';
 
 declare let alertify: any;
 
 @Component({
   selector: 'app-log',
   templateUrl: './log.component.html',
-  styleUrls: ['./log.component.css'],
+  styleUrls: ['../new/new.component.css', './log.component.css'],
   providers: [DatePipe],
 })
 export class LogComponent implements OnInit {
@@ -18,6 +19,7 @@ export class LogComponent implements OnInit {
   toDate = '';
   maxDate = '';
   checkingId: number | null = null;
+  hubPath = ecvHubPath();
 
   constructor(private service: DataAccessService, private datePipe: DatePipe) {
     const today = new Date();
@@ -65,6 +67,13 @@ export class LogComponent implements OnInit {
 
   isChecked(record: any): boolean {
     return !!(record?.checked_by_date && String(record.checked_by_date).trim());
+  }
+
+  formatDuration(value: any): string {
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return '';
+    }
+    return isNaN(Number(value)) ? String(value) : String(value) + ' minutes';
   }
 
   markChecked(record: any): void {

@@ -56,6 +56,7 @@ const routes: Routes = [
   { path: 'change-control', loadChildren: () => import('./change-control/change-control.module').then(m=>m.ChangeControlModule), data: {preload: false}},
   { path: 'deviation', loadChildren: () => import('./deviation/deviation.module').then(m=>m.DeviationModule), data: {preload: false}},
   { path: 'cleaning', loadChildren: () => import('./cleaning/cleaning.module').then(m=>m.CleaningModule), data: {preload: false}},
+  { path: 'cleaning-validation', loadChildren: () => import('../qa/equipment-cleaning-verification/equipment-cleaning-verification.module').then(m => m.EquipmentCleaningVerificationModule), data: {preload: false}},
   { path: 'oos', loadChildren: () => import('./oos/oos.module').then(m=>m.OosModule), data: {preload: false}},
   { path: 'testing-rds', loadChildren: () => import('./testinggmp-rds/testinggmp-rds.module').then(m=>m.TestinggmpRdsmodule), data: {preload: false}},
   { path: 'anat1', loadChildren: () => import('./analytical/analytical.module').then(m=>m.AnalyticalModule), data: {preload: false}},
