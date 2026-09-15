@@ -45,6 +45,7 @@
             <th>Send for Purchase</th>
             <th>Hold Indent</th>
             <th>Cancel Indent</th>
+            <th>Lock Indent</th>
           </tr>
           <tr *ngFor="let mat of visibleConfirmMaterials; let i = index; trackBy: trackByMaterial">
             <td class="ci-col-sr">{{ i + 1 }}</td>
@@ -92,7 +93,7 @@
             <td class="ci-col-action">
               <button type="button" class="btn btn-warning btn-sm"
                 (click)="openRemarkModal(mat, 'hold')"
-                [disabled]="!canHoldOrCancelMaterial(mat) || mat.holdActionLoading">
+                [disabled]="!canHoldOrCancelMaterial(mat) || mat.holdActionLoading || isIndentLocked(mat)">
                 <span *ngIf="mat.holdActionLoading" class="spinner spinner-inline"></span>
                 Hold
               </button>
@@ -100,10 +101,24 @@
             <td class="ci-col-action">
               <button type="button" class="btn btn-danger btn-sm"
                 (click)="openRemarkModal(mat, 'cancel')"
-                [disabled]="!canHoldOrCancelMaterial(mat) || mat.cancelActionLoading">
+                [disabled]="!canHoldOrCancelMaterial(mat) || mat.cancelActionLoading || isIndentLocked(mat)">
                 <span *ngIf="mat.cancelActionLoading" class="spinner spinner-inline"></span>
                 Cancel
               </button>
+            </td>
+            <td class="ci-col-action">
+              <button type="button" class="btn btn-sm"
+                [class.btn-outline]="isIndentLocked(mat)"
+                [class.btn-info]="!isIndentLocked(mat)"
+                (click)="openRemarkModal(mat, isIndentLocked(mat) ? 'unlock' : 'lock')"
+                [disabled]="!canLockOrUnlockMaterial(mat) || mat.lockActionLoading">
+                <span *ngIf="mat.lockActionLoading" class="spinner spinner-inline"></span>
+                {{ isIndentLocked(mat) ? 'Unlock' : 'Lock' }}
+              </button>
+              <div class="ci-lock-meta" *ngIf="isIndentLocked(mat)">
+                Locked
+                <span *ngIf="mat.lock_revision_no"> r{{ mat.lock_revision_no }}</span>
+              </div>
             </td>
           </tr>
         </table>
@@ -121,11 +136,21 @@
 
 <clr-modal [(clrModalOpen)]="remarkModalOpen" [clrModalClosable]="!remarkSubmitting">
   <h3 class="modal-title">
-    {{ remarkAction === 'hold' ? 'Hold Indent' : 'Cancel Indent' }}
+    {{
+      remarkAction === 'hold' ? 'Hold Indent' :
+      (remarkAction === 'cancel' ? 'Cancel Indent' :
+      (remarkAction === 'lock' ? 'Lock Indent' : 'Unlock Indent'))
+    }}
   </h3>
   <div class="modal-body">
     <p class="text-muted small" *ngIf="selectedMat">
       Material: <strong>{{ selectedMat.material_name || selectedMat.material_code }}</strong>
+    </p>
+    <p class="text-muted small" *ngIf="remarkAction === 'lock'">
+      Locked indents become controlled procurement requirements and cannot be silently modified.
+    </p>
+    <p class="text-muted small" *ngIf="remarkAction === 'unlock'">
+      Unlock requires a reason and creates a revision history entry.
     </p>
     <p class="text-muted small" *ngIf="remarkAction === 'cancel'">
       Cancelling returns this indent to <strong>Shortage Analysis → Cancelled Indent</strong> tab where it can be reprocessed or permanently cancelled.

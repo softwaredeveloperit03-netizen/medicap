@@ -35,20 +35,26 @@ export class ReviewComponent implements OnInit {
  
  
     viewFile1(url) {
-    url = this.service.url + '../../upload/incident/' + url;
-    window.open(url, '_blank');
+    this.openIncidentDoc(url);
   }
   viewFile2(url) {
-    url = this.service.url + '../../upload/incident/' + url;
-    window.open(url, '_blank');
+    this.openIncidentDoc(url);
   }
   viewFile3(url) {
-    url = this.service.url + '../../upload/incident/' + url;
-    window.open(url, '_blank');
+    this.openIncidentDoc(url);
   }
 
+  hasDoc(url): boolean {
+    return !!(url && String(url).trim() && String(url).trim() !== 'NA');
+  }
 
-
+  openIncidentDoc(url): void {
+    if (!this.hasDoc(url)) {
+      alertify.error('Document not available');
+      return;
+    }
+    window.open(this.service.url + '../../upload/incident/' + url, '_blank');
+  }
 
   save(status) {
     let temp={};

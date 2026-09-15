@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ClarityModule } from '@clr/angular';
 import { RouterModule } from '@angular/router';
 import { CanplanComponent } from './canplan/canplan.component';
+import { MrpMaterialAvailabilityComponent } from './mrp-material-availability/mrp-material-availability.component';
 
 @NgModule({
-  declarations: [CanplanComponent],
+  declarations: [CanplanComponent, MrpMaterialAvailabilityComponent],
   imports: [CommonModule, FormsModule, ClarityModule, RouterModule],
-  exports: [CanplanComponent],
+  exports: [CanplanComponent, MrpMaterialAvailabilityComponent],
 })
 export class PlanningSharedModule {}

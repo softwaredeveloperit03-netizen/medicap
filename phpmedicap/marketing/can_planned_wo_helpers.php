@@ -338,6 +338,9 @@ if (!function_exists('gw_get_can_planned_wo')) {
      */
     function gw_get_can_planned_wo($conn, $params = [])
     {
+        if (function_exists('gw_ensure_mrp_planning_horizon_columns')) {
+            gw_ensure_mrp_planning_horizon_columns($conn);
+        }
         $output = [];
         $shortageInfo = [];
         $plant_id = !empty($params['plant_id']) ? $conn->real_escape_string($params['plant_id']) : '';
@@ -457,16 +460,24 @@ if (!function_exists('gw_get_can_planned_wo')) {
             $row['display_plan_status'] = $hasShortage ? 'Not To Be Plan' : 'Can Plan';
             $row['process_plan_source'] = 'generate_wo';
             $row['purchase_pipeline_status'] = $hasShortage ? 'Live stock shortage' : 'Stock in hand';
+            if (function_exists('gw_mrp_attach_planning_horizon')) {
+                gw_mrp_attach_planning_horizon($row);
+            }
             $output[] = $row;
         }
 
         $readyCount = 0;
         $waitCount = 0;
+        $horizonCounts = ['IMMEDIATE' => 0, 'FUTURE' => 0, 'UNDECIDED' => 0];
         foreach ($output as $woOut) {
             if (!empty($woOut['can_plan'])) {
                 $readyCount++;
             } else {
                 $waitCount++;
+            }
+            $h = strtoupper((string)($woOut['planning_horizon'] ?? 'UNDECIDED'));
+            if (isset($horizonCounts[$h])) {
+                $horizonCounts[$h]++;
             }
         }
 
@@ -480,6 +491,9 @@ if (!function_exists('gw_get_can_planned_wo')) {
             'can_plan_ready_count' => $readyCount,
             'not_to_be_plan_count' => $waitCount,
             'shortage_count' => count($shortageInfo),
+            'planning_horizon_counts' => $horizonCounts,
+            'planning_horizon_window_days' => function_exists('gw_mrp_planning_horizon_window_days')
+                ? gw_mrp_planning_horizon_window_days() : 30,
             'debug_info' => [
                 'total_work_orders_found' => count($woRows),
                 'work_orders_processed' => count($woRows),

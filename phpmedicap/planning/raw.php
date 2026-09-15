@@ -1149,6 +1149,7 @@ u.primary_pm_list,u.primary_pm_batch_size,u.consumeableMaterial,
 FROM unitformula u where u.plant_id='".$_GET["plant_id"]."'
 AND u.approve_by IS NOT NULL AND TRIM(u.approve_by) <> ''
 AND LOWER(IFNULL(u.status,'')) NOT IN ('reject','rejected')
+AND CAST(IFNULL(NULLIF(TRIM(u.bom_batch_size),''),'0') AS DECIMAL(18,6)) > 0
 AND EXISTS (
     SELECT 1 FROM batch_formula_info c
     WHERE TRIM(IFNULL(c.plant_id,''))=TRIM(IFNULL(u.plant_id,''))
@@ -1233,7 +1234,8 @@ FROM unitformula u left join batch_formula_info c on u.mfr_no=c.mfr_no where u.p
      }
      else if ($_GET["type"] == "get_batch_formula_log1") {
           $output=Array();
-             $sql = "   SELECT DISTINCT  u.dosage_form,u.id,u.bom_type,u.master_formula_type,u.product_type,u.mfr_no,u.product_code,u.formula_for, u.average_weight,u.raw_materials,u.batch_size,u.unit,
+             $sql = "   SELECT DISTINCT  u.dosage_form,u.id,u.bom_type,u.bom_batch_size_unit,u.bom_batch_size,u.master_formula_type,u.product_type,u.mfr_no,u.product_code,u.formula_for, u.average_weight,u.raw_materials,u.batch_size,u.unit,u.status,
+(select c.status from batch_formula_info c where c.mfr_no=u.mfr_no AND c.plant_id=u.plant_id order by c.id desc limit 1) as c_status,
 (select product_name from product p where u.product_code=p.product_code limit 1) as product_name,
 (select grade from product p where u.product_code=p.product_code limit 1) as grade,
 (select generic_name from product p where u.product_code=p.product_code limit 1) as generic_name,
@@ -1247,6 +1249,7 @@ FROM unitformula u left join batch_formula_info c on u.mfr_no=c.mfr_no where u.p
 FROM unitformula u left join product p ON u.product_code = p.product_code  where u.plant_id='".$_GET["plant_id"]."'
 AND u.approve_by IS NOT NULL AND TRIM(u.approve_by) <> ''
 AND LOWER(IFNULL(u.status,'')) NOT IN ('reject','rejected')
+AND CAST(IFNULL(NULLIF(TRIM(u.bom_batch_size),''),'0') AS DECIMAL(18,6)) > 0
 AND p.product_name LIKE '%".$_GET["productName"]."%'
 AND EXISTS (
     SELECT 1 FROM batch_formula_info c

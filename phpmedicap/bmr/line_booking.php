@@ -32,6 +32,11 @@ if($result->num_rows > 0){
     if (!is_array($input)) {
         $input = array();
     }
+
+    $mrpLineHistHelper = __DIR__ . '/../marketing/mrp_line_booking_history_helpers.php';
+    if (is_file($mrpLineHistHelper)) {
+        require_once $mrpLineHistHelper;
+    }
     
     // ============================================
     // STOCK VERIFICATION FUNCTION
@@ -1336,12 +1341,21 @@ else if ($_GET["type"] == "getBookedStock") {
             // Also enhance file log with workorder number
             $txt = '{"process": "FRONTEND", "token": "'.$token.'", "action": "bookLine", "actiontime": "'.$logEntryDate.'", "department": "'.$_GET["department"].'", "emp_id": "'.$_GET["emp_id"].'", "method": "'.$_SERVER['REQUEST_METHOD'].'", "REMOTE_ADDR": "'.$_SERVER['REMOTE_ADDR'].'", "workorder_no": "'.$workorder_no.'", "line_no": "'.$line_no.'"}';
             $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
+
+            $newBookingId = (int)$conn->insert_id;
+            $historyMeta = null;
+            if ($newBookingId > 0 && function_exists('gw_mrp_snapshot_line_booking')) {
+                $historyMeta = @gw_mrp_snapshot_line_booking($conn, $newBookingId, 'CREATE', 'Initial line booking', array(
+                    'emp_id' => $_GET['emp_id'] ?? '',
+                ));
+            }
             
             $response = [
                 'status' => 'success', 
                 'message' => 'Line booked successfully', 
-                'booking_id' => $conn->insert_id,
-                'stockVerification' => $stockVerification
+                'booking_id' => $newBookingId,
+                'stockVerification' => $stockVerification,
+                'booking_version' => is_array($historyMeta) ? ($historyMeta['version_no'] ?? null) : null,
             ];
             if (isset($conflictWarning)) {
                 $response['warning'] = $conflictWarning;
@@ -1410,6 +1424,29 @@ else if ($_GET["type"] == "getBookedStock") {
         
         echo json_encode($output);
     }
+
+    else if ($_GET["type"] == "getLineBookingVersions") {
+        if (!function_exists('gw_mrp_get_line_booking_versions')) {
+            echo json_encode(array('status' => 'error', 'message' => 'History helper missing'));
+            exit;
+        }
+        echo json_encode(gw_mrp_get_line_booking_versions($conn, $_GET));
+        exit;
+    }
+
+    else if ($_GET["type"] == "snapshotLineBookingVersion") {
+        if (!function_exists('gw_mrp_snapshot_line_booking')) {
+            echo json_encode(array('status' => 'error', 'message' => 'History helper missing'));
+            exit;
+        }
+        $bookingId = (int)($input['booking_id'] ?? ($_GET['booking_id'] ?? 0));
+        $action = $input['action_type'] ?? ($_GET['action_type'] ?? 'SNAPSHOT');
+        $remark = $input['remark'] ?? ($_GET['remark'] ?? '');
+        echo json_encode(gw_mrp_snapshot_line_booking($conn, $bookingId, $action, $remark, array(
+            'emp_id' => $_GET['emp_id'] ?? '',
+        )));
+        exit;
+    }
     
     // ============================================
     // UPDATE BOOKING
@@ -1458,7 +1495,21 @@ else if ($_GET["type"] == "getBookedStock") {
         $sql = "UPDATE line_booking SET " . implode(', ', $updates) . " WHERE id = '".mysqli_real_escape_string($conn, $booking_id)."'";
         
         if ($conn->query($sql)) {
-            echo json_encode(['status' => 'success', 'message' => 'Booking updated successfully']);
+            $historyMeta = null;
+            if (function_exists('gw_mrp_snapshot_line_booking')) {
+                $historyMeta = @gw_mrp_snapshot_line_booking(
+                    $conn,
+                    (int)$booking_id,
+                    'UPDATE',
+                    'Booking updated',
+                    array('emp_id' => $_GET['emp_id'] ?? '')
+                );
+            }
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Booking updated successfully',
+                'booking_version' => is_array($historyMeta) ? ($historyMeta['version_no'] ?? null) : null,
+            ]);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Failed to update booking: ' . $conn->error]);
         }
@@ -1484,6 +1535,15 @@ else if ($_GET["type"] == "getBookedStock") {
                 WHERE id = '".mysqli_real_escape_string($conn, $booking_id)."'";
         
         if ($conn->query($sql)) {
+            if (function_exists('gw_mrp_snapshot_line_booking')) {
+                @gw_mrp_snapshot_line_booking(
+                    $conn,
+                    (int)$booking_id,
+                    'CANCEL',
+                    $cancellation_reason,
+                    array('emp_id' => $_GET['emp_id'] ?? '')
+                );
+            }
             echo json_encode(['status' => 'success', 'message' => 'Booking cancelled successfully']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Failed to cancel booking: ' . $conn->error]);

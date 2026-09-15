@@ -9,6 +9,8 @@ import { DocumentComponent } from './document/document.component';
 import { BatchComponent } from './batch/batch.component';
 import { ResignationComponent } from './resignation/resignation.component';
 import { SharedModule } from 'src/app/shared/shared.module';
+import { BatchFormulaComponent } from './batch-formula/batch-formula.component';
+import { MaterialMasterDataComponent } from './material-master-data/material-master-data.component';
 
 
 const routes: Routes = [
@@ -33,6 +35,9 @@ const routes: Routes = [
   { path: 'qms', loadChildren: () => import('./qms/qms.module').then(m=>m.QmsModule), data: {preload: false}},
   { path: 'batch-plan-approval', loadChildren: () => import('./batch-plan-approval/batch-plan-approval.module').then(m=>m.BatchPlanApprovalModule), data: {preload: false}},
   { path: 'masterformula', loadChildren: () => import('./masterformula/masterformula.module').then(m=>m.MasterformulaModule), data: {preload: false}},
+  { path: 'batch-formula', component: BatchFormulaComponent },
+  { path: 'material-master-data', component: MaterialMasterDataComponent },
+  { path: 'mrp/Log', redirectTo: 'material-master-data', pathMatch: 'full' },
   { path: 'sops', loadChildren: () => import('./sops/sops.module').then(m=>m.SOPSModule), data: {preload: false}},
   { path: 'stplan', loadChildren: () => import('./stplan/stplan.module').then(m=>m.StplanModule), data: {preload: false}},
   // STP/Planning screens from attached mrp/src (Receivepofo, Generatewo, Shortages, Canplan, ...)
@@ -45,7 +50,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [DashboardComponent, ShortageComponent, DocumentComponent, BatchComponent,ResignationComponent],
+  declarations: [DashboardComponent, ShortageComponent, DocumentComponent, BatchComponent, ResignationComponent, BatchFormulaComponent, MaterialMasterDataComponent],
   imports: [
     CommonModule,
     FormsModule,

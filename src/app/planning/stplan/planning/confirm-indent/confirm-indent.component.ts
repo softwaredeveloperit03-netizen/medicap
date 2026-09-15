@@ -31,9 +31,9 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
   confirmLoading = false;
   confirmMaterialsDisplayCap = 30;
 
-  /** Remark modal for Hold / Cancel indent */
+  /** Remark modal for Hold / Cancel / Lock / Unlock indent */
   remarkModalOpen = false;
-  remarkAction: 'hold' | 'cancel' = 'hold';
+  remarkAction: 'hold' | 'cancel' | 'lock' | 'unlock' = 'hold';
   remarkText = '';
   selectedMat: any = null;
   remarkSubmitting = false;
@@ -155,16 +155,74 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
             this.confirmMaterials.sort((a, b) =>
               String(a.material_code ?? '').localeCompare(String(b.material_code ?? ''))
             );
+            this.attachConfirmationLockMeta(this.confirmMaterials);
           } catch (err) {
             console.error('ConfirmIndent: failed processing summary', err);
             this.confirmMaterials = [];
           }
-          this.finalizeConfirmListState();
-        },
-        error: (err) => {
-          console.error('Error fetching raised indent summary', err);
+          this.confirmMaterialsBackup = [...this.confirmMaterials];
+          this.confirmMaterials.forEach(
+            (m) => (m._searchText = this.buildMaterialSearchText(m))
+          );
+          this.applyFilterInternal(this.searchText);
           this.confirmLoading = false;
           this.cdr.markForCheck();
+        },
+        error: () => {
+          this.confirmMaterials = [];
+          this.confirmMaterialsBackup = [];
+          this.confirmMaterialsFiltered = [];
+          this.visibleConfirmMaterials = [];
+          this.confirmLoading = false;
+          alertify.error('Failed to load confirm indents.');
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /** Merge lock/confirmation ids from mrp_indents_confirmation onto raised-indent rows. */
+  private attachConfirmationLockMeta(materials: any[]): void {
+    this.service
+      .get('mrp/indentsconfirmation.php?type=getPlanningIndentsConfirmation&status=ALL')
+      .subscribe({
+        next: (resp: any) => {
+          const rows = Array.isArray(resp) ? resp : [];
+          const byIndent = new Map<number, any>();
+          const byMaterial = new Map<string, any>();
+          for (const r of rows) {
+            const iid = Number(r.indent_id || 0);
+            if (iid > 0) {
+              byIndent.set(iid, r);
+            }
+            const code = String(r.material_code || '').trim();
+            if (code) {
+              byMaterial.set(code, r);
+            }
+          }
+          for (const mat of materials || []) {
+            let hit: any = null;
+            for (const id of this.collectIndentIdsForMaterial(mat)) {
+              if (byIndent.has(id)) {
+                hit = byIndent.get(id);
+                break;
+              }
+            }
+            if (!hit) {
+              hit = byMaterial.get(String(mat.material_code || '').trim());
+            }
+            if (hit) {
+              mat.confirmation_id = hit.id;
+              mat.confirmation_status = hit.confirmation_status;
+              mat.is_locked = hit.is_locked;
+              mat.lock_revision_no = hit.lock_revision_no;
+              mat.locked_by_name = hit.locked_by_name;
+              mat.locked_at = hit.locked_at;
+            }
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          /* non-blocking */
         },
       });
   }
@@ -224,6 +282,9 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
   }
 
   canHoldOrCancelMaterial(mat: any): boolean {
+    if (this.isIndentLocked(mat)) {
+      return false;
+    }
     if (!this.collectIndentIdsForMaterial(mat).length) {
       return false;
     }
@@ -231,10 +292,25 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
     return !['returned', 'cancelled'].includes(st);
   }
 
-  openRemarkModal(mat: any, action: 'hold' | 'cancel'): void {
+  isIndentLocked(mat: any): boolean {
+    return (
+      Number(mat?.is_locked || 0) === 1 ||
+      String(mat?.confirmation_status || '').toUpperCase() === 'LOCKED'
+    );
+  }
+
+  canLockOrUnlockMaterial(mat: any): boolean {
+    const confId = Number(mat?.confirmation_id || 0);
+    if (confId > 0) {
+      return true;
+    }
+    return this.collectIndentIdsForMaterial(mat).length > 0;
+  }
+
+  openRemarkModal(mat: any, action: 'hold' | 'cancel' | 'lock' | 'unlock'): void {
     this.selectedMat = mat;
     this.remarkAction = action;
-    this.remarkText = '';
+    this.remarkText = action === 'lock' ? 'Locked for procurement control' : '';
     this.remarkModalOpen = true;
     this.cdr.markForCheck();
   }
@@ -249,7 +325,7 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
 
   submitRemarkAction(): void {
     const remark = (this.remarkText || '').trim();
-    if (!remark) {
+    if (!remark && this.remarkAction !== 'lock') {
       alertify.error('Remark is required.');
       return;
     }
@@ -257,6 +333,48 @@ export class ConfirmIndentComponent implements OnInit, OnDestroy {
     if (!mat) {
       return;
     }
+
+    if (this.remarkAction === 'lock' || this.remarkAction === 'unlock') {
+      const confirmationId = Number(mat.confirmation_id || 0);
+      if (!confirmationId) {
+        alertify.error('No confirmation record found to lock/unlock. Send/confirm indent first.');
+        return;
+      }
+      this.remarkSubmitting = true;
+      mat.lockActionLoading = true;
+      this.cdr.markForCheck();
+      this.service
+        .post(
+          'mrp/indentsconfirmation.php?type=applyPlanningIndentConfirmationAction',
+          JSON.stringify({
+            confirmation_id: confirmationId,
+            action: this.remarkAction === 'lock' ? 'LOCK' : 'UNLOCK',
+            remark: remark || 'Locked for procurement control',
+          })
+        )
+        .subscribe({
+          next: (response: any) => {
+            this.remarkSubmitting = false;
+            mat.lockActionLoading = false;
+            if (response?.status === 'success') {
+              alertify.success(response.message || 'Lock updated.');
+              this.closeRemarkModal();
+              this.loadConfirmSummary();
+            } else {
+              alertify.error(response?.message || 'Lock action failed.');
+            }
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.remarkSubmitting = false;
+            mat.lockActionLoading = false;
+            alertify.error('Lock action failed.');
+            this.cdr.markForCheck();
+          },
+        });
+      return;
+    }
+
     const indentIds = this.collectIndentIdsForMaterial(mat);
     if (!indentIds.length) {
       alertify.error('No indent found for this material.');

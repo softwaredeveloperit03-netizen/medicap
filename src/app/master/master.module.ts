@@ -83,6 +83,7 @@ const routes: Routes = [
   { path: 'mmaster', loadChildren: () => import('./mmaster/mmaster.module').then(m => m.MmasterModule), data: { preload: false } },
   { path: 'section', loadChildren: () => import('./section/section.module').then(m => m.SectionModule), data: { preload: false } },
   { path: 'linemaster', loadChildren: () => import('./linemaster/linemaster.module').then(m => m.LinemasterModule), data: { preload: false } },
+  { path: 'bill-of-material', loadChildren: () => import('./bill-of-material/bill-of-material.module').then(m => m.BillOfMaterialModule), data: { preload: false } },
   { path: 'productionstage', loadChildren: () => import('./productionstage/productionstage.module').then(m => m.ProductionstageModule), data: { preload: false } },
   { path: 'bmr', loadChildren: () => import('./bmr/bmr.module').then(m => m.BmrModule), data: { preload: false } },
   { path: 'wobmr', loadChildren: () => import('./wobmr/wobmr.module').then(m => m.WobmrModule), data: { preload: false } },

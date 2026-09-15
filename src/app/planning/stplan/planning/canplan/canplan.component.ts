@@ -104,6 +104,88 @@ export class CanplanComponent implements OnInit, OnDestroy {
     return wo?.can_plan ? 'Can Plan' : 'Not To Be Plan';
   }
 
+  formatPlanningHorizon(wo: any): string {
+    if (wo?.planning_horizon_label) {
+      return String(wo.planning_horizon_label);
+    }
+    const h = String(wo?.planning_horizon || '').toUpperCase();
+    if (h === 'IMMEDIATE') {
+      return 'Immediate (≤30 days)';
+    }
+    if (h === 'FUTURE') {
+      return 'Future Plan';
+    }
+    return 'Not Decided';
+  }
+
+  planningHorizonBadgeClass(wo: any): string {
+    const h = String(wo?.planning_horizon || '').toUpperCase();
+    if (h === 'IMMEDIATE') {
+      return 'badge-danger';
+    }
+    if (h === 'FUTURE') {
+      return 'badge-info';
+    }
+    return 'badge-secondary';
+  }
+
+  horizonFilter: 'ALL' | 'IMMEDIATE' | 'FUTURE' | 'UNDECIDED' = 'ALL';
+  horizonCounts = { IMMEDIATE: 0, FUTURE: 0, UNDECIDED: 0 };
+
+  get filteredPendingPo(): any[] {
+    const rows = Array.isArray(this.pendingpo) ? this.pendingpo : [];
+    if (this.horizonFilter === 'ALL') {
+      return rows;
+    }
+    return rows.filter(
+      (wo) => String(wo?.planning_horizon || 'UNDECIDED').toUpperCase() === this.horizonFilter
+    );
+  }
+
+  setHorizonFilter(value: 'ALL' | 'IMMEDIATE' | 'FUTURE' | 'UNDECIDED'): void {
+    this.horizonFilter = value;
+  }
+
+  private syncHorizonCountsFromRows(): void {
+    const rows = Array.isArray(this.pendingpo) ? this.pendingpo : [];
+    this.horizonCounts = { IMMEDIATE: 0, FUTURE: 0, UNDECIDED: 0 };
+    rows.forEach((wo) => {
+      const h = String(wo?.planning_horizon || 'UNDECIDED').toUpperCase();
+      if (h === 'IMMEDIATE' || h === 'FUTURE' || h === 'UNDECIDED') {
+        this.horizonCounts[h]++;
+      } else {
+        this.horizonCounts.UNDECIDED++;
+      }
+    });
+  }
+
+  setPlanningHorizon(wo: any, horizon: 'IMMEDIATE' | 'FUTURE' | 'UNDECIDED'): void {
+    if (!wo?.workorder_no) {
+      return;
+    }
+    const body = {
+      workorder_no: wo.workorder_no,
+      planning_horizon: horizon,
+      remark: 'Process Plan classification',
+    };
+    this.service.post('marketing/po.php?type=setWoPlanningHorizon', body).subscribe({
+      next: (res: any) => {
+        if (res?.status === 'success') {
+          wo.planning_horizon = res.planning_horizon || horizon;
+          wo.planning_horizon_source = res.planning_horizon_source || 'MANUAL';
+          wo.planning_horizon_label = res.planning_horizon_label || this.formatPlanningHorizon(wo);
+          wo.planning_horizon_days = res.planning_horizon_days;
+          wo.planning_horizon_ref_date = res.planning_horizon_ref_date;
+          this.syncHorizonCountsFromRows();
+          alertify.success('Planning class saved: ' + this.formatPlanningHorizon(wo));
+        } else {
+          alertify.error(res?.message || 'Failed to save planning class');
+        }
+      },
+      error: () => alertify.error('Failed to save planning class'),
+    });
+  }
+
   planningStatusBadgeClass(wo: any): string {
     return this.canSendForVerification(wo) ? 'badge-success' : 'badge-warning';
   }
@@ -286,6 +368,7 @@ export class CanplanComponent implements OnInit, OnDestroy {
           this.shortageCount = 0;
         }
         this.syncPlanCountsFromRows();
+        this.syncHorizonCountsFromRows();
         this.rebuildFlattenedShortages();
         this.loading = false;
       },

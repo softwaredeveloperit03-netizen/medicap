@@ -1,13 +1,10 @@
 <div class="card" *ngIf="!isView && !isEdit && !add_packing_material && !prepareBF && !isprepareBFView" >
   <div class="card-header" style="text-align: center">
     <div class="clr-row" style="margin-bottom: -10px;">
-      <div class="clr-col-3" style="color: aliceblue;margin-top: -2px;text-align: left;">Master Formula / BOM</div>
+      <div class="clr-col-3" style="color: aliceblue;margin-top: -2px;text-align: left;">{{ listTitle }}</div>
       <div class="clr-col-lg-9" style="text-align: right;padding-right: 0px;margin-top: -7px;">
-        <button class="btn btn-sm" (click)="checkform()" style="background-color: green;color: white;" *ngIf="isuser == 'Yes'" >New</button>
-        <button class="btn btn-sm" routerLink="/unitformula/bfrreview" style="background-color: red;color: white;">Review BOM</button>
-        <button class="btn btn-sm" routerLink="/unitformula/bfrapproval" style="background-color: red;color: white;">Approve BOM</button>
-        <button class="btn btn-sm" routerLink="/unitformula/bfrlog" style="background-color: red;color: white;">BOM Log</button>
-        <button class="btn btn-sm" routerLink="/unitformula" style="background-color: red;color: white;">CLOSE</button>
+        <button class="btn btn-sm" (click)="checkform()" style="background-color: green;color: white;" *ngIf="isuser == 'Yes' && !isPrepareHub">New</button>
+        <button class="btn btn-sm" [routerLink]="closeRoute" style="background-color: red;color: white;">CLOSE</button>
       </div>
     </div>
   </div>
@@ -36,10 +33,15 @@
         <clr-dg-cell>{{ result.grade || 'NA'}}</clr-dg-cell>
         <clr-dg-cell>
             <!-- <button class="btn btn-sm btn-info" (click)="edit(i)" *ngIf="plant_id=='67'">Edit</button><br> -->
-            <button class="btn btn-sm btn-info" (click)="viewPackingMaterial(calculateStartSrNo() + i)">Add Packing Material</button>
-            <button class="btn btn-sm btn-info" (click)="PrepareBF(calculateStartSrNo() + i)" [disabled]="result.status!='approve'">BOM</button>
-            <button class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">VIEW</button>
-          <button class="btn btn-sm btn-danger-outline btn-icon" (click)="delPackingMaterial(result.id)" ><clr-icon shape="trash" class="is-danger"></clr-icon></button>              
+            <ng-container *ngIf="isPrepareHub">
+              <button class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">VIEW</button>
+              <button class="btn btn-sm btn-info" (click)="PrepareBF(calculateStartSrNo() + i)" [disabled]="result.status!='approve'">Prepare Batch Formula</button>
+            </ng-container>
+            <ng-container *ngIf="!isPrepareHub">
+              <button class="btn btn-sm btn-info" (click)="viewPackingMaterial(calculateStartSrNo() + i)">Add Packing Material</button>
+              <button class="btn btn-sm btn-info" (click)="view(calculateStartSrNo() + i)">VIEW</button>
+              <button class="btn btn-sm btn-danger-outline btn-icon" (click)="delPackingMaterial(result.id)"><clr-icon shape="trash" class="is-danger"></clr-icon></button>
+            </ng-container>
         </clr-dg-cell>
         <!-- <clr-dg-cell>
           <button class="btn btn-sm btn-info"></button>
@@ -396,28 +398,91 @@
       <h3>Product Details:</h3>
       <table class="table">
         <tr>
-          <td style="text-align: left; border:1px solid black;"> <b>Product Code</b></td>
+          <td style="text-align: left; border:1px solid black;"><b>Product Code</b></td>
           <td style="text-align: left; border:1px solid black;">{{selectedResult['product_code'] || 'NA'}}</td>
           <td style="text-align: left; border:1px solid black;"><b>Product Name</b></td>
           <td style="text-align: left; border:1px solid black;">{{selectedResult['product_name'] || 'NA'}}</td>
         </tr>
-       
         <tr>
-        
           <td style="text-align: left; border:1px solid black;"><b>Dosage Form</b></td>
-          <td style="text-align: left; border:1px solid black;"  >{{selectedResult['product_type'] || selectedResult['dosage_form'] || 'NA'}}</td>
-           <td style="text-align: left; border:1px solid black;"><b>Grade</b></td>
+          <td style="text-align: left; border:1px solid black;">{{selectedResult['product_type'] || selectedResult['dosage_form'] || 'NA'}}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Grade</b></td>
           <td style="text-align: left; border:1px solid black;">{{selectedResult['grade'] || 'NA'}}</td>
         </tr>
-         </table>
+        <tr>
+          <td style="text-align: left; border:1px solid black;"><b>Batch Size</b></td>
+          <td style="text-align: left; border:1px solid black;">{{ selectedResult['batch_size'] ? (selectedResult['batch_size'] + ' ' + (selectedResult['unit'] || '')) : 'NA' }}</td>
+          <td style="text-align: left; border:1px solid black;"><b>Formula Type</b></td>
+          <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['master_formula_type'])}}</td>
+        </tr>
+      </table>
 
-      <br>
-      <div class="clr-row">
-        <div class="clr-col-lg-4 clr-col-md-4 clr-col-sm-12 clr-col-xs-12">
-          <label>Unit Formula For:</label>
-          <input type="text" name="batch_size"
-            ngModel="{{ selectedResult['batch_size'] }} {{ selectedResult['unit'] || 'NA' }} " readonly>
+      <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+              Version Control</div>
+          </div>
         </div>
+        <table class="table" style="margin-top:0px">
+          <tr>
+            <td style="text-align: left; border:1px solid black;"><b>Formula No.</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['mfr_no'] || selectedResult['spec_no'])}}</td>
+            <td style="text-align: left; border:1px solid black;"><b>Revision No</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['version_no'])}}</td>
+          </tr>
+          <tr *ngIf="selectedResult['master_formula_type'] == 'Existing'">
+            <td style="text-align: left; border:1px solid black;"><b>Supersede No</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['supersede_no'] || versionControl.supersede_no)}}</td>
+            <td style="text-align: left; border:1px solid black;"><b>Supersede Ver. No</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['supersede_ver_no'] || versionControl.supersede_ver_no)}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; border:1px solid black;"><b>Date of Review</b></td>
+            <td style="text-align: left; border:1px solid black;" colspan="3">{{displayValue(selectedResult['review_date'] || versionControl.review_date)}}</td>
+          </tr>
+        </table>
+        <table class="table" style="margin-top:0px" *ngIf="revisionHistory?.length">
+          <tr>
+            <th style="background-color:#004A70;color:white;text-align:left;">Sr</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Master Formula No</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Version No</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Change Control No.</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Reason for change</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Effective Date</th>
+          </tr>
+          <tr *ngFor="let rev of revisionHistory; let i = index">
+            <td style="text-align:left;">{{ i + 1 }}</td>
+            <td style="text-align:left;">{{ displayValue(rev.spec_no) }}</td>
+            <td style="text-align:left;">{{ displayValue(rev.ver_no || rev.version_no) }}</td>
+            <td style="text-align:left;">{{ displayValue(rev.change_mode) }}</td>
+            <td style="text-align:left;">{{ displayValue(rev.change_reason || rev.reason) }}</td>
+            <td style="text-align:left;">{{ displayValue(rev.effective_date || rev.review_date) }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="text-align: center">
+          <div class="clr-row" style="margin-bottom: -10px;">
+            <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
+              YieldRange</div>
+          </div>
+        </div>
+        <table class="table" style="margin-top:0px">
+          <tr>
+            <td style="text-align: left; border:1px solid black;"><b>Yield %: (Min)</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['min_per'])}}</td>
+            <td style="text-align: left; border:1px solid black;"><b>Yield %: (Max)</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayValue(selectedResult['max_per'])}}</td>
+          </tr>
+          <tr>
+            <td style="text-align: left; border:1px solid black;"><b>Yield Qty : (Min)</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayYieldQty(selectedResult['min_output_qty'], selectedResult['min_per'])}}</td>
+            <td style="text-align: left; border:1px solid black;"><b>Yield Qty : (Max)</b></td>
+            <td style="text-align: left; border:1px solid black;">{{displayYieldQty(selectedResult['max_output_qty'], selectedResult['max_per'])}}</td>
+          </tr>
+        </table>
       </div>
 
       <div class="card">
@@ -426,44 +491,45 @@
             <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
               Raw Materials List:</div>
             <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
-           
             </div>
           </div>
         </div>
 
-     
-
         <table class="table table-border" style="margin-top:0px">
-            <ng-container *ngFor="let stage of groupedMaterials | keyvalue">
-              
-                <tr>
-                  <th style="background-color: aquamarine;font-weight: bold;text-align: left;" colspan="7">Stage: {{ stage.key }}</th>
-                </tr>
-                <tr>
-                  <th>Sr.No.</th>
-                  <th style="text-align: left;">Material type</th>
-                  <th style="text-align: left;">Material Code</th>
-                  <th style="text-align: left;">Material Name</th>
-                  <th>Qty</th>
-                  <th >Total Qty</th>
-                  <th>Percent Qty</th>
-                </tr>
-            
-                <tr *ngFor="let comp of stage.value; let i = index">
-                    <td>{{ i + 1 }}.</td>
-                    <td style="text-align: left;">{{ comp.material_subtype ? comp.material_subtype : 'NA' }}</td>
-                    <td style="text-align: left;">{{ comp.material_code ? comp.material_code : 'NA' }}</td>
-                    <td style="text-align: left;">{{ comp.material_name ? comp.material_name : 'NA' }}</td>
-                    <td>{{ comp.qty ? comp.qty + ' ' + comp.unit : 'NA' }}</td>
-                    <td>{{ comp.total_qty ? comp.total_qty : 'NA' }}</td>
-                    <td>{{ comp.percent_qty ? comp.percent_qty : 'NA' }}</td>
-                </tr>
-
-            </ng-container>
+          <tr>
+            <th>Sr.No.</th>
+            <th style="text-align: left;">Material type</th>
+            <th style="text-align: left;">Material Code</th>
+            <th style="text-align: left;">Material Name</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th *ngIf="plant_id!='59' && plant_id!='58'">Overages (%)</th>
+            <th>Total Qty</th>
+            <th *ngIf="plant_id!='59' && plant_id!='58'">Percent Qty</th>
+            <th *ngIf="plant_type=='Formulation'">Assay Calculation</th>
+            <th *ngIf="plant_type=='Formulation'">Assay Compensation with Exciepient</th>
+            <th>LOD</th>
+            <th>Contributing To Yield</th>
+          </tr>
+          <tr *ngFor="let comp of raw_materials; let i = index">
+            <td>{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ comp.material_subtype || 'NA' }}</td>
+            <td style="text-align: left;">{{ comp.material_code || 'NA' }}</td>
+            <td style="text-align: left;">{{ comp.material_name || 'NA' }}</td>
+            <td>{{ displayValue(comp.qty) }}</td>
+            <td>{{ displayValue(comp.unit) }}</td>
+            <td *ngIf="plant_id!='59' && plant_id!='58'">{{ displayValue(comp.overages_per) }}</td>
+            <td>{{ displayValue(comp.total_qty) }}</td>
+            <td *ngIf="plant_id!='59' && plant_id!='58'">{{ displayPercent(comp.percent_qty) }}</td>
+            <td *ngIf="plant_type=='Formulation'">{{ displayValue(comp.assay_calculation) }}</td>
+            <td *ngIf="plant_type=='Formulation'">{{ displayValue(comp.assay_compensation) }}</td>
+            <td>{{ displayValue(comp.lod_calculation) }}</td>
+            <td>{{ displayValue(comp.yeild_contribution) }}</td>
+          </tr>
+          <tr *ngIf="raw_materials?.length == 0">
+            <td [attr.colspan]="rawMaterialsColspan">No Records Found!</td>
+          </tr>
         </table>
-
-
-
 
       </div>
       <div class="card" *ngIf="false">
@@ -565,56 +631,57 @@
         <div class="card-header" style="text-align: center">
           <div class="clr-row" style="margin-bottom: -10px;">
             <div class="clr-col-7" style="color: aliceblue;margin-top: -2px;text-align: left;">
-              Packing Materials List: </div>
+              Packaging Material List:</div>
             <div class="clr-col-lg-5" style="text-align: right;padding-right: 0px;margin-top: -7px;">
-           
             </div>
           </div>
         </div>
 
-    <table class="table" style="margin-top:0px"
-        *ngFor="let packList of selectedResult['packing_configuration']; let k = index">
+    <table class="table pack-mat-table" style="margin-top:0px"
+        *ngFor="let packList of packingConfigurations; let k = index">
+        <colgroup>
+          <col class="col-sr"><col class="col-subtype"><col class="col-code"><col class="col-name"><col class="col-grade">
+          <col class="col-qty"><col class="col-unit"><col class="col-overages"><col class="col-req">
+        </colgroup>
         <tr style="background-color: maroon; color: white; font-weight: bold;">
-            <td style="text-align: left;" *ngIf="packList.country_name">{{ packList.country_name }}</td>
-            <td style="text-align: left;" *ngIf="!packList.country_name">Country Name: NA</td>
-            <td style="text-align: left;"> </td>
-            <td style="text-align: left;">Packing Type: {{ packList.packing_type ? packList.packing_type : 'NA' }}</td>
-            <td style="text-align: left;"></td>
-            <td style="text-align: left;">Batch Size: {{ packList.batch_size ? packList.batch_size : 'NA' }}</td>
-            <td style="text-align: left;"></td>
-            <td style="text-align: left;">Pack Size: {{ packList.pack_size ? packList.pack_size : 'NA' }}</td>
-            <td style="text-align: left;"></td>
-            <td style="text-align: left;">Pack Unit: {{ packList.unit ? packList.unit : 'NA' }}</td>
-            <td style="text-align: left;"></td>
+            <td style="text-align: left; width: 33%;">Batch Size: {{ packList.batch_size || 'NA' }}</td>
+            <td style="text-align: left; width: 33%;">Pack Size: {{ packList.pack_size || 'NA' }}</td>
+            <td style="text-align: left; width: 34%;">Pack Unit: {{ packList.unit || 'NA' }}</td>
         </tr>
-    
-        <tr style="background-color: darkblue; color: white; font-weight: bold;">
-            <th style="text-align: left">Sr.No.</th>
-            <th style="text-align: left">Code</th>
-            <th colspan="4" style="text-align: left">Name</th>
-            <th style="text-align: left">Grade</th>
-            <th style="text-align: left">Unit Qty</th>
-            <th style="text-align: left">Overages</th>
-            <th style="text-align: left">Required Qty</th>
+        <tr>
+            <th style="background-color:#004A70;color:white;text-align:left;">Sr.No.</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Material Subtype</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Code</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Name</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Grade</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Qty</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Unit</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Overages</th>
+            <th style="background-color:#004A70;color:white;text-align:left;">Required Qty</th>
         </tr>
     
         <tr *ngFor="let comp of packList.packing_materials; let i = index">
-            <td style="text-align: left">{{ i + 1 }}.</td>
-            <td style="text-align: left;">{{ comp.material_code ? comp.material_code : 'NA' }}</td>
-            <td colspan="4" style="text-align: left;">{{ comp.material_name ? comp.material_name : 'NA' }}</td>
-            <td style="text-align: left;">{{ comp.gradeName ? comp.gradeName : 'NA' }}</td>
-            <td style="text-align: left;">{{ comp.qty ? comp.qty + ' ' + comp.unit_name : 'NA' }}</td>
-            <td style="text-align: left;">{{ comp.overages ? comp.overages : 'NA' }}</td>
-            <td style="text-align: left;">{{ comp.total_qty ? comp.total_qty + ' ' + comp.unit_name : 'NA' }}</td>
+            <td class="cell-sr" style="text-align: left">{{ i + 1 }}.</td>
+            <td style="text-align: left;">{{ displayValue(comp.material_subtype) }}</td>
+            <td class="cell-code" style="text-align: left;">{{ displayValue(comp.material_code) }}</td>
+            <td style="text-align: left;">{{ displayValue(comp.material_name) }}</td>
+            <td class="cell-grade" style="text-align: left;">{{ displayValue(comp.gradeName || comp.grade) }}</td>
+            <td style="text-align: left;">{{ displayValue(comp.qty) }}</td>
+            <td style="text-align: left;">{{ displayValue(comp.unit_name || comp.unit) }}</td>
+            <td style="text-align: left;">{{ displayValue(comp.overages) }}</td>
+            <td style="text-align: left;">{{ displayValue(comp.total_qty) }}</td>
         </tr>
     
-        <tr *ngIf="packList.packing_materials?.length == 0">
-            <td colspan="8">No Records Found!</td>
+        <tr *ngIf="!packList.packing_materials?.length">
+            <td colspan="9">No Records Found!</td>
         </tr>
     </table>
 
-
-
+    <table class="table" style="margin-top:0px" *ngIf="!packingConfigurations?.length">
+      <tr>
+        <td colspan="9">No Records Found!</td>
+      </tr>
+    </table>
 
       </div>
     </div>

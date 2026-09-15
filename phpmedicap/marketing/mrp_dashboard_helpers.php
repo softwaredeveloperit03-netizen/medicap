@@ -3,11 +3,48 @@
 if (!function_exists('gw_mrp_dashboard_scalar_count')) {
     function gw_mrp_dashboard_scalar_count($conn, $sql)
     {
-        $result = $conn->query($sql);
-        if ($result && ($row = $result->fetch_row())) {
-            return (int)($row[0] ?? 0);
+        try {
+            $result = $conn->query($sql);
+            if ($result && ($row = $result->fetch_row())) {
+                return (int)($row[0] ?? 0);
+            }
+        } catch (Throwable $e) {
+            return 0;
         }
         return 0;
+    }
+}
+
+if (!function_exists('gw_mrp_dashboard_table_exists')) {
+    function gw_mrp_dashboard_table_exists($conn, $tableName)
+    {
+        $tableName = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$tableName);
+        if ($tableName === '') {
+            return false;
+        }
+        try {
+            $res = $conn->query("SHOW TABLES LIKE '$tableName'");
+            return ($res && $res->num_rows > 0);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('gw_mrp_dashboard_column_exists')) {
+    function gw_mrp_dashboard_column_exists($conn, $tableName, $colName)
+    {
+        $tableName = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$tableName);
+        $colName = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$colName);
+        if ($tableName === '' || $colName === '') {
+            return false;
+        }
+        try {
+            $res = $conn->query("SHOW COLUMNS FROM `$tableName` LIKE '$colName'");
+            return ($res && $res->num_rows > 0);
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 }
 
@@ -30,14 +67,18 @@ if (!function_exists('gw_get_mrp_dashboard_stats')) {
              WHERE TRIM(COALESCE(material_code, '')) <> ''$dedPlant"
         );
 
-        $indentsUnderConfirmation = gw_mrp_dashboard_scalar_count(
-            $conn,
-            "SELECT COUNT(*) FROM mrp_indents_confirmation WHERE UPPER(COALESCE(confirmation_status, '')) = 'PENDING'"
-        );
-        $latestPendingIndentId = gw_mrp_dashboard_scalar_count(
-            $conn,
-            "SELECT COALESCE(MAX(id), 0) FROM mrp_indents_confirmation WHERE UPPER(COALESCE(confirmation_status, '')) = 'PENDING'"
-        );
+        $indentsUnderConfirmation = 0;
+        $latestPendingIndentId = 0;
+        if (gw_mrp_dashboard_table_exists($conn, 'mrp_indents_confirmation')) {
+            $indentsUnderConfirmation = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM mrp_indents_confirmation WHERE UPPER(COALESCE(confirmation_status, '')) = 'PENDING'"
+            );
+            $latestPendingIndentId = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COALESCE(MAX(id), 0) FROM mrp_indents_confirmation WHERE UPPER(COALESCE(confirmation_status, '')) = 'PENDING'"
+            );
+        }
 
         $poProcessed = gw_mrp_dashboard_scalar_count(
             $conn,
@@ -125,13 +166,103 @@ if (!function_exists('gw_get_mrp_dashboard_stats')) {
              WHERE a.status = 'Pending Verification'$woPlant"
         );
 
+        // Phase 3–7 KPI counts (additive; guarded).
+        $shortageApprovalsPending = 0;
+        $shortageApprovalsApproved = 0;
+        if (gw_mrp_dashboard_table_exists($conn, 'mrp_shortage_approval')) {
+            $shortageApprovalsPending = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM mrp_shortage_approval WHERE UPPER(COALESCE(approval_status, '')) = 'PENDING'"
+            );
+            $shortageApprovalsApproved = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM mrp_shortage_approval WHERE UPPER(COALESCE(approval_status, '')) = 'APPROVED'"
+            );
+        }
+
+        $indentsLocked = 0;
+        if (gw_mrp_dashboard_table_exists($conn, 'mrp_indents_confirmation')) {
+            if (gw_mrp_dashboard_column_exists($conn, 'mrp_indents_confirmation', 'is_locked')) {
+                $indentsLocked = gw_mrp_dashboard_scalar_count(
+                    $conn,
+                    "SELECT COUNT(*) FROM mrp_indents_confirmation
+                     WHERE COALESCE(is_locked, 0) = 1
+                        OR UPPER(COALESCE(confirmation_status, '')) = 'LOCKED'"
+                );
+            } else {
+                $indentsLocked = gw_mrp_dashboard_scalar_count(
+                    $conn,
+                    "SELECT COUNT(*) FROM mrp_indents_confirmation
+                     WHERE UPPER(COALESCE(confirmation_status, '')) = 'LOCKED'"
+                );
+            }
+        }
+
+        $planningImmediate = 0;
+        $planningFuture = 0;
+        if (gw_mrp_dashboard_column_exists($conn, 'Work_order_materials', 'planning_horizon')) {
+            $planningImmediate = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM Work_order_materials
+                 WHERE UPPER(COALESCE(planning_horizon, '')) = 'IMMEDIATE'$woPlant"
+            );
+            $planningFuture = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM Work_order_materials
+                 WHERE UPPER(COALESCE(planning_horizon, '')) = 'FUTURE'$woPlant"
+            );
+        } elseif (gw_mrp_dashboard_column_exists($conn, 'Work_order_materials', 'expected_production_start_date')) {
+            $planningImmediate = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM Work_order_materials
+                 WHERE expected_production_start_date IS NOT NULL
+                   AND TRIM(expected_production_start_date) <> ''
+                   AND expected_production_start_date <> '0000-00-00'
+                   AND DATEDIFF(expected_production_start_date, CURDATE()) <= 30
+                   $woPlant"
+            );
+            $planningFuture = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM Work_order_materials
+                 WHERE expected_production_start_date IS NOT NULL
+                   AND TRIM(expected_production_start_date) <> ''
+                   AND expected_production_start_date <> '0000-00-00'
+                   AND DATEDIFF(expected_production_start_date, CURDATE()) > 30
+                   $woPlant"
+            );
+        }
+
+        $lineBookingHistoryVersions = 0;
+        if (gw_mrp_dashboard_table_exists($conn, 'mrp_line_booking_history')) {
+            $lineBookingHistoryVersions = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM mrp_line_booking_history"
+            );
+        }
+
+        $cancelRecalcEvents = 0;
+        if (gw_mrp_dashboard_table_exists($conn, 'mrp_cancel_recalc_log')) {
+            $cancelRecalcEvents = gw_mrp_dashboard_scalar_count(
+                $conn,
+                "SELECT COUNT(*) FROM mrp_cancel_recalc_log"
+            );
+        }
+
         return [
+            'status' => 'success',
             'po_received' => $poReceived,
             'po_processed' => $poProcessed,
             'total_wo' => $totalWo,
             'total_material' => $totalMaterial,
             'indents_under_confirmation' => $indentsUnderConfirmation,
             'latest_pending_indent_id' => $latestPendingIndentId,
+            'shortage_approvals_pending' => $shortageApprovalsPending,
+            'shortage_approvals_approved' => $shortageApprovalsApproved,
+            'indents_locked' => $indentsLocked,
+            'planning_immediate' => $planningImmediate,
+            'planning_future' => $planningFuture,
+            'line_booking_history_versions' => $lineBookingHistoryVersions,
+            'cancel_recalc_events' => $cancelRecalcEvents,
             'module_pending' => [
                 'processing' => $processingPending,
                 'approval' => $approvalPending,

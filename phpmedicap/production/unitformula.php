@@ -63,6 +63,7 @@ function utf8ize($mixed) {
         $output = Array();
      
       $sql = "SELECT DISTINCT  u.id,u.bom_type,u.master_formula_type,u.bom_batch_size,u.bom_batch_size_unit,u.product_type,u.mfr_no,u.product_code,u.formula_for,u.consumeableMaterial, u.average_weight,u.raw_materials,u.batch_size,u.unit,u.primary_pm_list,u.primary_pm_batch_size,u.status,
+u.min_per,u.max_per,u.min_output_qty,u.max_output_qty,u.version_no,u.revison_history,u.theoritical_yield,
 (select product_name from product p where u.product_code=p.product_code limit 1) as product_name,
 (select grade from product p where u.product_code=p.product_code limit 1) as grade,
 (select generic_name from product p where u.product_code=p.product_code limit 1) as generic_name,
@@ -81,7 +82,7 @@ FROM unitformula u  where u.plant_id='".$_GET["plant_id"]."' order by u.id DESC;
 
             while ($row = $result->fetch_assoc()) {
                  $output1 = Array();
-                $sql1 = "SELECT id,unit_formula_id,market_type,country_specific,country_name,packing_type,
+                $sql1 = "SELECT id,unit_formula_id,market_type,country_specific,country_name,packing_type,product_brand_name,
                 pack_size,batch_size,unit from unitformula_pm_dtl where unit_formula_id ='".$row["id"]."' ";
                
                 $result1 = $conn->query($sql1);
@@ -94,8 +95,11 @@ FROM unitformula u  where u.plant_id='".$_GET["plant_id"]."' order by u.id DESC;
                         $result2 = $conn->query($sql2);
                         if ($result2->num_rows > 0) {
                             while ($row2 = $result2->fetch_assoc()) {
-                                
-                                 
+                                $q= "SELECT GROUP_CONCAT(grade)  as gradeName FROM    grade where id in ('".  $row2['grade']."')";
+             $resQ = $conn->query($q);
+              $prodLatest = $resQ ? $resQ->fetch_assoc() : null; 
+         
+          $row2['gradeName'] = $prodLatest['gradeName'] ?? ''; 
                                 
                                  $output2[] = $row2;
                             }
@@ -125,6 +129,14 @@ FROM unitformula u  where u.plant_id='".$_GET["plant_id"]."' order by u.id DESC;
                 $row["primary_pm_list"] = json_decode($row["primary_pm_list"]); 
                 $row["consumeableMaterial"] = json_decode($row["consumeableMaterial"]); 
                 $row["product_name2"] = json_decode($row["product_name"][0]); 
+                $hist = json_decode((string)($row['revison_history'] ?? ''), true);
+                $row['review_date'] = '';
+                if (is_array($hist) && count($hist) > 0) {
+                    $last = end($hist);
+                    if (is_array($last)) {
+                        $row['review_date'] = $last['review_date'] ?? $last['effective_date'] ?? '';
+                    }
+                }
                 $output[] = $row;
             }
         }
@@ -174,12 +186,13 @@ echo json_encode($output);
     // 🔐 Basic sanitization
     $plant_id = mysqli_real_escape_string($conn, $_GET["plant_id"]);
 
-    $sql = "SELECT DISTINCT  
+    $sql = "SELECT DISTINCT
         u.id,u.bom_type,u.master_formula_type,u.bom_batch_size,
         u.bom_batch_size_unit,u.product_type,u.mfr_no,u.product_code,
         u.formula_for,u.consumeableMaterial,u.average_weight,
         u.raw_materials,u.batch_size,u.unit,u.primary_pm_list,
         u.primary_pm_batch_size,u.status,
+        u.min_per,u.max_per,u.min_output_qty,u.max_output_qty,u.version_no,u.revison_history,u.theoritical_yield,
 
         (SELECT product_name FROM product p WHERE u.product_code=p.product_code LIMIT 1) AS product_name,
         (SELECT grade FROM product p WHERE u.product_code=p.product_code LIMIT 1) AS grade,
@@ -191,7 +204,7 @@ echo json_encode($output);
         (SELECT label_claim FROM product p WHERE u.product_code=p.product_code LIMIT 1) AS label_claim,
         (SELECT product_code1 FROM product p WHERE u.product_code=p.product_code LIMIT 1) AS product_code1
 
-        FROM unitformula u  
+        FROM unitformula u
         WHERE u.plant_id = '$plant_id'
         ORDER BY u.id DESC";
 
@@ -268,6 +281,15 @@ echo json_encode($output);
 
             // Fixed issue
             $row["product_name2"] = $row["product_name"];
+
+            $hist = json_decode((string)($row['revison_history'] ?? ''), true);
+            $row['review_date'] = '';
+            if (is_array($hist) && count($hist) > 0) {
+                $last = end($hist);
+                if (is_array($last)) {
+                    $row['review_date'] = $last['review_date'] ?? $last['effective_date'] ?? '';
+                }
+            }
 
             $output[] = $row;
         }
@@ -567,6 +589,7 @@ if ($conn->query($sql)) {
         $plant_id=$_GET['plant_id'];
    
              $sql = "SELECT DISTINCT  u.id,u.bom_type,u.master_formula_type,u.product_type as p_type,u.mfr_no,u.product_code,u.formula_for, u.average_weight,u.raw_materials,u.batch_size,u.consumeableMaterial,u.unit,u.primary_pm_list,u.primary_pm_batch_size,
+u.min_per,u.max_per,u.min_output_qty,u.max_output_qty,u.version_no,u.revison_history,u.theoritical_yield,
 (select product_name from product p where u.product_code=p.product_code limit 1) as product_name,
 (select grade from product p where u.product_code=p.product_code limit 1) as grade,
 (select generic_name from product p where u.product_code=p.product_code limit 1) as generic_name,
@@ -618,6 +641,14 @@ FROM unitformula u  where    u.checked_by is null
                 $row['packing_configuration'] =$output1;
                  $row["primary_pm_list"] = json_decode($row["primary_pm_list"]); 
                  $row["consumeableMaterial"] = json_decode($row["consumeableMaterial"]); 
+                $hist = json_decode((string)($row['revison_history'] ?? ''), true);
+                $row['review_date'] = '';
+                if (is_array($hist) && count($hist) > 0) {
+                    $last = end($hist);
+                    if (is_array($last)) {
+                        $row['review_date'] = $last['review_date'] ?? $last['effective_date'] ?? '';
+                    }
+                }
 
                 $output[] = $row;
             }

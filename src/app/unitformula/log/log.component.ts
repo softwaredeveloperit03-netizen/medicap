@@ -10,6 +10,10 @@ declare let alertify;
 })
 export class LogComponent implements OnInit {
 
+  listTitle = 'Unit Formula Log';
+  closeRoute = '/unitformula';
+  isPrepareHub = false;
+
   isView = false;
   sub_materials;
   average_weight;
@@ -94,6 +98,11 @@ export class LogComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.isPrepareHub = (this.router.url || '').includes('/master/bill-of-material/prepare');
+    if (this.isPrepareHub) {
+      this.listTitle = 'Prepare Batch Formula';
+      this.closeRoute = '/master/bill-of-material';
+    }
     this.getSubMaterials();
     this.getUnitFormulas();
     this.getPackSize();
@@ -226,6 +235,60 @@ this.getBrandProducts();
   groupedMaterials =[];
   primary_pm_list =[];
   consumeableMaterial=[];
+  packingConfigurations: any[] = [];
+  revisionHistory: any[] = [];
+  versionControl: any = {};
+
+  get rawMaterialsColspan(): number {
+    let cols = 8; // sr, type, code, name, qty, unit, total, yield
+    if (this.plant_id !== '59' && this.plant_id !== '58') {
+      cols += 2;
+    }
+    if (this.plant_type === 'Formulation') {
+      cols += 2;
+    }
+    cols += 1; // LOD
+    return cols;
+  }
+
+  displayValue(value: any): string {
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return 'NA';
+    }
+    return String(value);
+  }
+
+  displayPercent(value: any): string {
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return 'NA';
+    }
+    const num = Number(value);
+    if (isNaN(num)) {
+      return String(value);
+    }
+    return num.toFixed(2);
+  }
+
+  displayYieldQty(savedQty: any, percent: any): string {
+    if (savedQty !== null && savedQty !== undefined && String(savedQty).trim() !== '') {
+      return String(savedQty);
+    }
+    const batch = Number(this.selectedResult?.['batch_size']);
+    const per = Number(percent);
+    if (!isNaN(batch) && !isNaN(per) && batch > 0) {
+      return String((batch * per) / 100);
+    }
+    return 'NA';
+  }
+
+  displayPackQty(qty: any, unit: any): string {
+    if (qty === null || qty === undefined || String(qty).trim() === '') {
+      return 'NA';
+    }
+    const unitText = unit ? ' ' + unit : '';
+    return String(qty) + unitText;
+  }
+
   view(index) {
 
     this.groupedMaterials=[];
@@ -234,6 +297,9 @@ this.getBrandProducts();
     this.raw_materials = (this.selectedResult['raw_materials']) || [];
     this.primary_pm_list = (this.selectedResult['primary_pm_list']) || [];
     this.consumeableMaterial = (this.selectedResult['consumeableMaterial']) || [];
+    this.packingConfigurations = Array.isArray(this.selectedResult['packing_configuration'])
+      ? this.selectedResult['packing_configuration']
+      : [];
 
     // Ensure raw_materials is an array
     if (!Array.isArray(this.raw_materials)) {
@@ -247,24 +313,22 @@ this.getBrandProducts();
       return group;
     }, {});
 
+    this.revisionHistory = this.parseJsonArray(this.selectedResult['revison_history'] || this.selectedResult['revisionList']);
+    this.versionControl = {
+      supersede_no: this.selectedResult['supersede_no'] || '',
+      supersede_ver_no: this.selectedResult['supersede_ver_no'] || '',
+      review_date: this.selectedResult['review_date'] || '',
+    };
+    if (this.revisionHistory.length) {
+      const last = this.revisionHistory[this.revisionHistory.length - 1] || {};
+      this.versionControl.supersede_no = this.versionControl.supersede_no || last['supersede_no'] || '';
+      this.versionControl.supersede_ver_no = this.versionControl.supersede_ver_no || last['supersede_ver_no'] || last['ver_no'] || '';
+      this.versionControl.review_date = this.versionControl.review_date || last['review_date'] || last['effective_date'] || '';
+      if (!this.selectedResult['version_no'] && (last['ver_no'] || last['version_no'])) {
+        this.selectedResult['version_no'] = last['ver_no'] || last['version_no'];
+      }
+    }
 
-
-
-    // this.raw_materials = JSON.parse(this.selectedResult['raw_materials']);
-    // this.packing_List_All =(this.selectedResult['packing_configuration']);
-    // this.label_claims = JSON.parse(this.selectedResult['label_claim']);
-    // if (this.packing_List_All == null) {
-    //   this.packing_List_All = [];
-    // }
-    // for (let i = 0; i < this.raw_materials.length; i++) {
-    //   let grade_name = '';
-    //   let grade = this.raw_materials[i]['grade'];
-    //   for (let j = 0; j < grade.length; j++) {
-    //     grade_name = grade_name + grade[j]['grade'] + ' ';
-    //   }
-    //   grade_name = grade_name.trim().replace(' ', ',');
-    //   this.raw_materials[i]['grade'] = grade_name;
-    // }
     this.isView = true;
     console.log(this.raw_materials);
   }

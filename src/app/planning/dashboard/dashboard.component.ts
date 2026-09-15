@@ -37,28 +37,12 @@ export class DashboardComponent implements OnInit {
   get cards(): QcDeptCard[] {
     const list: QcDeptCard[] = [
       {
-        id: 'masterformula',
-        title: 'Prep. Batch Formula',
-        route: 'masterformula',
-        icon: 'fa-flask',
-        category: 'Planning',
-        gradient: G.blue,
-      },
-      {
         id: 'batch-formula',
         title: 'Batch Formula',
-        route: 'masterformula/batch-formula-log',
+        route: 'batch-formula',
         icon: 'fa-puzzle-piece',
         category: 'Planning',
         gradient: G.indigo,
-      },
-      {
-        id: 'production',
-        title: 'Production Planning',
-        route: 'production',
-        icon: 'fa-tasks',
-        category: 'Planning',
-        gradient: G.teal,
       },
     ];
 
@@ -81,14 +65,6 @@ export class DashboardComponent implements OnInit {
         icon: 'fa-tasks',
         category: 'Planning',
         gradient: G.navy,
-      },
-      {
-        id: 'workorder',
-        title: 'Rec. PO From Market.',
-        route: 'workorder',
-        icon: 'fa-clipboard',
-        category: 'Planning',
-        gradient: G.amber,
       },
       {
         id: 'stplan',

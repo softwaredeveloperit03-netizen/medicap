@@ -111,13 +111,7 @@ export class ApprovalComponent implements OnInit {
         this.raw_materials = [];
       }
 
-      // Group materials by stage
-      this.groupedMaterials = this.raw_materials.reduce((group: any, material: any) => {
-        const stage = material.stage || 'Unassigned';
-        group[stage] = group[stage] || [];
-        group[stage].push(material);
-        return group;
-      }, {});
+      this.groupedMaterials = {};
     } catch (error) {
       console.error('Error parsing raw_materials:', error);
       console.error('Raw materials string:', this.selectedResult['raw_materials']);

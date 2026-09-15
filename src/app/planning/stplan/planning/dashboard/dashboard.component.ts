@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   buildSidebarTabsFromCards,
   QC_CARD_GRADIENTS,
 } from 'src/app/shared/qc-module-dashboard/qc-module-dashboard.constants';
 import { QcDeptCard } from 'src/app/shared/qc-module-dashboard/qc-module-dashboard.models';
+import { DataAccessService } from 'src/app/data-access.service';
 
 const G = QC_CARD_GRADIENTS;
 
@@ -12,8 +13,16 @@ const G = QC_CARD_GRADIENTS;
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   readonly cards: QcDeptCard[] = [
+    {
+      id: 'material-master-data',
+      title: 'Material Master Data',
+      route: '/planning/material-master-data',
+      icon: 'fa-clock',
+      category: 'Planning Sections',
+      gradient: G.emerald,
+    },
     {
       id: 'receivepofo',
       title: 'Receive FO/PO',
@@ -38,7 +47,83 @@ export class DashboardComponent {
       category: 'Planning Sections',
       gradient: G.amber,
     },
+    {
+      id: 'woplanninghub',
+      title: 'Indent Confirm / Can Plan',
+      route: '/planning/WoPlanningHub',
+      icon: 'fa-tasks',
+      category: 'Planning Sections',
+      gradient: G.indigo,
+    },
   ];
 
   readonly sidebarTabs = buildSidebarTabsFromCards(this.cards);
+
+  kpiLoading = false;
+  kpis: any = null;
+
+  traceWo = 'BO002';
+  traceMaterial = 'RM0129';
+  traceLoading = false;
+  traceError = '';
+  traceStages: any[] = [];
+  traceLast: any = null;
+  showTrace = false;
+
+  constructor(private service: DataAccessService) {}
+
+  ngOnInit(): void {
+    this.loadKpis();
+  }
+
+  loadKpis(): void {
+    this.kpiLoading = true;
+    this.service.get('mrp/indentsconfirmation.php?type=getMrpDashboardStats').subscribe({
+      next: (res: any) => {
+        this.kpis = res || {};
+        this.kpiLoading = false;
+      },
+      error: () => {
+        this.kpis = null;
+        this.kpiLoading = false;
+      },
+    });
+  }
+
+  loadTrace(): void {
+    const wo = (this.traceWo || '').trim();
+    const mat = (this.traceMaterial || '').trim();
+    if (!wo && !mat) {
+      this.traceError = 'Enter work order and/or material code';
+      return;
+    }
+    this.traceLoading = true;
+    this.traceError = '';
+    this.showTrace = true;
+    let url = 'mrp/indentsconfirmation.php?type=getMrpTraceability';
+    if (wo) {
+      url += '&workorder_no=' + encodeURIComponent(wo);
+    }
+    if (mat) {
+      url += '&material_code=' + encodeURIComponent(mat);
+    }
+    this.service.get(url).subscribe({
+      next: (res: any) => {
+        this.traceLoading = false;
+        if (res?.status === 'success') {
+          this.traceStages = res.stages || [];
+          this.traceLast = res.last_stage || null;
+        } else {
+          this.traceStages = [];
+          this.traceLast = null;
+          this.traceError = res?.message || 'Trace failed';
+        }
+      },
+      error: () => {
+        this.traceLoading = false;
+        this.traceStages = [];
+        this.traceError = 'Failed to load traceability';
+      },
+    });
+  }
 }

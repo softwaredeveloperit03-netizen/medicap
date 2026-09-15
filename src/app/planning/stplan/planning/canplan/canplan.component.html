@@ -28,20 +28,41 @@
             All work orders in planning appear here with live status.
             <strong>Can Plan</strong> = stock available — use Send for Verification.
             <strong>Not To Be Plan</strong> = awaiting PO receipt / GRN (indent sent to Purchase) or live stock shortage.
+            Classify as <strong>Immediate (≤30 days)</strong> or <strong>Future Plan</strong> from delivery / expected start date.
+          </div>
+          <div class="clr-row canplan-summary-row" *ngIf="!loading">
+            <div class="clr-col-12">
+              Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} -
+              {{ calculateStartSrNo() + (pendingpo?.length || 0) }} of {{ totalRecords }} work order(s)
+              · <span class="canplan-count-ready">{{ canPlanReadyCount }} Can Plan</span>
+              · <span class="canplan-count-wait">{{ notToBePlanCount }} Not To Be Plan</span>
+              · Immediate {{ horizonCounts.IMMEDIATE }}
+              · Future {{ horizonCounts.FUTURE }}
+              · Not Decided {{ horizonCounts.UNDECIDED }}
+              <span class="canplan-shortage-hint" *ngIf="shortageCount > 0">
+                · {{ shortageCount }} with material shortage detail (View Shortages)
+              </span>
+            </div>
+          </div>
+          <div class="canplan-horizon-filters" *ngIf="!loading">
+            <button type="button" class="btn btn-sm"
+              [class.btn-primary]="horizonFilter === 'ALL'"
+              [class.btn-outline]="horizonFilter !== 'ALL'"
+              (click)="setHorizonFilter('ALL')">All</button>
+            <button type="button" class="btn btn-sm"
+              [class.btn-danger]="horizonFilter === 'IMMEDIATE'"
+              [class.btn-outline]="horizonFilter !== 'IMMEDIATE'"
+              (click)="setHorizonFilter('IMMEDIATE')">Immediate</button>
+            <button type="button" class="btn btn-sm"
+              [class.btn-info]="horizonFilter === 'FUTURE'"
+              [class.btn-outline]="horizonFilter !== 'FUTURE'"
+              (click)="setHorizonFilter('FUTURE')">Future</button>
+            <button type="button" class="btn btn-sm"
+              [class.btn-secondary]="horizonFilter === 'UNDECIDED'"
+              [class.btn-outline]="horizonFilter !== 'UNDECIDED'"
+              (click)="setHorizonFilter('UNDECIDED')">Not Decided</button>
           </div>
           <div class="card-text">
-            <div class="clr-row canplan-summary-row" *ngIf="!loading">
-              <div class="clr-col-12">
-                Showing {{ totalRecords ? calculateStartSrNo() + 1 : 0 }} -
-                {{ calculateStartSrNo() + (pendingpo?.length || 0) }} of {{ totalRecords }} work order(s)
-                · <span class="canplan-count-ready">{{ canPlanReadyCount }} Can Plan</span>
-                · <span class="canplan-count-wait">{{ notToBePlanCount }} Not To Be Plan</span>
-                <span class="canplan-shortage-hint" *ngIf="shortageCount > 0">
-                  · {{ shortageCount }} with material shortage detail (View Shortages)
-                </span>
-              </div>
-            </div>
-
             <div class="datagrid-wrapper canplan-grid-wrap">
               <clr-datagrid [clrDgLoading]="loading" [clrDgStickyHeader]="true" class="canplan-queue-grid">
                 <clr-dg-column [clrDgField]="'planMonth'" [style.min-width.px]="88">Plan Month</clr-dg-column>
@@ -55,12 +76,13 @@
                 <clr-dg-column [clrDgField]="'batch_size'" class="cell-num" [style.min-width.px]="72">Plan Qty</clr-dg-column>
                 <clr-dg-column [clrDgField]="'planUnit'" [style.min-width.px]="52">Unit</clr-dg-column>
                 <clr-dg-column [clrDgField]="'display_plan_status'" [style.min-width.px]="120">Planning Status</clr-dg-column>
+                <clr-dg-column [clrDgField]="'planning_horizon'" [style.min-width.px]="130">Plan Class</clr-dg-column>
                 <clr-dg-column [style.min-width.px]="130">Source</clr-dg-column>
                 <clr-dg-column [style.min-width.px]="180">Purchase / Stock</clr-dg-column>
                 <clr-dg-column [clrDgField]="'total_shortage'" class="cell-num" [style.min-width.px]="68">Shortage</clr-dg-column>
-                <clr-dg-column [style.min-width.px]="280">Action</clr-dg-column>
+                <clr-dg-column [style.min-width.px]="320">Action</clr-dg-column>
 
-                <clr-dg-row *ngFor="let wo of pendingpo; let i = index; trackBy: trackByWo"
+                <clr-dg-row *ngFor="let wo of filteredPendingPo; let i = index; trackBy: trackByWo"
                   [style.backgroundColor]="wo.bg_color">
                   <clr-dg-cell>{{ formatPlanMonth(wo.planMonth) }}</clr-dg-cell>
                   <clr-dg-cell>{{ wo.mainGroupName || '—' }}</clr-dg-cell>
@@ -77,6 +99,11 @@
                   <clr-dg-cell>
                     <span class="badge badge-sm" [ngClass]="planningStatusBadgeClass(wo)">
                       {{ formatPlanningStatus(wo) }}
+                    </span>
+                  </clr-dg-cell>
+                  <clr-dg-cell>
+                    <span class="badge badge-sm" [ngClass]="planningHorizonBadgeClass(wo)">
+                      {{ formatPlanningHorizon(wo) }}
                     </span>
                   </clr-dg-cell>
                   <clr-dg-cell>{{ formatProcessSource(wo) }}</clr-dg-cell>
@@ -96,6 +123,10 @@
                         [title]="canSendForVerification(wo) ? 'Send for verification' : 'Available when status is Can Plan (stock in hand)'">
                         Send for Verification
                       </button>
+                      <button type="button" class="btn btn-outline btn-sm" (click)="setPlanningHorizon(wo, 'IMMEDIATE')"
+                        title="Mark Immediate (≤30 days)">Imm</button>
+                      <button type="button" class="btn btn-outline btn-sm" (click)="setPlanningHorizon(wo, 'FUTURE')"
+                        title="Mark Future Plan">Fut</button>
                       <button type="button" class="btn btn-danger btn-sm" (click)="rejectWorkOrder(wo)">
                         Reject
                       </button>

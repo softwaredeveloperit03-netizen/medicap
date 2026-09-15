@@ -561,30 +561,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
     if (!value) {
       return medicapLocal;
     }
-    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('assets/')) {
-      // Prefer local Medicap brand over remote/GMP/Cyclone defaults
-      if (
-        /cyclone\.png$/i.test(value) ||
-        /logo\.jpg$/i.test(value) ||
-        /gmp\.jpe?g$/i.test(value) ||
-        /medicap-logo\.png$/i.test(value)
-      ) {
-        return medicapLocal;
-      }
-      return value;
-    }
     const lower = value.toLowerCase();
+    // Always use the wide local Medicap logo (remote plant JPG is square and misaligns in the navbar pill)
     if (
-      lower === 'medicap-logo.png' ||
+      lower.indexOf('medicap') >= 0 ||
+      /cyclone\.png$/i.test(value) ||
+      /(?:^|\/)logo\.jpg$/i.test(value) ||
+      /gmp\.jpe?g$/i.test(value) ||
       lower === 'gmp.jpg' ||
       lower === 'gmp.png' ||
-      lower === 'cyclone-pharma-logo.png' ||
       lower === 'logo.jpg' ||
       lower === 'logo.png' ||
-      lower.indexOf('cyclone') >= 0 ||
-      lower.indexOf('medicap') >= 0
+      lower.indexOf('cyclone') >= 0
     ) {
       return medicapLocal;
+    }
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('assets/')) {
+      return value;
     }
     return 'https://aurenyxgmp.com/php/phpdevlop/gmptotal/logos/' + value;
   }

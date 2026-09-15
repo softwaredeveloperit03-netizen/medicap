@@ -247,6 +247,7 @@ export class ReceivepofoComponent implements OnInit {
       use_fg_stock: this.useFgStock,
       subtract_in_process: this.subtractInProcess,
       plan_entire_single_month: this.planEntireSingleMonth,
+      demand_source: this.resolveDemandSource(this.splitSource),
       splits,
     };
     this.service.post('marketing/po.php?type=saveOrderSplitPlan', JSON.stringify(payload)).subscribe((response: any) => {
@@ -263,19 +264,43 @@ export class ReceivepofoComponent implements OnInit {
   /** Fetch pending POs and calculate initial batches */
 
       searchText: string = '';
+  /** ALL | FORECAST | CONFIRMED — Demand source filter for Receive FO/PO. */
+  demandSourceFilter: 'ALL' | 'FORECAST' | 'CONFIRMED' = 'ALL';
 pendingpoBackup: any[] = [];  
   allVisibleSelected = false;
   selectedVisibleCount = 0;
 
   applyFilter() {
     const query = (this.searchText || '').toLowerCase().trim();
+    const demandFilter = this.demandSourceFilter || 'ALL';
     this.pendingpo = this.pendingpoBackup.filter((po) => {
+      const rowSource = this.resolveDemandSource(po);
+      if (demandFilter !== 'ALL' && rowSource !== demandFilter) {
+        return false;
+      }
       if (!query) {
         return true;
       }
       return JSON.stringify(po).toLowerCase().includes(query);
     });
     this.syncSelectAllState();
+  }
+
+  /** Resolve FORECAST vs CONFIRMED for a receive row (API + billing_type fallback). */
+  resolveDemandSource(row: any, parent?: any): 'FORECAST' | 'CONFIRMED' {
+    const raw = (row?.demand_source || parent?.demand_source || '').toString().trim().toUpperCase();
+    if (raw === 'FORECAST' || raw === 'CONFIRMED') {
+      return raw;
+    }
+    const billing = (row?.billing_type || parent?.billing_type || '').toString().toLowerCase();
+    if (!billing || /forecast|forcast|projection|estimate/.test(billing)) {
+      return 'FORECAST';
+    }
+    return 'CONFIRMED';
+  }
+
+  demandSourceLabel(row: any, parent?: any): string {
+    return this.resolveDemandSource(row, parent) === 'FORECAST' ? 'Forecast' : 'Confirmed';
   }
 
   /** Entry user: API returns "Firstname (emp_id)"; fallback to entry_by. */

@@ -1,8 +1,8 @@
 <?php
 
 
-ini_set('display_errors', 1);
- error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+//  error_reporting(E_ALL);
 
 
     require '../db.php';
@@ -32,15 +32,44 @@ ini_set('display_errors', 1);
     $myfile = file_put_contents('../logs.txt', $txt.PHP_EOL , FILE_APPEND | LOCK_EX);
 
     if ($_GET["type"] == "saveIncident") {
-        
+        // FormData uploads arrive in $_POST / $_FILES (not php://input JSON).
+        if (!empty($_POST)) {
+            $input = $_POST;
+        }
+        if (!is_array($input)) {
+            $input = array();
+        }
+
         $target_dir = "../../../upload/incident/";
+        if (!is_dir($target_dir)) {
+            @mkdir($target_dir, 0777, true);
+        }
 
         $id = date("YmdHis", $timestamp);
-    
+        $plantId = isset($_GET['plant_id']) ? $_GET['plant_id'] : '';
+
         $file_name = "NA";
         $file_name1 = "NA";
         $file_name2 = "NA";
-     
+
+        if (isset($_FILES["document"]["name"]) && $_FILES["document"]["name"] !== '') {
+            $parts = explode('.', $_FILES['document']['name']);
+            $file_ext = strtolower(end($parts));
+            $file_name = $plantId . 'inc1' . $id . '.' . $file_ext;
+            move_uploaded_file($_FILES["document"]["tmp_name"], $target_dir . $file_name);
+        }
+        if (isset($_FILES["document1"]["name"]) && $_FILES["document1"]["name"] !== '') {
+            $parts = explode('.', $_FILES['document1']['name']);
+            $file_ext = strtolower(end($parts));
+            $file_name1 = $plantId . 'inc2' . $id . '.' . $file_ext;
+            move_uploaded_file($_FILES["document1"]["tmp_name"], $target_dir . $file_name1);
+        }
+        if (isset($_FILES["document2"]["name"]) && $_FILES["document2"]["name"] !== '') {
+            $parts = explode('.', $_FILES['document2']['name']);
+            $file_ext = strtolower(end($parts));
+            $file_name2 = $plantId . 'inc3' . $id . '.' . $file_ext;
+            move_uploaded_file($_FILES["document2"]["tmp_name"], $target_dir . $file_name2);
+        }
 
         $Date_Of_INR = isset($input["Date_Of_INR"]) ? $input["Date_Of_INR"] : '';
         $Name_of_Department = isset($input["Name_of_Department"]) ? $input["Name_of_Department"] : '';
@@ -56,7 +85,7 @@ ini_set('display_errors', 1);
         $incident_relateds = isset($input["incident_relateds"]) ? $input["incident_relateds"] : '';
         $classification_inr = isset($input["classification_inr"]) ? $input["classification_inr"] : '';
         $potential_impact = isset($input["potential_impact"]) ? $input["potential_impact"] : '';
-    	
+
                    $sql = "INSERT INTO new_incident (
                             Date_Of_INR,
                             Name_of_Department,
@@ -75,27 +104,29 @@ ini_set('display_errors', 1);
                             incident_relateds,
                             classification_inr,
                             potential_impact,
+                            status,
                             entry_by,
                             entry_date
                         ) VALUES (
-                            '".$Date_Of_INR."',
-                            '".$Name_of_Department."',
-                            '".$INR_No."',
-                            '".$CAPA_Ref_No."',
-                            '".$Ref_QMS_Document_No."',
-                            '".$Target_Date."',
-                            '".$INR_Details."',
-                            '$file_name',
-                            '".$Probable_Cause_Root_Cause_for_Incidence."',
-                            '".$Corrective_Action."',
-                            '$file_name1',
-                            '".$Preventive_Action."',
-                            '$file_name2',
-                            '".$Root_Cause_Identified."',
-                            '".$incident_relateds."',
-                            '".$classification_inr."',
-                            '".$potential_impact."',
-                            '".$_GET["emp_id"]."',
+                            '".$conn->real_escape_string($Date_Of_INR)."',
+                            '".$conn->real_escape_string($Name_of_Department)."',
+                            '".$conn->real_escape_string($INR_No)."',
+                            '".$conn->real_escape_string($CAPA_Ref_No)."',
+                            '".$conn->real_escape_string($Ref_QMS_Document_No)."',
+                            '".$conn->real_escape_string($Target_Date)."',
+                            '".$conn->real_escape_string($INR_Details)."',
+                            '".$conn->real_escape_string($file_name)."',
+                            '".$conn->real_escape_string($Probable_Cause_Root_Cause_for_Incidence)."',
+                            '".$conn->real_escape_string($Corrective_Action)."',
+                            '".$conn->real_escape_string($file_name1)."',
+                            '".$conn->real_escape_string($Preventive_Action)."',
+                            '".$conn->real_escape_string($file_name2)."',
+                            '".$conn->real_escape_string($Root_Cause_Identified)."',
+                            '".$conn->real_escape_string($incident_relateds)."',
+                            '".$conn->real_escape_string($classification_inr)."',
+                            '".$conn->real_escape_string($potential_impact)."',
+                            'send for review',
+                            '".$conn->real_escape_string($_GET["emp_id"])."',
                             '$entry_date'
                         )";
 		
@@ -120,13 +151,21 @@ ini_set('display_errors', 1);
 	} 
 		else if ($_GET["type"] == "getIncidentsLog") {
 	    $output = array();
+	    $dep = isset($_GET["dep_name"]) ? $conn->real_escape_string($_GET["dep_name"]) : '';
 	    $sql = "SELECT * FROM new_incident";
+	    if ($dep !== '') {
+	        $sql .= " WHERE Name_of_Department = '".$dep."'";
+	    }
+	    $sql .= " ORDER BY id DESC";
 	    $result = $conn->query($sql);
 	    if ($result->num_rows > 0) {
 	        while ($row = $result->fetch_assoc()) {
 	            $row["potential_impact"] = json_decode($row["potential_impact"]);
 	            $row["classification_inr"] = json_decode($row["classification_inr"]);
 	            $row["incident_relateds"] = json_decode($row["incident_relateds"]);
+	            $row["needs_verify"] = json_decode($row["needs_verify"]);
+	            $row["specify_details"] = json_decode($row["specify_details"]);
+	            $row["evaluation"] = json_decode($row["evaluation"]);
 	            $output[] = $row;
 	        }
 	    }
@@ -204,20 +243,6 @@ ini_set('display_errors', 1);
 	else if ($_GET["type"] == "getPendingIncidentsFor_qa_Head_review") {
 	    $output = array();
 	    $sql = "SELECT * FROM new_incident WHERE status='Send to QA Head' ";
-	    $result = $conn->query($sql);
-	    if ($result->num_rows > 0) {
-	        while ($row = $result->fetch_assoc()) {
- 	            $row["needs_verify"] = json_decode($row["needs_verify"]);
-	            $row["specify_details"] = json_decode($row["specify_details"]);
-	            $row["evaluation"] = json_decode($row["evaluation"]);
-	            $output[] = $row;
-	        }
-	    }
-	    echo json_encode($output);
-	} 
-	else if ($_GET["type"] == "getIncidentsLog") {
-	    $output = array();
-	    $sql = "SELECT * FROM new_incident WHERE Name_of_Department = '".$_GET["dep_name"]."'";
 	    $result = $conn->query($sql);
 	    if ($result->num_rows > 0) {
 	        while ($row = $result->fetch_assoc()) {

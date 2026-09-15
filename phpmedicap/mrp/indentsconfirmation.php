@@ -82,6 +82,11 @@ mrp_ic_require_helper('mrp_shortages_log_helpers.php');
 mrp_ic_require_helper('mrp_indents_confirmation_helpers.php');
 mrp_ic_require_helper('mrp_dashboard_helpers.php');
 mrp_ic_require_helper('mrp_audit_log_helpers.php');
+mrp_ic_require_helper('mrp_material_availability_helpers.php');
+mrp_ic_require_helper('mrp_cancel_recalc_helpers.php');
+mrp_ic_require_helper('mrp_planning_horizon_helpers.php');
+mrp_ic_require_helper('mrp_traceability_helpers.php');
+mrp_ic_require_helper('mrp_phase_smoke_helpers.php');
 
 $type = $_GET['type'] ?? '';
 
@@ -164,15 +169,117 @@ if ($type === 'getMrpDashboardStats') {
     exit;
 }
 
+if ($type === 'getMrpTraceability') {
+    echo json_encode(gw_get_mrp_traceability($conn, array(
+        'workorder_no' => $_GET['workorder_no'] ?? '',
+        'material_code' => $_GET['material_code'] ?? '',
+        'order_no' => $_GET['order_no'] ?? '',
+        'plant_id' => $_GET['plant_id'] ?? '',
+        'write_audit' => $_GET['write_audit'] ?? '1',
+    )));
+    exit;
+}
+
+if ($type === 'runMrpPhaseSmoke') {
+    // line booking history helper used by smoke
+    mrp_ic_require_helper('mrp_line_booking_history_helpers.php');
+    echo json_encode(gw_run_mrp_phase_smoke($conn, array(
+        'plant_id' => $_GET['plant_id'] ?? '',
+        'workorder_no' => $_GET['workorder_no'] ?? 'BO002',
+        'material_code' => $_GET['material_code'] ?? 'RM0129',
+    )));
+    exit;
+}
+
+if ($type === 'createIndentConfirmationSnapshot') {
+    gw_ensure_mrp_indents_confirmation_tables($conn);
+    $materialCode = trim((string)($input['material_code'] ?? ''));
+    if ($materialCode === '') {
+        echo json_encode(array('status' => 'error', 'message' => 'material_code is required'));
+        exit;
+    }
+    $esc = function ($v) use ($conn) {
+        return $conn->real_escape_string((string)($v ?? ''));
+    };
+    $qty = (float)($input['raised_indent_qty'] ?? $input['shortage_qty'] ?? $input['required_qty'] ?? 0);
+    if ($qty <= 0) {
+        $qty = 1;
+    }
+    $empId = $esc($_GET['emp_id'] ?? '');
+    $empName = '';
+    if ($empId !== '') {
+        $er = @$conn->query(
+            "SELECT CASE
+                WHEN TRIM(IFNULL(firstname,'')) <> '' THEN CONCAT(TRIM(firstname), ' (', emp_id, ')')
+                ELSE emp_id
+             END AS n FROM employee WHERE emp_id='$empId' LIMIT 1"
+        );
+        if ($er && $er->num_rows > 0) {
+            $empName = $esc($er->fetch_assoc()['n'] ?? '');
+        }
+    }
+    $remark = $esc($input['remark'] ?? 'Indent confirmation snapshot');
+    $sql = "INSERT INTO mrp_indents_confirmation (
+                confirmation_status, material_code, material_name, material_type,
+                workorder_no, order_no, product_code, product_name,
+                required_qty, shortage_qty, raised_indent_qty, qty_unit,
+                indent_raised_date, indent_raised_by, indent_raised_by_name, remark,
+                is_locked, lock_revision_no
+            ) VALUES (
+                'PENDING',
+                '".$esc($materialCode)."',
+                '".$esc($input['material_name'] ?? '')."',
+                '".$esc($input['material_type'] ?? '')."',
+                '".$esc($input['workorder_no'] ?? '')."',
+                '".$esc($input['order_no'] ?? '')."',
+                '".$esc($input['product_code'] ?? '')."',
+                '".$esc($input['product_name'] ?? '')."',
+                $qty, $qty, $qty,
+                '".$esc($input['qty_unit'] ?? '')."',
+                NOW(), '$empId', '$empName', '$remark',
+                0, 0
+            )";
+    if (!$conn->query($sql)) {
+        echo json_encode(array('status' => 'error', 'message' => $conn->error));
+        exit;
+    }
+    $id = (int)$conn->insert_id;
+    gw_write_mrp_indent_confirmation_log($conn, array(
+        'confirmation_id' => $id,
+        'action_type' => 'CREATE',
+        'action_status' => 'PENDING',
+        'material_code' => $materialCode,
+        'material_name' => $input['material_name'] ?? '',
+        'workorder_no' => $input['workorder_no'] ?? '',
+        'order_no' => $input['order_no'] ?? '',
+        'qty' => $qty,
+        'remark' => $input['remark'] ?? 'Indent confirmation snapshot',
+    ), array(
+        'emp_id' => $_GET['emp_id'] ?? '',
+        'department' => $_GET['department'] ?? '',
+        'raised_by_name' => $empName,
+    ));
+    echo json_encode(array(
+        'status' => 'success',
+        'confirmation_id' => $id,
+        'confirmation_status' => 'PENDING',
+        'message' => 'Indent confirmation snapshot created',
+    ));
+    exit;
+}
+
 if ($type === 'applyPlanningIndentConfirmationAction') {
     $confirmationId = (int)($input['confirmation_id'] ?? 0);
     $action = $input['action'] ?? '';
     $remark = $input['remark'] ?? '';
     $raisedByName = '';
     if (!empty($_GET['emp_id'])) {
-        $empRes = $conn->query(
-            "SELECT COALESCE(emp_name, firstname, '') AS n FROM employee WHERE emp_id = '"
-            . mysqli_real_escape_string($conn, $_GET['emp_id']) . "' LIMIT 1"
+        $eid = mysqli_real_escape_string($conn, $_GET['emp_id']);
+        $empRes = @$conn->query(
+            "SELECT CASE
+                WHEN TRIM(IFNULL(firstname,'')) <> '' THEN CONCAT(TRIM(firstname), ' (', emp_id, ')')
+                ELSE emp_id
+             END AS n FROM employee WHERE emp_id = '$eid' LIMIT 1"
         );
         if ($empRes && $empRes->num_rows > 0) {
             $raisedByName = $empRes->fetch_assoc()['n'] ?? '';
@@ -187,6 +294,22 @@ if ($type === 'applyPlanningIndentConfirmationAction') {
         'raised_by_name' => $raisedByName,
     ));
     echo json_encode($resultAction);
+    exit;
+}
+
+if ($type === 'getMrpCancelRecalcLog') {
+    echo json_encode(gw_mrp_get_cancel_recalc_log($conn, $_GET));
+    exit;
+}
+
+if ($type === 'recalcAfterIndentCancel') {
+    $confirmationId = (int)($input['confirmation_id'] ?? ($_GET['confirmation_id'] ?? 0));
+    echo json_encode(gw_mrp_recalc_after_indent_cancel($conn, $confirmationId, array(
+        'emp_id' => $_GET['emp_id'] ?? '',
+        'department' => $_GET['department'] ?? '',
+        'plant_id' => $_GET['plant_id'] ?? '',
+        'remark' => $input['remark'] ?? 'Manual cancel recalculation',
+    )));
     exit;
 }
 

@@ -1,0 +1,247 @@
+<div class="card" *ngIf="!isEdit">
+  <div class="card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-8" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        Material Master Data
+        <div class="mmd-sub">Purchase timeline from Material Master (RM / PM). First column is Total Purchase Lead Time.</div>
+      </div>
+      <div class="clr-col-4" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" routerLink="/planning/stplan">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <div class="mmd-kpis">
+      <span><b>{{ total }}</b> Total records</span>
+      <span><b>{{ results.length }}</b> On this page</span>
+      <span><b>{{ selectedCount }}</b> Selected</span>
+      <span><b>{{ pages }}</b> Pages</span>
+    </div>
+
+    <div class="clr-row mmd-toolbar">
+      <div class="clr-col-lg-3 clr-col-md-4">
+        <label>Material Type</label>
+        <select [(ngModel)]="materialType" (change)="onTypeChange()">
+          <option value="RM_PM">All (RM / PM)</option>
+          <option value="RM">Raw Material</option>
+          <option value="PM">Packing Material</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="Others">Others</option>
+          <option value="ALL">All types</option>
+        </select>
+      </div>
+      <div class="clr-col-lg-4 clr-col-md-4">
+        <label>Search</label>
+        <input type="text" [(ngModel)]="search" placeholder="Search material code or name..."
+          (keyup.enter)="onSearch()" />
+      </div>
+      <div class="clr-col-lg-2 clr-col-md-2">
+        <label>Per page</label>
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+          <option [ngValue]="100">100</option>
+          <option [ngValue]="200">200</option>
+        </select>
+      </div>
+      <div class="clr-col-lg-3 clr-col-md-12 mmd-actions">
+        <button class="btn btn-sm btn-info" (click)="onSearch()">Search</button>
+        <button class="btn btn-sm btn-success" (click)="openBulk()" [disabled]="selectedCount < 1">
+          New Timeline Entry ({{ selectedCount }})
+        </button>
+        <button class="btn btn-sm" (click)="loadList()">Refresh</button>
+        <button class="btn btn-sm" (click)="exportPage()">Export page</button>
+      </div>
+    </div>
+
+    <div class="mmd-table-wrap" *ngIf="!loading">
+      <table class="mmd-table">
+        <thead>
+          <tr class="mmd-head-groups">
+            <th class="col-check band-neutral" rowspan="2">
+              <input type="checkbox" [checked]="selectAllPage" (change)="toggleSelectAll($event.target.checked)" />
+            </th>
+            <th class="col-sr band-neutral" rowspan="2">Sr</th>
+            <th class="col-lead band-lead" rowspan="2">Total Purchase Lead Time</th>
+            <th class="band-details" colspan="3">Material Details</th>
+            <th class="band-receiving" colspan="6">Material Receiving Lead Time (Days)</th>
+            <th class="band-release" colspan="4">Material Release Lead Time (Days)</th>
+            <th class="col-forecast band-forecast" rowspan="2">Forecast Total</th>
+            <th class="col-act band-neutral" rowspan="2">Action</th>
+          </tr>
+          <tr class="mmd-head-cols">
+            <th class="band-details">Material Code</th>
+            <th class="band-details">Material Name</th>
+            <th class="band-details">Material Grade</th>
+            <th class="band-receiving">Indent Bfr Recv.</th>
+            <th class="band-receiving">Indent Approval</th>
+            <th class="band-receiving">PO After Indent</th>
+            <th class="band-receiving">Payment After PO</th>
+            <th class="band-receiving">Vendor Transit</th>
+            <th class="band-receiving">Total Receiving</th>
+            <th class="band-release">Sampling</th>
+            <th class="band-release">Testing</th>
+            <th class="band-release">Doc. &amp; Release</th>
+            <th class="band-release">Total Release</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of results; let i = index">
+            <td class="col-check">
+              <input type="checkbox" [checked]="isSelected(row)" (change)="toggleRow(row, $event.target.checked)" />
+            </td>
+            <td class="col-sr">{{ (page - 1) * pageSize + i + 1 }}</td>
+            <td class="col-num col-lead"><b>{{ row.purchase_lead_days }}</b></td>
+            <td class="col-code">
+              <div class="code-cell">
+                <a href="javascript:void(0)" (click)="openEdit(row)">{{ row.material_code }}</a>
+                <span class="mmd-badge">{{ row.type_bucket }}</span>
+              </div>
+            </td>
+            <td class="col-name" [title]="row.material_name">{{ row.material_name }}</td>
+            <td class="col-grade" [title]="row.grade">{{ row.grade || '—' }}</td>
+            <td class="col-num">{{ row.indent_before_recv }}</td>
+            <td class="col-num">{{ row.indent_approval }}</td>
+            <td class="col-num">{{ row.po_after_indent }}</td>
+            <td class="col-num">{{ row.payment_days }}</td>
+            <td class="col-num">{{ row.vendor_lead_days }}</td>
+            <td class="col-num"><b>{{ row.total_receiving }}</b></td>
+            <td class="col-num">{{ row.sampling_days }}</td>
+            <td class="col-num">{{ row.testing_days }}</td>
+            <td class="col-num">{{ row.doc_days }}</td>
+            <td class="col-num"><b>{{ row.total_release }}</b></td>
+            <td class="col-num col-forecast"><b>{{ row.forecast_total }}</b></td>
+            <td class="col-act">
+              <button type="button" class="btn btn-sm btn-info" (click)="openEdit(row)">Edit</button>
+            </td>
+          </tr>
+          <tr *ngIf="!results.length">
+            <td colspan="18">No materials found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div *ngIf="loading" class="mmd-loading">Loading materials…</div>
+
+    <div class="mmd-pager">
+      <button class="btn btn-sm" (click)="goFirst()" [disabled]="page <= 1">First</button>
+      <button class="btn btn-sm" (click)="goPrev()" [disabled]="page <= 1">Prev</button>
+      <span>Page {{ page }} / {{ pages }}</span>
+      <button class="btn btn-sm" (click)="goNext()" [disabled]="page >= pages">Next</button>
+      <button class="btn btn-sm" (click)="goLast()" [disabled]="page >= pages">Last</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit one / Bulk -->
+<div class="card" *ngIf="isEdit">
+  <div class="card-header">
+    <div class="clr-row" style="margin-bottom: -10px;">
+      <div class="clr-col-9" style="color: aliceblue; margin-top: -2px; text-align: left;">
+        <ng-container *ngIf="!isBulk">
+          Update material — forecast days · {{ editRow?.material_code }} · {{ editRow?.material_name }}
+        </ng-container>
+        <ng-container *ngIf="isBulk">
+          New Timeline Entry — apply to {{ selectedCount }} selected material(s)
+        </ng-container>
+      </div>
+      <div class="clr-col-3" style="text-align: right; padding-right: 0; margin-top: -7px;">
+        <button class="btn btn-sm btn-danger" (click)="cancelEdit()">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <p class="mmd-hint">
+      Indent Before Receiving updates automatically from Total Receiving
+      (Indent Approval + PO + Payment + Vendor Transit).
+      Total Purchase Lead Time equals Total Receiving.
+      Forecast total days = <b>{{ forecastTotal }}</b> (Receiving + Release).
+    </p>
+
+    <div class="mmd-chips" *ngIf="isBulk">
+      <span class="mmd-chip" *ngFor="let s of selectedList">{{ s.material_code }}</span>
+    </div>
+
+    <div class="mmd-panel" *ngIf="!isBulk">
+      <h4>Material Details</h4>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Material Code</label>
+          <input type="text" [ngModel]="editRow?.material_code" readonly />
+        </div>
+        <div class="clr-col-lg-4">
+          <label>Material Name</label>
+          <input type="text" [ngModel]="editRow?.material_name" readonly />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Grade</label>
+          <input type="text" [ngModel]="editRow?.grade" readonly />
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Purchase Lead Time</label>
+          <input type="number" [ngModel]="purchaseLeadDays" readonly />
+        </div>
+      </div>
+    </div>
+
+    <div class="mmd-panel">
+      <h4>Material Receiving Lead Time (Days)</h4>
+      <div class="clr-row">
+        <div class="clr-col-lg-2">
+          <label>Indent Before Recv. (auto)</label>
+          <input type="number" [ngModel]="indentBeforeRecv" readonly />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Indent Approval</label>
+          <input type="number" min="0" [(ngModel)]="indent_approval" />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>PO After Indent</label>
+          <input type="number" min="0" [(ngModel)]="po_after_indent" />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Payment After PO</label>
+          <input type="number" min="0" [(ngModel)]="payment_days" />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Vendor Transit</label>
+          <input type="number" min="0" [(ngModel)]="vendor_lead_days" />
+        </div>
+        <div class="clr-col-lg-2">
+          <label>Total Receiving</label>
+          <input type="number" [ngModel]="totalReceiving" readonly />
+        </div>
+      </div>
+    </div>
+
+    <div class="mmd-panel">
+      <h4>Material Release Lead Time (Days)</h4>
+      <div class="clr-row">
+        <div class="clr-col-lg-3">
+          <label>Sampling</label>
+          <input type="number" min="0" [(ngModel)]="sampling_days" />
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Testing</label>
+          <input type="number" min="0" [(ngModel)]="testing_days" />
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Doc. &amp; Release</label>
+          <input type="number" min="0" [(ngModel)]="doc_days" />
+        </div>
+        <div class="clr-col-lg-3">
+          <label>Total Release</label>
+          <input type="number" [ngModel]="totalRelease" readonly />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-primary" (click)="save()" *ngIf="!isBulk">Update</button>
+    <button class="btn btn-primary" (click)="save()" *ngIf="isBulk">Save for {{ selectedCount }} material(s)</button>
+    <button class="btn btn-danger" (click)="cancelEdit()">Cancel</button>
+  </div>
+</div>

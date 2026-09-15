@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Medicap MRP Flow — User Guide</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#eef4fb",
+        primaryTextColor: "#1b3a5b",
+        primaryBorderColor: "#2c5d8f",
+        lineColor: "#2c5d8f",
+        secondaryColor: "#f7fafc",
+        tertiaryColor: "#ffffff",
+        fontFamily: "Segoe UI, system-ui, sans-serif"
+      },
+      flowchart: { curve: "basis", htmlLabels: true }
+    });
+  </script>
+  <style>
+    :root {
+      --navy: #1b3a5b;
+      --blue: #2c5d8f;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #c5d9ec;
+      --text: #243447;
+      --muted: #5a6f86;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(180deg, #e8f0f8 0%, var(--bg) 180px);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(90deg, #1b3a5b, #2c5d8f);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+    }
+    header h1 { margin: 0 0 0.35rem; font-size: 1.45rem; font-weight: 650; }
+    header p { margin: 0; opacity: 0.92; font-size: 0.95rem; max-width: 52rem; }
+    main { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.15rem 1.25rem;
+      margin: 1rem 0;
+      box-shadow: 0 4px 14px rgba(27, 58, 91, 0.05);
+    }
+    h2 {
+      margin: 0 0 0.65rem;
+      color: var(--navy);
+      font-size: 1.15rem;
+      border-bottom: 2px solid #e3eef8;
+      padding-bottom: 0.4rem;
+    }
+    h3 { margin: 1rem 0 0.4rem; color: var(--blue); font-size: 1rem; }
+    p, li { font-size: 0.95rem; }
+    .muted { color: var(--muted); font-size: 0.88rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.5rem 0 0.25rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eef4fb; color: var(--navy); }
+    .diagram {
+      background: #fafcfe;
+      border: 1px dashed #d0dde9;
+      border-radius: 8px;
+      padding: 0.75rem;
+      overflow-x: auto;
+      margin-top: 0.5rem;
+    }
+    .tip {
+      background: #eef6ff;
+      border-left: 4px solid var(--blue);
+      padding: 0.65rem 0.85rem;
+      border-radius: 0 8px 8px 0;
+      margin: 0.75rem 0 0;
+      font-size: 0.9rem;
+    }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 0.5rem 1rem 2rem;
+    }
+    nav.toc a {
+      display: inline-block;
+      margin: 0.2rem 0.35rem 0.2rem 0;
+      padding: 0.25rem 0.55rem;
+      background: #eef4fb;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--navy);
+      text-decoration: none;
+      font-size: 0.8rem;
+    }
+    @media print {
+      header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      section { break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Medicap MRP — Complete Flow Guide</h1>
+    <p>
+      A plain-language map of Material Requirement Planning in Medicap:
+      from customer FO/PO to work order, shortage &amp; purchase, process plan, and line booking.
+      Open this file in any browser. Print if you need a training handout.
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Contents</h2>
+      <nav class="toc">
+        <a href="#big">Big picture</a>
+        <a href="#screens">Screens</a>
+        <a href="#full">Full flow</a>
+        <a href="#shortage">Shortage path</a>
+        <a href="#horizon">Immediate / Future</a>
+        <a href="#booking">Line booking history</a>
+        <a href="#trace">KPIs &amp; Trace</a>
+        <a href="#stock">Stock popup</a>
+        <a href="#demand">Forecast vs Confirmed</a>
+        <a href="#checklist">Training checklist</a>
+        <a href="#glossary">Glossary</a>
+      </nav>
+      <p class="muted">Plant: Medicap Laboratories (1126). Path: Planning / STP (live system).</p>
+    </section>
+
+    <section id="big">
+      <h2>1. Big picture</h2>
+      <p>MRP answers three questions in order:</p>
+      <ol>
+        <li><strong>What do we need to make?</strong> (customer FO/PO → work order)</li>
+        <li><strong>Do we have the materials?</strong> (stock check → buy if short)</li>
+        <li><strong>When and on which line?</strong> (process plan → verify → book → approve)</li>
+      </ol>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  start([Start: Customer need]) --> marketing[Marketing creates FO or PO]
+  marketing --> approve[FO/PO approved]
+  approve --> receive[Planning receives FO/PO]
+  receive --> genWO[Generate Work Order]
+  genWO --> stockCheck{Materials enough?}
+  stockCheck -->|Yes| processPlan[Process Plan]
+  stockCheck -->|No| shortage[Shortage Analysis]
+  shortage --> buy[Confirm Indent then Purchase]
+  buy --> stockIn[Material received GRN]
+  stockIn --> processPlan
+  processPlan --> verify[Verify stock]
+  verify --> book[Line booking]
+  book --> lineAppr[Line approval]
+  lineAppr --> nextStages([Then QA Batch / Production / Dispensing])
+        </pre>
+      </div>
+    </section>
+
+    <section id="screens">
+      <h2>2. Where to click in Medicap</h2>
+      <table>
+        <thead>
+          <tr><th>Step</th><th>What you do</th><th>Screen</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A</td><td>Enter and approve customer FO/PO</td><td>Marketing → PO/FO</td></tr>
+          <tr><td>B</td><td>Receive approved FO/PO into Planning</td><td>Planning → <strong>Receive FO/PO</strong></td></tr>
+          <tr><td>C</td><td>Create the work order</td><td>Planning → <strong>Generate Work Order</strong></td></tr>
+          <tr><td>D</td><td>If materials short: analyse and raise indent</td><td>Planning → <strong>Shortage Analysis</strong></td></tr>
+          <tr><td>E</td><td>Confirm indent / send to Purchase</td><td>Planning → <strong>Indent Confirm / Can Plan</strong></td></tr>
+          <tr><td>F</td><td>Decide which WOs can be planned</td><td>Planning → STP → <strong>Process Plan</strong></td></tr>
+          <tr><td>G</td><td>Verify stock before booking</td><td>Planning → STP → <strong>Verify &amp; Book Stock</strong></td></tr>
+          <tr><td>H</td><td>Book manufacturing / packing line</td><td>Planning → STP → <strong>Line Booking</strong></td></tr>
+          <tr><td>I</td><td>Approve the line booking</td><td>Planning → STP → <strong>Line Approval</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="full">
+      <h2>3. Full operational flow</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  subgraph marketingArea [Marketing]
+    M1[New FO or PO] --> M2[Generate batch / formula]
+    M2 --> M3[Approve FO or PO]
+  end
+  subgraph planningReceive [Planning - Receive and WO]
+    R1[Receive FO/PO] --> R2[Demand: Forecast or Confirmed]
+    R2 --> R3[Split and Plan qty]
+    R3 --> G1[Generate Work Order]
+  end
+  subgraph stockBranch [Stock decision]
+    G1 --> S1{Enough material?}
+    S1 -->|Yes| P1[Process Plan]
+    S1 -->|No| H1[Shortage Analysis]
+  end
+  subgraph shortagePath [When stock is short]
+    H1 --> H2[Stock popup]
+    H2 --> H3[Submit shortage for approval]
+    H3 --> H4{Approved?}
+    H4 -->|Yes| H5[Raise Indent]
+    H5 --> H6[Indent Confirm]
+    H6 --> H7[Optional Lock]
+    H7 --> H8[Send for Purchase]
+    H8 --> H9[PO and GRN]
+    H9 --> P1
+  end
+  subgraph makePlan [Plan and book]
+    P1 --> P2[Immediate or Future]
+    P2 --> V1[Verify stock]
+    V1 --> L1[Book line]
+    L1 --> L2[History versions kept]
+    L2 --> L3[Line Approval]
+  end
+  marketingArea --> planningReceive
+  L3 --> Done([Ready for QA / Production])
+        </pre>
+      </div>
+    </section>
+
+    <section id="shortage">
+      <h2>4. When stock is short</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  A[WO needs material] --> B[Shortage found]
+  B --> C[Manager approves shortage]
+  C --> D[Indent raised]
+  D --> E[Indent confirmed]
+  E --> F[Optional Lock]
+  F --> G[Purchase buys]
+  G --> H[Goods received]
+  H --> I[Back to Process Plan]
+        </pre>
+      </div>
+      <div class="tip">
+        <strong>Remember:</strong> Indent cannot be raised until shortage is <em>Approved</em>
+        (submitter cannot approve their own request). A <em>Locked</em> indent needs unlock-with-reason
+        or cancel before silent changes. Cancelling an indent updates the shortage picture automatically.
+      </div>
+    </section>
+
+    <section id="horizon">
+      <h2>5. Immediate vs Future</h2>
+      <table>
+        <thead><tr><th>Class</th><th>Meaning</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Immediate</strong></td><td>Needed within ~30 days (or overdue)</td><td>Priority for Process Plan → Verify → Book</td></tr>
+          <tr><td><strong>Future</strong></td><td>Needed later than 30 days</td><td>Keep visible; plan when closer</td></tr>
+          <tr><td><strong>Not Decided</strong></td><td>No clear date yet</td><td>Set date or choose class on Process Plan</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="booking">
+      <h2>6. Line booking history</h2>
+      <p>Every create or change to a line booking keeps a <strong>version</strong>. Older versions are not erased — useful for audits.</p>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  B1[Book line - Version 1] --> B2[Change - Version 2]
+  B2 --> B3[Change - Version 3]
+  B3 --> Now[Current booking on screen]
+  B1 -.-> Hist[History keeps all versions]
+  B2 -.-> Hist
+  B3 -.-> Hist
+        </pre>
+      </div>
+    </section>
+
+    <section id="trace">
+      <h2>7. Dashboard KPIs and Trace</h2>
+      <p>On the Planning / STP dashboard:</p>
+      <ul>
+        <li>See KPI chips: Immediate WOs, Locked indents, Pending shortage approvals, Booking versions, Cancel recalcs.</li>
+        <li>Enter a Work Order and/or Material code → click <strong>Trace</strong> to see the full stage timeline.</li>
+      </ul>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  W1[Work order] --> W2[Immediate]
+  W2 --> W3[Line booked]
+  W3 --> W4[History versions]
+        </pre>
+      </div>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  S1[Shortage submitted] --> S2[Indent confirmed]
+  S2 --> S3[Indent locked]
+  S3 --> S4[Or cancelled with recalc]
+        </pre>
+      </div>
+    </section>
+
+    <section id="stock">
+      <h2>8. Stock popup (what the numbers mean)</h2>
+      <table>
+        <thead><tr><th>Bucket</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Store available</td><td>Physically usable stock</td></tr>
+          <tr><td>Reserved</td><td>Already committed to other WOs</td></tr>
+          <tr><td>Under test</td><td>QC not released — not free stock</td></tr>
+          <tr><td>Open PO / Transit</td><td>Ordered or in transit — not in hand</td></tr>
+          <tr><td>Open indent</td><td>Indent sent; PO/GRN not finished</td></tr>
+          <tr><td>Net shortage</td><td>Still short after the above</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Open PO, transit, and open indent help planning, but they are not physical store stock.</p>
+    </section>
+
+    <section id="demand">
+      <h2>9. Forecast vs Confirmed</h2>
+      <table>
+        <thead><tr><th>Demand</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Forecast</strong></td><td>Planning / forecast signal (e.g. billing “Forcast”)</td></tr>
+          <tr><td><strong>Confirmed</strong></td><td>Firm order (e.g. “PO for Billing”)</td></tr>
+        </tbody>
+      </table>
+      <p>Both can enter Planning. Confirmed is firmer for execution; Forecast still drives material visibility.</p>
+    </section>
+
+    <section id="checklist">
+      <h2>10. Training checklist</h2>
+      <ol>
+        <li>Marketing FO/PO approved?</li>
+        <li>Planning received it (Forecast or Confirmed shown)?</li>
+        <li>Work order generated?</li>
+        <li>If short → Stock popup → Shortage approved → Indent raised?</li>
+        <li>Indent confirmed (locked if required)?</li>
+        <li>Process Plan: Can Plan / Immediate or Future?</li>
+        <li>Verify → Line book → Line approve?</li>
+        <li>Optional: Trace on dashboard for that WO/material — last stage looks right?</li>
+      </ol>
+    </section>
+
+    <section id="glossary">
+      <h2>11. Glossary</h2>
+      <table>
+        <thead><tr><th>Term</th><th>Simple meaning</th></tr></thead>
+        <tbody>
+          <tr><td>FO / PO</td><td>Factory Order / Purchase Order from Marketing</td></tr>
+          <tr><td>Work Order (WO)</td><td>Production job Planning creates for a product qty</td></tr>
+          <tr><td>Shortage</td><td>Not enough material for the WO</td></tr>
+          <tr><td>Indent</td><td>Internal request to Purchase to buy material</td></tr>
+          <tr><td>GRN</td><td>Goods receipt — material arrived in store</td></tr>
+          <tr><td>Process Plan</td><td>Screen to mark WOs ready / send for verification</td></tr>
+          <tr><td>Line booking</td><td>Reserving a line for dates/times</td></tr>
+          <tr><td>KPI</td><td>Key dashboard numbers for a quick health check</td></tr>
+          <tr><td>Trace</td><td>Timeline of what happened to one WO or material</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>12. What this build strengthened (for management)</h2>
+      <table>
+        <thead><tr><th>Area</th><th>User benefit</th></tr></thead>
+        <tbody>
+          <tr><td>Forecast vs Confirmed</td><td>Clear which demand is firm</td></tr>
+          <tr><td>Shared stock popup</td><td>One honest material picture</td></tr>
+          <tr><td>Shortage approval before indent</td><td>Controlled buying; no self-approval</td></tr>
+          <tr><td>Indent lock</td><td>Purchase requirements cannot change silently</td></tr>
+          <tr><td>Immediate / Future</td><td>Focus near-term production</td></tr>
+          <tr><td>Line-booking history</td><td>Full audit of booking changes</td></tr>
+          <tr><td>Cancel recalculation</td><td>Shortage picture updates when indents cancel</td></tr>
+          <tr><td>Dashboard KPIs + Trace</td><td>Visibility without opening every screen</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    Medicap MRP Flow Guide · Sep 2026 · Also available as docs/MRP-FLOW-USER-GUIDE.md
+  </footer>
+</body>
+</html>

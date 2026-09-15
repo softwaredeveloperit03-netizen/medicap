@@ -1,0 +1,149 @@
+<clr-modal
+  [clrModalOpen]="open"
+  (clrModalOpenChange)="onOpenChange($event)"
+  [clrModalSize]="'xl'"
+  [clrModalClosable]="!loading"
+>
+  <h3 class="modal-title mrp-avail-title">
+    Material Availability
+    <span class="mrp-avail-title__code" *ngIf="materialCode">— {{ materialCode }}</span>
+  </h3>
+  <div class="modal-body mrp-avail-body">
+    <div class="mrp-avail-loading" *ngIf="loading" role="status">
+      <span class="spinner"></span>
+      <span>Loading availability…</span>
+    </div>
+
+    <p class="mrp-avail-error" *ngIf="!loading && errorMsg">{{ errorMsg }}</p>
+
+    <ng-container *ngIf="!loading && detail">
+      <div class="mrp-avail-meta">
+        <div class="mrp-avail-meta__item">
+          <span class="mrp-avail-meta__label">Material</span>
+          <span class="mrp-avail-meta__value" [title]="detail.material_name || materialName">
+            {{ detail.material_name || materialName || '—' }}
+          </span>
+        </div>
+        <div class="mrp-avail-meta__item">
+          <span class="mrp-avail-meta__label">Type</span>
+          <span class="mrp-avail-meta__value">{{ detail.material_type || materialType || '—' }}</span>
+        </div>
+        <div class="mrp-avail-meta__item">
+          <span class="mrp-avail-meta__label">Mother code</span>
+          <span class="mrp-avail-meta__value mrp-avail-code">{{ detail.mother_code || '—' }}</span>
+        </div>
+        <div class="mrp-avail-meta__item">
+          <span class="mrp-avail-meta__label">UOM</span>
+          <span class="mrp-avail-meta__value">{{ detail.uom || uom || '—' }}</span>
+        </div>
+      </div>
+
+      <p class="mrp-avail-note">
+        Open PO, transit PO and open indent are <strong>expected / committed</strong> quantities —
+        they are not physical store stock. Under-test is shown separately and is not treated as free stock.
+      </p>
+
+      <div class="mrp-avail-buckets">
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Required</span>
+          <span class="mrp-avail-bucket__value">{{ detail.required_qty != null ? num(detail.required_qty) : '—' }}</span>
+        </div>
+        <div class="mrp-avail-bucket mrp-avail-bucket--ok">
+          <span class="mrp-avail-bucket__label">Available (store)</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.available_store_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Reserved</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.reserved_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket mrp-avail-bucket--warn">
+          <span class="mrp-avail-bucket__label">Under test</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.under_test_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Open PO</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.open_po_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Transit PO</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.transit_po_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Open indent</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.open_indent_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket">
+          <span class="mrp-avail-bucket__label">Expected receipt</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.expected_receipt_qty) }}</span>
+        </div>
+        <div class="mrp-avail-bucket"
+          [class.mrp-avail-bucket--bad]="(detail.net_shortage_qty || 0) > 0"
+          [class.mrp-avail-bucket--ok]="(detail.net_shortage_qty || 0) <= 0">
+          <span class="mrp-avail-bucket__label">Net shortage</span>
+          <span class="mrp-avail-bucket__value">
+            {{ detail.net_shortage_qty != null ? num(detail.net_shortage_qty) : '—' }}
+          </span>
+        </div>
+        <div class="mrp-avail-bucket mrp-avail-bucket--muted">
+          <span class="mrp-avail-bucket__label">Planning effective</span>
+          <span class="mrp-avail-bucket__value">{{ num(detail.effective_planning_qty) }}</span>
+        </div>
+      </div>
+
+      <div class="mrp-avail-commit">
+        <div class="mrp-avail-commit__head">
+          <h4>Committed against Work Orders / Factory Orders</h4>
+          <span class="text-muted">{{ detail.commitments?.length || 0 }} row(s)</span>
+        </div>
+        <div class="mrp-avail-table-wrap" *ngIf="detail.commitments?.length; else noCommit">
+          <table class="mrp-avail-table">
+            <thead>
+              <tr>
+                <th>WO No</th>
+                <th>FO / Order</th>
+                <th>Product</th>
+                <th>Client</th>
+                <th class="num">Required</th>
+                <th class="num">Reserved</th>
+                <th class="num">Shortage</th>
+                <th>Indent</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of detail.commitments">
+                <td>{{ c.workorder_no || '—' }}</td>
+                <td>{{ c.factory_order_no || c.order_no || '—' }}</td>
+                <td [title]="c.product_name">
+                  {{ c.product_code || '—' }}
+                  <span class="mrp-avail-sub" *ngIf="c.product_name">{{ c.product_name }}</span>
+                </td>
+                <td [title]="c.client_name">{{ c.client_name || c.client_code || '—' }}</td>
+                <td class="num">{{ num(c.required_qty) }}</td>
+                <td class="num">{{ num(c.reserved_qty) }}</td>
+                <td class="num">{{ num(c.shortage_qty) }}</td>
+                <td>{{ c.indent_status || '—' }}</td>
+                <td>{{ c.deduction_status || c.wo_status || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noCommit>
+          <p class="text-muted mrp-avail-empty">No active work-order commitments for this material.</p>
+        </ng-template>
+      </div>
+
+      <button type="button" class="btn btn-sm btn-link mrp-avail-basis-toggle" (click)="toggleBasis()">
+        {{ showBasis ? 'Hide' : 'Show' }} calculation basis
+      </button>
+      <ul class="mrp-avail-basis" *ngIf="showBasis && detail.calculation_basis">
+        <li *ngFor="let key of (detail.calculation_basis | keyvalue)">
+          <strong>{{ key.key }}:</strong> {{ key.value }}
+        </li>
+      </ul>
+    </ng-container>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="close()" [disabled]="loading">Close</button>
+  </div>
+</clr-modal>

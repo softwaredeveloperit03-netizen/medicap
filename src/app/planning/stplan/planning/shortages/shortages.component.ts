@@ -43,8 +43,8 @@ export class ShortagesComponent implements OnInit, OnDestroy {
   /** Calculation rules modal (header "Rules" button). */
   showRules = false;
 
-  /** Main shortages list vs cancelled-indents tab */
-  activeView: 'shortages' | 'cancelled' = 'shortages';
+  /** Main shortages list vs cancelled-indents / approval queue */
+  activeView: 'shortages' | 'cancelled' | 'approvals' = 'shortages';
   cancelledIndents: any[] = [];
   cancelledIndentsBackup: any[] = [];
   cancelledIndentsFiltered: any[] = [];
@@ -53,6 +53,38 @@ export class ShortagesComponent implements OnInit, OnDestroy {
   permanentCancelTarget: any = null;
   permanentCancelRemark = '';
   permanentCancelSubmitting = false;
+
+  /** Consolidated shortage approval queue */
+  approvalRows: any[] = [];
+  approvalLoading = false;
+  approvalActionSubmitting = false;
+  approvalRemarkModalOpen = false;
+  approvalRemarkAction: 'APPROVE' | 'REJECT' | 'CANCEL' = 'APPROVE';
+  approvalRemarkText = '';
+  approvalRemarkTarget: any = null;
+  submitApprovalBusyCode = '';
+
+  /** Material availability popup (shared MRP component). */
+  availModalOpen = false;
+  availMaterialCode = '';
+  availMaterialName = '';
+  availMaterialType = '';
+  availMaterialUom = '';
+  availRequiredQty: number | null = null;
+
+  openMaterialAvailability(mat: any): void {
+    if (!mat?.material_code) {
+      return;
+    }
+    this.availMaterialCode = String(mat.material_code);
+    this.availMaterialName = String(mat.material_name || '');
+    this.availMaterialType = String(mat.mat_type || '');
+    this.availMaterialUom = this.getMaterialUom(mat);
+    const req = Number(mat.total_shortage ?? mat.required_qty ?? 0);
+    this.availRequiredQty = isFinite(req) && req > 0 ? req : null;
+    this.availModalOpen = true;
+    this.cdr.markForCheck();
+  }
 
   openRules(): void {
     this.showRules = true;
@@ -64,12 +96,14 @@ export class ShortagesComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  setActiveView(view: 'shortages' | 'cancelled'): void {
+  setActiveView(view: 'shortages' | 'cancelled' | 'approvals'): void {
     this.activeView = view;
     if (view === 'cancelled' && !this.cancelledIndentsBackup.length) {
       this.loadCancelledIndents();
     } else if (view === 'shortages') {
       this.loadSummary();
+    } else if (view === 'approvals') {
+      this.loadApprovals();
     }
     this.applyFilterInternal(this.searchText);
     this.cdr.markForCheck();
@@ -381,6 +415,43 @@ export class ShortagesComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** Material-level: Raise Indent allowed only when shortage approval is APPROVED. */
+  canRaiseIndentForMaterial(mat: any, client?: any): boolean {
+    const st = String(
+      mat?._approval_status || mat?.approval_status || client?._approval_status || ''
+    ).toUpperCase();
+    const hasShort = this.canRaiseClientIndent(client || mat) || this.nonNeg(mat?.total_shortage) > 0;
+    return hasShort && st === 'APPROVED';
+  }
+
+  canSubmitShortageApproval(mat: any): boolean {
+    if (!mat?.material_code || this.nonNeg(mat?.total_shortage) <= 0) {
+      return false;
+    }
+    if (this.submitApprovalBusyCode === mat.material_code) {
+      return false;
+    }
+    const st = String(mat._approval_status || 'NONE').toUpperCase();
+    return st === 'NONE' || st === 'REJECTED' || st === 'CANCELLED' || st === '';
+  }
+
+  approvalStatusLabel(mat: any): string {
+    const st = String(mat?._approval_status || 'NONE').toUpperCase();
+    if (st === 'PENDING') {
+      return 'Pending approval';
+    }
+    if (st === 'APPROVED') {
+      return 'Approved';
+    }
+    if (st === 'REJECTED') {
+      return 'Rejected';
+    }
+    if (st === 'CANCELLED') {
+      return 'Cancelled';
+    }
+    return 'Not submitted';
+  }
+
   /**
    * The "Use of MC" dropdown (and the Use MC Stock / Send For Approval buttons it
    * unlocks) is only enabled when the client (RM) stock is short for this work
@@ -523,6 +594,10 @@ export class ShortagesComponent implements OnInit, OnDestroy {
     mat.mother_available_qty = this.nonNeg(
       detail.mother_available_qty ?? mat.mother_available_qty
     );
+    (mat.Client || []).forEach((c: any) => {
+      c._approval_status = mat._approval_status;
+      c._approval_id = mat._approval_id;
+    });
     this.processMaterial(mat);
     return this.isVisibleShortageMaterial(mat);
   }
@@ -631,6 +706,7 @@ export class ShortagesComponent implements OnInit, OnDestroy {
       this.pendingpo.forEach((m) => (m._searchText = this.buildMaterialSearchText(m)));
       this.applyFilterInternal(this.searchText);
       this.pruneInvisibleMaterials();
+      this.attachApprovalStatuses(this.pendingpoBackup);
     } catch (err) {
       console.error('Shortages: failed building search / filter', err);
       this.pendingpoBackup = [];
@@ -640,6 +716,228 @@ export class ShortagesComponent implements OnInit, OnDestroy {
       this.loading = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private attachApprovalStatuses(materials: any[]): void {
+    const codes = (materials || [])
+      .map((m) => String(m?.material_code || '').trim())
+      .filter((c) => !!c);
+    if (!codes.length) {
+      return;
+    }
+    const url =
+      'marketing/po.php?type=getShortageApprovalStatuses&material_codes=' +
+      encodeURIComponent(codes.join(','));
+    this.service
+      .get(url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp: any) => {
+          const map = resp && typeof resp === 'object' ? resp : {};
+          for (const mat of this.pendingpoBackup || []) {
+            const st = map[mat.material_code];
+            if (st) {
+              mat._approval_status = st.approval_status || 'NONE';
+              mat._approval_id = st.approval_id || 0;
+              mat._approval_revision = st.revision_no || 0;
+              mat._can_raise_indent = !!st.can_raise_indent;
+              mat._can_submit_approval = st.can_submit !== false;
+            } else {
+              mat._approval_status = 'NONE';
+              mat._approval_id = 0;
+              mat._can_raise_indent = false;
+              mat._can_submit_approval = true;
+            }
+            // Propagate to client rows used by Raise Indent button.
+            (mat.Client || []).forEach((c: any) => {
+              c._approval_status = mat._approval_status;
+              c._approval_id = mat._approval_id;
+            });
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          /* non-blocking — Raise Indent stays gated as not approved */
+        },
+      });
+  }
+
+  loadApprovals(): void {
+    this.approvalLoading = true;
+    this.cdr.markForCheck();
+    this.service
+      .get('marketing/po.php?type=getShortageApprovals&status=PENDING')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp: any) => {
+          this.approvalRows = Array.isArray(resp) ? resp : [];
+          this.approvalLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.approvalRows = [];
+          this.approvalLoading = false;
+          alertify.error('Failed to load shortage approvals.');
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  submitShortageForApproval(mat: any): void {
+    if (!this.canSubmitShortageApproval(mat)) {
+      alertify.error('Cannot submit this material for approval.');
+      return;
+    }
+    // Ensure WO detail is loaded so approval lines are complete.
+    const runSubmit = () => {
+      const lines: any[] = [];
+      for (const client of mat.Client || []) {
+        for (const wo of client.wos || []) {
+          const short = this.nonNeg(wo.rm_shortage ?? wo.shortage);
+          if (short <= 0) {
+            continue;
+          }
+          lines.push({
+            wo_deduction_id: wo.wo_deduction_id || wo.id,
+            workorder_no: wo.workorder_no,
+            order_no: wo.order_no,
+            product_code: wo.product_code,
+            product_name: wo.product_name,
+            client_code: wo.client_code || client.client_code,
+            client_name: wo.client_name || client.client_name,
+            required_qty: this.nonNeg(wo.required_qty) || short,
+            shortage_qty: short,
+            reserved_qty: this.nonNeg(wo.used_from_RM),
+          });
+        }
+      }
+      if (!lines.length && this.nonNeg(mat.total_shortage) <= 0) {
+        alertify.error('No shortage lines to submit.');
+        return;
+      }
+      const payload = {
+        material_code: mat.material_code,
+        material_name: mat.material_name,
+        material_type: mat.mat_type,
+        mother_code: mat.MotherCode,
+        uom: this.getMaterialUom(mat),
+        client_code: mat.client_code,
+        client_name: mat.client_name,
+        net_shortage_qty: this.nonNeg(mat.total_shortage),
+        total_shortage: this.nonNeg(mat.total_shortage),
+        open_po_qty: this.nonNeg(mat.openPO),
+        wo_count: lines.length || this.nonNeg(mat.wo_count),
+        lines,
+        remark: '',
+      };
+      this.submitApprovalBusyCode = mat.material_code;
+      this.cdr.markForCheck();
+      this.service
+        .post('marketing/po.php?type=submitShortageApproval', JSON.stringify(payload))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (resp: any) => {
+            this.submitApprovalBusyCode = '';
+            if (resp?.status === 'success') {
+              alertify.success('Shortage submitted for approval');
+              mat._approval_status = 'PENDING';
+              mat._approval_id = resp.approval_id;
+              mat._can_raise_indent = false;
+              mat._can_submit_approval = false;
+              (mat.Client || []).forEach((c: any) => {
+                c._approval_status = 'PENDING';
+              });
+            } else {
+              alertify.error(resp?.message || 'Submit failed');
+            }
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.submitApprovalBusyCode = '';
+            alertify.error('Submit failed');
+            this.cdr.markForCheck();
+          },
+        });
+    };
+
+    if (mat.detailLoaded) {
+      runSubmit();
+      return;
+    }
+    mat.detailLoading = true;
+    this.cdr.markForCheck();
+    this.service.get(this.buildDetailUrl(mat.material_code)).subscribe({
+      next: (resp: any) => {
+        this.applyDetailToMaterial(mat, resp);
+        mat.detailLoaded = true;
+        mat.detailLoading = false;
+        mat.detailExpanded = true;
+        runSubmit();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        mat.detailLoading = false;
+        alertify.error('Failed to load work orders for approval submit.');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  openApprovalAction(row: any, action: 'APPROVE' | 'REJECT' | 'CANCEL'): void {
+    this.approvalRemarkTarget = row;
+    this.approvalRemarkAction = action;
+    this.approvalRemarkText = '';
+    this.approvalRemarkModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeApprovalRemarkModal(): void {
+    this.approvalRemarkModalOpen = false;
+    this.approvalRemarkTarget = null;
+    this.approvalRemarkText = '';
+    this.cdr.markForCheck();
+  }
+
+  submitApprovalAction(): void {
+    const row = this.approvalRemarkTarget;
+    const action = this.approvalRemarkAction;
+    if (!row?.id) {
+      return;
+    }
+    if (action === 'REJECT' && !String(this.approvalRemarkText || '').trim()) {
+      alertify.error('Rejection remark is required');
+      return;
+    }
+    this.approvalActionSubmitting = true;
+    this.cdr.markForCheck();
+    this.service
+      .post(
+        'marketing/po.php?type=actionShortageApproval',
+        JSON.stringify({
+          approval_id: row.id,
+          action,
+          remark: this.approvalRemarkText,
+        })
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp: any) => {
+          this.approvalActionSubmitting = false;
+          if (resp?.status === 'success') {
+            alertify.success(resp.message || 'Updated');
+            this.closeApprovalRemarkModal();
+            this.loadApprovals();
+          } else {
+            alertify.error(resp?.message || 'Action failed');
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
+          this.approvalActionSubmitting = false;
+          alertify.error('Action failed');
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   toggleMaterialDetail(mat: any): void {
@@ -1139,6 +1437,12 @@ temp['Worders']=this.pendingpo;
 
   RaiseInd(data: any, category: string, mat?: any): void {
     if (category !== 'Client') {
+      return;
+    }
+    if (!this.canRaiseIndentForMaterial(mat || data, data)) {
+      alertify.error(
+        'Raise Indent is allowed only after consolidated shortage approval.'
+      );
       return;
     }
     this.updateClientTotals(data);

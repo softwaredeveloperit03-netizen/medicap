@@ -329,6 +329,109 @@ if (!function_exists('gw_get_open_po_cancelled_plan_qty')) {
         }
     }
 
+if (!function_exists('po_normalize_demand_source')) {
+    /** MRP: normalize Forecast vs Confirmed demand source. */
+    function po_normalize_demand_source($value) {
+        $v = strtoupper(trim((string)$value));
+        if ($v === 'FORECAST') {
+            return 'FORECAST';
+        }
+        if ($v === 'CONFIRMED') {
+            return 'CONFIRMED';
+        }
+        return '';
+    }
+}
+
+if (!function_exists('po_demand_source_from_billing')) {
+    /**
+     * Infer demand source from Marketing billing_type / po_type.
+     * Forcast/Forecast → FORECAST; PO for Billing (and other billed POs) → CONFIRMED.
+     */
+    function po_demand_source_from_billing($billingType, $poType = '') {
+        $b = strtolower(trim((string)$billingType));
+        if ($b === '' || preg_match('/(forecast|forcast|projection|estimate)/', $b)) {
+            return 'FORECAST';
+        }
+        if (preg_match('/billing|confirmed|confirm|sales\s*order|client\s*po/', $b)
+            || $b === 'po for billing') {
+            return 'CONFIRMED';
+        }
+        $t = strtolower(trim((string)$poType));
+        if ($t !== '' && preg_match('/(forecast|forcast|projection|estimate)/', $t)) {
+            return 'FORECAST';
+        }
+        return 'CONFIRMED';
+    }
+}
+
+if (!function_exists('po_attach_demand_source_to_row')) {
+    /** Attach demand_source (+ reference fields) onto a Receive FO/PO row. */
+    function po_attach_demand_source_to_row(array &$row) {
+        $source = po_normalize_demand_source($row['demand_source'] ?? '');
+        if ($source === '') {
+            $source = po_demand_source_from_billing(
+                $row['billing_type'] ?? '',
+                $row['po_type'] ?? ''
+            );
+        }
+        $row['demand_source'] = $source;
+        if (empty($row['demand_reference_type'])) {
+            $row['demand_reference_type'] = ($source === 'FORECAST') ? 'FORECAST_ENTRY' : 'PO';
+        }
+        if (empty($row['demand_reference_no'])) {
+            $row['demand_reference_no'] = (string)($row['order_no'] ?? ($row['po_no'] ?? ''));
+        }
+        if (!empty($row['products']) && is_array($row['products'])) {
+            foreach ($row['products'] as &$child) {
+                if (!is_array($child)) {
+                    continue;
+                }
+                if (empty($child['demand_source'])) {
+                    $child['demand_source'] = $source;
+                }
+                if (empty($child['demand_reference_type'])) {
+                    $child['demand_reference_type'] = $row['demand_reference_type'];
+                }
+                if (empty($child['demand_reference_no'])) {
+                    $child['demand_reference_no'] = $row['demand_reference_no'];
+                }
+                if (empty($child['billing_type']) && !empty($row['billing_type'])) {
+                    $child['billing_type'] = $row['billing_type'];
+                }
+            }
+            unset($child);
+        }
+    }
+}
+
+if (!function_exists('po_ensure_split_planning_demand_cols')) {
+    /** Ensure split_planning_qty can store Forecast/Confirmed linkage. */
+    function po_ensure_split_planning_demand_cols($conn) {
+        static $done = false;
+        if ($done || !($conn instanceof mysqli)) {
+            return;
+        }
+        $tCheck = $conn->query("SHOW TABLES LIKE 'split_planning_qty'");
+        if (!$tCheck || $tCheck->num_rows === 0) {
+            $done = true;
+            return;
+        }
+        $cols = array(
+            'demand_source' => "VARCHAR(20) DEFAULT 'CONFIRMED'",
+            'demand_reference_type' => "VARCHAR(40) DEFAULT NULL",
+            'demand_reference_no' => "VARCHAR(120) DEFAULT NULL",
+        );
+        foreach ($cols as $colName => $colDef) {
+            $col = $conn->query("SHOW COLUMNS FROM `split_planning_qty` LIKE '".$colName."'");
+            if (!$col || $col->num_rows === 0) {
+                @$conn->query("ALTER TABLE `split_planning_qty` ADD COLUMN `".$colName."` ".$colDef);
+            }
+        }
+        $done = true;
+    }
+}
+
 
 if (!function_exists('gw_get_open_indent_previous_plan_qty')) {
     function gw_get_open_indent_previous_plan_qty($conn, $material_code, $exclude_plan_month = '') {
@@ -7664,8 +7767,63 @@ $html .= '
         if (function_exists('ensureWoVerificationColumns')) {
             ensureWoVerificationColumns($conn);
         }
+        medicap_require_helper('mrp_planning_horizon_helpers.php');
         medicap_require_helper('can_planned_wo_helpers.php');
         gw_json_response(gw_get_can_planned_wo($conn, $_GET));
+    }
+    else if ($_GET["type"] == "getWoPlanningHorizons") {
+        medicap_require_helper('mrp_wo_schema_helpers.php');
+        medicap_require_helper('can_planned_wo_helpers.php');
+        medicap_require_helper('mrp_planning_horizon_helpers.php');
+        gw_json_response(gw_mrp_get_wo_planning_horizons($conn, $_GET));
+    }
+    else if ($_GET["type"] == "setWoPlanningHorizon") {
+        medicap_require_helper('mrp_wo_schema_helpers.php');
+        medicap_require_helper('can_planned_wo_helpers.php');
+        medicap_require_helper('mrp_planning_horizon_helpers.php');
+        $payload = is_array($input) ? $input : array();
+        $empName = '';
+        $empId = (string)($_GET['emp_id'] ?? '');
+        if ($empId !== '') {
+            $eid = $conn->real_escape_string($empId);
+            $er = @$conn->query(
+                "SELECT CASE
+                    WHEN TRIM(IFNULL(firstname,'')) <> '' THEN CONCAT(TRIM(firstname), ' (', emp_id, ')')
+                    ELSE emp_id
+                 END AS n FROM employee WHERE emp_id = '$eid' LIMIT 1"
+            );
+            if ($er && $er->num_rows > 0) {
+                $empName = (string)($er->fetch_assoc()['n'] ?? '');
+            }
+        }
+        gw_json_response(gw_mrp_set_wo_planning_horizon(
+            $conn,
+            $payload['workorder_no'] ?? ($_GET['workorder_no'] ?? ''),
+            $payload['planning_horizon'] ?? ($payload['horizon'] ?? ''),
+            $payload['remark'] ?? '',
+            array('emp_id' => $empId, 'emp_name' => $empName)
+        ));
+    }
+    else if ($_GET["type"] == "getMrpTraceability") {
+        medicap_require_helper('mrp_wo_schema_helpers.php');
+        medicap_require_helper('can_planned_wo_helpers.php');
+        medicap_require_helper('mrp_planning_horizon_helpers.php');
+        medicap_require_helper('mrp_audit_log_helpers.php');
+        medicap_require_helper('mrp_traceability_helpers.php');
+        gw_json_response(gw_get_mrp_traceability($conn, array(
+            'workorder_no' => $_GET['workorder_no'] ?? '',
+            'material_code' => $_GET['material_code'] ?? '',
+            'order_no' => $_GET['order_no'] ?? '',
+            'plant_id' => $_GET['plant_id'] ?? '',
+            'write_audit' => $_GET['write_audit'] ?? '1',
+        )));
+    }
+    else if ($_GET["type"] == "getMrpDashboardStats") {
+        medicap_require_helper('can_planned_wo_helpers.php');
+        medicap_require_helper('mrp_dashboard_helpers.php');
+        gw_json_response(gw_get_mrp_dashboard_stats($conn, array(
+            'plant_id' => $_GET['plant_id'] ?? '',
+        )));
     }
     else if ($_GET["type"] == "getWorkOrderPlanStatus") {
         // Real-time status of every generated WO grouped by plan.
@@ -10387,6 +10545,7 @@ else if ($_GET["type"] == "getReconciliationHub") {
                 
                 // Planning Receive queue: Marketing Approval done → status Approved
                 // + order_materials Work Order Preparation Approved / Approved.
+                // Includes Forecast (Forcast) and Confirmed (PO for Billing) demand sources.
                 // Batches / WO rows are optional so newly approved FOs still appear.
                 $sql = "SELECT a.*,
                         (SELECT c.LglNm FROM client c WHERE c.client_code = a.client_code LIMIT 1) AS clientName,
@@ -10400,13 +10559,28 @@ else if ($_GET["type"] == "getReconciliationHub") {
                             (SELECT p.product_name FROM product p WHERE p.product_code = a.parent_product_code ORDER BY p.id DESC LIMIT 1)
                         ) AS product_name,
                         a.parent_product_code AS product_code,
-                        ".poEmpFirstNameIdSql('a.entry_by')." AS emp_name
+                        ".poEmpFirstNameIdSql('a.entry_by')." AS emp_name,
+                        CASE
+                            WHEN LOWER(TRIM(IFNULL(a.billing_type,''))) IN ('forcast','forecast','')
+                              OR LOWER(TRIM(IFNULL(a.billing_type,''))) REGEXP 'forecast|forcast|projection|estimate'
+                            THEN 'FORECAST'
+                            ELSE 'CONFIRMED'
+                        END AS demand_source,
+                        CASE
+                            WHEN LOWER(TRIM(IFNULL(a.billing_type,''))) IN ('forcast','forecast','')
+                              OR LOWER(TRIM(IFNULL(a.billing_type,''))) REGEXP 'forecast|forcast|projection|estimate'
+                            THEN 'FORECAST_ENTRY'
+                            ELSE 'PO'
+                        END AS demand_reference_type,
+                        COALESCE(NULLIF(TRIM(IFNULL(a.order_no,'')),''), NULLIF(TRIM(IFNULL(a.po_no,'')),''), CAST(a.id AS CHAR)) AS demand_reference_no
                         FROM po_entry a
                         WHERE LOWER(TRIM(IFNULL(a.status,'')))='approved'
                           AND TRIM(IFNULL(a.plant_id,''))='".mysqli_real_escape_string($conn, (string)($_GET['plant_id'] ?? ''))."'
                           AND (
                                 LOWER(TRIM(IFNULL(a.billing_type,''))) IN ('forcast','forecast')
                                 OR TRIM(IFNULL(a.billing_type,'')) = ''
+                                OR LOWER(TRIM(IFNULL(a.billing_type,''))) IN ('po for billing')
+                                OR LOWER(TRIM(IFNULL(a.billing_type,''))) LIKE '%billing%'
                               )
                         ORDER BY a.id DESC";
                 
@@ -10596,6 +10770,9 @@ else if ($_GET["type"] == "getReconciliationHub") {
                             continue;
                         }
                         po_attach_fo_planner_info($conn, $row, $row['plant_id'] ?? $_GET['plant_id']);
+                        if (function_exists('po_attach_demand_source_to_row')) {
+                            po_attach_demand_source_to_row($row);
+                        }
                        
                         $output[] = $row;
                     }
@@ -10640,6 +10817,40 @@ else if ($_GET["type"] == "getReconciliationHub") {
         $productEsc = mysqli_real_escape_string($conn, $productCode);
         $productNameEsc = mysqli_real_escape_string($conn, $productName);
         $splitDate = date('Y-m-d');
+
+        if (function_exists('po_ensure_split_planning_demand_cols')) {
+            po_ensure_split_planning_demand_cols($conn);
+        }
+
+        $demandSource = '';
+        if (function_exists('po_normalize_demand_source')) {
+            $demandSource = po_normalize_demand_source($input['demand_source'] ?? '');
+        }
+        $billingType = '';
+        $poType = '';
+        $poNo = '';
+        $peRes = $conn->query(
+            "SELECT billing_type, po_type, po_no FROM po_entry
+             WHERE order_no = '".$orderEsc."'
+             ORDER BY id DESC LIMIT 1"
+        );
+        if ($peRes && $peRes->num_rows > 0) {
+            $peRow = $peRes->fetch_assoc();
+            $billingType = (string)($peRow['billing_type'] ?? '');
+            $poType = (string)($peRow['po_type'] ?? '');
+            $poNo = (string)($peRow['po_no'] ?? '');
+        }
+        if ($demandSource === '' && function_exists('po_demand_source_from_billing')) {
+            $demandSource = po_demand_source_from_billing($billingType, $poType);
+        }
+        if ($demandSource === '') {
+            $demandSource = 'CONFIRMED';
+        }
+        $demandRefType = ($demandSource === 'FORECAST') ? 'FORECAST_ENTRY' : 'PO';
+        $demandRefNo = $orderNo !== '' ? $orderNo : $poNo;
+        $demandSourceEsc = mysqli_real_escape_string($conn, $demandSource);
+        $demandRefTypeEsc = mysqli_real_escape_string($conn, $demandRefType);
+        $demandRefNoEsc = mysqli_real_escape_string($conn, $demandRefNo);
 
         $avblStock = 0;
         if ($useFgStock && $plantId !== '') {
@@ -10703,12 +10914,14 @@ else if ($_GET["type"] == "getReconciliationHub") {
 
             $insSql = "INSERT INTO split_planning_qty (
                             order_no, plant_id, product_name, product_code, date, month, year,
-                            oder_qty, outQty, InQty, balance_qty, avbl_stock, status, entry_by
+                            oder_qty, outQty, InQty, balance_qty, avbl_stock, status, entry_by,
+                            demand_source, demand_reference_type, demand_reference_no
                         ) VALUES (
                             '".$orderEsc."', '".$plantId."', '".$productNameEsc."', '".$productEsc."',
                             '".$splitDate."', '".$monthEsc."', '".$yearEsc."',
                             '".$produceEsc."', '".$outsourceEsc."', '".$inhouseEsc."', '".$produceEsc."',
-                            '".$avblStockEsc."', 'Planned', '".$empId."'
+                            '".$avblStockEsc."', 'Planned', '".$empId."',
+                            '".$demandSourceEsc."', '".$demandRefTypeEsc."', '".$demandRefNoEsc."'
                         )";
 
             if ($conn->query($insSql)) {
@@ -10741,6 +10954,9 @@ else if ($_GET["type"] == "getReconciliationHub") {
             'avbl_stock' => $avblStock,
             'use_fg_stock' => $useFgStock,
             'subtract_in_process' => $subtractInProcess,
+            'demand_source' => $demandSource,
+            'demand_reference_type' => $demandRefType,
+            'demand_reference_no' => $demandRefNo,
         ]);
     }
 
@@ -10758,12 +10974,22 @@ else if ($_GET["type"] == "getReconciliationHub") {
 
         $splits = array();
         $useFgStock = false;
-        $sql = "SELECT id, month, year, oder_qty, InQty, outQty, avbl_stock
+        $demandSource = '';
+        $sql = "SELECT id, month, year, oder_qty, InQty, outQty, avbl_stock, demand_source, demand_reference_type, demand_reference_no
                 FROM split_planning_qty
                 WHERE order_no = '".$orderEsc."'
                 AND product_code = '".$productEsc."'
                 ORDER BY id ASC";
         $res = $conn->query($sql);
+        if (!$res) {
+            // Older DB without demand columns — fall back.
+            $sql = "SELECT id, month, year, oder_qty, InQty, outQty, avbl_stock
+                    FROM split_planning_qty
+                    WHERE order_no = '".$orderEsc."'
+                    AND product_code = '".$productEsc."'
+                    ORDER BY id ASC";
+            $res = $conn->query($sql);
+        }
         if ($res && $res->num_rows > 0) {
             while ($row = $res->fetch_assoc()) {
                 $inhouse = floatval($row['InQty'] ?? 0);
@@ -10775,6 +11001,9 @@ else if ($_GET["type"] == "getReconciliationHub") {
                 if (floatval($row['avbl_stock'] ?? 0) > 0) {
                     $useFgStock = true;
                 }
+                if ($demandSource === '' && !empty($row['demand_source'])) {
+                    $demandSource = strtoupper(trim((string)$row['demand_source']));
+                }
                 $splits[] = array(
                     'id' => $row['id'],
                     'inhouse' => $inhouse,
@@ -10782,7 +11011,18 @@ else if ($_GET["type"] == "getReconciliationHub") {
                     'produce' => $produce,
                     'month' => $row['month'] ?? '',
                     'year' => $row['year'] ?? '',
+                    'demand_source' => $row['demand_source'] ?? null,
                 );
+            }
+        }
+
+        if ($demandSource === '' && function_exists('po_demand_source_from_billing')) {
+            $peRes = $conn->query(
+                "SELECT billing_type, po_type FROM po_entry
+                 WHERE order_no = '".$orderEsc."' ORDER BY id DESC LIMIT 1"
+            );
+            if ($peRes && ($pe = $peRes->fetch_assoc())) {
+                $demandSource = po_demand_source_from_billing($pe['billing_type'] ?? '', $pe['po_type'] ?? '');
             }
         }
 
@@ -10790,6 +11030,7 @@ else if ($_GET["type"] == "getReconciliationHub") {
             'status' => 'success',
             'splits' => $splits,
             'use_fg_stock' => $useFgStock,
+            'demand_source' => $demandSource !== '' ? $demandSource : null,
         ));
     }
 
@@ -11434,6 +11675,115 @@ else if ($_GET["type"] == "getReconciliationHub") {
     echo json_encode(shortagesBuildPlannedWoSummary($conn, $plantId, $raisedOnly));
 }
 
+      else if ($_GET["type"] == "getMrpMaterialAvailability") {
+        header('Content-Type: application/json; charset=utf-8');
+        medicap_require_helper('mrp_material_availability_helpers.php');
+        $materialCode = trim((string)($_GET['material_code'] ?? ''));
+        if ($materialCode === '' && is_array($input)) {
+            $materialCode = trim((string)($input['material_code'] ?? ''));
+        }
+        $requiredQty = null;
+        if (isset($_GET['required_qty']) && $_GET['required_qty'] !== '') {
+            $requiredQty = floatval($_GET['required_qty']);
+        } elseif (is_array($input) && isset($input['required_qty']) && $input['required_qty'] !== '') {
+            $requiredQty = floatval($input['required_qty']);
+        }
+        $detail = gw_get_mrp_material_availability_detail($conn, $materialCode, array(
+            'plant_id' => $_GET['plant_id'] ?? '',
+            'required_qty' => $requiredQty,
+        ));
+        echo json_encode($detail);
+    }
+
+      else if ($_GET["type"] == "submitShortageApproval") {
+        header('Content-Type: application/json; charset=utf-8');
+        medicap_require_helper('mrp_material_availability_helpers.php');
+        medicap_require_helper('mrp_shortage_approval_helpers.php');
+        if (function_exists('medicap_require_helper')) {
+            @medicap_require_helper('mrp_audit_log_helpers.php');
+        }
+        $payload = is_array($input) ? $input : array();
+        echo json_encode(gw_submit_mrp_shortage_approval($conn, $payload, array(
+            'plant_id' => $_GET['plant_id'] ?? '',
+            'emp_id' => $_GET['emp_id'] ?? '',
+            'department' => $_GET['department'] ?? '',
+        )));
+    }
+
+      else if ($_GET["type"] == "actionShortageApproval") {
+        header('Content-Type: application/json; charset=utf-8');
+        medicap_require_helper('mrp_shortage_approval_helpers.php');
+        if (function_exists('medicap_require_helper')) {
+            @medicap_require_helper('mrp_audit_log_helpers.php');
+        }
+        $payload = is_array($input) ? $input : array();
+        if (empty($payload['approval_id']) && !empty($_GET['approval_id'])) {
+            $payload['approval_id'] = $_GET['approval_id'];
+        }
+        if (empty($payload['action']) && !empty($_GET['action'])) {
+            $payload['action'] = $_GET['action'];
+        }
+        echo json_encode(gw_action_mrp_shortage_approval($conn, $payload, array(
+            'emp_id' => $_GET['emp_id'] ?? '',
+            'department' => $_GET['department'] ?? '',
+        )));
+    }
+
+      else if ($_GET["type"] == "getShortageApprovals") {
+        header('Content-Type: application/json; charset=utf-8');
+        medicap_require_helper('mrp_shortage_approval_helpers.php');
+        $list = gw_list_mrp_shortage_approvals($conn, array(
+            'status' => $_GET['status'] ?? 'PENDING',
+            'plant_id' => $_GET['plant_id'] ?? '',
+            'material_code' => $_GET['material_code'] ?? '',
+        ));
+        echo json_encode($list);
+    }
+
+      else if ($_GET["type"] == "getShortageApprovalStatuses") {
+        header('Content-Type: application/json; charset=utf-8');
+        medicap_require_helper('mrp_shortage_approval_helpers.php');
+        $codes = array();
+        if (!empty($_GET['material_codes'])) {
+            $codes = preg_split('/\s*,\s*/', (string)$_GET['material_codes']);
+        } elseif (is_array($input) && !empty($input['material_codes']) && is_array($input['material_codes'])) {
+            $codes = $input['material_codes'];
+        }
+        $map = gw_msa_latest_by_materials($conn, $codes, $_GET['plant_id'] ?? '');
+        $out = array();
+        foreach ($codes as $code) {
+            $code = trim((string)$code);
+            if ($code === '') {
+                continue;
+            }
+            $row = $map[$code] ?? null;
+            if (!$row) {
+                $out[$code] = array(
+                    'approval_status' => 'NONE',
+                    'approval_id' => 0,
+                    'can_raise_indent' => false,
+                    'can_submit' => true,
+                );
+            } else {
+                $st = strtoupper(trim((string)($row['approval_status'] ?? 'NONE')));
+                $out[$code] = array(
+                    'approval_status' => $st,
+                    'approval_id' => (int)$row['id'],
+                    'revision_no' => (int)($row['revision_no'] ?? 1),
+                    'submitted_by' => (string)($row['submitted_by'] ?? ''),
+                    'submitted_by_name' => (string)($row['submitted_by_name'] ?? ''),
+                    'submitted_at' => (string)($row['submitted_at'] ?? ''),
+                    'approved_by' => (string)($row['approved_by'] ?? ''),
+                    'approved_at' => (string)($row['approved_at'] ?? ''),
+                    'net_shortage_qty' => floatval($row['net_shortage_qty'] ?? 0),
+                    'can_raise_indent' => ($st === 'APPROVED'),
+                    'can_submit' => in_array($st, array('NONE', 'REJECTED', 'CANCELLED', ''), true),
+                );
+            }
+        }
+        echo json_encode($out);
+    }
+
       else if ($_GET["type"] == "sendMaterialForDirectorApproval") {
         
         $orders = $input["orders"];   // Array of order_no values: ["FO1000035","FO1000036B"]
@@ -11463,6 +11813,11 @@ echo json_encode(["status" => "success"]);
       else if ($_GET["type"] == "getCanPlannedWOPlaning_STP") {
       
         $output = Array();
+        medicap_require_helper('mrp_wo_schema_helpers.php');
+        medicap_require_helper('mrp_planning_horizon_helpers.php');
+        if (function_exists('gw_ensure_mrp_planning_horizon_columns')) {
+            gw_ensure_mrp_planning_horizon_columns($conn);
+        }
         
                    $sql = "SELECT 
                                 a.*,
@@ -11572,6 +11927,9 @@ echo json_encode(["status" => "success"]);
                  
                  $row["selectedLines"] = json_decode($row["selectedLines"]); 
                    $row["Lines"] = $output1;
+                        if (function_exists('gw_mrp_attach_planning_horizon')) {
+                            gw_mrp_attach_planning_horizon($row);
+                        }
                         $output[] = $row;
                     }
                 }

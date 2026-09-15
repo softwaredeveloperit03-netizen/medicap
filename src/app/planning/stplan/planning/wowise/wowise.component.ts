@@ -38,6 +38,34 @@ export class WowiseComponent implements OnInit, OnDestroy {
   pendingpoDisplay: any[] = [];
   searchText = '';
   pendingpoBackup: any[] = [];
+
+  /** Shared MRP material availability popup. */
+  availModalOpen = false;
+  availMaterialCode = '';
+  availMaterialName = '';
+  availMaterialType = '';
+  availMaterialUom = '';
+  availRequiredQty: number | null = null;
+
+  openMaterialAvailability(mat: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!mat?.material_code) {
+      return;
+    }
+    this.availMaterialCode = String(mat.material_code);
+    this.availMaterialName = String(mat.material_name || '');
+    this.availMaterialType = String(
+      mat.material_type || (this.isRmMaterialRow(mat) ? 'Raw Material' : 'Packing Material') || ''
+    );
+    this.availMaterialUom = String(mat.unit || mat.Matunit || '');
+    const req = Number(mat.required_qty ?? mat.rm_shortage ?? 0);
+    this.availRequiredQty = isFinite(req) && req > 0 ? req : null;
+    this.availModalOpen = true;
+    this.cdr.markForCheck();
+  }
   pendingpoBackup1: any[] = [];
 
   autoConsolidated: any[] = [];

@@ -71,13 +71,27 @@ export class BfrlogComponent implements OnInit {
         this.results = response;
       });
   }
+  private hasBomBatchSize(row: any): boolean {
+    if (row?.bom_batch_size == null || String(row.bom_batch_size).trim() === '') {
+      return false;
+    }
+    const n = Number(row.bom_batch_size);
+    return !isNaN(n) && n > 0;
+  }
+
+  private applyBatchSizeFilter(rows: any): any[] {
+    return (Array.isArray(rows) ? rows : []).filter((row) =>
+      this.hasBomBatchSize(row)
+    );
+  }
+
   getBatchFormaulsLog() {
     this.isLog = true;
     this.isApproval = false;
     this.service
       .get('planning/raw.php?type=get_batch_formula_log')
       .subscribe((response) => {
-        this.results = response;
+        this.results = this.applyBatchSizeFilter(response);
       });
   }
 
@@ -89,7 +103,7 @@ export class BfrlogComponent implements OnInit {
           productName
       )
       .subscribe((response) => {
-        this.results = response;
+        this.results = this.applyBatchSizeFilter(response);
       });
   }
 

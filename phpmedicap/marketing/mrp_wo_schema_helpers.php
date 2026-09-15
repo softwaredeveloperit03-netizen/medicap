@@ -16,7 +16,11 @@ if (!function_exists('medicap_ensure_table_columns')) {
         foreach ($columns as $colName => $colDef) {
             $col = @$conn->query("SHOW COLUMNS FROM `".$table."` LIKE '".$conn->real_escape_string($colName)."'");
             if (!$col || $col->num_rows === 0) {
-                @$conn->query("ALTER TABLE `".$table."` ADD COLUMN `".$colName."` ".$colDef);
+                try {
+                    $conn->query("ALTER TABLE `".$table."` ADD COLUMN `".$colName."` ".$colDef);
+                } catch (Throwable $e) {
+                    // mysqli exception mode: duplicate column / race
+                }
             }
         }
     }

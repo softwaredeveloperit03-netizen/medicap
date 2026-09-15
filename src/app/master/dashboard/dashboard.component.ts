@@ -95,6 +95,7 @@ export class DashboardComponent implements OnInit {
     { id: 'transporter', title: 'Transporter Master', description: '', route: '/admin/transporter', icon: 'fa-truck', category: 'Purchase', gradient: G.amber, departmentId: 'purchase' },
     // Production
     { id: 'unitformula', title: 'Master Formula Rec.', description: '', route: '/unitformula', icon: 'fa-flask', category: 'Production', gradient: G.navy, departmentId: 'production' },
+    { id: 'bill-of-material', title: 'Batch Formula (BFR)', description: '', route: '/master/bill-of-material', icon: 'fa-boxes', category: 'Production', gradient: G.teal, departmentId: 'production' },
     { id: 'linemaster', title: 'Line Master', description: '', route: '/master/linemaster', icon: 'fa-stream', category: 'Production', gradient: G.slate, departmentId: 'production' },
     { id: 'productionstage', title: 'Stage Master', description: '', route: '/master/productionstage', icon: 'fa-layer-group', category: 'Production', gradient: G.blue, departmentId: 'production' },
     { id: 'bmr-checklist', title: 'BMR Checklist', description: '', route: '/production/stages-master', icon: 'fa-clipboard-check', category: 'Production', gradient: G.teal, departmentId: 'production' },

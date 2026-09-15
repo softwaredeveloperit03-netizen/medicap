@@ -62,6 +62,34 @@ if (!function_exists('gw_ensure_mrp_indents_confirmation_tables')) {
             INDEX idx_action_status (action_status),
             INDEX idx_material_code (material_code)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Indent Lock columns (Phase 4) — additive; check before ALTER (mysqli throws on duplicate).
+        $lockCols = [
+            'is_locked' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER confirmation_status",
+            'locked_by' => "VARCHAR(50) DEFAULT NULL AFTER is_locked",
+            'locked_by_name' => "VARCHAR(120) DEFAULT NULL AFTER locked_by",
+            'locked_at' => "DATETIME DEFAULT NULL AFTER locked_by_name",
+            'lock_remark' => "TEXT AFTER locked_at",
+            'lock_revision_no' => "INT NOT NULL DEFAULT 0 AFTER lock_remark",
+        ];
+        foreach ($lockCols as $colName => $colDef) {
+            $col = @$conn->query("SHOW COLUMNS FROM mrp_indents_confirmation LIKE '" . $conn->real_escape_string($colName) . "'");
+            if (!$col || $col->num_rows === 0) {
+                try {
+                    $conn->query("ALTER TABLE mrp_indents_confirmation ADD COLUMN `$colName` $colDef");
+                } catch (Throwable $e) {
+                    // ignore race / already exists
+                }
+            }
+        }
+        $idx = @$conn->query("SHOW INDEX FROM mrp_indents_confirmation WHERE Key_name = 'idx_mic_is_locked'");
+        if (!$idx || $idx->num_rows === 0) {
+            try {
+                $conn->query("ALTER TABLE mrp_indents_confirmation ADD INDEX idx_mic_is_locked (is_locked)");
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
     }
 }
 
@@ -542,7 +570,7 @@ if (!function_exists('gw_apply_mrp_indent_confirmation_action')) {
         gw_ensure_mrp_indents_confirmation_tables($conn);
         $confirmationId = (int)$confirmationId;
         $action = strtoupper(trim($action));
-        $allowed = ['SENT_FOR_PURCHASE', 'CANCEL', 'ON_HOLD'];
+        $allowed = ['SENT_FOR_PURCHASE', 'CANCEL', 'ON_HOLD', 'LOCK', 'UNLOCK'];
         if (!in_array($action, $allowed, true)) {
             return ['status' => 'error', 'message' => 'Invalid action'];
         }
@@ -552,6 +580,28 @@ if (!function_exists('gw_apply_mrp_indent_confirmation_action')) {
             return ['status' => 'error', 'message' => 'Confirmation record not found'];
         }
         $row = $res->fetch_assoc();
+        $isLocked = (int)($row['is_locked'] ?? 0) === 1
+            || strtoupper(trim((string)($row['confirmation_status'] ?? ''))) === 'LOCKED';
+
+        // Locked indents cannot be silently modified — only UNLOCK (with remark) or CANCEL with remark.
+        if ($isLocked && !in_array($action, ['UNLOCK', 'CANCEL'], true)) {
+            return [
+                'status' => 'error',
+                'message' => 'Indent is locked. Unlock (with remark) or cancel via revision workflow before changing.',
+            ];
+        }
+        if ($action === 'UNLOCK' && !$isLocked) {
+            return ['status' => 'error', 'message' => 'Indent is not locked'];
+        }
+        if ($action === 'LOCK' && $isLocked) {
+            return ['status' => 'error', 'message' => 'Already locked'];
+        }
+        if (in_array($action, ['LOCK', 'UNLOCK', 'CANCEL'], true) && trim((string)$remark) === '') {
+            // LOCK can use a default remark; UNLOCK/CANCEL require reason.
+            if ($action !== 'LOCK') {
+                return ['status' => 'error', 'message' => 'Remark/reason is required for ' . $action];
+            }
+        }
 
         if ($action === 'SENT_FOR_PURCHASE' && $row['confirmation_status'] === 'SENT_FOR_PURCHASE') {
             return ['status' => 'error', 'message' => 'Already sent for purchase'];
@@ -565,20 +615,82 @@ if (!function_exists('gw_apply_mrp_indent_confirmation_action')) {
         $empId = mysqli_real_escape_string($conn, $meta['emp_id'] ?? ($_GET['emp_id'] ?? ''));
         $empName = mysqli_real_escape_string($conn, $meta['raised_by_name'] ?? '');
         $remarkEsc = mysqli_real_escape_string($conn, $remark);
+        $dept = mysqli_real_escape_string($conn, $meta['department'] ?? ($_GET['department'] ?? ''));
 
-        $newStatus = $action === 'CANCEL' ? 'CANCELLED' : ($action === 'ON_HOLD' ? 'ON_HOLD' : 'SENT_FOR_PURCHASE');
+        if ($action === 'LOCK') {
+            $newStatus = 'LOCKED';
+        } elseif ($action === 'UNLOCK') {
+            // Return to SENT_FOR_PURCHASE if previously sent, else PENDING.
+            $prev = strtoupper(trim((string)($row['confirmation_status'] ?? '')));
+            $newStatus = ($prev === 'LOCKED') ? 'SENT_FOR_PURCHASE' : 'PENDING';
+            if ($prev === 'LOCKED' && (int)($row['is_locked'] ?? 0) === 1) {
+                // Prefer last non-lock status from log if available.
+                $lr = @$conn->query(
+                    "SELECT action_status FROM mrp_indents_confirmation_log
+                     WHERE confirmation_id = $confirmationId
+                       AND action_type NOT IN ('LOCK','UNLOCK')
+                     ORDER BY id DESC LIMIT 1"
+                );
+                if ($lr && $lr->num_rows > 0) {
+                    $last = strtoupper(trim((string)($lr->fetch_assoc()['action_status'] ?? '')));
+                    if (in_array($last, ['PENDING', 'SENT_FOR_PURCHASE', 'ON_HOLD'], true)) {
+                        $newStatus = $last;
+                    }
+                }
+            }
+        } elseif ($action === 'CANCEL') {
+            $newStatus = 'CANCELLED';
+        } elseif ($action === 'ON_HOLD') {
+            $newStatus = 'ON_HOLD';
+        } else {
+            $newStatus = 'SENT_FOR_PURCHASE';
+        }
+
         $cancelledQty = $action === 'CANCEL' ? (float)($row['raised_indent_qty'] ?? 0) : 0;
+        $lockRev = (int)($row['lock_revision_no'] ?? 0);
+        if ($action === 'LOCK' || $action === 'UNLOCK') {
+            $lockRev++;
+        }
 
         $conn->begin_transaction();
         try {
-            $sql = "UPDATE mrp_indents_confirmation SET
-                confirmation_status = '$newStatus',
-                cancelled_qty = $cancelledQty,
-                remark = '$remarkEsc',
-                updated_by = '$empId',
-                updated_by_name = '$empName',
-                updated_at = '$now'
-                WHERE id = $confirmationId";
+            if ($action === 'LOCK') {
+                $sql = "UPDATE mrp_indents_confirmation SET
+                    confirmation_status = 'LOCKED',
+                    is_locked = 1,
+                    locked_by = '$empId',
+                    locked_by_name = '$empName',
+                    locked_at = '$now',
+                    lock_remark = '$remarkEsc',
+                    lock_revision_no = $lockRev,
+                    remark = '$remarkEsc',
+                    updated_by = '$empId',
+                    updated_by_name = '$empName',
+                    updated_at = '$now'
+                    WHERE id = $confirmationId";
+            } elseif ($action === 'UNLOCK') {
+                $sql = "UPDATE mrp_indents_confirmation SET
+                    confirmation_status = '$newStatus',
+                    is_locked = 0,
+                    lock_remark = CONCAT(IFNULL(lock_remark,''), ' | Unlock: $remarkEsc'),
+                    lock_revision_no = $lockRev,
+                    remark = '$remarkEsc',
+                    updated_by = '$empId',
+                    updated_by_name = '$empName',
+                    updated_at = '$now'
+                    WHERE id = $confirmationId";
+            } else {
+                $lockClear = $action === 'CANCEL' ? ", is_locked = 0" : "";
+                $sql = "UPDATE mrp_indents_confirmation SET
+                    confirmation_status = '$newStatus',
+                    cancelled_qty = $cancelledQty,
+                    remark = '$remarkEsc',
+                    updated_by = '$empId',
+                    updated_by_name = '$empName',
+                    updated_at = '$now'
+                    $lockClear
+                    WHERE id = $confirmationId";
+            }
             if (!$conn->query($sql)) {
                 throw new Exception($conn->error);
             }
@@ -617,15 +729,35 @@ if (!function_exists('gw_apply_mrp_indent_confirmation_action')) {
                 'qty' => $action === 'CANCEL' ? $cancelledQty : (float)($row['raised_indent_qty'] ?? 0),
                 'qty_unit' => $row['qty_unit'] ?? '',
                 'remark' => $remark,
-            ], $meta);
+                'action_by' => $meta['emp_id'] ?? ($_GET['emp_id'] ?? ''),
+                'action_by_name' => $meta['raised_by_name'] ?? '',
+                'department' => $meta['department'] ?? ($_GET['department'] ?? ''),
+                'event_detail' => json_encode([
+                    'is_locked' => ($action === 'LOCK') ? 1 : 0,
+                    'lock_revision_no' => $lockRev,
+                    'previous_status' => $row['confirmation_status'] ?? '',
+                ]),
+            ]);
 
             $conn->commit();
-            return [
+            $result = [
                 'status' => 'success',
-                'message' => 'Action applied successfully',
+                'message' => 'Indent ' . strtolower($action) . ' applied',
+                'confirmation_id' => $confirmationId,
                 'confirmation_status' => $newStatus,
-                'cancelled_qty' => $cancelledQty,
+                'is_locked' => ($action === 'LOCK') ? 1 : 0,
+                'lock_revision_no' => $lockRev,
             ];
+            if ($action === 'CANCEL' && function_exists('gw_mrp_recalc_after_indent_cancel')) {
+                $recalc = @gw_mrp_recalc_after_indent_cancel($conn, $confirmationId, array_merge($meta, [
+                    'remark' => $remark,
+                    'plant_id' => $_GET['plant_id'] ?? ($meta['plant_id'] ?? ''),
+                ]));
+                if (is_array($recalc)) {
+                    $result['cancel_recalc'] = $recalc;
+                }
+            }
+            return $result;
         } catch (Exception $e) {
             $conn->rollback();
             return ['status' => 'error', 'message' => $e->getMessage()];

@@ -9,6 +9,10 @@
             [class.btn-outline]="activeView !== 'shortages'"
             (click)="setActiveView('shortages')">Shortages</button>
           <button type="button" class="btn btn-sm"
+            [class.btn-primary]="activeView === 'approvals'"
+            [class.btn-outline]="activeView !== 'approvals'"
+            (click)="setActiveView('approvals')">Approvals</button>
+          <button type="button" class="btn btn-sm"
             [class.btn-primary]="activeView === 'cancelled'"
             [class.btn-outline]="activeView !== 'cancelled'"
             (click)="setActiveView('cancelled')">Cancelled Indent</button>
@@ -75,6 +79,18 @@
               <span class="shortages-mat-field__value shortages-mat-field__value--qty">{{ mat.total_shortage || 0 }}</span>
             </div>
             <div class="shortages-mat-field">
+              <span class="shortages-mat-field__label">Approval</span>
+              <span class="shortages-mat-field__value">
+                <span class="sh-appr-badge"
+                  [class.sh-appr-badge--none]="!mat._approval_status || mat._approval_status === 'NONE'"
+                  [class.sh-appr-badge--pending]="mat._approval_status === 'PENDING'"
+                  [class.sh-appr-badge--approved]="mat._approval_status === 'APPROVED'"
+                  [class.sh-appr-badge--rejected]="mat._approval_status === 'REJECTED'">
+                  {{ approvalStatusLabel(mat) }}
+                </span>
+              </span>
+            </div>
+            <div class="shortages-mat-field">
               <span class="shortages-mat-field__label">UOM</span>
               <span class="shortages-mat-field__value">{{ getMaterialUom(mat) }}</span>
             </div>
@@ -82,6 +98,25 @@
         </div>
       </div>
       <div class="shortages-mat-actions">
+        <button
+          type="button"
+          class="btn btn-sm shortages-submit-appr-btn"
+          (click)="submitShortageForApproval(mat)"
+          [disabled]="!canSubmitShortageApproval(mat)"
+          title="Submit consolidated shortage for approval before raising indent"
+        >
+          <span *ngIf="submitApprovalBusyCode === mat.material_code" class="spinner spinner-inline"></span>
+          <span>Submit Appr.</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm shortages-avail-btn"
+          (click)="openMaterialAvailability(mat)"
+          title="Material availability"
+        >
+          <clr-icon shape="storage"></clr-icon>
+          <span>Stock</span>
+        </button>
         <button
           type="button"
           class="btn btn-sm shortages-view-btn"
@@ -157,7 +192,8 @@
   <clr-dg-cell class="sh-col-balance">{{ mats.total_rm_balance || 0 }}</clr-dg-cell>
   <clr-dg-cell class="sh-col-shortage">
     <button class="btn btn-primary btn-sm" (click)="RaiseInd(mats,'Client', mat)"
-      [disabled]="!canRaiseClientIndent(mats)">
+      [disabled]="!canRaiseIndentForMaterial(mat, mats)"
+      [title]="canRaiseIndentForMaterial(mat, mats) ? 'Raise planning indent' : 'Approve consolidated shortage first'">
       Raise Indent (CL): {{ mats.total_Client_shortage || mats.total_rm_shortage || 0 }}
     </button>
   </clr-dg-cell>
@@ -173,6 +209,53 @@
 
   <p class="shortages-empty" *ngIf="!visibleMaterials?.length">No shortage materials found.</p>
 </div>
+
+  <!-- Approvals tab -->
+  <div class="card-text shortages-loading" *ngIf="activeView === 'approvals' && approvalLoading">
+    <p class="text-muted">Loading shortage approvals…</p>
+  </div>
+  <div class="card-text sh-approval-panel" *ngIf="activeView === 'approvals' && !approvalLoading">
+    <p class="text-muted small" *ngIf="!approvalRows?.length">No pending shortage approvals.</p>
+    <div class="sh-approval-wrap" *ngIf="approvalRows?.length">
+      <table class="table table-bordered table-sm sh-approval-table">
+        <thead>
+          <tr>
+            <th>Sr</th>
+            <th>Material</th>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Net shortage</th>
+            <th>WO count</th>
+            <th>Rev</th>
+            <th>Submitted by</th>
+            <th>Submitted at</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of approvalRows; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td [title]="row.material_name">{{ row.material_name || '—' }}</td>
+            <td>{{ row.material_code || '—' }}</td>
+            <td>{{ row.material_type || '—' }}</td>
+            <td>{{ row.net_shortage_qty || 0 }} {{ row.uom || '' }}</td>
+            <td>{{ row.wo_count || row.lines?.length || 0 }}</td>
+            <td>{{ row.revision_no || 1 }}</td>
+            <td>{{ row.submitted_by_name || row.submitted_by || '—' }}</td>
+            <td>{{ row.submitted_at || '—' }}</td>
+            <td class="sh-approval-actions">
+              <button type="button" class="btn btn-sm btn-success"
+                (click)="openApprovalAction(row, 'APPROVE')"
+                [disabled]="approvalActionSubmitting">Approve</button>
+              <button type="button" class="btn btn-sm btn-danger"
+                (click)="openApprovalAction(row, 'REJECT')"
+                [disabled]="approvalActionSubmitting">Reject</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <!-- Cancelled Indent tab -->
   <div class="card-text shortages-loading" *ngIf="activeView === 'cancelled' && cancelledLoading">
@@ -261,6 +344,42 @@
 
   </div>
 </div> 
+
+<app-mrp-material-availability
+  [(open)]="availModalOpen"
+  [materialCode]="availMaterialCode"
+  [materialName]="availMaterialName"
+  [materialType]="availMaterialType"
+  [uom]="availMaterialUom"
+  [requiredQty]="availRequiredQty"
+></app-mrp-material-availability>
+
+<!-- Approval remark modal -->
+<clr-modal [(clrModalOpen)]="approvalRemarkModalOpen" [clrModalClosable]="!approvalActionSubmitting">
+  <h3 class="modal-title">
+    {{ approvalRemarkAction === 'APPROVE' ? 'Approve' : (approvalRemarkAction === 'REJECT' ? 'Reject' : 'Cancel') }}
+    shortage
+  </h3>
+  <div class="modal-body">
+    <p class="text-muted small" *ngIf="approvalRemarkTarget">
+      Material: <strong>{{ approvalRemarkTarget.material_name || approvalRemarkTarget.material_code }}</strong>
+      &nbsp;|&nbsp; Shortage: <strong>{{ approvalRemarkTarget.net_shortage_qty || 0 }}</strong>
+    </p>
+    <label>Remark <span *ngIf="approvalRemarkAction === 'REJECT'" class="text-danger">*</span></label>
+    <textarea rows="3" class="sh-remark-input" [(ngModel)]="approvalRemarkText"
+      [disabled]="approvalActionSubmitting"></textarea>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" (click)="closeApprovalRemarkModal()" [disabled]="approvalActionSubmitting">Close</button>
+    <button type="button" class="btn"
+      [class.btn-success]="approvalRemarkAction === 'APPROVE'"
+      [class.btn-danger]="approvalRemarkAction !== 'APPROVE'"
+      (click)="submitApprovalAction()" [disabled]="approvalActionSubmitting">
+      <span *ngIf="approvalActionSubmitting" class="spinner spinner-inline"></span>
+      Confirm
+    </button>
+  </div>
+</clr-modal>
 
 <!-- Permanent cancel modal -->
 <clr-modal [(clrModalOpen)]="permanentCancelModalOpen" [clrModalClosable]="!permanentCancelSubmitting">
@@ -393,7 +512,8 @@
         <tr><th>RM available</th><td>Starting net pool before the first work order.</td></tr>
         <tr><th>Balance</th><td>Pool remaining after the <em>last</em> work order.</td></tr>
         <tr><th>Total shortage</th><td>Sum of per-WO client-code shortages.</td></tr>
-        <tr><th>Raise Indent (CL)</th><td>Raises indent on the <strong>client code</strong>. Enabled when RM shortage &gt; 0.</td></tr>
+        <tr><th>Raise Indent (CL)</th><td>Raises indent on the <strong>client code</strong>. Enabled only when RM shortage &gt; 0 <strong>and</strong> consolidated shortage is <strong>Approved</strong>.</td></tr>
+        <tr><th>Submit Appr.</th><td>Submits the consolidated material shortage for Planning approval. Indent cannot be raised until approved. Submitter cannot approve their own request.</td></tr>
       </table>
 
     </div>
